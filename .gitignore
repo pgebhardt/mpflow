@@ -1,0 +1,4 @@
+ert
+*.swp
+*.o
+build

@@ -1,6 +1,5 @@
-# libactor
+# ert
 #
-# Implementation of an erlang style actor model using libdispatch
 # Copyright (C) 2012  Patrik Gebhardt
 # Contact: patrik.gebhardt@rub.de
 #
@@ -20,32 +19,27 @@
 # Copmiler and flags
 CC = clang
 CFLAGS = -fblocks
-LDFLAGS = 
+LDFLAGS = -lBlocksRuntime -lactor -llinalg
 
 # Directories
 SRC = src
 BUILD = build
 
-# Install directories
-INCLUDES = /usr/local/include/actor
-LIBS = /usr/local/lib
-
 # Object files
-_OBJ = actor.o message.o process.o node.o distributer.o error.o
+_OBJ = main.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Dependencies
-_DEPS = actor.h message.h process.h node.h distributer.h error.h common.h
+_DEPS = 
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file
-BIN = libactor.a
+BIN = ert
 
 # Rule for library
 $(BIN): $(OBJ) $(DEPS)
 	mkdir -p $(BUILD)
-	ar rc $(BUILD)/$(BIN) $(OBJ)
-	ranlib $(BUILD)/$(BIN)
+	$(CC) $(CFLAGS) -o $(BIN) $(OBJ) $(LDFLAGS)
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
@@ -56,16 +50,5 @@ $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
 clean:
 	rm -rf $(BUILD)
 
-# Install
-install: $(BIN)
-	mkdir -p $(INCLUDES)
-	install -m 0644 $(SRC)/*.h $(INCLUDES)
-	install -m 0644 $(BUILD)/$(BIN) $(LIBS)
-
-# Uninstall
-uninstall:
-	rm -rf $(INCLUDES)
-	rm -rf $(LIBS)/$(BIN)
-
 # Flags
-.PHONY: clean install
+.PHONY: clean
