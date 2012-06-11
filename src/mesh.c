@@ -129,5 +129,53 @@ linalg_error_t ert_mesh_init(ert_mesh_t mesh, linalg_matrix_t field) {
         phi += acos(1.0 - distance * distance / (2.0 * rad * rad));
     }
 
+    // precondition field
+    for (linalg_size_t i = 0; i < field->size_x; i++) {
+        for (linalg_size_t j = 0; j < field->size_y; j++) {
+            field->data[(i * field->size_y) + j] = -field->data[(i * field->size_y) + j] *
+                field->data[(i * field->size_y) + j] - 0.01;
+        }
+    }
+    // calc gradient of field
+    linalg_matrix_t gradx, grady;
+    linalg_matrix_create(&gradx, field->size_x, field->size_y);
+    linalg_matrix_create(&grady, field->size_x, field->size_y);
+    linalg_matrix_data_t dx = 2.0 / (linalg_matrix_data_t)(field->size_x - 1);
+    linalg_matrix_data_t dy = 2.0 / (linalg_matrix_data_t)(field->size_y - 1);
+
+    for (linalg_size_t i = 1; i < field->size_x - 1; i++) {
+        for (linalg_size_t j = 1; j < field->size_y - 1; j++) {
+            gradx->data[(i * gradx->size_y) + j] = (field->data[((i + 1) * field->size_y) + j]
+                - field->data[((i - 1) * field->size_y) + j]) / (2.0 * dx);
+            grady->data[(i * grady->size_y) + j] = (field->data[(i * field->size_y) + j + 1]
+                - field->data[(i * field->size_y) + j - 1]) / (2.0 * dy);
+
+        }
+    }
+
+    // move vertices
+    linalg_size_t a, b;
+    for (linalg_size_t j = 0; j < 10; j++) {
+        for (linalg_size_t i = 0; i < mesh->vortex_count; i++) {
+            // get vortex position
+            linalg_matrix_get_element(mesh->vertices, &x, i, 0);
+            linalg_matrix_get_element(mesh->vertices, &y, i, 1);
+
+            // calc matrix positions
+            a = (linalg_size_t)((x + 1.0) / dx);
+            b = (linalg_size_t)((y + 1.0) / dy);
+
+            // move gradient
+            x -= 0.1 * gradx->data[(a * gradx->size_y) + b];
+            y -= 0.1 * grady->data[(a * grady->size_y) + b];
+
+            // set vortex
+            if (x * x + y * y <= 1.0) {
+                linalg_matrix_set_element(mesh->vertices, x, i, 0);
+                linalg_matrix_set_element(mesh->vertices, y, i, 1);
+            }
+        }
+    }
+
     return LINALG_SUCCESS;
 }
