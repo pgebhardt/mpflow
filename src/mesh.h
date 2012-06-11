@@ -21,17 +21,11 @@
 
 #define ERT_MESH_MAX_VERTICES (2048)
 
-// vortex
-typedef struct {
-    linalg_matrix_data_t x;
-    linalg_matrix_data_t y;
-} ert_mesh_vortex_s;
-
 // mesh struct
 typedef struct {
     linalg_matrix_data_t radius;
     linalg_size_t vortex_count;
-    ert_mesh_vortex_s* vertices;
+    linalg_matrix_t vertices;
 } ert_mesh_s;
 typedef ert_mesh_s* ert_mesh_t;
 

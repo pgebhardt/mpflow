@@ -19,7 +19,7 @@
 # Copmiler and flags
 CC = clang
 CFLAGS = -fblocks
-LDFLAGS = -lBlocksRuntime -lactor -llinalg -ldispatch
+LDFLAGS = -lBlocksRuntime -lactor -llinalg -ldispatch -lm
 
 # Directories
 SRC = src
@@ -38,7 +38,6 @@ BIN = ert
 
 # Rule for library
 $(BIN): $(OBJ) $(DEPS)
-	mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -o $(BIN) $(OBJ) $(LDFLAGS)
 
 # Rule for object files

@@ -34,7 +34,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     if (error != LINALG_SUCCESS) {
         return ACTOR_ERROR;
     }
-    printf("Mesh erzeugen hat geklappt!\n");
 
     // load field
     linalg_matrix_t field = NULL;
@@ -47,7 +46,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
         return ACTOR_ERROR;
     }
-    printf("Feld laden hat geklappt!\n");
 
     // init mesh
     error = ert_mesh_init(mesh, field);
@@ -59,6 +57,9 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
         return ACTOR_ERROR;
     }
+
+    // save vertices
+    linalg_matrix_save("vertices.txt", mesh->vertices);
 
     // cleanup
     ert_mesh_release(&mesh);
