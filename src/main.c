@@ -19,13 +19,49 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <actor/actor.h>
+#include <linalg/matrix.h>
+#include "mesh.h"
 
 static actor_process_function_t main_process = ^(actor_process_t self) {
-    printf("Hello World!\n");
+    // error
+    linalg_error_t error = LINALG_SUCCESS;
 
-    actor_process_sleep(self, 2.0);
+    // create mesh
+    ert_mesh_t mesh = NULL;
+    error = ert_mesh_create(&mesh, 1.0);
 
-    printf("Ende!\n");
+    // check success
+    if (error != LINALG_SUCCESS) {
+        return ACTOR_ERROR;
+    }
+    printf("Mesh erzeugen hat geklappt!\n");
+
+    // load field
+    linalg_matrix_t field = NULL;
+    error = linalg_matrix_load(&field, "image.txt");
+
+    // check success
+    if (error != LINALG_SUCCESS) {
+        // cleanup
+        ert_mesh_release(&mesh);
+
+        return ACTOR_ERROR;
+    }
+    printf("Feld laden hat geklappt!\n");
+
+    // init mesh
+    error = ert_mesh_init(mesh, field);
+
+    // check success
+    if (error != LINALG_SUCCESS) {
+        // cleanup
+        ert_mesh_release(&mesh);
+
+        return ACTOR_ERROR;
+    }
+
+    // cleanup
+    ert_mesh_release(&mesh);
 
     return ACTOR_SUCCESS;
 };

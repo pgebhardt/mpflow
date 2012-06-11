@@ -19,6 +19,8 @@
 #ifndef ERT_MESH_H
 #define ERT_MESH_H
 
+#define ERT_MESH_MAX_VERTICES (2048)
+
 // vortex
 typedef struct {
     linalg_matrix_data_t x;
@@ -27,16 +29,20 @@ typedef struct {
 
 // mesh struct
 typedef struct {
-    linalg_matrix_t boundary;
+    linalg_matrix_data_t radius;
     linalg_size_t vortex_count;
     ert_mesh_vortex_s* vertices;
 } ert_mesh_s;
 typedef ert_mesh_s* ert_mesh_t;
 
 // create new mesh
-linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer, linalg_matrix_t boundary);
+linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
+    linalg_matrix_data_t radius);
 
 // cleanup mesh
 linalg_error_t ert_mesh_release(ert_mesh_t* meshPointer);
+
+// create mesh to scalar field
+linalg_error_t ert_mesh_init(ert_mesh_t mesh, linalg_matrix_t field);
 
 #endif

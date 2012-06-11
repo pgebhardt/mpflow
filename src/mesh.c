@@ -21,9 +21,9 @@
 #include "mesh.h"
 
 linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
-    linalg_matrix_t boundary) {
+    linalg_matrix_data_t radius) {
     // check input
-    if ((meshPointer == NULL) || (boundary == NULL)) {
+    if ((meshPointer == NULL) || (radius <= 0.0)) {
         return LINALG_ERROR;
     }
 
@@ -42,9 +42,20 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     }
 
     // init struct
-    mesh->boundary = NULL;
+    mesh->radius = radius;
     mesh->vortex_count = 0;
     mesh->vertices = NULL;
+
+    // create vertex memory
+    mesh->vertices = malloc(ERT_MESH_MAX_VERTICES * sizeof(ert_mesh_vortex_s));
+
+    // check success
+    if (mesh->vertices == NULL) {
+        // cleanup
+        ert_mesh_release(&mesh);
+
+        return LINALG_ERROR;
+    }
 
     // set mesh pointer
     *meshPointer = mesh;
@@ -61,11 +72,6 @@ linalg_error_t ert_mesh_release(ert_mesh_t* meshPointer) {
     // get mesh
     ert_mesh_t mesh = *meshPointer;
 
-    // release boundary matrix
-    if (mesh->boundary != NULL) {
-        linalg_matrix_release(&mesh->boundary);
-    }
-
     // free vertices
     free(mesh->vertices);
 
@@ -74,6 +80,15 @@ linalg_error_t ert_mesh_release(ert_mesh_t* meshPointer) {
 
     // set mesh pointer to NULL
     *meshPointer = NULL;
+
+    return LINALG_SUCCESS;
+}
+
+linalg_error_t ert_mesh_init(ert_mesh_t mesh, linalg_matrix_t field) {
+    // check input
+    if ((mesh == NULL) || (field == NULL)) {
+        return LINALG_ERROR;
+    }
 
     return LINALG_SUCCESS;
 }

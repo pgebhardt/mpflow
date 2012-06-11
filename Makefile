@@ -26,11 +26,11 @@ SRC = src
 BUILD = build
 
 # Object files
-_OBJ = main.o
+_OBJ = main.o mesh.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Dependencies
-_DEPS = 
+_DEPS = mesh.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file
