@@ -18,9 +18,49 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <actor/actor.h>
+
+static actor_process_function_t main_process = ^(actor_process_t self) {
+    printf("Hello World!\n");
+
+    actor_process_sleep(self, 2.0);
+
+    printf("Ende!\n");
+
+    return ACTOR_SUCCESS;
+};
 
 int main(int argc, char* argv[]) {
-    printf("Hallo Welt!\n");
+    // error
+    actor_error_t error = ACTOR_SUCCESS;
+
+    // create node
+    actor_node_t node = NULL;
+    error = actor_node_create(&node, 0, 100);
+
+    // check success
+    if (error != ACTOR_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    // start main process
+    error = actor_spawn(node, NULL, main_process);
+
+    // check success
+    if (error != ACTOR_SUCCESS) {
+        // cleanup
+        actor_node_release(&node);
+
+        return EXIT_FAILURE;
+    }
+
+    // wait for processes to complete
+    while (actor_node_wait_for_processes(node, 10.0) != ACTOR_SUCCESS) {
+        // wait
+    }
+
+    // cleanup
+    actor_node_release(&node);
 
     return EXIT_SUCCESS;
 }
