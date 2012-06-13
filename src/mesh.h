@@ -19,7 +19,7 @@
 #ifndef ERT_MESH_H
 #define ERT_MESH_H
 
-#define ERT_MESH_MAX_VERTICES (2048)
+#define ERT_MESH_MAX_VERTICES (40000)
 
 // mesh struct
 typedef struct {
@@ -31,12 +31,9 @@ typedef ert_mesh_s* ert_mesh_t;
 
 // create new mesh
 linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
-    linalg_matrix_data_t radius);
+    linalg_matrix_data_t radius, linalg_matrix_data_t distance);
 
 // cleanup mesh
 linalg_error_t ert_mesh_release(ert_mesh_t* meshPointer);
-
-// create mesh to scalar field
-linalg_error_t ert_mesh_init(ert_mesh_t mesh, linalg_matrix_t field);
 
 #endif
