@@ -35,18 +35,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
-    // load field
-    linalg_matrix_t field = NULL;
-    error = linalg_matrix_load(&field, "image.txt");
-
-    // check success
-    if (error != LINALG_SUCCESS) {
-        // cleanup
-        ert_mesh_release(&mesh);
-
-        return ACTOR_ERROR;
-    }
-
     // save vertices
     linalg_matrix_save("vertices.txt", mesh->vertices);
 
