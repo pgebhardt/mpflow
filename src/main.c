@@ -28,27 +28,18 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 0.1);
+    error = ert_mesh_create(&mesh, 1.0, 0.05);
 
     // check success
     if (error != LINALG_SUCCESS) {
-        return ACTOR_ERROR;
-    }
-
-    // load field
-    linalg_matrix_t field = NULL;
-    error = linalg_matrix_load(&field, "image.txt");
-
-    // check success
-    if (error != LINALG_SUCCESS) {
-        // cleanup
-        ert_mesh_release(&mesh);
-
         return ACTOR_ERROR;
     }
 
     // save vertices
     linalg_matrix_save("vertices.txt", mesh->vertices);
+
+    // show grid
+    system("python src/script.py");
 
     // cleanup
     ert_mesh_release(&mesh);
