@@ -35,4 +35,8 @@ linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
 // release basis
 linalg_error_t ert_basis_release(ert_basis_t* basisPointer);
 
+// evaluate basis function
+linalg_error_t ert_basis_function(ert_basis_t basis, linalg_matrix_data_t* resultPointer,
+    linalg_matrix_data_t x, linalg_matrix_data_t y);
+
 #endif

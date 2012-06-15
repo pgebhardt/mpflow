@@ -127,3 +127,18 @@ linalg_error_t ert_basis_release(ert_basis_t* basisPointer) {
 
     return LINALG_SUCCESS;
 }
+
+// evaluate basis function
+linalg_error_t ert_basis_function(ert_basis_t basis, linalg_matrix_data_t* resultPointer,
+    linalg_matrix_data_t x, linalg_matrix_data_t y) {
+    // check input
+    if ((basis == NULL) || (resultPointer == NULL)) {
+        return LINALG_ERROR;
+    }
+
+    // calc result
+    *resultPointer = basis->coefficients[0] + basis->coefficients[1] * x +
+        basis->coefficients[2] * y;
+
+    return LINALG_SUCCESS;
+}
