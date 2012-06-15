@@ -26,7 +26,7 @@ SRC = src
 BUILD = build
 
 # Object files
-_OBJ = main.o mesh.o
+_OBJ = main.o mesh.o basis.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Dependencies

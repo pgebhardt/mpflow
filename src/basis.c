@@ -18,7 +18,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 #include <linalg/matrix.h>
 #include <linalg/matrix_operations.h>
 #include "basis.h"
@@ -55,56 +54,68 @@ linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
     basis->gradient[1] = 0.0;
 
     // calc coefficients (A * c = b)
-    linalg_matrix_t A, b, c;
-    error = linalg_matrix_create(&A, 3, 3);
-    error += linalg_matrix_create(&c, 3, 1);
-    error += linalg_matrix_create(&b, 3, 1);
+    linalg_matrix_t Ainv, B, C;
+    error = linalg_matrix_create(&Ainv, 3, 3);
+    error += linalg_matrix_create(&C, 3, 1);
+    error += linalg_matrix_create(&B, 3, 1);
 
     // check success
     if (error != LINALG_SUCCESS) {
         // cleanup
-        linalg_matrix_release(&A);
-        linalg_matrix_release(&c);
-        linalg_matrix_release(&b);
+        linalg_matrix_release(&Ainv);
+        linalg_matrix_release(&C);
+        linalg_matrix_release(&B);
 
         return LINALG_ERROR;
     }
 
-    // fill Matrix A
-    linalg_matrix_set_element(A, 1.0, 0, 0);
-    linalg_matrix_set_element(A, 1.0, 1, 0);
-    linalg_matrix_set_element(A, 1.0, 2, 0);
-    linalg_matrix_set_element(A, Ax, 0, 1);
-    linalg_matrix_set_element(A, Bx, 1, 1);
-    linalg_matrix_set_element(A, Cx, 2, 1);
-    linalg_matrix_set_element(A, Ay, 0, 2);
-    linalg_matrix_set_element(A, By, 1, 2);
-    linalg_matrix_set_element(A, Cy, 2, 2);
-
     // fill result vector b
-    linalg_matrix_set_element(b, 1.0, 0, 0);
-    linalg_matrix_set_element(A, 0.0, 1, 0);
-    linalg_matrix_set_element(A, 0.0, 2, 0);
+    linalg_matrix_set_element(B, 1.0, 0, 0);
+    linalg_matrix_set_element(B, 0.0, 1, 0);
+    linalg_matrix_set_element(B, 0.0, 2, 0);
+
+    // invert matrix A directly
+    linalg_matrix_data_t a, b, c, d, e, f, g, h, i;
+    a = 1.0;
+    b = Ax;
+    c = Ay;
+    d = 1.0;
+    e = Bx;
+    f = By;
+    g = 1.0;
+    h = Cx;
+    i = Cy;
+    linalg_matrix_data_t det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
+
+    linalg_matrix_set_element(Ainv, (e * i - f * h) / det, 0, 0);
+    linalg_matrix_set_element(Ainv, (c * h - b * i) / det, 0, 1);
+    linalg_matrix_set_element(Ainv, (b * f - c * e) / det, 0, 2);
+    linalg_matrix_set_element(Ainv, (f * g - d * i) / det, 1, 0);
+    linalg_matrix_set_element(Ainv, (a * i - c * g) / det, 1, 1);
+    linalg_matrix_set_element(Ainv, (c * d - a * f) / det, 1, 2);
+    linalg_matrix_set_element(Ainv, (d * h - e * g) / det, 2, 0);
+    linalg_matrix_set_element(Ainv, (g * b - a * h) / det, 2, 1);
+    linalg_matrix_set_element(Ainv, (a * e - b * d) / det, 2, 2);
 
     // calc coefficients
-    linalg_matrix_t temp;
-    linalg_matrix_inverse(&temp, A);
-    linalg_matrix_multiply(&c, temp, b);
+    linalg_matrix_multiply(&C, Ainv, B);
+
+    printf("basis zu: A = (%f, %f), B = (%f, %f) C = (%f, %f): %f, %f, %f\n",
+        Ax, Ay, Bx, By, Cx, Cy, C->data[0], C->data[1], C->data[2]);
 
     // save coefficients
-    linalg_matrix_get_element(c, &basis->coefficients[0], 0, 0);
-    linalg_matrix_get_element(c, &basis->coefficients[1], 1, 0);
-    linalg_matrix_get_element(c, &basis->coefficients[2], 2, 0);
+    linalg_matrix_get_element(C, &basis->coefficients[0], 0, 0);
+    linalg_matrix_get_element(C, &basis->coefficients[1], 1, 0);
+    linalg_matrix_get_element(C, &basis->coefficients[2], 2, 0);
 
     // save gradient
     basis->gradient[0] = basis->coefficients[1];
     basis->gradient[1] = basis->coefficients[2];
 
     // cleanup
-    linalg_matrix_release(&temp);
-    linalg_matrix_release(&A);
-    linalg_matrix_release(&b);
-    linalg_matrix_release(&c);
+    linalg_matrix_release(&Ainv);
+    linalg_matrix_release(&B);
+    linalg_matrix_release(&C);
 
     // set basis pointer
     *basisPointer = basis;

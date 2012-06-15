@@ -17,7 +17,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
 #include <linalg/matrix.h>
 #include "mesh.h"
@@ -93,7 +92,6 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
                 // save vertex id in vertex matrix
                 linalg_matrix_set_element(vertices, (linalg_size_t)mesh->vertex_count, i, j);
-
 
                 mesh->vertex_count++;
             }
@@ -231,13 +229,13 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
                 mesh->element_count++;
             }
 
-            // create elements top left
+            /*// create elements top left
             if ((isnan(neighbours[6])) && (!isnan(neighbours[7]))) {
                 linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
                 linalg_matrix_set_element(mesh->elements, neighbours[0], mesh->element_count, 1);
                 linalg_matrix_set_element(mesh->elements, neighbours[7], mesh->element_count, 2);
                 mesh->element_count++;
-            }
+            }*/
         }
     }
 
