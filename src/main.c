@@ -47,24 +47,24 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 0.5);
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 64.0);
 
     // check success
     if (error != LINALG_SUCCESS) {
         return ACTOR_ERROR;
     }
 
-    // save vertices
+    /*// save vertices
     linalg_matrix_save("vertices.txt", mesh->vertices);
 
-    // print elements
-    printf("vertices:\n");
-    print_matrix(mesh->vertices);
-    printf("\nelements:\n");
-    print_matrix(mesh->elements);
+    // save elements
+    linalg_matrix_save("elements.txt", mesh->elements);
 
     // show grid
-    system("python src/script.py");
+    system("python src/script.py");*/
+
+    printf("vertex count: %d\n", mesh->vertex_count);
+    printf("element count: %d\n", mesh->element_count);
 
     // cleanup
     ert_mesh_release(&mesh);
