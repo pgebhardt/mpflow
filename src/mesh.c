@@ -45,8 +45,10 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
     // init struct
     mesh->radius = radius;
-    mesh->vortex_count = 0;
+    mesh->vertex_count = 0;
+    mesh->element_count = 0;
     mesh->vertices = NULL;
+    mesh->elements = NULL;
 
     // create vertex memory
     error = linalg_matrix_create(&mesh->vertices, (linalg_size_t)(mesh->radius * mesh->radius /
@@ -84,13 +86,13 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
             // check point
             if (x * x + y * y <= 1.0) {
                 // set vertex
-                linalg_matrix_set_element(mesh->vertices, x, mesh->vortex_count, 0);
-                linalg_matrix_set_element(mesh->vertices, y, mesh->vortex_count, 1);
+                linalg_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
+                linalg_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);
 
                 // save vertex id in vertex matrix
-                linalg_matrix_set_element(vertices, (linalg_size_t)mesh->vortex_count, i, j);
+                linalg_matrix_set_element(vertices, (linalg_size_t)mesh->vertex_count, i, j);
 
-                mesh->vortex_count++;
+                mesh->vertex_count++;
             }
             else {
                 // invalidate vertex
@@ -100,10 +102,17 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     }
 
     // create elements
-    linalg_matrix_t elements;
-    error = linalg_matrix_create(&elements, vertices->size_x * vertices->size_y * 2, 3);
+    error = linalg_matrix_create(&mesh->elements, vertices->size_x * vertices->size_y * 2, 3);
 
-    linalg_size_t element_count = 0;
+    // check success
+    if (error != LINALG_SUCCESS) {
+        // cleanup
+        linalg_matrix_release(&vertices);
+        ert_mesh_release(&mesh);
+
+        return error;
+    }
+
     linalg_matrix_data_t neighbours[8];
     linalg_matrix_data_t node;
     for (linalg_size_t i = 0; i < vertices->size_x; i++) {
@@ -112,7 +121,7 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
             linalg_matrix_get_element(vertices, &node, i, j);
 
             // check valid node
-            if (node == NAN) {
+            if (isnan(node)) {
                 continue;
             }
 
@@ -170,7 +179,7 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
                 linalg_matrix_get_element(vertices, &neighbours[6], i, j -1);
             }
             else {
-                neighbours[2] = NAN;
+                neighbours[6] = NAN;
             }
 
             // top left
@@ -181,23 +190,83 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
                 neighbours[7] = NAN;
             }
 
-            // create elements in front
-            if ((neighbours[0] != NAN) && (neighbours[1] != NAN)) {
-                linalg_matrix_set_element(elements, node, element_count, 0);
-                linalg_matrix_set_element(elements, neighbours[0], element_count, 1);
-                linalg_matrix_set_element(elements, neighbours[1], element_count, 2);
+            // create elements top right
+            if (!isnan(neighbours[1])) {
+                if (!isnan(neighbours[0])) {
+                    linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                    linalg_matrix_set_element(mesh->elements, neighbours[0],
+                        mesh->element_count, 1);
+                    linalg_matrix_set_element(mesh->elements, neighbours[1],
+                        mesh->element_count, 2);
+
+                    mesh->element_count++;
+                }
+
+                if (!isnan(neighbours[2])) {
+                    linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                    linalg_matrix_set_element(mesh->elements, neighbours[1],
+                        mesh->element_count, 1);
+                    linalg_matrix_set_element(mesh->elements, neighbours[2],
+                        mesh->element_count, 2);
+
+                    mesh->element_count++;
+                }
+            }
+            else if ((!isnan(neighbours[0])) && (!isnan(neighbours[2]))) {
+                linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                linalg_matrix_set_element(mesh->elements, neighbours[0],
+                    mesh->element_count, 1);
+                linalg_matrix_set_element(mesh->elements, neighbours[2],
+                    mesh->element_count, 2);
+
+                mesh->element_count++;
             }
 
+            // create elements bottom right
+            if (!isnan(neighbours[3])) {
+                if (!isnan(neighbours[2])) {
+                    linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                    linalg_matrix_set_element(mesh->elements, neighbours[2],
+                        mesh->element_count, 1);
+                    linalg_matrix_set_element(mesh->elements, neighbours[3],
+                        mesh->element_count, 2);
+
+                    mesh->element_count++;
+                }
+
+                if (!isnan(neighbours[4])) {
+                    linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                    linalg_matrix_set_element(mesh->elements, neighbours[3],
+                        mesh->element_count, 1);
+                    linalg_matrix_set_element(mesh->elements, neighbours[4],
+                        mesh->element_count, 2);
+
+                    mesh->element_count++;
+                }
+            }
+            else if (!isnan((neighbours[2])) && (!isnan(neighbours[4]))) {
+                linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                linalg_matrix_set_element(mesh->elements, neighbours[2], mesh->element_count, 1);
+                linalg_matrix_set_element(mesh->elements, neighbours[4], mesh->element_count, 2);
+                mesh->element_count++;
+            }
+
+            // create elements bottom left
+            if ((isnan(neighbours[6])) && (!isnan(neighbours[5]))) {
+                linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                linalg_matrix_set_element(mesh->elements, neighbours[4], mesh->element_count, 1);
+                linalg_matrix_set_element(mesh->elements, neighbours[5], mesh->element_count, 2);
+                mesh->element_count++;
+            }
+
+            // create elements top left
+            if ((isnan(neighbours[6])) && (!isnan(neighbours[7]))) {
+                linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                linalg_matrix_set_element(mesh->elements, neighbours[7], mesh->element_count, 1);
+                linalg_matrix_set_element(mesh->elements, neighbours[0], mesh->element_count, 2);
+                mesh->element_count++;
+            }
         }
-    }
-
-    // check success
-    if (error != LINALG_SUCCESS) {
-        // cleanup
-        ert_mesh_release(&mesh);
-        linalg_matrix_release(&vertices);
-
-        return error;
     }
 
     // cleanup

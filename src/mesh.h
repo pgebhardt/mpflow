@@ -24,8 +24,10 @@
 // mesh struct
 typedef struct {
     linalg_matrix_data_t radius;
-    linalg_size_t vortex_count;
+    linalg_size_t vertex_count;
+    linalg_size_t element_count;
     linalg_matrix_t vertices;
+    linalg_matrix_t elements;
 } ert_mesh_s;
 typedef ert_mesh_s* ert_mesh_t;
 

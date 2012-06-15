@@ -22,13 +22,32 @@
 #include <linalg/matrix.h>
 #include "mesh.h"
 
+void print_matrix(linalg_matrix_t matrix) {
+    if (matrix == NULL) {
+        return;
+    }
+
+    // value memory
+    linalg_matrix_data_t value = 0.0;
+
+    for (linalg_size_t i = 0; i < matrix->size_x; i++) {
+        for (linalg_size_t j = 0; j < matrix->size_y; j++) {
+            // get value
+            linalg_matrix_get_element(matrix, &value, i, j);
+
+            printf("%f, ", value);
+        }
+        printf("\n");
+    }
+}
+
 static actor_process_function_t main_process = ^(actor_process_t self) {
     // error
     linalg_error_t error = LINALG_SUCCESS;
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 0.125);
+    error = ert_mesh_create(&mesh, 1.0, 0.5);
 
     // check success
     if (error != LINALG_SUCCESS) {
@@ -37,6 +56,12 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // save vertices
     linalg_matrix_save("vertices.txt", mesh->vertices);
+
+    // print elements
+    printf("vertices:\n");
+    print_matrix(mesh->vertices);
+    printf("\nelements:\n");
+    print_matrix(mesh->elements);
 
     // show grid
     system("python src/script.py");
