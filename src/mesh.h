@@ -19,15 +19,15 @@
 #ifndef ERT_MESH_H
 #define ERT_MESH_H
 
-#define ERT_MESH_MAX_VERTICES (40000)
-
 // mesh struct
 typedef struct {
     linalg_matrix_data_t radius;
     linalg_size_t vertex_count;
     linalg_size_t element_count;
+    linalg_size_t boundary_count;
     linalg_matrix_t vertices;
     linalg_matrix_t elements;
+    linalg_matrix_t boundary;
 } ert_mesh_s;
 typedef ert_mesh_s* ert_mesh_t;
 

@@ -47,8 +47,10 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     mesh->radius = radius;
     mesh->vertex_count = 0;
     mesh->element_count = 0;
+    mesh->boundary_count = 0;
     mesh->vertices = NULL;
     mesh->elements = NULL;
+    mesh->boundary = NULL;
 
     // create vertex memory
     error = linalg_matrix_create(&mesh->vertices, (linalg_size_t)(mesh->radius * mesh->radius /
@@ -115,6 +117,7 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
     linalg_matrix_data_t neighbours[8];
     linalg_matrix_data_t node;
+
     for (linalg_size_t i = 0; i < vertices->size_x; i++) {
         for (linalg_size_t j = 0; j < vertices->size_y; j++) {
             // get node
@@ -219,39 +222,6 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
                 mesh->element_count++;
             }
 
-            // TODO ? Geht aber auch bei kreisen ohne!!
-            /*// create elements top right
-            if (!isnan(neighbours[1])) {
-                if (!isnan(neighbours[0])) {
-                    linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                    linalg_matrix_set_element(mesh->elements, neighbours[1],
-                        mesh->element_count, 1);
-                    linalg_matrix_set_element(mesh->elements, neighbours[0],
-                        mesh->element_count, 2);
-
-                    mesh->element_count++;
-                }
-
-                if (!isnan(neighbours[2])) {
-                    linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                    linalg_matrix_set_element(mesh->elements, neighbours[2],
-                        mesh->element_count, 1);
-                    linalg_matrix_set_element(mesh->elements, neighbours[1],
-                        mesh->element_count, 2);
-
-                    mesh->element_count++;
-                }
-            }
-            else if ((!isnan(neighbours[0])) && (!isnan(neighbours[2]))) {
-                linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                linalg_matrix_set_element(mesh->elements, neighbours[2],
-                    mesh->element_count, 1);
-                linalg_matrix_set_element(mesh->elements, neighbours[0],
-                    mesh->element_count, 2);
-
-                mesh->element_count++;
-            }*/
-
             // create elements bottom left
             if ((isnan(neighbours[6])) && (!isnan(neighbours[5]))) {
                 linalg_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
@@ -290,6 +260,12 @@ linalg_error_t ert_mesh_release(ert_mesh_t* meshPointer) {
 
     // cleanup vertices
     linalg_matrix_release(&mesh->vertices);
+
+    // cleanup elements
+    linalg_matrix_release(&mesh->elements);
+
+    // cleanup boundary
+    linalg_matrix_release(&mesh->boundary);
 
     // free struct
     free(mesh);
