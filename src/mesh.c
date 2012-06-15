@@ -94,6 +94,7 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
                 // save vertex id in vertex matrix
                 linalg_matrix_set_element(vertices, (linalg_size_t)mesh->vertex_count, i, j);
 
+
                 mesh->vertex_count++;
             }
             else {
