@@ -19,7 +19,7 @@
 # Copmiler and flags
 CC = clang
 CFLAGS = -fblocks
-LDFLAGS = -lBlocksRuntime -lactor -llinalg -ldispatch -lm
+LDFLAGS = -lactor -llinalg -lm
 
 # Directories
 SRC = src

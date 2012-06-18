@@ -49,7 +49,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0);
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 8.0);
 
     // check success
     if (error != LINALG_SUCCESS) {

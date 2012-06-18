@@ -85,7 +85,7 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
             // calc x and y
             x = mesh->radius - distance * (linalg_matrix_data_t)i +
                 (linalg_matrix_data_t)(j % 2) * 0.5 * distance;
-            y = mesh->radius - r * (linalg_matrix_data_t)j;
+            y = (int)(mesh->radius / r) * r - r * (linalg_matrix_data_t)j;
 
             // check point
             if (x * x + y * y <= mesh->radius) {
