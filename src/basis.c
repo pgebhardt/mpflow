@@ -100,9 +100,6 @@ linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
     // calc coefficients
     linalg_matrix_multiply(&C, Ainv, B);
 
-    printf("basis zu: A = (%f, %f), B = (%f, %f) C = (%f, %f): %f, %f, %f\n",
-        Ax, Ay, Bx, By, Cx, Cy, C->data[0], C->data[1], C->data[2]);
-
     // save coefficients
     linalg_matrix_get_element(C, &basis->coefficients[0], 0, 0);
     linalg_matrix_get_element(C, &basis->coefficients[1], 1, 0);
