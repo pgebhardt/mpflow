@@ -52,7 +52,7 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     mesh->boundary = NULL;
 
     // create vertex memory
-    error = linalg_matrix_create(&mesh->vertices, (linalg_size_t)(mesh->radius * mesh->radius /
+    error = linalg_matrix_create(&mesh->vertices, 2 * (linalg_size_t)(mesh->radius * mesh->radius /
         (0.25 * distance * distance)), 2);
 
     // check success
@@ -66,8 +66,8 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     // create vertex matrix
     linalg_matrix_t vertices;
     linalg_matrix_data_t r = sqrt(3.0 * distance * distance / 4.0);
-    error = linalg_matrix_create(&vertices, (linalg_size_t)(2.0 * mesh->radius / distance + 1),
-        (linalg_size_t)(2.0 * mesh->radius / r + 1));
+    error = linalg_matrix_create(&vertices, (linalg_size_t)(3.0 * mesh->radius / distance + 1),
+        (linalg_size_t)(3.0 * mesh->radius / distance + 1));
 
     // check success
     if (error != LINALG_SUCCESS) {
@@ -83,12 +83,26 @@ linalg_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     for (linalg_size_t i = 0; i < vertices->size_x; i++) {
         for (linalg_size_t j = 0; j < vertices->size_y; j++) {
             // calc x and y
-            x = mesh->radius - distance * (linalg_matrix_data_t)i +
+            x = 1.25 * mesh->radius - distance * (linalg_matrix_data_t)i +
                 (linalg_matrix_data_t)(j % 2) * 0.5 * distance;
-            y = (int)(mesh->radius / r) * r - r * (linalg_matrix_data_t)j;
+            y = (int)(mesh->radius / r + 1) * r - r * (linalg_matrix_data_t)j;
 
             // check point
-            if (x * x + y * y <= mesh->radius) {
+            if (x * x + y * y < mesh->radius) {
+                // set vertex
+                linalg_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
+                linalg_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);
+
+                // save vertex id in vertex matrix
+                linalg_matrix_set_element(vertices, (linalg_size_t)mesh->vertex_count, i, j);
+
+                mesh->vertex_count++;
+            }
+            else if (x * x + y * y < mesh->radius + distance) {
+                // calc new x and y
+                x = x / sqrt(x * x + y * y) * mesh->radius;
+                y = y / sqrt(x * x + y * y) * mesh->radius;
+
                 // set vertex
                 linalg_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
                 linalg_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);

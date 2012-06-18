@@ -77,10 +77,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     // show grid
     system("python src/script.py");
 
-    /*printf("vertex count: %d\n", mesh->vertex_count);
+    printf("vertex count: %d\n", mesh->vertex_count);
     printf("element count: %d\n", mesh->element_count);
-    printf("A: \n");
-    print_matrix(solver->A);*/
 
     // cleanup
     ert_solver_release(&solver);
