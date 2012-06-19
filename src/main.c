@@ -18,24 +18,29 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <actor/actor.h>
-#include <linalg/matrix.h>
-#include "mesh.h"
-#include "basis.h"
-#include "solver.h"
 
-void print_matrix(linalg_matrix_t matrix) {
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
+
+#include <actor/actor.h>
+#include <linalgcl/linalgcl.h>
+#include "mesh.h"
+
+void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
         return;
     }
 
     // value memory
-    linalg_matrix_data_t value = 0.0;
+    linalgcl_matrix_data_t value = 0.0;
 
-    for (linalg_size_t i = 0; i < matrix->size_x; i++) {
-        for (linalg_size_t j = 0; j < matrix->size_y; j++) {
+    for (linalgcl_size_t i = 0; i < matrix->size_x; i++) {
+        for (linalgcl_size_t j = 0; j < matrix->size_y; j++) {
             // get value
-            linalg_matrix_get_element(matrix, &value, i, j);
+            linalgcl_matrix_get_element(matrix, &value, i, j);
 
             printf("%f, ", value);
         }
@@ -45,43 +50,63 @@ void print_matrix(linalg_matrix_t matrix) {
 
 static actor_process_function_t main_process = ^(actor_process_t self) {
     // error
-    linalg_error_t error = LINALG_SUCCESS;
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+    cl_int cl_error = CL_SUCCESS;
+
+    // Connect to a compute device
+    cl_device_id device_id;
+    cl_error = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+
+    if (cl_error != CL_SUCCESS)
+    {
+        printf("Error: Failed to create a device group!\n");
+        return ACTOR_ERROR;
+    }
+
+    // Create a compute context 
+    cl_context context = clCreateContext(0, 1, &device_id, NULL, NULL, &cl_error);
+
+    if (cl_error != CL_SUCCESS)
+    {
+        printf("Error: Failed to create a compute context!\n");
+        return ACTOR_ERROR;
+    }
+
+    // Create a command commands
+    cl_command_queue queue = clCreateCommandQueue(context, device_id, 0, &cl_error);
+
+    if (cl_error != CL_SUCCESS)
+    {
+        printf("Error: Failed to create a command commands!\n");
+        return ACTOR_ERROR;
+    }
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 8.0);
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 8.0, context);
 
     // check success
-    if (error != LINALG_SUCCESS) {
+    if (error != LINALGCL_SUCCESS) {
         return ACTOR_ERROR;
     }
 
-    // create solver
-    ert_solver_t solver = NULL;
-    error = ert_solver_create(&solver, mesh);
-
-    // check success
-    if (error != LINALG_SUCCESS) {
-        // cleanup
-        ert_mesh_release(&mesh);
-
-        return ACTOR_ERROR;
-    }
+    // copy matrices to device
+    linalgcl_matrix_copy_to_device(mesh->vertices, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->elements, queue, CL_TRUE);
 
     // save vertices
-    linalg_matrix_save("vertices.txt", mesh->vertices);
+    linalgcl_matrix_save("vertices.txt", mesh->vertices);
 
     // save elements
-    linalg_matrix_save("elements.txt", mesh->elements);
+    linalgcl_matrix_save("elements.txt", mesh->elements);
 
     // show grid
     system("python src/script.py");
 
-    printf("vertex count: %d\n", mesh->vertex_count);
-    printf("element count: %d\n", mesh->element_count);
-
     // cleanup
-    ert_solver_release(&solver);
+    ert_mesh_release(&mesh);
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
 
     return ACTOR_SUCCESS;
 };
