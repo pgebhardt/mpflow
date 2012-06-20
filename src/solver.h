@@ -38,22 +38,24 @@ typedef ert_solver_grid_s* ert_solver_grid_t;
 
 // solver struct
 typedef struct {
-    ert_mesh_t mesh;
-    linalgcl_matrix_t system_matrix;
-    linalgcl_matrix_t gradient_matrix;
-    linalgcl_matrix_t gradient_matrix_transposed;
-    linalgcl_matrix_t sigma_matrix;
+    ert_solver_grid_t* grids;
+    linalgcl_size_t grid_count;
+    linalgcl_size_t max_grids;
     ert_solver_program_t program;
 } ert_solver_s;
 typedef ert_solver_s* ert_solver_t;
 
 // create solver
-linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
-    cl_context context, cl_command_queue queue, cl_device_id device_id,
-    linalgcl_matrix_program_t program);
+linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
+    linalgcl_size_t max_grids, cl_context context, cl_device_id device_id);
 
 // release solver
 linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
+
+// add coarser grid
+linalgcl_error_t ert_solver_add_coarser_grid(ert_solver_t solver,
+    ert_mesh_t mesh, linalgcl_matrix_program_t matrix_program,
+    cl_context context, cl_command_queue queue);
 
 // create new solver program
 linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
@@ -71,9 +73,7 @@ linalgcl_error_t ert_solver_grid_create(ert_solver_grid_t* gridPointer,
 linalgcl_error_t ert_solver_grid_release(ert_solver_grid_t* gridPointer);
 
 // update system matrix
-linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
-    linalgcl_matrix_t sigma, linalgcl_sparse_matrix_t gradient_matrix_transposed_sparse,
-    linalgcl_sparse_matrix_t system_matrix_sparse,
-    ert_solver_program_t program, cl_command_queue queue);
+linalgcl_error_t ert_solver_update_system_matrix(ert_solver_grid_t grid,
+    ert_solver_t solver, cl_command_queue queue);
 
 #endif

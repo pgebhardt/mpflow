@@ -31,32 +31,11 @@
 #include "mesh.h"
 #include "solver.h"
 
-static void print_matrix(linalgcl_matrix_t matrix) {
-    if (matrix == NULL) {
-        return;
-    }
-
-    // value memory
-    linalgcl_matrix_data_t value = 0.0;
-
-    for (linalgcl_size_t i = 0; i < matrix->size_x; i++) {
-        for (linalgcl_size_t j = 0; j < matrix->size_y; j++) {
-            // get value
-            linalgcl_matrix_get_element(matrix, &value, i, j);
-
-            printf("%f, ", value);
-        }
-        printf("\n");
-    }
-}
-
 // create solver
-linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
-    cl_context context, cl_command_queue queue, cl_device_id device_id,
-    linalgcl_matrix_program_t program) {
+linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
+    linalgcl_size_t max_grids, cl_context context, cl_device_id device_id) {
     // check input
-    if ((solverPointer == NULL) || (mesh == NULL) || (context == NULL) ||
-        (queue == NULL) || (program == NULL)) {
+    if ((solverPointer == NULL) || (context == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -76,23 +55,14 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
     }
 
     // init struct
-    solver->mesh = mesh;
-    solver->system_matrix = NULL;
-    solver->gradient_matrix = NULL;
-    solver->gradient_matrix_transposed = NULL;
-    solver->sigma_matrix = NULL;
+    solver->grids = NULL;
+    solver->grid_count = 0;
+    solver->max_grids = max_grids;
     solver->program = NULL;
 
-    // create matrices
-    error  = linalgcl_matrix_create(&solver->system_matrix, context,
-        solver->mesh->vertex_count, solver->mesh->vertex_count);
-    error += linalgcl_matrix_create(&solver->gradient_matrix, context,
-        2 * solver->mesh->element_count, solver->mesh->vertex_count);
-    error += linalgcl_matrix_create(&solver->gradient_matrix_transposed, context,
-        solver->mesh->vertex_count, 2 * solver->mesh->element_count);
-    error += linalgcl_matrix_unity(&solver->sigma_matrix, context,
-        2 * solver->mesh->element_count);
-    error += linalgcl_matrix_copy_to_device(solver->sigma_matrix, queue, CL_TRUE);
+    // load program
+    error = ert_solver_program_create(&solver->program, context, device_id,
+        "src/solver.cl");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -102,156 +72,16 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
         return error;
     }
 
-    // calc gradient matrix
-    linalgcl_matrix_data_t x[3], y[3];
-    linalgcl_matrix_data_t id[3];
-    ert_basis_t basis[3];
-
-    // init matrices
-    for (linalgcl_size_t i = 0; i < solver->gradient_matrix->size_x; i++) {
-        for (linalgcl_size_t j = 0; j < solver->gradient_matrix->size_y; j++) {
-            linalgcl_matrix_set_element(solver->gradient_matrix, 0.0, i, j);
-            linalgcl_matrix_set_element(solver->gradient_matrix_transposed, 0.0, j, i);
-        }
-    }
-
-    for (linalgcl_size_t k = 0; k < solver->mesh->element_count; k++) {
-        // get vertices for element
-        for (linalgcl_size_t i = 0; i < 3; i++) {
-            linalgcl_matrix_get_element(solver->mesh->elements, &id[i], k, i);
-            linalgcl_matrix_get_element(solver->mesh->vertices, &x[i], (linalgcl_size_t)id[i], 0);
-            linalgcl_matrix_get_element(solver->mesh->vertices, &y[i], (linalgcl_size_t)id[i], 1);
-        }
-
-        // calc corresponding basis functions
-        ert_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        ert_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        ert_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
-
-        // calc matrix elements
-        for (linalgcl_size_t i = 0; i < 3; i++) {
-            linalgcl_matrix_set_element(solver->gradient_matrix,
-                basis[i]->gradient[0], 2 * k, (linalgcl_size_t)id[i]);
-            linalgcl_matrix_set_element(solver->gradient_matrix,
-                basis[i]->gradient[1], 2 * k + 1, (linalgcl_size_t)id[i]);
-            linalgcl_matrix_set_element(solver->gradient_matrix_transposed,
-                basis[i]->gradient[0], (linalgcl_size_t)id[i], 2 * k);
-            linalgcl_matrix_set_element(solver->gradient_matrix_transposed,
-                basis[i]->gradient[1], (linalgcl_size_t)id[i], 2 * k + 1);
-        }
-
-        // cleanup
-        ert_basis_release(&basis[0]);
-        ert_basis_release(&basis[1]);
-        ert_basis_release(&basis[2]);
-    }
-
-    // copy matrices to device
-    linalgcl_matrix_copy_to_device(solver->gradient_matrix, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(solver->gradient_matrix_transposed, queue, CL_TRUE);
-
-    // calc sigma matrix
-    // TODO: non uniform sigma
-
-    // get start time
-    struct timeval tv;
-    double start;
-    gettimeofday(&tv, NULL);
-
-    // convert time
-    start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // calc system matrix
-    linalgcl_matrix_t temp = NULL;
-    linalgcl_matrix_create(&temp, context, solver->mesh->vertex_count,
-        2 * solver->mesh->element_count);
-    error = linalgcl_matrix_multiply(program, queue, temp, solver->gradient_matrix_transposed,
-        solver->sigma_matrix);
-    error += linalgcl_matrix_multiply(program, queue, solver->system_matrix,
-        temp, solver->gradient_matrix);
-
-    clFinish(queue);
-
-    // get end time
-    gettimeofday(&tv, NULL);
-
-    // convert time
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // print time
-    printf("Full matrix time: %f s\n", end - start);
+    // create grid memory
+    solver->grids = malloc(sizeof(ert_solver_grid_s) * solver->max_grids);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (solver->grids == NULL) {
         // cleanup
         ert_solver_release(&solver);
 
         return LINALGCL_ERROR;
     }
-
-    // Test of optimized system matrix assembly
-    // create solver program
-    ert_solver_program_t solver_program = NULL;
-    error = ert_solver_program_create(&solver_program, context, device_id,
-        "src/solver.cl");
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        ert_solver_release(&solver);
-
-        return LINALGCL_ERROR;
-    }
-
-    // create sigma vector
-    linalgcl_matrix_t sigma = NULL;
-    linalgcl_matrix_create(&sigma, context, solver->mesh->element_count, 1);
-
-    // set uniform sigma
-    for (linalgcl_size_t i = 0; i < sigma->size_x; i++) {
-        linalgcl_matrix_set_element(sigma, 1.0, i, 0);
-    }
-
-    // copy to device
-    linalgcl_matrix_copy_to_device(sigma, queue, CL_TRUE);
-
-    // create sparse matrix of gradient_matrix_transposed
-    linalgcl_sparse_matrix_t gradient_matrix_transposed_sparse;
-    linalgcl_sparse_matrix_create(&gradient_matrix_transposed_sparse,
-        solver->gradient_matrix_transposed, program, context, queue);
-
-    // create sparse matrix of system matrix
-    linalgcl_sparse_matrix_t system_matrix_sparse;
-    linalgcl_sparse_matrix_create(&system_matrix_sparse, solver->system_matrix,
-        program, context, queue);
-
-    // get start time
-    gettimeofday(&tv, NULL);
-
-    // convert time
-    start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // update system matrix
-    error = ert_solver_update_system_matrix(solver, sigma,
-        gradient_matrix_transposed_sparse, system_matrix_sparse,
-        solver_program, queue);
-    clFinish(queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        printf("Geht noch nicht!\n");
-
-        return LINALGCL_ERROR;
-    }
-
-    // get end time
-    gettimeofday(&tv, NULL);
-
-    // convert time
-    end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // print time
-    printf("Optimized time: %f s\n", end - start);
 
     // set solver pointer
     *solverPointer = solver;
@@ -270,17 +100,52 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_solver_t solver = *solverPointer;
 
     // cleanup
-    ert_mesh_release(&solver->mesh);
-    linalgcl_matrix_release(&solver->system_matrix);
-    linalgcl_matrix_release(&solver->gradient_matrix);
-    linalgcl_matrix_release(&solver->gradient_matrix_transposed);
-    linalgcl_matrix_release(&solver->sigma_matrix);
+    ert_solver_program_release(&solver->program);
+
+    // release grids
+    for (linalgcl_size_t i = 0; i < solver->grid_count; i++) {
+        ert_solver_grid_release(&solver->grids[i]);
+    }
+    free(solver->grids);
 
     // free struct
     free(solver);
 
     // set solver pointer to NULL
     *solverPointer = NULL;
+
+    return LINALGCL_SUCCESS;
+}
+
+// add coarser grid
+linalgcl_error_t ert_solver_add_coarser_grid(ert_solver_t solver,
+    ert_mesh_t mesh, linalgcl_matrix_program_t matrix_program,
+    cl_context context, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (mesh == NULL) || (matrix_program == NULL) ||
+        (context == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
+    // check grid count
+    if (solver->grid_count == solver->max_grids) {
+        return LINALGCL_ERROR;
+    }
+
+    // add new grid
+    error = ert_solver_grid_create(&solver->grids[solver->grid_count],
+        solver, matrix_program, mesh, context, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
+    }
+
+    // increment grid counter
+    solver->grid_count++;
 
     return LINALGCL_SUCCESS;
 }
@@ -551,6 +416,7 @@ linalgcl_error_t ert_solver_grid_create(ert_solver_grid_t* gridPointer,
     error  = linalgcl_matrix_copy_to_device(gradient_matrix, queue, CL_TRUE);
     error += linalgcl_matrix_copy_to_device(grid->gradient_matrix, queue, CL_TRUE);
     error += linalgcl_matrix_copy_to_device(sigma_matrix, queue, CL_TRUE);
+    error += linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_TRUE);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -602,6 +468,9 @@ linalgcl_error_t ert_solver_grid_create(ert_solver_grid_t* gridPointer,
         return LINALGCL_ERROR;
     }
 
+    // set grid pointer
+    *gridPointer = grid;
+
     return LINALGCL_SUCCESS;
 }
 
@@ -632,15 +501,10 @@ linalgcl_error_t ert_solver_grid_release(ert_solver_grid_t* gridPointer) {
 }
 
 // update system matrix
-linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
-    linalgcl_matrix_t sigma, linalgcl_sparse_matrix_t gradient_matrix_transposed_sparse,
-    linalgcl_sparse_matrix_t system_matrix_sparse,
-    ert_solver_program_t program, cl_command_queue queue) {
+linalgcl_error_t ert_solver_update_system_matrix(ert_solver_grid_t grid,
+    ert_solver_t solver, cl_command_queue queue) {
     // check input
-    if ((solver == NULL) || (sigma == NULL) ||
-        (gradient_matrix_transposed_sparse == NULL) ||
-        (system_matrix_sparse == NULL) ||
-        (program == NULL) || (queue == NULL)) {
+    if ((grid == NULL) || (solver == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -648,20 +512,20 @@ linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
     cl_int cl_error = CL_SUCCESS;
 
     // set kernel arguments
-    cl_error  = clSetKernelArg(program->kernel_update_system_matrix,
-        0, sizeof(cl_mem), &system_matrix_sparse->values->device_data);
-    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
-        1, sizeof(cl_mem), &system_matrix_sparse->column_ids->device_data);
-    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
-        2, sizeof(cl_mem), &gradient_matrix_transposed_sparse->values->device_data);
-    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
-        3, sizeof(cl_mem), &gradient_matrix_transposed_sparse->column_ids->device_data);
-    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
-        4, sizeof(cl_mem), &solver->gradient_matrix_transposed->device_data);
-    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
-        5, sizeof(cl_mem), &sigma->device_data);
-    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
-        6, sizeof(unsigned int), &solver->gradient_matrix_transposed->size_y);
+    cl_error  = clSetKernelArg(solver->program->kernel_update_system_matrix,
+        0, sizeof(cl_mem), &grid->system_matrix->values->device_data);
+    cl_error += clSetKernelArg(solver->program->kernel_update_system_matrix,
+        1, sizeof(cl_mem), &grid->system_matrix->column_ids->device_data);
+    cl_error += clSetKernelArg(solver->program->kernel_update_system_matrix,
+        2, sizeof(cl_mem), &grid->gradient_matrix_sparse->values->device_data);
+    cl_error += clSetKernelArg(solver->program->kernel_update_system_matrix,
+        3, sizeof(cl_mem), &grid->gradient_matrix_sparse->column_ids->device_data);
+    cl_error += clSetKernelArg(solver->program->kernel_update_system_matrix,
+        4, sizeof(cl_mem), &grid->gradient_matrix->device_data);
+    cl_error += clSetKernelArg(solver->program->kernel_update_system_matrix,
+        5, sizeof(cl_mem), &grid->sigma->device_data);
+    cl_error += clSetKernelArg(solver->program->kernel_update_system_matrix,
+        6, sizeof(unsigned int), &grid->gradient_matrix->size_y);
 
     // check success
     if (cl_error != CL_SUCCESS) {
@@ -669,10 +533,11 @@ linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
     }
 
     // execute kernel_update_system_matrix
-    size_t global[2] = { system_matrix_sparse->size_x, LINALGCL_BLOCK_SIZE };
+    size_t global[2] = { grid->system_matrix->size_x, LINALGCL_BLOCK_SIZE };
     size_t local[2] = { LINALGCL_BLOCK_SIZE, LINALGCL_BLOCK_SIZE };
 
-    cl_error = clEnqueueNDRangeKernel(queue, program->kernel_update_system_matrix, 2,
+    cl_error = clEnqueueNDRangeKernel(queue,
+        solver->program->kernel_update_system_matrix, 2,
         NULL, global, local, 0, NULL, NULL);
 
     // check success

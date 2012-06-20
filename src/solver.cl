@@ -20,7 +20,7 @@ __kernel void update_system_matrix(__global float* system_matrix_values,
         id = gradient_matrix_transposed_column_ids[(i * BLOCK_SIZE) + k];
 
         element += gradient_matrix_transposed_values[(i * BLOCK_SIZE) + k] *
-            sigma[id] * gradient_matrix_transposed[(j * element_count) + id];
+            sigma[i] * gradient_matrix_transposed[(j * element_count) + id];
     }
 
     system_matrix_values[(i * BLOCK_SIZE) + get_global_id(1)] = element;
