@@ -18,22 +18,28 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <linalg/matrix.h>
-#include <linalg/matrix_operations.h>
+
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
+
+#include <linalgcl/linalgcl.h>
 #include "basis.h"
 
 // create basis
-linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
-    linalg_matrix_data_t Ax, linalg_matrix_data_t Ay,
-    linalg_matrix_data_t Bx, linalg_matrix_data_t By,
-    linalg_matrix_data_t Cx, linalg_matrix_data_t Cy) {
+linalgcl_error_t ert_basis_create(ert_basis_t* basisPointer,
+    linalgcl_matrix_data_t Ax, linalgcl_matrix_data_t Ay,
+    linalgcl_matrix_data_t Bx, linalgcl_matrix_data_t By,
+    linalgcl_matrix_data_t Cx, linalgcl_matrix_data_t Cy) {
     // check input
     if (basisPointer == NULL) {
-        return LINALG_ERROR;
+        return LINALGCL_ERROR;
     }
 
     // error
-    linalg_error_t error = LINALG_SUCCESS;
+    linalgcl_error_t error = LINALGCL_SUCCESS;
 
     // init basis pointer
     *basisPointer = NULL;
@@ -43,7 +49,7 @@ linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
 
     // check success
     if (basis == NULL) {
-        return LINALG_ERROR;
+        return LINALGCL_ERROR;
     }
 
     // init struct
@@ -54,28 +60,11 @@ linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
     basis->gradient[1] = 0.0;
 
     // calc coefficients (A * c = b)
-    linalg_matrix_t Ainv, B, C;
-    error = linalg_matrix_create(&Ainv, 3, 3);
-    error += linalg_matrix_create(&C, 3, 1);
-    error += linalg_matrix_create(&B, 3, 1);
-
-    // check success
-    if (error != LINALG_SUCCESS) {
-        // cleanup
-        linalg_matrix_release(&Ainv);
-        linalg_matrix_release(&C);
-        linalg_matrix_release(&B);
-
-        return LINALG_ERROR;
-    }
-
-    // fill result vector b
-    linalg_matrix_set_element(B, 1.0, 0, 0);
-    linalg_matrix_set_element(B, 0.0, 1, 0);
-    linalg_matrix_set_element(B, 0.0, 2, 0);
+    linalgcl_matrix_data_t Ainv[3][3];
+    linalgcl_matrix_data_t B[3] = {1.0, 0.0, 0.0};
 
     // invert matrix A directly
-    linalg_matrix_data_t a, b, c, d, e, f, g, h, i;
+    linalgcl_matrix_data_t a, b, c, d, e, f, g, h, i;
     a = 1.0;
     b = Ax;
     c = Ay;
@@ -85,46 +74,38 @@ linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
     g = 1.0;
     h = Cx;
     i = Cy;
-    linalg_matrix_data_t det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
+    linalgcl_matrix_data_t det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
 
-    linalg_matrix_set_element(Ainv, (e * i - f * h) / det, 0, 0);
-    linalg_matrix_set_element(Ainv, (c * h - b * i) / det, 0, 1);
-    linalg_matrix_set_element(Ainv, (b * f - c * e) / det, 0, 2);
-    linalg_matrix_set_element(Ainv, (f * g - d * i) / det, 1, 0);
-    linalg_matrix_set_element(Ainv, (a * i - c * g) / det, 1, 1);
-    linalg_matrix_set_element(Ainv, (c * d - a * f) / det, 1, 2);
-    linalg_matrix_set_element(Ainv, (d * h - e * g) / det, 2, 0);
-    linalg_matrix_set_element(Ainv, (g * b - a * h) / det, 2, 1);
-    linalg_matrix_set_element(Ainv, (a * e - b * d) / det, 2, 2);
+    Ainv[0][0] = (e * i - f * h) / det;
+    Ainv[0][1] = (c * h - b * i) / det;
+    Ainv[0][2] = (b * f - c * e) / det;
+    Ainv[1][0] = (f * g - d * i) / det;
+    Ainv[1][1] = (a * i - c * g) / det;
+    Ainv[1][2] = (c * d - a * f) / det;
+    Ainv[2][0] = (d * h - e * g) / det;
+    Ainv[2][1] = (g * b - a * h) / det;
+    Ainv[2][2] = (a * e - b * d) / det;
 
     // calc coefficients
-    linalg_matrix_multiply(&C, Ainv, B);
-
-    // save coefficients
-    linalg_matrix_get_element(C, &basis->coefficients[0], 0, 0);
-    linalg_matrix_get_element(C, &basis->coefficients[1], 1, 0);
-    linalg_matrix_get_element(C, &basis->coefficients[2], 2, 0);
+    basis->coefficients[0] = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
+    basis->coefficients[1] = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
+    basis->coefficients[2] = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
 
     // save gradient
     basis->gradient[0] = basis->coefficients[1];
     basis->gradient[1] = basis->coefficients[2];
 
-    // cleanup
-    linalg_matrix_release(&Ainv);
-    linalg_matrix_release(&B);
-    linalg_matrix_release(&C);
-
     // set basis pointer
     *basisPointer = basis;
 
-    return LINALG_SUCCESS;
+    return LINALGCL_SUCCESS;
 }
 
 // release basis
-linalg_error_t ert_basis_release(ert_basis_t* basisPointer) {
+linalgcl_error_t ert_basis_release(ert_basis_t* basisPointer) {
     // check input
     if ((basisPointer == NULL) || (*basisPointer == NULL)) {
-        return LINALG_ERROR;
+        return LINALGCL_ERROR;
     }
 
     // free struct
@@ -133,20 +114,20 @@ linalg_error_t ert_basis_release(ert_basis_t* basisPointer) {
     // set basis pointer to NULL
     *basisPointer = NULL;
 
-    return LINALG_SUCCESS;
+    return LINALGCL_SUCCESS;
 }
 
 // evaluate basis function
-linalg_error_t ert_basis_function(ert_basis_t basis, linalg_matrix_data_t* resultPointer,
-    linalg_matrix_data_t x, linalg_matrix_data_t y) {
+linalgcl_error_t ert_basis_function(ert_basis_t basis, linalgcl_matrix_data_t* resultPointer,
+    linalgcl_matrix_data_t x, linalgcl_matrix_data_t y) {
     // check input
     if ((basis == NULL) || (resultPointer == NULL)) {
-        return LINALG_ERROR;
+        return LINALGCL_ERROR;
     }
 
     // calc result
     *resultPointer = basis->coefficients[0] + basis->coefficients[1] * x +
         basis->coefficients[2] * y;
 
-    return LINALG_SUCCESS;
+    return LINALGCL_SUCCESS;
 }

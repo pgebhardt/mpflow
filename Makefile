@@ -19,18 +19,18 @@
 # Copmiler and flags
 CC = clang
 CFLAGS = -fblocks
-LDFLAGS = -lBlocksRuntime -lactor -llinalgcl -lm -ldispatch -lOpenCL
+LDFLAGS = -lactor -llinalgcl -lm -framework OpenCL
 
 # Directories
 SRC = src
 BUILD = build
 
 # Object files
-_OBJ = main.o mesh.o #basis.o solver.o
+_OBJ = main.o mesh.o basis.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Dependencies
-_DEPS = mesh.h #basis.h solver.h
+_DEPS = mesh.h basis.h solver.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file

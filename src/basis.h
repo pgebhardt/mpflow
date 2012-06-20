@@ -21,22 +21,22 @@
 
 // basis struct
 typedef struct {
-    linalg_matrix_data_t coefficients[3];
-    linalg_matrix_data_t gradient[2];
+    linalgcl_matrix_data_t coefficients[3];
+    linalgcl_matrix_data_t gradient[2];
 } ert_basis_s;
 typedef ert_basis_s* ert_basis_t;
 
 // create basis
-linalg_error_t ert_basis_create(ert_basis_t* basisPointer,
-    linalg_matrix_data_t Ax, linalg_matrix_data_t Ay,
-    linalg_matrix_data_t Bx, linalg_matrix_data_t By,
-    linalg_matrix_data_t Cx, linalg_matrix_data_t Cy);
+linalgcl_error_t ert_basis_create(ert_basis_t* basisPointer,
+    linalgcl_matrix_data_t Ax, linalgcl_matrix_data_t Ay,
+    linalgcl_matrix_data_t Bx, linalgcl_matrix_data_t By,
+    linalgcl_matrix_data_t Cx, linalgcl_matrix_data_t Cy);
 
 // release basis
-linalg_error_t ert_basis_release(ert_basis_t* basisPointer);
+linalgcl_error_t ert_basis_release(ert_basis_t* basisPointer);
 
 // evaluate basis function
-linalg_error_t ert_basis_function(ert_basis_t basis, linalg_matrix_data_t* resultPointer,
-    linalg_matrix_data_t x, linalg_matrix_data_t y);
+linalgcl_error_t ert_basis_function(ert_basis_t basis, linalgcl_matrix_data_t* resultPointer,
+    linalgcl_matrix_data_t x, linalgcl_matrix_data_t y);
 
 #endif

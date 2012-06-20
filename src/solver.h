@@ -22,15 +22,18 @@
 // solver struct
 typedef struct {
     ert_mesh_t mesh;
-    linalg_matrix_t A;
-    linalg_matrix_t B;
+    linalgcl_matrix_t system_matrix;
+    linalgcl_matrix_t gradient_matrix;
+    linalgcl_matrix_t gradient_matrix_transposed;
+    linalgcl_matrix_t sigma_matrix;
 } ert_solver_s;
 typedef ert_solver_s* ert_solver_t;
 
 // create solver
-linalg_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh);
+linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
+    cl_context context, cl_command_queue queue, linalgcl_matrix_program_t program);
 
 // release solver
-linalg_error_t ert_solver_release(ert_solver_t* solverPointer);
+linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
 
 #endif

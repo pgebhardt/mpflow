@@ -28,8 +28,10 @@
 #include <actor/actor.h>
 #include <linalgcl/linalgcl.h>
 #include "mesh.h"
+#include "basis.h"
+#include "solver.h"
 
-void print_matrix(linalgcl_matrix_t matrix) {
+static void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
         return;
     }
@@ -80,9 +82,22 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
+    // create matrix program
+    linalgcl_matrix_program_t program = NULL;
+    error = linalgcl_matrix_create_programm(&program, context, device_id,
+        "/usr/local/include/linalgcl/matrix.cl");
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        clReleaseContext(context);
+
+        return ACTOR_ERROR;
+    }
+
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 8.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -97,17 +112,23 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_copy_to_device(mesh->vertices, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh->elements, queue, CL_TRUE);
 
-    // save vertices
-    linalgcl_matrix_save("vertices.txt", mesh->vertices);
+    // create solver
+    ert_solver_t solver;
+    error = ert_solver_create(&solver, mesh, context, queue, program);
 
-    // save elements
-    linalgcl_matrix_save("elements.txt", mesh->elements);
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        printf("Ging nicht!\n");
 
-    // show grid
-    system("python src/script.py");
+        // cleanup
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
+
+        return ACTOR_ERROR;
+    }
 
     // cleanup
-    ert_mesh_release(&mesh);
+    ert_solver_release(&solver);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 
