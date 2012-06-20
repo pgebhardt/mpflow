@@ -53,6 +53,8 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 
 // update system matrix
 linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
-    linalgcl_matrix_t sigma, ert_solver_program_t program, cl_command_queue queue);
+    linalgcl_matrix_t sigma, linalgcl_sparse_matrix_t gradient_matrix_transposed_sparse,
+    linalgcl_sparse_matrix_t system_matrix_sparse,
+    ert_solver_program_t program, cl_command_queue queue);
 
 #endif

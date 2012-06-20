@@ -214,6 +214,21 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
     // copy to device
     linalgcl_matrix_copy_to_device(sigma, queue, CL_TRUE);
 
+    // create sparse matrix of gradient_matrix_transposed
+    linalgcl_sparse_matrix_t gradient_matrix_transposed_sparse;
+    linalgcl_sparse_matrix_create(&gradient_matrix_transposed_sparse,
+        solver->gradient_matrix_transposed, program, context, queue);
+
+    // create sparse matrix of system matrix
+    linalgcl_sparse_matrix_t system_matrix_sparse;
+    linalgcl_sparse_matrix_create(&system_matrix_sparse, solver->system_matrix,
+        program, context, queue);
+
+    // vorher
+    printf("vorher:\n");
+    linalgcl_matrix_copy_to_host(system_matrix_sparse->values, queue, CL_TRUE);
+    //print_matrix(system_matrix_sparse->values);
+
     // get start time
     gettimeofday(&tv, NULL);
 
@@ -221,13 +236,31 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
     start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // update system matrix
-    ert_solver_update_system_matrix(solver, sigma, solver_program, queue);
+    error = ert_solver_update_system_matrix(solver, sigma,
+        gradient_matrix_transposed_sparse, system_matrix_sparse,
+        solver_program, queue);
+    clFinish(queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        printf("Geht noch nicht!\n");
+
+        return LINALGCL_ERROR;
+    }
+
+    // get end time
+    gettimeofday(&tv, NULL);
 
     // convert time
     end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // print time
     printf("Optimized time: %f s\n", end - start);
+
+    // nacher
+    printf("nachher:\n");
+    linalgcl_matrix_copy_to_host(system_matrix_sparse->values, queue, CL_TRUE);
+    //print_matrix(system_matrix_sparse->values);
 
     // set solver pointer
     *solverPointer = solver;
@@ -408,9 +441,50 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 
 // update system matrix
 linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
-    linalgcl_matrix_t sigma, ert_solver_program_t program, cl_command_queue queue) {
+    linalgcl_matrix_t sigma, linalgcl_sparse_matrix_t gradient_matrix_transposed_sparse,
+    linalgcl_sparse_matrix_t system_matrix_sparse,
+    ert_solver_program_t program, cl_command_queue queue) {
     // check input
-    if ((solver == NULL) || (sigma == NULL) || (program == NULL) || (queue == NULL)) {
+    if ((solver == NULL) || (sigma == NULL) ||
+        (gradient_matrix_transposed_sparse == NULL) ||
+        (system_matrix_sparse == NULL) ||
+        (program == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(program->kernel_update_system_matrix,
+        0, sizeof(cl_mem), &system_matrix_sparse->values->device_data);
+    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
+        1, sizeof(cl_mem), &system_matrix_sparse->column_ids->device_data);
+    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
+        2, sizeof(cl_mem), &gradient_matrix_transposed_sparse->values->device_data);
+    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
+        3, sizeof(cl_mem), &gradient_matrix_transposed_sparse->column_ids->device_data);
+    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
+        4, sizeof(cl_mem), &solver->gradient_matrix_transposed->device_data);
+    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
+        5, sizeof(cl_mem), &sigma->device_data);
+    cl_error += clSetKernelArg(program->kernel_update_system_matrix,
+        6, sizeof(unsigned int), &solver->gradient_matrix_transposed->size_y);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global[2] = { system_matrix_sparse->size_x, LINALGCL_BLOCK_SIZE };
+    size_t local[2] = { LINALGCL_BLOCK_SIZE, LINALGCL_BLOCK_SIZE };
+
+    cl_error = clEnqueueNDRangeKernel(queue, program->kernel_update_system_matrix, 2,
+        NULL, global, local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
         return LINALGCL_ERROR;
     }
 
