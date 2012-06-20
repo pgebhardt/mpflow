@@ -384,7 +384,7 @@ linalgcl_error_t ert_solver_grid_create(ert_solver_grid_t* gridPointer,
         }
     }
 
-    linalgcl_matrix_data_t s, a, b, c, area;
+    linalgcl_matrix_data_t area;
 
     for (linalgcl_size_t k = 0; k < grid->mesh->element_count; k++) {
         // get vertices for element
@@ -412,11 +412,8 @@ linalgcl_error_t ert_solver_grid_create(ert_solver_grid_t* gridPointer,
         }
 
         // calc area of element
-        a = sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2]));
-        b = sqrt((x[2] - x[0]) * (x[2] - x[0]) + (y[2] - y[0]) * (y[2] - y[0]));
-        c = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
-        s = (a + b + c) / 2.0;
-        area = sqrt(s * (s - a) * (s - b) * (s - c));
+        area = 0.5 * fabs((x[1] - x[0]) * (y[2] - y[0]) -
+            (x[2] - x[0]) * (y[1] - y[0]));
 
         linalgcl_matrix_set_element(grid->area, area, k, 0);
         linalgcl_matrix_set_element(sigma_matrix, area, 2 * k, 2 * k);
