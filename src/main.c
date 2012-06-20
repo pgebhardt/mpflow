@@ -120,8 +120,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     // get start time
     struct timeval tv;
     gettimeofday(&tv, NULL);
-
-    // convert time
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     error += ert_solver_add_coarser_grid(solver, mesh, program,
@@ -139,8 +137,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // get end time
     gettimeofday(&tv, NULL);
-
-    // convert time
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // print time
@@ -148,8 +144,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // get start time
     gettimeofday(&tv, NULL);
-
-    // convert time
     start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // update_system_matrix
@@ -158,8 +152,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // get end time
     gettimeofday(&tv, NULL);
-
-    // convert time
     end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // print time

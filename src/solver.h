@@ -33,6 +33,7 @@ typedef struct {
     linalgcl_sparse_matrix_t gradient_matrix_sparse;
     linalgcl_matrix_t gradient_matrix;
     linalgcl_matrix_t sigma;
+    linalgcl_matrix_t area;
 } ert_solver_grid_s;
 typedef ert_solver_grid_s* ert_solver_grid_t;
 
