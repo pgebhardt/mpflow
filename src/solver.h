@@ -29,11 +29,30 @@ typedef struct {
 } ert_solver_s;
 typedef ert_solver_s* ert_solver_t;
 
+// solver program struct
+typedef struct {
+    cl_program program;
+    cl_kernel kernel_update_system_matrix;
+} ert_solver_program_s;
+typedef ert_solver_program_s* ert_solver_program_t;
+
 // create solver
 linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
-    cl_context context, cl_command_queue queue, linalgcl_matrix_program_t program);
+    cl_context context, cl_command_queue queue, cl_device_id device_id,
+    linalgcl_matrix_program_t program);
 
 // release solver
 linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
+
+// create new solver program
+linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
+    cl_context context, cl_device_id device_id, const char* path);
+
+// release solver program
+linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer);
+
+// update system matrix
+linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
+    linalgcl_matrix_t sigma, ert_solver_program_t program, cl_command_queue queue);
 
 #endif

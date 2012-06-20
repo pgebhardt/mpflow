@@ -52,7 +52,8 @@ static void print_matrix(linalgcl_matrix_t matrix) {
 
 // create solver
 linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
-    cl_context context, cl_command_queue queue, linalgcl_matrix_program_t program) {
+    cl_context context, cl_command_queue queue, cl_device_id device_id,
+    linalgcl_matrix_program_t program) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (context == NULL) ||
         (queue == NULL) || (program == NULL)) {
@@ -177,7 +178,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // print time
-    printf("Time: %f s\n", end - start);
+    printf("Full matrix time: %f s\n", end - start);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -186,6 +187,47 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
 
         return LINALGCL_ERROR;
     }
+
+    // Test of optimized system matrix assembly
+    // create solver program
+    ert_solver_program_t solver_program = NULL;
+    error = ert_solver_program_create(&solver_program, context, device_id,
+        "src/solver.cl");
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_release(&solver);
+
+        return LINALGCL_ERROR;
+    }
+
+    // create sigma vector
+    linalgcl_matrix_t sigma = NULL;
+    linalgcl_matrix_create(&sigma, context, solver->mesh->element_count, 1);
+
+    // set uniform sigma
+    for (linalgcl_size_t i = 0; i < sigma->size_x; i++) {
+        linalgcl_matrix_set_element(sigma, 1.0, i, 0);
+    }
+
+    // copy to device
+    linalgcl_matrix_copy_to_device(sigma, queue, CL_TRUE);
+
+    // get start time
+    gettimeofday(&tv, NULL);
+
+    // convert time
+    start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // update system matrix
+    ert_solver_update_system_matrix(solver, sigma, solver_program, queue);
+
+    // convert time
+    end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // print time
+    printf("Optimized time: %f s\n", end - start);
 
     // set solver pointer
     *solverPointer = solver;
@@ -219,3 +261,158 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     return LINALGCL_SUCCESS;
 }
 
+// create new solver program
+linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
+    cl_context context, cl_device_id device_id, const char* path) {
+    // check input
+    if ((programPointer == NULL) || (context == NULL) || (path == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+    linalgcl_error_t linalgcl_error = LINALGCL_SUCCESS;
+
+    // init program pointer
+    *programPointer = NULL;
+
+    // create program struct
+    ert_solver_program_t program = malloc(sizeof(ert_solver_program_s));
+
+    // check success
+    if (program == NULL) {
+        return LINALGCL_ERROR;
+    }
+
+    // init struct
+    program->program = NULL;
+    program->kernel_update_system_matrix = NULL;
+
+    // read program file
+    // open file
+    FILE* file = fopen(path, "r");
+
+    // check success
+    if (file == NULL) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // get file length
+    linalgcl_size_t length = 0;
+    fseek(file, 0, SEEK_END);
+    length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // allocate buffer
+    char* buffer = malloc(sizeof(char) * length);
+
+    // check success
+    if (buffer == NULL) {
+        // cleanup
+        fclose(file);
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // fread file
+    if (fread(buffer, sizeof(char), length, file) != length) {
+        // cleanup
+        free(buffer);
+        fclose(file);
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // close file
+    fclose(file);
+
+    // create program from source buffer
+    program->program = clCreateProgramWithSource(context, 1,
+        (const char**)&buffer, NULL, &cl_error);
+    free(buffer);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // build program
+    cl_error = clBuildProgram(program->program, 0, NULL, NULL, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // print build error log
+        char buffer[2048];
+        clGetProgramBuildInfo(program->program, device_id, CL_PROGRAM_BUILD_LOG,
+            sizeof(buffer), buffer, NULL);
+        printf("%s\n", buffer);
+
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // create kernel
+    program->kernel_update_system_matrix = clCreateKernel(program->program,
+        "update_system_matrix", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // set program pointer
+    *programPointer = program;
+
+    return LINALGCL_SUCCESS;
+}
+
+// release solver program
+linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer) {
+    // check input
+    if ((programPointer == NULL) || (*programPointer == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // get program
+    ert_solver_program_t program = *programPointer;
+
+    if (program->program != NULL) {
+        clReleaseProgram(program->program);
+    }
+
+    if (program->kernel_update_system_matrix != NULL) {
+        clReleaseKernel(program->kernel_update_system_matrix);
+    }
+
+    // free struct
+    free(program);
+
+    // set program pointer to NULL
+    *programPointer = NULL;
+
+    return LINALGCL_SUCCESS;
+}
+
+// update system matrix
+linalgcl_error_t ert_solver_update_system_matrix(ert_solver_t solver,
+    linalgcl_matrix_t sigma, ert_solver_program_t program, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (sigma == NULL) || (program == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}

@@ -114,7 +114,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // create solver
     ert_solver_t solver;
-    error = ert_solver_create(&solver, mesh, context, queue, program);
+    error = ert_solver_create(&solver, mesh, context, queue, device_id,
+        program);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
