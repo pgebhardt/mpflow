@@ -224,11 +224,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
     linalgcl_sparse_matrix_create(&system_matrix_sparse, solver->system_matrix,
         program, context, queue);
 
-    // vorher
-    printf("vorher:\n");
-    linalgcl_matrix_copy_to_host(system_matrix_sparse->values, queue, CL_TRUE);
-    //print_matrix(system_matrix_sparse->values);
-
     // get start time
     gettimeofday(&tv, NULL);
 
@@ -256,11 +251,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
 
     // print time
     printf("Optimized time: %f s\n", end - start);
-
-    // nacher
-    printf("nachher:\n");
-    linalgcl_matrix_copy_to_host(system_matrix_sparse->values, queue, CL_TRUE);
-    //print_matrix(system_matrix_sparse->values);
 
     // set solver pointer
     *solverPointer = solver;
