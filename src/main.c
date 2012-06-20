@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #ifdef __APPLE__
 #include <OpenCL/opencl.h>
@@ -114,19 +115,55 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // create solver
     ert_solver_t solver;
-    error = ert_solver_create(&solver, mesh, context, queue, device_id,
-        program);
+    error = ert_solver_create(&solver, 2, context, device_id);
+
+    // get start time
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
+    // convert time
+    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    error += ert_solver_add_coarser_grid(solver, mesh, program,
+        context, queue);
+    clFinish(queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        printf("Ging nicht!\n");
-
         // cleanup
         clReleaseCommandQueue(queue);
         clReleaseContext(context);
 
         return ACTOR_ERROR;
     }
+
+    // get end time
+    gettimeofday(&tv, NULL);
+
+    // convert time
+    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // print time
+    printf("Grid setup time:  %f s\n", end - start);
+
+    // get start time
+    gettimeofday(&tv, NULL);
+
+    // convert time
+    start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // update_system_matrix
+    ert_solver_update_system_matrix(solver->grids[0], solver, queue);
+    clFinish(queue);
+
+    // get end time
+    gettimeofday(&tv, NULL);
+
+    // convert time
+    end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // print time
+    printf("Grid update time: %f s\n", end - start);
 
     // cleanup
     ert_solver_release(&solver);
