@@ -81,6 +81,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer, ert_mesh_t mesh,
     solver->gradient_matrix = NULL;
     solver->gradient_matrix_transposed = NULL;
     solver->sigma_matrix = NULL;
+    solver->program = NULL;
 
     // create matrices
     error  = linalgcl_matrix_create(&solver->system_matrix, context,
@@ -425,6 +426,207 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 
     // set program pointer to NULL
     *programPointer = NULL;
+
+    return LINALGCL_SUCCESS;
+}
+
+// create solver grid
+linalgcl_error_t ert_solver_grid_create(ert_solver_grid_t* gridPointer,
+    ert_solver_t solver, linalgcl_matrix_program_t matrix_program,
+    ert_mesh_t mesh, cl_context context, cl_command_queue queue) {
+    // check input
+    if ((gridPointer == NULL) || (solver == NULL) || (mesh == NULL) ||
+        (context == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
+    // init grid pointer
+    *gridPointer = NULL;
+
+    // create grid struct
+    ert_solver_grid_t grid = malloc(sizeof(ert_solver_grid_s));
+
+    // check success
+    if (grid == NULL) {
+        return LINALGCL_ERROR;
+    }
+
+    // init struct
+    grid->mesh = mesh;
+    grid->system_matrix = NULL;
+    grid->gradient_matrix_sparse = NULL;
+    grid->gradient_matrix = NULL;
+    grid->sigma = NULL;
+
+    // create sigma vector
+    error  = linalgcl_matrix_create(&grid->sigma, context,
+        grid->mesh->element_count, 1);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_grid_release(&grid);
+
+        return error;
+    }
+
+    // init to uniform sigma
+    for (linalgcl_size_t i = 0; i < grid->sigma->size_x; i++) {
+        if (i < grid->mesh->element_count) {
+            linalgcl_matrix_set_element(grid->sigma, 1.0, i, 0);
+        }
+        else {
+            linalgcl_matrix_set_element(grid->sigma, 0.0, i, 0);
+        }
+    }
+
+    // calc initial system matrix
+    // create matrices
+    linalgcl_matrix_t system_matrix, gradient_matrix, sigma_matrix;
+    error = linalgcl_matrix_create(&system_matrix, context,
+        grid->mesh->vertex_count, grid->mesh->vertex_count);
+    error += linalgcl_matrix_create(&gradient_matrix, context,
+        2 * grid->mesh->element_count, grid->mesh->vertex_count);
+    error += linalgcl_matrix_create(&grid->gradient_matrix, context,
+        grid->mesh->vertex_count, 2 * grid->mesh->element_count);
+    error += linalgcl_matrix_unity(&sigma_matrix, context,
+        2 * grid->mesh->element_count);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_grid_release(&grid);
+
+        return LINALGCL_ERROR;
+    }
+
+    // calc gradient matrix
+    linalgcl_matrix_data_t x[3], y[3];
+    linalgcl_matrix_data_t id[3];
+    ert_basis_t basis[3];
+
+    // init matrices
+    for (linalgcl_size_t i = 0; i < gradient_matrix->size_x; i++) {
+        for (linalgcl_size_t j = 0; j < gradient_matrix->size_y; j++) {
+            linalgcl_matrix_set_element(gradient_matrix, 0.0, i, j);
+            linalgcl_matrix_set_element(grid->gradient_matrix, 0.0, j, i);
+        }
+    }
+
+    for (linalgcl_size_t k = 0; k < grid->mesh->element_count; k++) {
+        // get vertices for element
+        for (linalgcl_size_t i = 0; i < 3; i++) {
+            linalgcl_matrix_get_element(grid->mesh->elements, &id[i], k, i);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &x[i], (linalgcl_size_t)id[i], 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &y[i], (linalgcl_size_t)id[i], 1);
+        }
+
+        // calc corresponding basis functions
+        ert_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        ert_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        ert_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+
+        // calc matrix elements
+        for (linalgcl_size_t i = 0; i < 3; i++) {
+            linalgcl_matrix_set_element(gradient_matrix,
+                basis[i]->gradient[0], 2 * k, (linalgcl_size_t)id[i]);
+            linalgcl_matrix_set_element(gradient_matrix,
+                basis[i]->gradient[1], 2 * k + 1, (linalgcl_size_t)id[i]);
+            linalgcl_matrix_set_element(grid->gradient_matrix,
+                basis[i]->gradient[0], (linalgcl_size_t)id[i], 2 * k);
+            linalgcl_matrix_set_element(grid->gradient_matrix,
+                basis[i]->gradient[1], (linalgcl_size_t)id[i], 2 * k + 1);
+        }
+
+        // cleanup
+        ert_basis_release(&basis[0]);
+        ert_basis_release(&basis[1]);
+        ert_basis_release(&basis[2]);
+    }
+
+    // copy matrices to device
+    error  = linalgcl_matrix_copy_to_device(gradient_matrix, queue, CL_TRUE);
+    error += linalgcl_matrix_copy_to_device(grid->gradient_matrix, queue, CL_TRUE);
+    error += linalgcl_matrix_copy_to_device(sigma_matrix, queue, CL_TRUE);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        linalgcl_matrix_release(&system_matrix);
+        linalgcl_matrix_release(&gradient_matrix);
+        linalgcl_matrix_release(&sigma_matrix);
+        ert_solver_grid_release(&grid);
+
+        return LINALGCL_ERROR;
+    }
+
+    // calc system matrix
+    linalgcl_matrix_t temp = NULL;
+    error = linalgcl_matrix_create(&temp, context, grid->mesh->vertex_count,
+        2 * grid->mesh->element_count);
+    error += linalgcl_matrix_multiply(matrix_program, queue, temp,
+        grid->gradient_matrix, sigma_matrix);
+    error += linalgcl_matrix_multiply(matrix_program, queue, system_matrix,
+        temp, gradient_matrix);
+
+    // cleanup
+    linalgcl_matrix_release(&sigma_matrix);
+    linalgcl_matrix_release(&gradient_matrix);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        linalgcl_matrix_release(&system_matrix);
+        ert_solver_grid_release(&grid);
+
+        return LINALGCL_ERROR;
+    }
+
+    // create sparse matrices
+    error = linalgcl_sparse_matrix_create(&grid->system_matrix, system_matrix,
+        matrix_program, context, queue);
+    error += linalgcl_sparse_matrix_create(&grid->gradient_matrix_sparse,
+        grid->gradient_matrix, matrix_program, context, queue);
+
+    // cleanup
+    linalgcl_matrix_release(&system_matrix);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_grid_release(&grid);
+
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
+// release solver grid
+linalgcl_error_t ert_solver_grid_release(ert_solver_grid_t* gridPointer) {
+    // check input
+    if ((gridPointer == NULL) || (*gridPointer == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // get grid
+    ert_solver_grid_t grid = *gridPointer;
+
+    // cleanup
+    ert_mesh_release(&grid->mesh);
+    linalgcl_sparse_matrix_release(&grid->system_matrix);
+    linalgcl_matrix_release(&grid->gradient_matrix);
+    linalgcl_sparse_matrix_release(&grid->gradient_matrix_sparse);
+    linalgcl_matrix_release(&grid->sigma);
+
+    // free struct
+    free(grid);
+
+    // set grid pointer to NULL
+    *gridPointer = NULL;
 
     return LINALGCL_SUCCESS;
 }
