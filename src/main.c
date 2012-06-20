@@ -57,36 +57,39 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     cl_device_id device_id;
     cl_error = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
 
-    if (cl_error != CL_SUCCESS)
-    {
-        printf("Error: Failed to create a device group!\n");
+    // check success
+    if (cl_error != CL_SUCCESS) {
         return ACTOR_ERROR;
     }
 
     // Create a compute context 
     cl_context context = clCreateContext(0, 1, &device_id, NULL, NULL, &cl_error);
 
-    if (cl_error != CL_SUCCESS)
-    {
-        printf("Error: Failed to create a compute context!\n");
+    // check success
+    if (cl_error != CL_SUCCESS) {
         return ACTOR_ERROR;
     }
 
     // Create a command commands
     cl_command_queue queue = clCreateCommandQueue(context, device_id, 0, &cl_error);
 
-    if (cl_error != CL_SUCCESS)
-    {
-        printf("Error: Failed to create a command commands!\n");
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        clReleaseContext(context);
+
         return ACTOR_ERROR;
     }
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 8.0, context);
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        clReleaseContext(context);
+        clReleaseCommandQueue(queue);
+
         return ACTOR_ERROR;
     }
 
