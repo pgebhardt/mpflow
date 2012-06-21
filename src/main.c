@@ -98,7 +98,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 1.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -139,6 +139,10 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
+    linalgcl_matrix_copy_to_host(solver->grids[0]->system_matrix->values, queue, CL_TRUE);
+    printf("vorher\n");
+    print_matrix(solver->grids[0]->system_matrix->values);
+
     // print time
     printf("Grid setup time:  %f s\n", end - start);
 
@@ -156,6 +160,10 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // print time
     printf("Grid update time: %f s\n", end - start);
+
+    linalgcl_matrix_copy_to_host(solver->grids[0]->system_matrix->values, queue, CL_TRUE);
+    printf("nachher\n");
+    print_matrix(solver->grids[0]->system_matrix->values);
 
     // cleanup
     ert_solver_release(&solver);
