@@ -30,6 +30,7 @@
 #include <linalgcl/linalgcl.h>
 #include "mesh.h"
 #include "basis.h"
+#include "grid.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -147,7 +148,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // update_system_matrix
-    ert_solver_update_system_matrix(solver->grids[0], solver, queue);
+    ert_grid_update_system_matrix(solver->grids[0], solver->grid_program, queue);
     clFinish(queue);
 
     // get end time
