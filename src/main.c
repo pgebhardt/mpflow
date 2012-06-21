@@ -158,6 +158,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     printf("Grid update time: %f s\n", end - start);
     printf("vertex count: %d\n", solver->grids[0]->mesh->vertex_count);
     printf("element count: %d\n", solver->grids[0]->mesh->element_count);
+    linalgcl_matrix_save("vertices.txt", solver->grids[0]->mesh->vertices);
 
     // cleanup
     ert_solver_release(&solver);
