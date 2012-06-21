@@ -97,7 +97,7 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
             y = (int)(mesh->radius / r + 1) * r - r * (linalgcl_matrix_data_t)j;
 
             // check point
-            if (x * x + y * y < mesh->radius) {
+            if (x * x + y * y < mesh->radius - 0.5 * distance) {
                 // set vertex
                 linalgcl_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
                 linalgcl_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);
@@ -124,6 +124,60 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
             else {
                 // invalidate vertex
                 linalgcl_matrix_set_element(vertices, NAN, i, j);
+            }
+        }
+    }
+
+    // create boundary matrix
+    error = linalgcl_matrix_create(&mesh->boundary, context,
+        (linalgcl_size_t)(3.0 * M_PI * mesh->radius / distance), 1);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        linalgcl_matrix_release(&vertices);
+        ert_mesh_release(&mesh);
+
+        return error;
+    }
+
+    // get boundary vertices
+    // look from right to left
+    linalgcl_matrix_data_t id = NAN;
+
+    for (linalgcl_size_t i = 0; i < vertices->size_x; i++) {
+        for (linalgcl_size_t j = 0; j < vertices->size_y; j++) {
+            // get vertex id
+            linalgcl_matrix_get_element(vertices, &id, i, j);
+
+            // check elements
+            if (!isnan(id)) {
+                // add new boundary vertex
+                linalgcl_matrix_set_element(mesh->boundary, id, mesh->boundary_count, 0);
+
+                // increment boundary count
+                mesh->boundary_count++;
+
+                break;
+            }
+        }
+    }
+
+    // look from left to right
+    for (int i = vertices->size_x - 1; i >= 0; i--) {
+        for (int j = vertices->size_y - 1; j >= 0; j--) {
+            // get vertex id
+            linalgcl_matrix_get_element(vertices, &id, i, j);
+
+            // check elements
+            if ((!isnan(id)) && (id != mesh->boundary->host_data[mesh->boundary_count - 1])) {
+                // add new boundary vertex
+                linalgcl_matrix_set_element(mesh->boundary, id, mesh->boundary_count, 0);
+
+                // increment boundary count
+                mesh->boundary_count++;
+
+                break;
             }
         }
     }
