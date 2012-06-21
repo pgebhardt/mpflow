@@ -98,7 +98,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // create mesh
     ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 12.0, context);
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -156,10 +156,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // print time
     printf("Grid update time: %f s\n", end - start);
-
-    linalgcl_matrix_save("vertices.txt", solver->grids[0]->mesh->vertices);
-    linalgcl_matrix_save("elements.txt", solver->grids[0]->mesh->elements);
-    system("python src/script.py");
+    printf("vertex count: %d\n", solver->grids[0]->mesh->vertex_count);
+    printf("element count: %d\n", solver->grids[0]->mesh->element_count);
 
     // cleanup
     ert_solver_release(&solver);

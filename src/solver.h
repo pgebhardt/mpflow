@@ -30,6 +30,7 @@ typedef ert_solver_program_s* ert_solver_program_t;
 typedef struct {
     ert_mesh_t mesh;
     linalgcl_sparse_matrix_t system_matrix;
+    linalgcl_matrix_t exitation_matrix;
     linalgcl_sparse_matrix_t gradient_matrix_sparse;
     linalgcl_matrix_t gradient_matrix;
     linalgcl_matrix_t sigma;
