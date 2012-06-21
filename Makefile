@@ -16,10 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# get os name
+UNAME = $(shell uname)
+
 # Copmiler and flags
 CC = clang
 CFLAGS = -fblocks
-LDFLAGS = -lactor -llinalgcl -lm -framework OpenCL
+
+# linux libraries
+ifeq ($(UNAME), Linux)
+LDFLAGS = -lBlocksRuntime -lactor -llinalgcl -lm -ldispatch -lamdocl64
+endif
+
+# osx libraries
+ifeq ($(UNAME), Darwin)
+LDFLAGS = -lactor -llinalgcl -lm -framework opencl
+endif
 
 # Directories
 SRC = src
