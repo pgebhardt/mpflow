@@ -544,10 +544,8 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
                              sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2])));
 
             // set matrix element
-            if (((x[1] <= electrode_end[0]) && (y[1] <= electrode_end[1]) && (x[1] >= electrode_start[0]) && (y[1] >= electrode_start[1])) ||
-                ((x[1] <= electrode_end[0]) && (y[1] >= electrode_end[1]) && (x[1] >= electrode_start[0]) && (y[1] <= electrode_start[1])) ||
-                ((x[1] >= electrode_end[0]) && (y[1] <= electrode_end[1]) && (x[1] <= electrode_start[0]) && (y[1] >= electrode_start[1])) ||
-                ((x[1] >= electrode_end[0]) && (y[1] >= electrode_end[1]) && (x[1] <= electrode_start[0]) && (y[1] <= electrode_start[1]))) {
+            if ((x[1] >= fmin(electrode_start[0], electrode_end[0])) && (x[1] <= fmax(electrode_start[0], electrode_end[0])) &&
+                (y[1] >= fmin(electrode_start[1], electrode_end[1])) && (y[1] <= fmax(electrode_start[1], electrode_end[1]))) {
                 linalgcl_matrix_set_element(grid->exitation_matrix, element, (linalgcl_size_t)id[0], i);
             }
         }
