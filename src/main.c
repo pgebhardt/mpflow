@@ -132,28 +132,17 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
-    // get start time
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
     // update_system_matrix
     ert_grid_update_system_matrix(solver->grids[0], solver->grid_program, queue);
-    clFinish(queue);
 
-    // get end time
-    gettimeofday(&tv, NULL);
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // print time
-    printf("Grid update time: %f s\n", end - start);
-    printf("vertex count: %d\n", solver->grids[0]->mesh->vertex_count);
-    printf("element count: %d\n", solver->grids[0]->mesh->element_count);
-    linalgcl_matrix_save("vertices.txt", solver->grids[0]->mesh->vertices);
+    // calc phi
+    char buffer[1024];
+    sprintf(buffer, "python src/script.py %d %d", mesh->vertex_count, 10);
+    system(buffer);
 
     // create image
     ert_image_t image = NULL;
-    error = ert_image_create(&image, 100, 100, mesh, context, device_id);
+    error = ert_image_create(&image, 1000, 1000, mesh, context, device_id);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -162,14 +151,22 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     }
 
     // calc image
+    linalgcl_matrix_t phi = NULL;
+    linalgcl_matrix_load(&phi, context, queue, "phi.txt");
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
-    error = ert_image_calc(image, mesh->vertices, queue);
+
+    error = ert_image_calc(image, phi, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
         printf("Bild berechnen geht nicht!\n");
         return ACTOR_ERROR;
     }
+
+    // save image
+    clFinish(queue);
+    linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
+    linalgcl_matrix_save("image.txt", image->image);
 
     // cleanup
     ert_solver_release(&solver);

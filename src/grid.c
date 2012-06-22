@@ -389,11 +389,6 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
         return LINALGCL_ERROR;
     }
 
-    // get start time
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
     // calc system matrix
     linalgcl_matrix_t temp = NULL;
     error = linalgcl_matrix_create(&temp, context, grid->mesh->vertex_count,
@@ -403,13 +398,6 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     error += linalgcl_matrix_multiply(matrix_program, queue, system_matrix,
         temp, gradient_matrix);
     clFinish(queue);
-
-    // get end time
-    gettimeofday(&tv, NULL);
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // print time
-    printf("Grid setup time:  %f s\n", end - start);
 
     // cleanup
     linalgcl_matrix_release(&sigma_matrix);
@@ -564,6 +552,10 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
             }
         }
     }
+
+    // upload matrix
+    linalgcl_matrix_copy_to_device(grid->exitation_matrix, queue, CL_FALSE);
+
     linalgcl_matrix_save("B.txt", grid->exitation_matrix);
     return LINALGCL_SUCCESS;
 }
