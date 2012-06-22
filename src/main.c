@@ -118,11 +118,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     ert_solver_t solver;
     error = ert_solver_create(&solver, 2, context, device_id);
 
-    // get start time
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
     error += ert_solver_add_coarser_grid(solver, mesh, program,
         context, queue);
     clFinish(queue);
@@ -136,16 +131,10 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
-    // get end time
-    gettimeofday(&tv, NULL);
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // print time
-    printf("Grid setup time:  %f s\n", end - start);
-
     // get start time
+    struct timeval tv;
     gettimeofday(&tv, NULL);
-    start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // update_system_matrix
     ert_grid_update_system_matrix(solver->grids[0], solver->grid_program, queue);
@@ -153,7 +142,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // get end time
     gettimeofday(&tv, NULL);
-    end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // print time
     printf("Grid update time: %f s\n", end - start);
