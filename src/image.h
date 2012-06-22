@@ -26,6 +26,14 @@ typedef struct {
 } ert_image_program_s;
 typedef ert_image_program_s* ert_image_program_t;
 
+// ert image
+typedef struct {
+    linalgcl_matrix_t elements;
+    linalgcl_matrix_t image;
+    ert_image_program_t program;
+} ert_image_s;
+typedef ert_image_s* ert_image_t;
+
 // create image program
 linalgcl_error_t ert_image_program_create(ert_image_program_t* programPointer,
     cl_context context, cl_device_id device_id, const char* path);
@@ -33,8 +41,15 @@ linalgcl_error_t ert_image_program_create(ert_image_program_t* programPointer,
 // release image program
 linalgcl_error_t ert_image_program_release(ert_image_program_t* programPointer);
 
+// create image
+linalgcl_error_t ert_image_create(ert_image_t* imagePointer, linalgcl_size_t size_x,
+    linalgcl_size_t size_y, ert_mesh_t mesh, cl_context context, cl_device_id device_id);
+
+// release image
+linalgcl_error_t ert_image_release(ert_image_t* imagePointer);
+
 // calc image
-linalgcl_error_t ert_image_calc(linalgcl_matrix_t image, ert_image_program_t image_program,
-    ert_mesh_t mesh, linalgcl_matrix_t phi, cl_command_queue queue);
+linalgcl_error_t ert_image_calc(ert_image_t image, linalgcl_matrix_t phi,
+    cl_command_queue queue);
 
 #endif

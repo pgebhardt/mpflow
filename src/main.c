@@ -30,6 +30,7 @@
 #include <linalgcl/linalgcl.h>
 #include "mesh.h"
 #include "basis.h"
+#include "image.h"
 #include "grid.h"
 #include "solver.h"
 
@@ -150,8 +151,29 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     printf("element count: %d\n", solver->grids[0]->mesh->element_count);
     linalgcl_matrix_save("vertices.txt", solver->grids[0]->mesh->vertices);
 
+    // create image
+    ert_image_t image = NULL;
+    error = ert_image_create(&image, 100, 100, mesh, context, device_id);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        printf("Ging nicht!\n");
+        return ACTOR_ERROR;
+    }
+
+    // calc image
+    linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
+    error = ert_image_calc(image, mesh->vertices, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        printf("Bild berechnen geht nicht!\n");
+        return ACTOR_ERROR;
+    }
+
     // cleanup
     ert_solver_release(&solver);
+    ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 
