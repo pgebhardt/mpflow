@@ -210,8 +210,10 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     grid->sigma = NULL;
     grid->area = NULL;
 
-    // create sigma and area vector
-    error  = linalgcl_matrix_create(&grid->sigma, context,
+    // create matrices
+    error  = linalgcl_matrix_create(&grid->gradient_matrix, context,
+        grid->mesh->vertex_count, 2 * grid->mesh->element_count);
+    error += linalgcl_matrix_create(&grid->sigma, context,
         grid->mesh->element_count, 1);
     error += linalgcl_matrix_create(&grid->area, context,
         grid->mesh->element_count, 1);
@@ -234,6 +236,69 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
         }
     }
 
+    // copy sigma matrix to device
+    linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_FALSE);
+
+    // init system matrix
+    error = ert_grid_init_system_matrix(grid, matrix_program, context, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_grid_release(&grid);
+
+        return error;
+    }
+
+    // create exitation matrix
+    error = ert_grid_init_exitation_matrix(grid, context, queue);
+
+    // set grid pointer
+    *gridPointer = grid;
+
+    return LINALGCL_SUCCESS;
+}
+
+// release solver grid
+linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
+    // check input
+    if ((gridPointer == NULL) || (*gridPointer == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // get grid
+    ert_grid_t grid = *gridPointer;
+
+    // cleanup
+    ert_mesh_release(&grid->mesh);
+    linalgcl_sparse_matrix_release(&grid->system_matrix);
+    linalgcl_matrix_release(&grid->gradient_matrix);
+    linalgcl_sparse_matrix_release(&grid->gradient_matrix_sparse);
+    linalgcl_matrix_release(&grid->sigma);
+    linalgcl_matrix_release(&grid->area);
+
+    // free struct
+    free(grid);
+
+    // set grid pointer to NULL
+    *gridPointer = NULL;
+
+    return LINALGCL_SUCCESS;
+}
+
+// init system matrix
+linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue) {
+    // check input
+    if ((grid == NULL) || (matrix_program == NULL) ||
+        (context == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
     // calc initial system matrix
     // create matrices
     linalgcl_matrix_t system_matrix, gradient_matrix, sigma_matrix;
@@ -241,8 +306,6 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
         grid->mesh->vertex_count, grid->mesh->vertex_count);
     error += linalgcl_matrix_create(&gradient_matrix, context,
         2 * grid->mesh->element_count, grid->mesh->vertex_count);
-    error += linalgcl_matrix_create(&grid->gradient_matrix, context,
-        grid->mesh->vertex_count, 2 * grid->mesh->element_count);
     error += linalgcl_matrix_unity(&sigma_matrix, context,
         2 * grid->mesh->element_count);
 
@@ -381,95 +444,6 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
 
         return LINALGCL_ERROR;
     }
-
-    // create exitation matrix
-    // TODO: variable elektrodenzahl und geometrie
-    linalgcl_size_t electrode_count = 10;
-    linalgcl_matrix_data_t element_area = 2.0 * M_PI * grid->mesh->radius /
-        (linalgcl_matrix_data_t)(electrode_count * 2);
-    error = linalgcl_matrix_create(&grid->exitation_matrix, context,
-        grid->mesh->vertex_count, electrode_count);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        ert_grid_release(&grid);
-
-        return LINALGCL_ERROR;
-    }
-
-    // fill exitation_matrix matrix
-    linalgcl_matrix_data_t electrode_start[2];
-    linalgcl_matrix_data_t electrode_end[2];
-    linalgcl_matrix_data_t element = 0.0;
-
-    for (linalgcl_size_t i = 0; i < electrode_count; i++) {
-        // calc electrode start and end
-        electrode_start[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)i /
-            (linalgcl_matrix_data_t)electrode_count);
-        electrode_start[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)i /
-            (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
-            (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
-            (linalgcl_matrix_data_t)electrode_count);
-
-        for (linalgcl_size_t j = 0; j < grid->mesh->boundary_count; j++) {
-            // get boundary vertices
-            linalgcl_matrix_get_element(grid->mesh->boundary, &id[0], j, 0);
-
-            linalgcl_matrix_get_element(grid->mesh->vertices, &x[0], ((linalgcl_size_t)id[0] - 1) % grid->mesh->boundary_count, 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &y[0], ((linalgcl_size_t)id[0] - 1) & grid->mesh->boundary_count, 1);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &x[1], (linalgcl_size_t)id[0], 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &y[1], (linalgcl_size_t)id[0], 1);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &x[2], ((linalgcl_size_t)id[0] + 1) % grid->mesh->boundary_count, 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &y[2], ((linalgcl_size_t)id[0] + 1) % grid->mesh->boundary_count, 1);
-
-            // calc matrix element
-            element = 0.5 * (sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1])) +
-                             sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2])));
-
-            // set matrix element
-            if (((x[1] <= electrode_end[0]) && (y[1] <= electrode_end[1]) && (x[1] >= electrode_start[0]) && (y[1] >= electrode_start[1])) ||
-                ((x[1] <= electrode_end[0]) && (y[1] >= electrode_end[1]) && (x[1] >= electrode_start[0]) && (y[1] <= electrode_start[1])) ||
-                ((x[1] >= electrode_end[0]) && (y[1] <= electrode_end[1]) && (x[1] <= electrode_start[0]) && (y[1] >= electrode_start[1])) ||
-                ((x[1] >= electrode_end[0]) && (y[1] >= electrode_end[1]) && (x[1] <= electrode_start[0]) && (y[1] <= electrode_start[1]))) {
-                linalgcl_matrix_set_element(grid->exitation_matrix, element, (linalgcl_size_t)id[0], i);
-            }
-        }
-    }
-    linalgcl_matrix_save("B.txt", grid->exitation_matrix);
-
-    // set grid pointer
-    *gridPointer = grid;
-
-    return LINALGCL_SUCCESS;
-}
-
-// release solver grid
-linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
-    // check input
-    if ((gridPointer == NULL) || (*gridPointer == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // get grid
-    ert_grid_t grid = *gridPointer;
-
-    // cleanup
-    ert_mesh_release(&grid->mesh);
-    linalgcl_sparse_matrix_release(&grid->system_matrix);
-    linalgcl_matrix_release(&grid->gradient_matrix);
-    linalgcl_sparse_matrix_release(&grid->gradient_matrix_sparse);
-    linalgcl_matrix_release(&grid->sigma);
-    linalgcl_matrix_release(&grid->area);
-
-    // free struct
-    free(grid);
-
-    // set grid pointer to NULL
-    *gridPointer = NULL;
-
     return LINALGCL_SUCCESS;
 }
 
@@ -520,5 +494,76 @@ linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
         return LINALGCL_ERROR;
     }
 
+    return LINALGCL_SUCCESS;
+}
+
+// init exitation matrix
+linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
+    cl_context context, cl_command_queue queue) {
+    // check input
+    if ((grid == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
+    // TODO: variable elektrodenzahl und geometrie
+    linalgcl_size_t electrode_count = 10;
+    linalgcl_matrix_data_t element_area = 2.0 * M_PI * grid->mesh->radius /
+        (linalgcl_matrix_data_t)(electrode_count * 2);
+    error = linalgcl_matrix_create(&grid->exitation_matrix, context,
+        grid->mesh->vertex_count, electrode_count);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_grid_release(&grid);
+
+        return LINALGCL_ERROR;
+    }
+
+    // fill exitation_matrix matrix
+    linalgcl_matrix_data_t id[3], x[3], y[3];
+    linalgcl_matrix_data_t electrode_start[2];
+    linalgcl_matrix_data_t electrode_end[2];
+    linalgcl_matrix_data_t element = 0.0;
+
+    for (linalgcl_size_t i = 0; i < electrode_count; i++) {
+        // calc electrode start and end
+        electrode_start[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)i /
+            (linalgcl_matrix_data_t)electrode_count);
+        electrode_start[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)i /
+            (linalgcl_matrix_data_t)electrode_count);
+        electrode_end[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
+            (linalgcl_matrix_data_t)electrode_count);
+        electrode_end[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
+            (linalgcl_matrix_data_t)electrode_count);
+
+        for (linalgcl_size_t j = 0; j < grid->mesh->boundary_count; j++) {
+            // get boundary vertices
+            linalgcl_matrix_get_element(grid->mesh->boundary, &id[0], j, 0);
+
+            linalgcl_matrix_get_element(grid->mesh->vertices, &x[0], ((linalgcl_size_t)id[0] - 1) % grid->mesh->boundary_count, 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &y[0], ((linalgcl_size_t)id[0] - 1) & grid->mesh->boundary_count, 1);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &x[1], (linalgcl_size_t)id[0], 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &y[1], (linalgcl_size_t)id[0], 1);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &x[2], ((linalgcl_size_t)id[0] + 1) % grid->mesh->boundary_count, 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &y[2], ((linalgcl_size_t)id[0] + 1) % grid->mesh->boundary_count, 1);
+
+            // calc matrix element
+            element = 0.5 * (sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1])) +
+                             sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2])));
+
+            // set matrix element
+            if (((x[1] <= electrode_end[0]) && (y[1] <= electrode_end[1]) && (x[1] >= electrode_start[0]) && (y[1] >= electrode_start[1])) ||
+                ((x[1] <= electrode_end[0]) && (y[1] >= electrode_end[1]) && (x[1] >= electrode_start[0]) && (y[1] <= electrode_start[1])) ||
+                ((x[1] >= electrode_end[0]) && (y[1] <= electrode_end[1]) && (x[1] <= electrode_start[0]) && (y[1] >= electrode_start[1])) ||
+                ((x[1] >= electrode_end[0]) && (y[1] >= electrode_end[1]) && (x[1] <= electrode_start[0]) && (y[1] <= electrode_start[1]))) {
+                linalgcl_matrix_set_element(grid->exitation_matrix, element, (linalgcl_size_t)id[0], i);
+            }
+        }
+    }
+    linalgcl_matrix_save("B.txt", grid->exitation_matrix);
     return LINALGCL_SUCCESS;
 }

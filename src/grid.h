@@ -53,8 +53,17 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
 // release grid
 linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer);
 
+// init system matrix
+linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue);
+
 // update system matrix
 linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
     ert_grid_program_t grid_program, cl_command_queue queue);
+
+// init exitation matrix
+linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
+    cl_context context, cl_command_queue queue);
 
 #endif
