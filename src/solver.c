@@ -254,6 +254,7 @@ linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
         for (linalgcl_size_t k = 0; k < r->size_x; k++) {
             beta += r->host_data[k] * r ->host_data[k];
         }
+
         beta /= rnorm;
 
         // calc new pi = ri + beta * pi-1
@@ -380,10 +381,21 @@ linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
     clFinish(queue);
 
     // v cycle
-    for (linalgcl_size_t i = 0; i < 5; i++) {
+    while (1) {
         // do Multigrid step
         ert_solver_multigrid(solver, 0, f, matrix_program, context, queue);
 
+        // calc error
+        linalgcl_matrix_copy_to_host(solver->grids[0]->e, queue, CL_TRUE);
+        linalgcl_matrix_data_t error_max = 0.0;
+        for (linalgcl_size_t k = 0; k < solver->grids[0]->e->size_x; k++) {
+            error_max = solver->grids[0]->e->host_data[k] > error_max ? solver->grids[0]->e->host_data[k] : error_max;
+        }
+
+        // check error
+        if (error <= 1E-9) {
+            break;
+        }
     }
 
     // cleanup

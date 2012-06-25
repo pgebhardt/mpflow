@@ -218,6 +218,13 @@ linalgcl_error_t ert_image_create(ert_image_t* imagePointer, linalgcl_size_t siz
         return error;
     }
 
+    // fill elements
+    for (linalgcl_size_t i = 0; i < image->image->size_x; i++) {
+        for (linalgcl_size_t j = 0; j < image->image->size_y; j++) {
+            image->image->host_data[(i * image->image->size_y) + j] = NAN;
+        }
+    }
+
     // create program
     error = ert_image_program_create(&image->program, context, device_id, "src/image.cl");
 

@@ -56,8 +56,8 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
     // calc triangle
     float pixel = 0.0;
     float x, y;
-    for (unsigned int i = iStart; i <= iEnd; i++) {
-        for (unsigned int j = jStart; j <= jEnd; j++) {
+    for (int i = iStart; i <= iEnd; i++) {
+        for (int j = jStart; j <= jEnd; j++) {
             // calc coordinate
             x = (float)i * dx - 1.0;
             y = (float)j * dy - 1.0;
@@ -75,4 +75,5 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
         }
     }
 }
+
 

@@ -121,6 +121,12 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_copy_to_device(mesh[2]->vertices, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[2]->elements, queue, CL_TRUE);
 
+    // create image
+    ert_image_t image;
+    ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);
+    linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
+
     // create solver
     ert_solver_t solver;
     error = ert_solver_create(&solver, 3, context, device_id);
@@ -160,8 +166,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_t x;
     linalgcl_matrix_create(&x, context, mesh[0]->vertex_count, 1);
 
-    for (linalgcl_size_t i = 1; i < mesh[0]->vertex_count; i++) {
-        x->host_data[i] = 1.0;
+    for (linalgcl_size_t i = 0; i < mesh[0]->vertex_count; i++) {
+        x->host_data[i] = 0.0;
     }
 
     linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
@@ -171,8 +177,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_create(&f, context, mesh[0]->vertex_count, 1);
 
     // set j
-    linalgcl_matrix_set_element(j, 1.0, 1, 0);
-    linalgcl_matrix_set_element(j, -1.0, 2, 0);
+    linalgcl_matrix_set_element(j, 1.0, 2, 0);
+    linalgcl_matrix_set_element(j, -1.0, 6, 0);
     linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
 
     // calc f matrix
@@ -188,7 +194,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     error = ert_solver_v_cycle(solver, x, f, program, context, queue);
-    // error = ert_solver_conjugate_gradient(solver->grids[0], x, f, program, context, queue);
     clFinish(queue);
 
     // get end time
@@ -200,10 +205,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         printf("Multigrid geht nicht!\n");
         return ACTOR_ERROR;
     }
-
-    ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);
-    linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
 
     ert_image_calc(image, solver->grids[0]->x, queue);
     clFinish(queue);
