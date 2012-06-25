@@ -153,7 +153,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_t x;
     linalgcl_matrix_create(&x, context, mesh[0]->vertex_count, 1);
 
-    for (linalgcl_size_t i = 0; i < mesh[0]->vertex_count; i++) {
+    for (linalgcl_size_t i = 1; i < mesh[0]->vertex_count; i++) {
         x->host_data[i] = 1.0;
     }
 
@@ -166,6 +166,10 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         printf("Conjugate gradient geht nicht!\n");
         return ACTOR_ERROR;
     }
+
+    linalgcl_matrix_copy_to_host(x, queue, CL_TRUE);
+    printf("x:\n");
+    print_matrix(x);
 
     ert_image_t image;
     ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);

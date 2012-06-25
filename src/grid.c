@@ -353,14 +353,16 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
 
         // calc matrix elements
         for (linalgcl_size_t i = 0; i < 3; i++) {
-            linalgcl_matrix_set_element(gradient_matrix,
-                basis[i]->gradient[0], 2 * k, (linalgcl_size_t)id[i]);
-            linalgcl_matrix_set_element(gradient_matrix,
-                basis[i]->gradient[1], 2 * k + 1, (linalgcl_size_t)id[i]);
-            linalgcl_matrix_set_element(grid->gradient_matrix,
-                basis[i]->gradient[0], (linalgcl_size_t)id[i], 2 * k);
-            linalgcl_matrix_set_element(grid->gradient_matrix,
-                basis[i]->gradient[1], (linalgcl_size_t)id[i], 2 * k + 1);
+            if ((linalgcl_size_t)id[i] != 0) {
+                linalgcl_matrix_set_element(gradient_matrix,
+                    basis[i]->gradient[0], 2 * k, (linalgcl_size_t)id[i]);
+                linalgcl_matrix_set_element(gradient_matrix,
+                    basis[i]->gradient[1], 2 * k + 1, (linalgcl_size_t)id[i]);
+                linalgcl_matrix_set_element(grid->gradient_matrix,
+                    basis[i]->gradient[0], (linalgcl_size_t)id[i], 2 * k);
+                linalgcl_matrix_set_element(grid->gradient_matrix,
+                    basis[i]->gradient[1], (linalgcl_size_t)id[i], 2 * k + 1);
+            }
         }
 
         // calc area of element
