@@ -504,7 +504,7 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
 
     // TODO: variable elektrodenzahl und geometrie
     linalgcl_size_t electrode_count = 10;
-    linalgcl_matrix_data_t element_area = 2.0 * M_PI * grid->mesh->radius /
+    linalgcl_matrix_data_t element_area = 2.0 * M_PI * 1.0 /
         (linalgcl_matrix_data_t)(electrode_count * 2);
     error = linalgcl_matrix_create(&grid->exitation_matrix, context,
         grid->mesh->vertex_count, electrode_count);
@@ -525,13 +525,13 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
 
     for (linalgcl_size_t i = 0; i < electrode_count; i++) {
         // calc electrode start and end
-        electrode_start[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)i /
+        electrode_start[0] = 1.0 * cos(2.0 * M_PI * (linalgcl_matrix_data_t)i /
             (linalgcl_matrix_data_t)electrode_count);
-        electrode_start[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)i /
+        electrode_start[1] = 1.0 * sin(2.0 * M_PI * (linalgcl_matrix_data_t)i /
             (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
+        electrode_end[0] = 1.0 * cos(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
             (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
+        electrode_end[1] = 1.0 * sin(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
             (linalgcl_matrix_data_t)electrode_count);
 
         for (linalgcl_size_t j = 0; j < grid->mesh->boundary_count; j++) {
@@ -674,8 +674,74 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
         }
     }
 
-    /*// create prolongination matrix only if finer grid is available
+    // create prolongination matrix only if finer grid is available
     if (finer_grid != NULL) {
+        // create matrices
+        error  = linalgcl_matrix_create(&prolongate_phi, context,
+            finer_grid->mesh->vertex_count, grid->mesh->vertex_count);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            return error;
+        }
+
+        // fill restrict_phi matrix
+        linalgcl_matrix_data_t x, y;
+        linalgcl_matrix_data_t element;
+        linalgcl_matrix_data_t id[3], xElement[3], yElement[3];
+        int b[3];
+        ert_basis_t basis[3];
+
+        for (linalgcl_size_t i = 0; i < finer_grid->mesh->vertex_count; i++) {
+            for (linalgcl_size_t k = 0; k < grid->mesh->element_count; k++) {
+                // get vertex
+                linalgcl_matrix_get_element(finer_grid->mesh->vertices, &x, i, 0);
+                linalgcl_matrix_get_element(finer_grid->mesh->vertices, &y, i, 1);
+
+                // get vertices for element
+                for (linalgcl_size_t j = 0; j < 3; j++) {
+                    linalgcl_matrix_get_element(grid->mesh->elements, &id[j], k, j);
+                    linalgcl_matrix_get_element(grid->mesh->vertices, &xElement[j],
+                        (linalgcl_size_t)id[j], 0);
+                    linalgcl_matrix_get_element(grid->mesh->vertices, &yElement[j],
+                        (linalgcl_size_t)id[j], 1);
+                }
+
+                // check if vertex in element
+                b[0] = (x - xElement[1]) * (yElement[0] - yElement[1]) -
+                    (xElement[0] - xElement[1]) * (y - yElement[1]) <= 0.001 ? 0 : 1;
+                b[1] = (x - xElement[2]) * (yElement[1] - yElement[2]) -
+                    (xElement[1] - xElement[2]) * (y - yElement[2]) <= 0.001 ? 0 : 1;
+                b[2] = (x - xElement[0]) * (yElement[2] - yElement[0]) -
+                    (xElement[2] - xElement[0]) * (y - yElement[0]) <= 0.001 ? 0 : 1;
+
+                if ((b[0] == b[1]) && (b[1] == b[2])) {
+                    // calc basis functions
+                    ert_basis_create(&basis[0], xElement[0], yElement[0],
+                        xElement[1], yElement[1], xElement[2], yElement[2]);
+                    ert_basis_create(&basis[1], xElement[1], yElement[1],
+                        xElement[2], yElement[2], xElement[0], yElement[0]);
+                    ert_basis_create(&basis[2], xElement[2], yElement[2],
+                        xElement[0], yElement[0], xElement[1], yElement[1]);
+
+                    // calc matrix elements
+                    ert_basis_function(basis[0], &element, x, y);
+                    linalgcl_matrix_set_element(prolongate_phi, element, i,
+                        (linalgcl_size_t)id[0]);
+                    ert_basis_function(basis[1], &element, x, y);
+                    linalgcl_matrix_set_element(prolongate_phi, element, i,
+                        (linalgcl_size_t)id[1]);
+                    ert_basis_function(basis[2], &element, x, y);
+                    linalgcl_matrix_set_element(prolongate_phi, element, i,
+                        (linalgcl_size_t)id[2]);
+
+                    // cleanup
+                    ert_basis_release(&basis[0]);
+                    ert_basis_release(&basis[1]);
+                    ert_basis_release(&basis[2]);
+                }
+            }
+        }
         // copy matrices to device
         error  = linalgcl_matrix_copy_to_device(prolongate_phi, queue, CL_TRUE);
 
@@ -690,7 +756,7 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
         if (error != LINALGCL_SUCCESS) {
             return error;
         }
-    }*/
+    }
 
     return LINALGCL_SUCCESS;
 }

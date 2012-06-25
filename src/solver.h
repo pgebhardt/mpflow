@@ -40,4 +40,9 @@ linalgcl_error_t ert_solver_add_coarser_grid(ert_solver_t solver,
     ert_mesh_t mesh, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_command_queue queue);
 
+// solve conjugate gradient
+linalgcl_error_t ert_solver_conjugate_gradient(ert_solver_t solver,
+    linalgcl_matrix_t initial_guess, linalgcl_matrix_program_t matrix_program,
+    cl_context context, cl_command_queue queue);
+
 #endif

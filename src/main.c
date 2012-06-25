@@ -150,13 +150,36 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
-    linalgcl_matrix_copy_to_host(solver->grids[0]->restrict_phi->values, queue,
-        CL_TRUE);
-    printf("restrict_phi:\n");
-    print_matrix(solver->grids[0]->restrict_phi->values);
+    linalgcl_matrix_t x;
+    linalgcl_matrix_create(&x, context, mesh[0]->vertex_count, 1);
+
+    for (linalgcl_size_t i = 0; i < mesh[0]->vertex_count; i++) {
+        x->host_data[i] = 1.0;
+    }
+
+    linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
+
+    error = ert_solver_conjugate_gradient(solver, x, program, context, queue);
+    clFinish(queue);
+
+    if (error != LINALGCL_SUCCESS) {
+        printf("Conjugate gradient geht nicht!\n");
+        return ACTOR_ERROR;
+    }
+
+    ert_image_t image;
+    ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);
+    linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
+
+    printf("image calc: %d\n", ert_image_calc(image, x, queue));
+    clFinish(queue);
+    linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
+    linalgcl_matrix_save("image.txt", image->image);
 
     // cleanup
+    linalgcl_matrix_release(&x);
     ert_solver_release(&solver);
+    ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 
