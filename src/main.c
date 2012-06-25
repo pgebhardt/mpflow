@@ -159,8 +159,34 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
 
-    error = ert_solver_conjugate_gradient(solver, x, program, context, queue);
+    linalgcl_matrix_t j, f;
+    linalgcl_matrix_create(&j, context, 10, 1);
+    linalgcl_matrix_create(&f, context, mesh[0]->vertex_count, 1);
+
+    // set j
+    linalgcl_matrix_set_element(j, 1.0, 4, 0);
+    linalgcl_matrix_set_element(j, -1.0, 9, 0);
+    linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
+
+    // calc f matrix
+    // f = B * j
+    linalgcl_matrix_multiply(program, queue, f,
+        solver->grids[0]->exitation_matrix, j);
+    linalgcl_matrix_release(&j);
+
+    // get start time
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
     clFinish(queue);
+    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    error = ert_solver_v_cycle(solver, x, f, program, context, queue);
+    clFinish(queue);
+
+    // get end time
+    gettimeofday(&tv, NULL);
+    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+    printf("Solving time: %f\n", end - start);
 
     if (error != LINALGCL_SUCCESS) {
         printf("Conjugate gradient geht nicht!\n");
@@ -182,6 +208,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // cleanup
     linalgcl_matrix_release(&x);
+    linalgcl_matrix_release(&f);
     ert_solver_release(&solver);
     ert_image_release(&image);
     clReleaseCommandQueue(queue);
