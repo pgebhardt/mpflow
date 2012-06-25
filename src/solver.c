@@ -172,30 +172,27 @@ linalgcl_error_t ert_solver_add_coarser_grid(ert_solver_t solver,
 
 // solve conjugate gradient
 linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
-    linalgcl_matrix_t initial_guess, linalgcl_matrix_t f,
+    linalgcl_matrix_t x, linalgcl_matrix_t f,
     linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_command_queue queue) {
     // check input
-    if ((grid == NULL) || (initial_guess == NULL) || (f == NULL) || (queue == NULL)) {
+    if ((grid == NULL) || (x == NULL) || (f == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
-    linalgcl_matrix_t x, r, p, temp1, temp2;
+    linalgcl_matrix_t r, p, temp1, temp2;
     linalgcl_matrix_data_t alpha, beta, temp3, rnorm;
 
     // create matrices
-    error  = linalgcl_matrix_create(&x, context, initial_guess->size_x, 1);
-    error += linalgcl_matrix_create(&r, context, initial_guess->size_x, 1);
-    error += linalgcl_matrix_create(&p, context, initial_guess->size_x, 1);
-    error += linalgcl_matrix_create(&temp1, context, initial_guess->size_x, 1);
-    error += linalgcl_matrix_create(&temp2, context, initial_guess->size_x, 1);
-    // set data
-    // set x0 to initial_guess
-    error += linalgcl_matrix_copy(matrix_program, queue, x, initial_guess);
+    error += linalgcl_matrix_create(&r, context, x->size_x, 1);
+    error += linalgcl_matrix_create(&p, context, x->size_x, 1);
+    error += linalgcl_matrix_create(&temp1, context, x->size_x, 1);
+    error += linalgcl_matrix_create(&temp2, context, x->size_x, 1);
 
+    // set data
     // calc r0 = f - A * x0
     error += linalgcl_matrix_scalar_multiply(matrix_program, queue, temp1, x, -1.0);
 
@@ -265,13 +262,92 @@ linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
         clFinish(queue);
     }
 
-    clFinish(queue);
-    linalgcl_matrix_copy(matrix_program, queue, initial_guess, x);
-
     // cleanup
-    linalgcl_matrix_release(&x);
     linalgcl_matrix_release(&r);
     linalgcl_matrix_release(&p);
+    linalgcl_matrix_release(&temp1);
+    linalgcl_matrix_release(&temp2);
+
+    return LINALGCL_SUCCESS;
+}
+
+// do Multigrid step
+linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
+    linalgcl_matrix_t f, linalgcl_matrix_program_t matrix_program,
+    cl_context context, cl_command_queue queue) {
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
+    // create temp matrices
+    linalgcl_matrix_t temp1, temp2;
+    error  = linalgcl_matrix_create(&temp1, context, solver->grids[n]->mesh->vertex_count, 1);
+    error += linalgcl_matrix_create(&temp2, context, solver->grids[n]->mesh->vertex_count, 1);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
+    }
+
+    if (n >= solver->grid_count - 1) {
+        // calc error
+        error = ert_solver_conjugate_gradient(solver->grids[n], solver->grids[n]->x, f, matrix_program, context, queue);
+        clFinish(queue);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            printf("conjugate gradient error!\n");
+            return error;
+        }
+
+    }
+    else {
+        // calc residuum r = f - A * x
+        error  = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, temp1,
+            solver->grids[n]->system_matrix, solver->grids[n]->x);
+        error += linalgcl_matrix_scalar_multiply(matrix_program, queue, temp2, temp1, -1.0);
+        error += linalgcl_matrix_add(matrix_program, queue, solver->grids[n]->r, f, temp2);
+
+        // calc coarser residuum 
+        error = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, solver->grids[n + 1]->f,
+            solver->grids[n]->restrict_phi, solver->grids[n]->r);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            printf("calc coarser residuum error!\n");
+            return error;
+        }
+
+        // calc error
+        error = ert_solver_multigrid(solver, n + 1, solver->grids[n + 1]->f, matrix_program, context, queue);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            printf("calc error error!\n");
+            return error;
+        }
+
+        // prolongate error
+        error = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, solver->grids[n]->e,
+            solver->grids[n + 1]->prolongate_phi, solver->grids[n + 1]->x);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            printf("prolongation error!\n");
+            return error;
+        }
+
+        // update x
+        error = linalgcl_matrix_add(matrix_program, queue, solver->grids[n]->x,
+            solver->grids[n]->x, solver->grids[n]->e);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            printf("update x error!\n");
+            return error;
+        }
+    }
+
+    // cleanup
     linalgcl_matrix_release(&temp1);
     linalgcl_matrix_release(&temp2);
 
@@ -292,73 +368,25 @@ linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
     linalgcl_error_t error = LINALGCL_ERROR;
 
     // create matrices
-    linalgcl_matrix_t rh, rH, eh, eH, temp1, temp2;
-    error  = linalgcl_matrix_create(&rh, context, solver->grids[0]->mesh->vertex_count, 1);
-    error += linalgcl_matrix_create(&rH, context, solver->grids[1]->mesh->vertex_count, 1);
-    error += linalgcl_matrix_create(&eh, context, solver->grids[0]->mesh->vertex_count, 1);
-    error += linalgcl_matrix_create(&eH, context, solver->grids[1]->mesh->vertex_count, 1);
-    error += linalgcl_matrix_create(&temp1, context, solver->grids[0]->mesh->vertex_count, 1);
+    linalgcl_matrix_t temp1, temp2;
+    linalgcl_matrix_t rh = solver->grids[0]->r;
+    linalgcl_matrix_t rH = solver->grids[1]->r;
+    linalgcl_matrix_t eh = solver->grids[0]->e;
+    linalgcl_matrix_t eH = solver->grids[1]->e;
+    error = linalgcl_matrix_create(&temp1, context, solver->grids[0]->mesh->vertex_count, 1);
     error += linalgcl_matrix_create(&temp2, context, solver->grids[0]->mesh->vertex_count, 1);
+
+    linalgcl_matrix_copy(matrix_program, queue, solver->grids[0]->x, x);
+    clFinish(queue);
 
     // v cycle
     for (linalgcl_size_t i = 0; i < 5; i++) {
-        // set residuum rh = fh - Ah * xh
-        error  = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, temp1,
-            solver->grids[0]->system_matrix, x);
-        error += linalgcl_matrix_scalar_multiply(matrix_program, queue, temp2, temp1, -1.0);
-        error += linalgcl_matrix_add(matrix_program, queue, rh, f, temp2);
+        // do Multigrid step
+        ert_solver_multigrid(solver, 0, f, matrix_program, context, queue);
 
-        // check success
-        if (error != LINALGCL_SUCCESS) {
-            printf("calc residuum error!\n");
-            return error;
-        }
-
-        // calc coarser residuum rH = IhH * rh
-        error = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, rH,
-            solver->grids[0]->restrict_phi, rh);
-
-        // check success
-        if (error != LINALGCL_SUCCESS) {
-            printf("restriction error!\n");
-            return error;
-        }
-
-        // calc error
-        error = ert_solver_conjugate_gradient(solver->grids[1], eH, rH, matrix_program, context, queue);
-        clFinish(queue);
-
-        // check success
-        if (error != LINALGCL_SUCCESS) {
-            printf("conjugate gradient error!\n");
-            return error;
-        }
-
-        // prolongate error
-        error = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, eh,
-            solver->grids[1]->prolongate_phi, eH);
-
-        // check success
-        if (error != LINALGCL_SUCCESS) {
-            printf("prolongation error!\n");
-            return error;
-        }
-
-        // update x
-        error = linalgcl_matrix_add(matrix_program, queue, x, x, eh);
-
-        // check success
-        if (error != LINALGCL_SUCCESS) {
-            printf("update x error!\n");
-            return error;
-        }
     }
 
     // cleanup
-    linalgcl_matrix_release(&rh);
-    linalgcl_matrix_release(&rH);
-    linalgcl_matrix_release(&eh);
-    linalgcl_matrix_release(&eH);
     linalgcl_matrix_release(&temp1);
     linalgcl_matrix_release(&temp2);
 

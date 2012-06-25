@@ -212,6 +212,10 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     grid->restrict_phi = NULL;
     grid->restrict_sigma = NULL;
     grid->prolongate_phi = NULL;
+    grid->x = NULL;
+    grid->f = NULL;
+    grid->r = NULL;
+    grid->e = NULL;
 
     // create matrices
     error  = linalgcl_matrix_create(&grid->gradient_matrix, context,
@@ -220,6 +224,14 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
         grid->mesh->element_count, 1);
     error += linalgcl_matrix_create(&grid->area, context,
         grid->mesh->element_count, 1);
+    error += linalgcl_matrix_create(&grid->x, context,
+        grid->mesh->vertex_count, 1);
+    error += linalgcl_matrix_create(&grid->f, context,
+        grid->mesh->vertex_count, 1);
+    error += linalgcl_matrix_create(&grid->r, context,
+        grid->mesh->vertex_count, 1);
+    error += linalgcl_matrix_create(&grid->e, context,
+        grid->mesh->vertex_count, 1);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -282,6 +294,10 @@ linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
     linalgcl_sparse_matrix_release(&grid->restrict_phi);
     linalgcl_sparse_matrix_release(&grid->restrict_sigma);
     linalgcl_sparse_matrix_release(&grid->prolongate_phi);
+    linalgcl_matrix_release(&grid->x);
+    linalgcl_matrix_release(&grid->f);
+    linalgcl_matrix_release(&grid->r);
+    linalgcl_matrix_release(&grid->e);
 
     // free struct
     free(grid);

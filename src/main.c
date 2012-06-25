@@ -99,9 +99,10 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     }
 
     // create mesh
-    ert_mesh_t mesh[2];
+    ert_mesh_t mesh[3];
     error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 16.0, context);
     error += ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
+    error += ert_mesh_create(&mesh[2], 1.0, 1.0 / 4.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -117,15 +118,18 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_copy_to_device(mesh[0]->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[1]->vertices, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[1]->elements, queue, CL_TRUE);
-    printf("vertices: %d\n", mesh[0]->vertex_count);
+    linalgcl_matrix_copy_to_device(mesh[2]->vertices, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh[2]->elements, queue, CL_TRUE);
 
     // create solver
     ert_solver_t solver;
-    error = ert_solver_create(&solver, 2, context, device_id);
+    error = ert_solver_create(&solver, 3, context, device_id);
 
     error += ert_solver_add_coarser_grid(solver, mesh[0], program,
         context, queue);
     error += ert_solver_add_coarser_grid(solver, mesh[1], program,
+        context, queue);
+    error += ert_solver_add_coarser_grid(solver, mesh[2], program,
         context, queue);
     clFinish(queue);
 
@@ -142,7 +146,9 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     error  = ert_grid_init_intergrid_transfer_matrices(solver->grids[0], NULL,
         solver->grids[1], program, context, queue);
     error += ert_grid_init_intergrid_transfer_matrices(solver->grids[1],
-        solver->grids[0], NULL, program, context, queue);
+        solver->grids[0], solver->grids[2], program, context, queue);
+    error += ert_grid_init_intergrid_transfer_matrices(solver->grids[2],
+        solver->grids[1], NULL, program, context, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -199,7 +205,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
 
-    ert_image_calc(image, x, queue);
+    ert_image_calc(image, solver->grids[0]->x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);

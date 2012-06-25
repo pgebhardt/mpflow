@@ -38,6 +38,10 @@ typedef struct {
     linalgcl_sparse_matrix_t restrict_phi;
     linalgcl_sparse_matrix_t restrict_sigma;
     linalgcl_sparse_matrix_t prolongate_phi;
+    linalgcl_matrix_t x;
+    linalgcl_matrix_t f;
+    linalgcl_matrix_t r;
+    linalgcl_matrix_t e;
 } ert_grid_s;
 typedef ert_grid_s* ert_grid_t;
 
