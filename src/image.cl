@@ -1,3 +1,4 @@
+
 #define BLOCK_SIZE (16)
 
 float test(float ax, float ay, float bx, float by, float cx, float cy) {
@@ -74,3 +75,4 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
         }
     }
 }
+

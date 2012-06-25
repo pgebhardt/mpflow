@@ -117,6 +117,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_copy_to_device(mesh[0]->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[1]->vertices, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[1]->elements, queue, CL_TRUE);
+    printf("vertices: %d\n", mesh[0]->vertex_count);
 
     // create solver
     ert_solver_t solver;
@@ -164,8 +165,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_create(&f, context, mesh[0]->vertex_count, 1);
 
     // set j
-    linalgcl_matrix_set_element(j, 1.0, 4, 0);
-    linalgcl_matrix_set_element(j, -1.0, 9, 0);
+    linalgcl_matrix_set_element(j, 1.0, 1, 0);
+    linalgcl_matrix_set_element(j, -1.0, 2, 0);
     linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
 
     // calc f matrix
@@ -181,6 +182,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     error = ert_solver_v_cycle(solver, x, f, program, context, queue);
+    // error = ert_solver_conjugate_gradient(solver->grids[0], x, f, program, context, queue);
     clFinish(queue);
 
     // get end time
@@ -189,22 +191,19 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     printf("Solving time: %f\n", end - start);
 
     if (error != LINALGCL_SUCCESS) {
-        printf("Conjugate gradient geht nicht!\n");
+        printf("Multigrid geht nicht!\n");
         return ACTOR_ERROR;
     }
-
-    linalgcl_matrix_copy_to_host(x, queue, CL_TRUE);
-    printf("x:\n");
-    print_matrix(x);
 
     ert_image_t image;
     ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
 
-    printf("image calc: %d\n", ert_image_calc(image, x, queue));
+    ert_image_calc(image, x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
+    system("python src/script.py");
 
     // cleanup
     linalgcl_matrix_release(&x);

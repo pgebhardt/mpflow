@@ -353,16 +353,14 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
 
         // calc matrix elements
         for (linalgcl_size_t i = 0; i < 3; i++) {
-            if ((linalgcl_size_t)id[i] != 0) {
-                linalgcl_matrix_set_element(gradient_matrix,
-                    basis[i]->gradient[0], 2 * k, (linalgcl_size_t)id[i]);
-                linalgcl_matrix_set_element(gradient_matrix,
-                    basis[i]->gradient[1], 2 * k + 1, (linalgcl_size_t)id[i]);
-                linalgcl_matrix_set_element(grid->gradient_matrix,
-                    basis[i]->gradient[0], (linalgcl_size_t)id[i], 2 * k);
-                linalgcl_matrix_set_element(grid->gradient_matrix,
-                    basis[i]->gradient[1], (linalgcl_size_t)id[i], 2 * k + 1);
-            }
+            linalgcl_matrix_set_element(gradient_matrix,
+                basis[i]->gradient[0], 2 * k, (linalgcl_size_t)id[i]);
+            linalgcl_matrix_set_element(gradient_matrix,
+                basis[i]->gradient[1], 2 * k + 1, (linalgcl_size_t)id[i]);
+            linalgcl_matrix_set_element(grid->gradient_matrix,
+                basis[i]->gradient[0], (linalgcl_size_t)id[i], 2 * k);
+            linalgcl_matrix_set_element(grid->gradient_matrix,
+                basis[i]->gradient[1], (linalgcl_size_t)id[i], 2 * k + 1);
         }
 
         // calc area of element
@@ -427,10 +425,6 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
         grid->gradient_matrix, matrix_program, context, queue);
 
     // cleanup
-    clFinish(queue);
-
-    linalgcl_matrix_copy_to_host(system_matrix, queue, CL_TRUE);
-    linalgcl_matrix_save("system_matrix.txt", system_matrix);
     linalgcl_matrix_release(&system_matrix);
 
     // check success
@@ -505,7 +499,7 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
     // TODO: variable elektrodenzahl und geometrie
-    linalgcl_size_t electrode_count = 10;
+    linalgcl_size_t electrode_count = 8;
     linalgcl_matrix_data_t element_area = 2.0 * M_PI * 1.0 /
         (linalgcl_matrix_data_t)(electrode_count * 2);
     error = linalgcl_matrix_create(&grid->exitation_matrix, context,
@@ -553,7 +547,8 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
 
             // set matrix element
             if ((x[1] >= fmin(electrode_start[0], electrode_end[0])) && (x[1] <= fmax(electrode_start[0], electrode_end[0])) &&
-                (y[1] >= fmin(electrode_start[1], electrode_end[1])) && (y[1] <= fmax(electrode_start[1], electrode_end[1]))) {
+                (y[1] >= fmin(electrode_start[1], electrode_end[1])) && (y[1] <= fmax(electrode_start[1], electrode_end[1])) &&
+                ((linalgcl_size_t)id[0] != 0)) {
                 linalgcl_matrix_set_element(grid->exitation_matrix, element, (linalgcl_size_t)id[0], i);
             }
         }
@@ -599,59 +594,33 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
         }
 
         // fill restrict_phi matrix
-        linalgcl_matrix_data_t x, y;
-        linalgcl_matrix_data_t element;
-        linalgcl_matrix_data_t id[3], xElement[3], yElement[3];
-        int b[3];
-        ert_basis_t basis[3];
+        linalgcl_matrix_data_t x[2], y[2];
+        linalgcl_matrix_data_t distance;
+        linalgcl_matrix_data_t row_count = 0.0;
 
         for (linalgcl_size_t i = 0; i < coarser_grid->mesh->vertex_count; i++) {
-            for (linalgcl_size_t k = 0; k < grid->mesh->element_count; k++) {
-                // get vertex
-                linalgcl_matrix_get_element(coarser_grid->mesh->vertices, &x, i, 0);
-                linalgcl_matrix_get_element(coarser_grid->mesh->vertices, &y, i, 1);
 
-                // get vertices for element
-                for (linalgcl_size_t j = 0; j < 3; j++) {
-                    linalgcl_matrix_get_element(grid->mesh->elements, &id[j], k, j);
-                    linalgcl_matrix_get_element(grid->mesh->vertices, &xElement[j],
-                        (linalgcl_size_t)id[j], 0);
-                    linalgcl_matrix_get_element(grid->mesh->vertices, &yElement[j],
-                        (linalgcl_size_t)id[j], 1);
+            row_count = 0.0;
+            for (linalgcl_size_t j = 0; j < grid->mesh->vertex_count; j++) {
+                // get vertices
+                linalgcl_matrix_get_element(coarser_grid->mesh->vertices, &x[0], i, 0);
+                linalgcl_matrix_get_element(coarser_grid->mesh->vertices, &y[0], i, 1);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &x[1], j, 0);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &y[1], j, 1);
+
+                // check distance
+                distance = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
+
+                if (distance <= 2.0 * grid->mesh->distance) {
+                    linalgcl_matrix_set_element(restrict_phi, 1.0 - 0.5 * distance / grid->mesh->distance, i, j);
+                    row_count += 1.0 - 0.5 * distance / grid->mesh->distance;
                 }
+            }
 
-                // check if vertex in element
-                b[0] = (x - xElement[1]) * (yElement[0] - yElement[1]) -
-                    (xElement[0] - xElement[1]) * (y - yElement[1]) <= 0.001 ? 0 : 1;
-                b[1] = (x - xElement[2]) * (yElement[1] - yElement[2]) -
-                    (xElement[1] - xElement[2]) * (y - yElement[2]) <= 0.001 ? 0 : 1;
-                b[2] = (x - xElement[0]) * (yElement[2] - yElement[0]) -
-                    (xElement[2] - xElement[0]) * (y - yElement[0]) <= 0.001 ? 0 : 1;
-
-                if ((b[0] == b[1]) && (b[1] == b[2])) {
-                    // calc basis functions
-                    ert_basis_create(&basis[0], xElement[0], yElement[0],
-                        xElement[1], yElement[1], xElement[2], yElement[2]);
-                    ert_basis_create(&basis[1], xElement[1], yElement[1],
-                        xElement[2], yElement[2], xElement[0], yElement[0]);
-                    ert_basis_create(&basis[2], xElement[2], yElement[2],
-                        xElement[0], yElement[0], xElement[1], yElement[1]);
-
-                    // calc matrix elements
-                    ert_basis_function(basis[0], &element, x, y);
-                    linalgcl_matrix_set_element(restrict_phi, element, i,
-                        (linalgcl_size_t)id[0]);
-                    ert_basis_function(basis[1], &element, x, y);
-                    linalgcl_matrix_set_element(restrict_phi, element, i,
-                        (linalgcl_size_t)id[1]);
-                    ert_basis_function(basis[2], &element, x, y);
-                    linalgcl_matrix_set_element(restrict_phi, element, i,
-                        (linalgcl_size_t)id[2]);
-
-                    // cleanup
-                    ert_basis_release(&basis[0]);
-                    ert_basis_release(&basis[1]);
-                    ert_basis_release(&basis[2]);
+            // normalize row
+            if (row_count != 0.0) {
+                for (linalgcl_size_t j = 0; j < grid->mesh->vertex_count; j++) {
+                    restrict_phi->host_data[(i * restrict_phi->size_y) + j] /= row_count;
                 }
             }
         }
@@ -687,63 +656,38 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
             return error;
         }
 
-        // fill restrict_phi matrix
-        linalgcl_matrix_data_t x, y;
-        linalgcl_matrix_data_t element;
-        linalgcl_matrix_data_t id[3], xElement[3], yElement[3];
-        int b[3];
-        ert_basis_t basis[3];
+        // fill prolongate_phi matrix
+        linalgcl_matrix_data_t x[2], y[2];
+        linalgcl_matrix_data_t distance;
+        linalgcl_matrix_data_t row_count = 0.0;
 
         for (linalgcl_size_t i = 0; i < finer_grid->mesh->vertex_count; i++) {
-            for (linalgcl_size_t k = 0; k < grid->mesh->element_count; k++) {
-                // get vertex
-                linalgcl_matrix_get_element(finer_grid->mesh->vertices, &x, i, 0);
-                linalgcl_matrix_get_element(finer_grid->mesh->vertices, &y, i, 1);
+            row_count = 0.0;
 
-                // get vertices for element
-                for (linalgcl_size_t j = 0; j < 3; j++) {
-                    linalgcl_matrix_get_element(grid->mesh->elements, &id[j], k, j);
-                    linalgcl_matrix_get_element(grid->mesh->vertices, &xElement[j],
-                        (linalgcl_size_t)id[j], 0);
-                    linalgcl_matrix_get_element(grid->mesh->vertices, &yElement[j],
-                        (linalgcl_size_t)id[j], 1);
+            for (linalgcl_size_t j = 0; j < grid->mesh->vertex_count; j++) {
+                // get vertices
+                linalgcl_matrix_get_element(finer_grid->mesh->vertices, &x[0], i, 0);
+                linalgcl_matrix_get_element(finer_grid->mesh->vertices, &y[0], i, 1);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &x[1], j, 0);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &y[1], j, 1);
+
+                // check distance
+                distance = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
+
+                if (distance <= 2.0 * grid->mesh->distance) {
+                    linalgcl_matrix_set_element(prolongate_phi, 1.0 - 0.5 * distance / grid->mesh->distance, i, j);
+                    row_count += 1.0 - 0.5 * distance / grid->mesh->distance;
                 }
+            }
 
-                // check if vertex in element
-                b[0] = (x - xElement[1]) * (yElement[0] - yElement[1]) -
-                    (xElement[0] - xElement[1]) * (y - yElement[1]) <= 0.001 ? 0 : 1;
-                b[1] = (x - xElement[2]) * (yElement[1] - yElement[2]) -
-                    (xElement[1] - xElement[2]) * (y - yElement[2]) <= 0.001 ? 0 : 1;
-                b[2] = (x - xElement[0]) * (yElement[2] - yElement[0]) -
-                    (xElement[2] - xElement[0]) * (y - yElement[0]) <= 0.001 ? 0 : 1;
-
-                if ((b[0] == b[1]) && (b[1] == b[2])) {
-                    // calc basis functions
-                    ert_basis_create(&basis[0], xElement[0], yElement[0],
-                        xElement[1], yElement[1], xElement[2], yElement[2]);
-                    ert_basis_create(&basis[1], xElement[1], yElement[1],
-                        xElement[2], yElement[2], xElement[0], yElement[0]);
-                    ert_basis_create(&basis[2], xElement[2], yElement[2],
-                        xElement[0], yElement[0], xElement[1], yElement[1]);
-
-                    // calc matrix elements
-                    ert_basis_function(basis[0], &element, x, y);
-                    linalgcl_matrix_set_element(prolongate_phi, element, i,
-                        (linalgcl_size_t)id[0]);
-                    ert_basis_function(basis[1], &element, x, y);
-                    linalgcl_matrix_set_element(prolongate_phi, element, i,
-                        (linalgcl_size_t)id[1]);
-                    ert_basis_function(basis[2], &element, x, y);
-                    linalgcl_matrix_set_element(prolongate_phi, element, i,
-                        (linalgcl_size_t)id[2]);
-
-                    // cleanup
-                    ert_basis_release(&basis[0]);
-                    ert_basis_release(&basis[1]);
-                    ert_basis_release(&basis[2]);
+            // normalize row
+            if (row_count != 0.0) {
+                for (linalgcl_size_t j = 0; j < grid->mesh->vertex_count; j++) {
+                    prolongate_phi->host_data[(i * prolongate_phi->size_y) + j] /= row_count;
                 }
             }
         }
+
         // copy matrices to device
         error  = linalgcl_matrix_copy_to_device(prolongate_phi, queue, CL_TRUE);
 

@@ -214,7 +214,7 @@ linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
     }
 
     // iteration
-    for (linalgcl_size_t i = 0; i < 10; i++) {
+    for (linalgcl_size_t i = 0; i < 5; i++) {
         // calc alpha
         // calc A * p
         linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, temp1,
@@ -301,7 +301,7 @@ linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
     error += linalgcl_matrix_create(&temp2, context, solver->grids[0]->mesh->vertex_count, 1);
 
     // v cycle
-    for (linalgcl_size_t i = 0; i < 1; i++) {
+    for (linalgcl_size_t i = 0; i < 5; i++) {
         // set residuum rh = fh - Ah * xh
         error  = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, temp1,
             solver->grids[0]->system_matrix, x);

@@ -1,3 +1,4 @@
+
 #define BLOCK_SIZE (16)
 
 __kernel void update_system_matrix(__global float* system_matrix_values,
@@ -28,3 +29,4 @@ __kernel void update_system_matrix(__global float* system_matrix_values,
     system_matrix_values[(i * BLOCK_SIZE) + get_global_id(1)] = (((j == 0) && (get_global_id(1) == 0)) ||
         (j != 0)) ? element : 0.0;
 }
+
