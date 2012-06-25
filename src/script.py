@@ -3,18 +3,20 @@ from pylab import *
 
 
 def main():
-    A = matrix(loadtxt('system_matrix.txt')[1:int(sys.argv[1]),
-        1:int(sys.argv[1])])
-    Ainv = linalg.inv(A)
-    B = matrix(loadtxt('B.txt')[1:int(sys.argv[1]),
-        :int(sys.argv[2])])
+    # load A
+    A = matrix(loadtxt('system_matrix.txt')[:int(sys.argv[1]), :int(sys.argv[1])])
+
+    # load B
+    B = matrix(loadtxt('B.txt')[:int(sys.argv[1]), :int(sys.argv[2])])
 
     j = matrix(zeros((int(sys.argv[2]),))).transpose()
-    j[0] = 1.0
-    j[3] = -1.0
+    j[4] = 1.0
+    j[9] = -1.0
 
-    print B
-    phi = Ainv * B * j
+    phi = ones((int(sys.argv[1]), 1))
+    Ainv = linalg.inv(A[1:, 1:])
+    f = B[1:, :] * j
+    phi[1:] = Ainv * (f - A[1:, 0])
     savetxt('phi.txt', phi)
 
 

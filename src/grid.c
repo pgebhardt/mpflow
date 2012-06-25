@@ -209,6 +209,9 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     grid->gradient_matrix = NULL;
     grid->sigma = NULL;
     grid->area = NULL;
+    grid->restrict_phi = NULL;
+    grid->restrict_sigma = NULL;
+    grid->prolongate_phi = NULL;
 
     // create matrices
     error  = linalgcl_matrix_create(&grid->gradient_matrix, context,
@@ -276,6 +279,9 @@ linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
     linalgcl_sparse_matrix_release(&grid->gradient_matrix_sparse);
     linalgcl_matrix_release(&grid->sigma);
     linalgcl_matrix_release(&grid->area);
+    linalgcl_sparse_matrix_release(&grid->restrict_phi);
+    linalgcl_sparse_matrix_release(&grid->restrict_sigma);
+    linalgcl_sparse_matrix_release(&grid->prolongate_phi);
 
     // free struct
     free(grid);
@@ -555,5 +561,136 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     linalgcl_matrix_copy_to_device(grid->exitation_matrix, queue, CL_FALSE);
 
     linalgcl_matrix_save("B.txt", grid->exitation_matrix);
+    return LINALGCL_SUCCESS;
+}
+
+// init intergrid transfer matrices
+linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
+    ert_grid_t finer_grid, ert_grid_t coarser_grid, 
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue) {
+    // check input
+    if ((grid == NULL) || ((finer_grid == NULL) && (coarser_grid == NULL)) ||
+        (matrix_program == NULL) || (context == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
+    // matrices
+    linalgcl_matrix_t restrict_phi = NULL;
+    linalgcl_matrix_t restrict_sigma = NULL;
+    linalgcl_matrix_t prolongate_phi = NULL;
+
+    // create restriction matrices only if coarser grid is available
+    if (coarser_grid != NULL) {
+        // create matrices
+        error  = linalgcl_matrix_create(&restrict_phi, context,
+            coarser_grid->mesh->vertex_count, grid->mesh->vertex_count);
+        error += linalgcl_matrix_create(&restrict_sigma, context,
+            coarser_grid->mesh->element_count, grid->mesh->element_count);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            return error;
+        }
+
+        // fill restrict_phi matrix
+        linalgcl_matrix_data_t x, y;
+        linalgcl_matrix_data_t element;
+        linalgcl_matrix_data_t id[3], xElement[3], yElement[3];
+        int b[3];
+        ert_basis_t basis[3];
+
+        for (linalgcl_size_t i = 0; i < coarser_grid->mesh->vertex_count; i++) {
+            for (linalgcl_size_t k = 0; k < grid->mesh->element_count; k++) {
+                // get vertex
+                linalgcl_matrix_get_element(coarser_grid->mesh->vertices, &x, i, 0);
+                linalgcl_matrix_get_element(coarser_grid->mesh->vertices, &y, i, 1);
+
+                // get vertices for element
+                for (linalgcl_size_t j = 0; j < 3; j++) {
+                    linalgcl_matrix_get_element(grid->mesh->elements, &id[j], k, j);
+                    linalgcl_matrix_get_element(grid->mesh->vertices, &xElement[j],
+                        (linalgcl_size_t)id[j], 0);
+                    linalgcl_matrix_get_element(grid->mesh->vertices, &yElement[j],
+                        (linalgcl_size_t)id[j], 1);
+                }
+
+                // check if vertex in element
+                b[0] = (x - xElement[1]) * (yElement[0] - yElement[1]) -
+                    (xElement[0] - xElement[1]) * (y - yElement[1]) <= 0.001 ? 0 : 1;
+                b[1] = (x - xElement[2]) * (yElement[1] - yElement[2]) -
+                    (xElement[1] - xElement[2]) * (y - yElement[2]) <= 0.001 ? 0 : 1;
+                b[2] = (x - xElement[0]) * (yElement[2] - yElement[0]) -
+                    (xElement[2] - xElement[0]) * (y - yElement[0]) <= 0.001 ? 0 : 1;
+
+                if ((b[0] == b[1]) && (b[1] == b[2])) {
+                    // calc basis functions
+                    ert_basis_create(&basis[0], xElement[0], yElement[0],
+                        xElement[1], yElement[1], xElement[2], yElement[2]);
+                    ert_basis_create(&basis[1], xElement[1], yElement[1],
+                        xElement[2], yElement[2], xElement[0], yElement[0]);
+                    ert_basis_create(&basis[2], xElement[2], yElement[2],
+                        xElement[0], yElement[0], xElement[1], yElement[1]);
+
+                    // calc matrix elements
+                    ert_basis_function(basis[0], &element, x, y);
+                    linalgcl_matrix_set_element(restrict_phi, element, i,
+                        (linalgcl_size_t)id[0]);
+                    ert_basis_function(basis[1], &element, x, y);
+                    linalgcl_matrix_set_element(restrict_phi, element, i,
+                        (linalgcl_size_t)id[1]);
+                    ert_basis_function(basis[2], &element, x, y);
+                    linalgcl_matrix_set_element(restrict_phi, element, i,
+                        (linalgcl_size_t)id[2]);
+
+                    // cleanup
+                    ert_basis_release(&basis[0]);
+                    ert_basis_release(&basis[1]);
+                    ert_basis_release(&basis[2]);
+                }
+            }
+        }
+
+        // copy matrices to device
+        error  = linalgcl_matrix_copy_to_device(restrict_phi, queue, CL_TRUE);
+        // error += linalgcl_matrix_copy_to_device(restrict_sigma, queue, CL_TRUE);
+
+        // create sparse matrices
+        error += linalgcl_sparse_matrix_create(&grid->restrict_phi, restrict_phi,
+            matrix_program, context, queue);
+        // error += linalgcl_sparse_matrix_create(&grid->restrict_sigma, restrict_sigma,
+        //    matrix_program, context, queue);
+
+        // cleanup
+        linalgcl_matrix_release(&restrict_phi);
+        linalgcl_matrix_release(&restrict_sigma);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            return error;
+        }
+    }
+
+    /*// create prolongination matrix only if finer grid is available
+    if (finer_grid != NULL) {
+        // copy matrices to device
+        error  = linalgcl_matrix_copy_to_device(prolongate_phi, queue, CL_TRUE);
+
+        // create sparse matrices
+        error += linalgcl_sparse_matrix_create(&grid->prolongate_phi, prolongate_phi,
+            matrix_program, context, queue);
+
+        // cleanup
+        linalgcl_matrix_release(&prolongate_phi);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            return error;
+        }
+    }*/
+
     return LINALGCL_SUCCESS;
 }

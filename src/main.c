@@ -99,8 +99,9 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     }
 
     // create mesh
-    ert_mesh_t mesh = NULL;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
+    ert_mesh_t mesh[2];
+    error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 16.0, context);
+    error += ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -112,14 +113,18 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(mesh->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh->elements, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh[0]->vertices, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh[0]->elements, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh[1]->vertices, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh[1]->elements, queue, CL_TRUE);
 
     // create solver
     ert_solver_t solver;
     error = ert_solver_create(&solver, 2, context, device_id);
 
-    error += ert_solver_add_coarser_grid(solver, mesh, program,
+    error += ert_solver_add_coarser_grid(solver, mesh[0], program,
+        context, queue);
+    error += ert_solver_add_coarser_grid(solver, mesh[1], program,
         context, queue);
     clFinish(queue);
 
@@ -132,45 +137,26 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
-    // update_system_matrix
-    ert_grid_update_system_matrix(solver->grids[0], solver->grid_program, queue);
-
-    // calc phi
-    char buffer[1024];
-    sprintf(buffer, "python src/script.py %d %d", mesh->vertex_count, 10);
-    system(buffer);
-
-    // create image
-    ert_image_t image = NULL;
-    error = ert_image_create(&image, 1000, 1000, mesh, context, device_id);
+    // calc intergrid transfer matrices
+    error  = ert_grid_init_intergrid_transfer_matrices(solver->grids[0], NULL,
+        solver->grids[1], program, context, queue);
+    error += ert_grid_init_intergrid_transfer_matrices(solver->grids[1],
+        solver->grids[0], NULL, program, context, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        printf("Ging nicht!\n");
+        printf("intergrid transfer ging nicht!\n");
+
         return ACTOR_ERROR;
     }
 
-    // calc image
-    linalgcl_matrix_t phi = NULL;
-    linalgcl_matrix_load(&phi, context, queue, "phi.txt");
-    linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
-
-    error = ert_image_calc(image, phi, queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        printf("Bild berechnen geht nicht!\n");
-        return ACTOR_ERROR;
-    }
-
-    // save image
-    clFinish(queue);
-    linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
-    linalgcl_matrix_save("image.txt", image->image);
+    linalgcl_matrix_copy_to_host(solver->grids[0]->restrict_phi->values, queue,
+        CL_TRUE);
+    printf("restrict_phi:\n");
+    print_matrix(solver->grids[0]->restrict_phi->values);
 
     // cleanup
     ert_solver_release(&solver);
-    ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 
