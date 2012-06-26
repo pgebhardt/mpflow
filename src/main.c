@@ -177,8 +177,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_create(&f, context, mesh[0]->vertex_count, 1);
 
     // set j
-    linalgcl_matrix_set_element(j, 1.0, 2, 0);
-    linalgcl_matrix_set_element(j, -1.0, 6, 0);
+    linalgcl_matrix_set_element(j, 1.0, 1, 0);
+    linalgcl_matrix_set_element(j, -1.0, 5, 0);
     linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
 
     // calc f matrix

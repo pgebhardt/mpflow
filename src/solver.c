@@ -202,6 +202,10 @@ linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
     error += linalgcl_matrix_add(matrix_program, queue, r, f, temp2);
     clFinish(queue);
 
+    linalgcl_matrix_copy_to_host(r, queue, CL_TRUE);
+    linalgcl_matrix_set_element(r, 0.0, 0, 0);
+    linalgcl_matrix_copy_to_device(r, queue, CL_TRUE);
+
     // init p0
     error += linalgcl_matrix_copy(matrix_program, queue, p, r);
 
@@ -211,7 +215,7 @@ linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
     }
 
     // iteration
-    for (linalgcl_size_t i = 0; i < 5; i++) {
+    for (linalgcl_size_t i = 0; i < 100; i++) {
         // calc alpha
         // calc A * p
         linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, temp1,
@@ -249,12 +253,15 @@ linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
 
         // calc beta
         linalgcl_matrix_copy_to_host(r, queue, CL_TRUE);
+        linalgcl_matrix_set_element(r, 0.0, 0, 0);
+        linalgcl_matrix_copy_to_device(r, queue, CL_TRUE);
 
         beta = 0.0;
         for (linalgcl_size_t k = 0; k < r->size_x; k++) {
             beta += r->host_data[k] * r ->host_data[k];
         }
 
+        printf("Fehler: %f\n", sqrt(beta));
         beta /= rnorm;
 
         // calc new pi = ri + beta * pi-1
@@ -393,7 +400,7 @@ linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
         }
 
         // check error
-        if (error <= 1E-9) {
+        if (error_max <= 1E-9) {
             break;
         }
     }
