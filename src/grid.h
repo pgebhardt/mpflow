@@ -23,8 +23,6 @@
 typedef struct {
     cl_program program;
     cl_kernel kernel_update_system_matrix;
-    cl_kernel kernel_unfold_system_matrix;
-    cl_kernel kernel_regulize_system_matrix;
 } ert_grid_program_s;
 typedef ert_grid_program_s* ert_grid_program_t;
 

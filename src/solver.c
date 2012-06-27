@@ -170,137 +170,6 @@ linalgcl_error_t ert_solver_add_coarser_grid(ert_solver_t solver,
     return LINALGCL_SUCCESS;
 }
 
-// solve conjugate gradient
-linalgcl_error_t ert_solver_conjugate_gradient(ert_grid_t grid,
-    linalgcl_matrix_t x, linalgcl_matrix_t f,
-    linalgcl_matrix_program_t matrix_program,
-    ert_grid_program_t grid_program,
-    cl_context context, cl_command_queue queue) {
-    // check input
-    if ((grid == NULL) || (x == NULL) || (f == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
-
-    linalgcl_matrix_t r, p, temp1, temp2, R, A;
-    linalgcl_matrix_data_t alpha, beta, temp3, rnorm;
-
-    // create matrices
-    error += linalgcl_matrix_create(&r, context, x->size_x, 1);
-    error += linalgcl_matrix_create(&p, context, x->size_x, 1);
-    error += linalgcl_matrix_create(&temp1, context, x->size_x, 1);
-    error += linalgcl_matrix_create(&temp2, context, x->size_x, 1);
-    error += linalgcl_matrix_create(&R, context,
-        grid->system_matrix->size_x, grid->system_matrix->size_y);
-    error += linalgcl_matrix_create(&A, context,
-        grid->system_matrix->size_x, grid->system_matrix->size_y);
-
-    // copy to device
-    linalgcl_matrix_copy_to_device(r, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(p, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(temp1, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(temp2, queue, CL_TRUE);
-
-    // regulize system matrix
-    linalgcl_matrix_copy_to_device(A, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(R, queue, CL_TRUE);
-    ert_grid_unfold_system_matrix(grid, A, grid_program, queue);
-    clFinish(queue);
-    linalgcl_matrix_multiply(matrix_program, queue, R, A, A);
-    clFinish(queue);
-    ert_grid_regulize_system_matrix(grid, R, 0.0001, grid_program,
-        queue);
-    clFinish(queue);
-
-    linalgcl_matrix_copy_to_host(R, queue, CL_TRUE);
-    linalgcl_matrix_save("A.txt", R);
-
-    // regulize f
-    linalgcl_matrix_copy_to_host(f, queue, CL_TRUE);
-    linalgcl_sparse_matrix_vector_multiply(matrix_program, queue,
-        temp1, grid->system_matrix, f);
-    linalgcl_matrix_copy(matrix_program, queue, f, temp1);
-
-    // set data
-    // calc r0 = f - A * x0
-    error += linalgcl_matrix_scalar_multiply(matrix_program, queue, temp1, x, -1.0);
-
-    error += linalgcl_matrix_multiply(matrix_program, queue, temp2,
-        R, temp1);
-
-    error += linalgcl_matrix_add(matrix_program, queue, r, f, temp2);
-    clFinish(queue);
-
-    // init p0
-    error += linalgcl_matrix_copy(matrix_program, queue, p, r);
-    clFinish(queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return error;
-    }
-
-    // iteration
-    for (linalgcl_size_t i = 0; i < 1000; i++) {
-        // calc R * p
-        linalgcl_matrix_multiply(matrix_program, queue, temp1, R, p);
-        clFinish(queue);
-        linalgcl_matrix_copy_to_host(temp1, queue, CL_TRUE);
-        linalgcl_matrix_copy_to_host(p, queue, CL_TRUE);
-
-        // calc rnorm
-        linalgcl_matrix_copy_to_host(r, queue, CL_TRUE);
-        temp3 = 0.0;
-        rnorm = 0.0;
-
-        for (linalgcl_size_t k = 0; k < r->size_x; k++) {
-            rnorm += r->host_data[k] * r->host_data[k];
-            temp3 += p->host_data[k] * temp1->host_data[k];
-        }
-        alpha = rnorm / temp3;
-
-        // check error
-        if (sqrt(rnorm) <= 0.001) {
-            break;
-        }
-
-        // correct x
-        linalgcl_matrix_scalar_multiply(matrix_program, queue, temp2, p, alpha);
-        linalgcl_matrix_add(matrix_program, queue, x, x, temp2);
-
-        // correct r
-        linalgcl_matrix_scalar_multiply(matrix_program, queue, temp2, temp1, -alpha);
-        linalgcl_matrix_add(matrix_program, queue, r, r, temp2);
-        clFinish(queue);
-
-        linalgcl_matrix_copy_to_host(r, queue, CL_TRUE);
-
-        // calc beta
-        beta = 0.0;
-        for (linalgcl_size_t k = 0; k < r->size_x; k++) {
-            beta += r->host_data[k] * r->host_data[k];
-        }
-        beta = beta / rnorm;
-
-        // calc new p
-        linalgcl_matrix_scalar_multiply(matrix_program, queue, temp1, p, beta);
-        linalgcl_matrix_add(matrix_program, queue, p, r, temp1);
-        clFinish(queue);
-    }
-
-    // cleanup
-    linalgcl_matrix_release(&r);
-    linalgcl_matrix_release(&p);
-    linalgcl_matrix_release(&temp1);
-    linalgcl_matrix_release(&temp2);
-    linalgcl_matrix_release(&R);
-    linalgcl_matrix_release(&A);
-
-    return LINALGCL_SUCCESS;
-}
-
 // do Multigrid step
 linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
     linalgcl_matrix_t f, linalgcl_matrix_program_t matrix_program,
@@ -320,10 +189,7 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
 
     if (n >= solver->grid_count - 1) {
         // calc error
-        error = ert_solver_conjugate_gradient(solver->grids[n],
-            solver->grids[n]->x, f, matrix_program, solver->grid_program,
-            context, queue);
-        clFinish(queue);
+        // TODO: needs gradient solver as soon as ready
 
         // check success
         if (error != LINALGCL_SUCCESS) {

@@ -189,9 +189,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // error = ert_solver_v_cycle(solver, x, f, program, context, queue);
-    error = ert_solver_conjugate_gradient(solver->grids[0], x, f, program, solver->grid_program,
-        context, queue);
+    error = ert_solver_v_cycle(solver, x, f, program, context, queue);
     clFinish(queue);
 
     // get end time
@@ -204,10 +202,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
-    // linalgcl_matrix_load(&x, context, queue, "phi.txt");
-    // linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
-    // ert_image_calc(image, solver->grids[0]->x, queue);
-    ert_image_calc(image, x, queue);
+    ert_image_calc(image, solver->grids[0]->x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);

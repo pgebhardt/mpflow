@@ -217,6 +217,7 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
 
     // init struct
     solver->grid = grid;
+    solver->system_matrix = NULL;
     solver->regulized_matrix = NULL;
     solver->residuum = NULL;
     solver->projection = NULL;

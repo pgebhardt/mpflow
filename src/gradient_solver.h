@@ -30,6 +30,7 @@ typedef ert_gradient_solver_program_s* ert_gradient_solver_program_t;
 // gradient solver struct
 typedef struct {
     ert_grid_t grid;
+    linalgcl_matrix_t system_matrix;
     linalgcl_sparse_matrix_t regulized_matrix;
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t projection;
