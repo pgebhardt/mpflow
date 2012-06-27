@@ -144,6 +144,28 @@ linalgcl_error_t ert_grid_program_create(ert_grid_program_t* programPointer,
         return LINALGCL_ERROR;
     }
 
+    program->kernel_unfold_system_matrix = clCreateKernel(program->program,
+        "unfold_system_matrix", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_grid_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    program->kernel_regulize_system_matrix = clCreateKernel(
+        program->program, "regulize_system_matrix", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_grid_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
     // set program pointer
     *programPointer = program;
 
@@ -166,6 +188,14 @@ linalgcl_error_t ert_grid_program_release(ert_grid_program_t* programPointer) {
 
     if (program->kernel_update_system_matrix != NULL) {
         clReleaseKernel(program->kernel_update_system_matrix);
+    }
+
+    if (program->kernel_unfold_system_matrix != NULL) {
+        clReleaseKernel(program->kernel_unfold_system_matrix);
+    }
+
+    if (program->kernel_regulize_system_matrix != NULL) {
+        clReleaseKernel(program->kernel_regulize_system_matrix);
     }
 
     // free struct
@@ -440,6 +470,11 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     error += linalgcl_sparse_matrix_create(&grid->gradient_matrix_sparse,
         grid->gradient_matrix, matrix_program, context, queue);
 
+    char buffer[1024];
+    sprintf(buffer, "system_matrix-%d.txt", grid->mesh->vertex_count);
+    linalgcl_matrix_copy_to_host(system_matrix, queue, CL_TRUE);
+    linalgcl_matrix_save(buffer, system_matrix);
+
     // cleanup
     linalgcl_matrix_release(&system_matrix);
 
@@ -494,6 +529,92 @@ linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
     cl_error = clEnqueueNDRangeKernel(queue,
         grid_program->kernel_update_system_matrix, 2,
         NULL, global, local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
+// unfold system matrix
+linalgcl_error_t ert_grid_unfold_system_matrix(ert_grid_t grid,
+    linalgcl_matrix_t result, ert_grid_program_t grid_program,
+    cl_command_queue queue) {
+    // check input
+    if ((grid == NULL) || (result == NULL) || (grid_program == NULL) ||
+        (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(grid_program->kernel_unfold_system_matrix,
+        0, sizeof(cl_mem), &result->device_data);
+    cl_error += clSetKernelArg(grid_program->kernel_unfold_system_matrix,
+        1, sizeof(cl_mem), &grid->system_matrix->values->device_data);
+    cl_error += clSetKernelArg(grid_program->kernel_unfold_system_matrix,
+        2, sizeof(cl_mem), &grid->system_matrix->column_ids->device_data);
+    cl_error += clSetKernelArg(grid_program->kernel_unfold_system_matrix,
+        3, sizeof(linalgcl_size_t), &grid->system_matrix->size_y);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global = grid->system_matrix->size_x;
+    size_t local = LINALGCL_BLOCK_SIZE;
+
+    cl_error = clEnqueueNDRangeKernel(queue,
+        grid_program->kernel_unfold_system_matrix, 1,
+        NULL, &global, &local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
+// regulize system matrix
+linalgcl_error_t ert_grid_regulize_system_matrix(ert_grid_t grid,
+    linalgcl_matrix_t system_matrix, linalgcl_matrix_data_t lambda,
+    ert_grid_program_t grid_program, cl_command_queue queue) {
+    // check input
+    if ((grid == NULL) || (system_matrix == NULL) ||
+        (grid_program == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(grid_program->kernel_regulize_system_matrix,
+        0, sizeof(cl_mem), &system_matrix->device_data);
+    cl_error += clSetKernelArg(grid_program->kernel_regulize_system_matrix,
+        1, sizeof(linalgcl_size_t), &system_matrix->size_y);
+    cl_error += clSetKernelArg(grid_program->kernel_regulize_system_matrix,
+        2, sizeof(linalgcl_matrix_data_t), &lambda);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global = grid->system_matrix->size_x;
+    size_t local = LINALGCL_BLOCK_SIZE;
+
+    cl_error = clEnqueueNDRangeKernel(queue,
+        grid_program->kernel_regulize_system_matrix, 1,
+        NULL, &global, &local, 0, NULL, NULL);
 
     // check success
     if (cl_error != CL_SUCCESS) {
@@ -588,6 +709,9 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
         return LINALGCL_ERROR;
     }
 
+    // smoothing factor
+    linalgcl_matrix_data_t smoothing_factor = 2.0;
+
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
@@ -627,9 +751,10 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
                 // check distance
                 distance = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
 
-                if (distance <= 2.0 * grid->mesh->distance) {
-                    linalgcl_matrix_set_element(restrict_phi, 1.0 - 0.5 * distance / grid->mesh->distance, i, j);
-                    row_count += 1.0 - 0.5 * distance / grid->mesh->distance;
+                if (distance <= smoothing_factor * grid->mesh->distance) {
+                    linalgcl_matrix_set_element(restrict_phi, 1.0 - distance /
+                        (smoothing_factor * grid->mesh->distance), i, j);
+                    row_count += 1.0 - distance / (smoothing_factor * grid->mesh->distance);
                 }
             }
 
@@ -690,9 +815,10 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
                 // check distance
                 distance = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
 
-                if (distance <= 2.0 * grid->mesh->distance) {
-                    linalgcl_matrix_set_element(prolongate_phi, 1.0 - 0.5 * distance / grid->mesh->distance, i, j);
-                    row_count += 1.0 - 0.5 * distance / grid->mesh->distance;
+                if (distance <= smoothing_factor * grid->mesh->distance) {
+                    linalgcl_matrix_set_element(prolongate_phi, 1.0 - distance /
+                        (smoothing_factor * grid->mesh->distance), i, j);
+                    row_count += 1.0 - distance / (smoothing_factor * grid->mesh->distance);
                 }
             }
 

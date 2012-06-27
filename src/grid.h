@@ -23,6 +23,8 @@
 typedef struct {
     cl_program program;
     cl_kernel kernel_update_system_matrix;
+    cl_kernel kernel_unfold_system_matrix;
+    cl_kernel kernel_regulize_system_matrix;
 } ert_grid_program_s;
 typedef ert_grid_program_s* ert_grid_program_t;
 
@@ -67,6 +69,16 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
 
 // update system matrix
 linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
+    ert_grid_program_t grid_program, cl_command_queue queue);
+
+// unfold system matrix
+linalgcl_error_t ert_grid_unfold_system_matrix(ert_grid_t grid,
+    linalgcl_matrix_t result, ert_grid_program_t grid_program,
+    cl_command_queue queue);
+
+// regulize system matrix
+linalgcl_error_t ert_grid_regulize_system_matrix(ert_grid_t grid,
+    linalgcl_matrix_t system_matrix, linalgcl_matrix_data_t lambda,
     ert_grid_program_t grid_program, cl_command_queue queue);
 
 // init exitation matrix

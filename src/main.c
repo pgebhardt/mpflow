@@ -102,7 +102,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     ert_mesh_t mesh[3];
     error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 16.0, context);
     error += ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
-    error += ert_mesh_create(&mesh[2], 1.0, 1.0 / 4.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -118,8 +117,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_copy_to_device(mesh[0]->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[1]->vertices, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[1]->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[2]->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[2]->elements, queue, CL_TRUE);
 
     // create image
     ert_image_t image;
@@ -134,8 +131,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     error += ert_solver_add_coarser_grid(solver, mesh[0], program,
         context, queue);
     error += ert_solver_add_coarser_grid(solver, mesh[1], program,
-        context, queue);
-    error += ert_solver_add_coarser_grid(solver, mesh[2], program,
         context, queue);
     clFinish(queue);
 
@@ -152,9 +147,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     error  = ert_grid_init_intergrid_transfer_matrices(solver->grids[0], NULL,
         solver->grids[1], program, context, queue);
     error += ert_grid_init_intergrid_transfer_matrices(solver->grids[1],
-        solver->grids[0], solver->grids[2], program, context, queue);
-    error += ert_grid_init_intergrid_transfer_matrices(solver->grids[2],
-        solver->grids[1], NULL, program, context, queue);
+        solver->grids[0], NULL, program, context, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -167,7 +160,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     linalgcl_matrix_create(&x, context, mesh[0]->vertex_count, 1);
 
     for (linalgcl_size_t i = 0; i < mesh[0]->vertex_count; i++) {
-        x->host_data[i] = 0.0;
+        x->host_data[i] = 1.0;
     }
 
     linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
@@ -185,7 +178,10 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     // f = B * j
     linalgcl_matrix_multiply(program, queue, f,
         solver->grids[0]->exitation_matrix, j);
+    clFinish(queue);
     linalgcl_matrix_release(&j);
+    linalgcl_matrix_copy_to_host(f, queue, CL_TRUE);
+    linalgcl_matrix_save("f.txt", f);
 
     // get start time
     struct timeval tv;
@@ -193,7 +189,9 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    error = ert_solver_v_cycle(solver, x, f, program, context, queue);
+    // error = ert_solver_v_cycle(solver, x, f, program, context, queue);
+    error = ert_solver_conjugate_gradient(solver->grids[0], x, f, program, solver->grid_program,
+        context, queue);
     clFinish(queue);
 
     // get end time
@@ -206,7 +204,10 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
         return ACTOR_ERROR;
     }
 
-    ert_image_calc(image, solver->grids[0]->x, queue);
+    // linalgcl_matrix_load(&x, context, queue, "phi.txt");
+    // linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
+    // ert_image_calc(image, solver->grids[0]->x, queue);
+    ert_image_calc(image, x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
