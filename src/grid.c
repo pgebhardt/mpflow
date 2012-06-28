@@ -578,7 +578,6 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     // upload matrix
     linalgcl_matrix_copy_to_device(grid->exitation_matrix, queue, CL_FALSE);
 
-    linalgcl_matrix_save("B.txt", grid->exitation_matrix);
     return LINALGCL_SUCCESS;
 }
 
