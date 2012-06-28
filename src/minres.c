@@ -32,6 +32,25 @@
 #include "grid.h"
 #include "minres.h"
 
+static void print_matrix(linalgcl_matrix_t matrix) {
+    if (matrix == NULL) {
+        return;
+    }
+
+    // value memory
+    linalgcl_matrix_data_t value = 0.0;
+
+    for (linalgcl_size_t i = 0; i < matrix->size_x; i++) {
+        for (linalgcl_size_t j = 0; j < matrix->size_y; j++) {
+            // get value
+            linalgcl_matrix_get_element(matrix, &value, i, j);
+
+            printf("%f, ", value);
+        }
+        printf("\n");
+    }
+}
+
 // create new minres program
 linalgcl_error_t ert_minres_solver_program_create(ert_minres_solver_program_t* programPointer,
     cl_context context, cl_device_id device_id, const char* path) {
@@ -195,6 +214,50 @@ linalgcl_error_t ert_minres_solver_create(ert_minres_solver_t* solverPointer,
     solver->solution[2] = NULL;
     solver->program = NULL;
 
+    // create matrices
+    error  = linalgcl_matrix_create(&solver->residuum, context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->projection[0], context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->projection[1], context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->projection[2], context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->solution[0], context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->solution[1], context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->solution[2], context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->temp_matrix, context,
+        solver->grid->mesh->vertex_count, 1);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_minres_solver_release(&solver);
+
+        return error;
+    }
+
+    // copy data to device
+    error  = linalgcl_matrix_copy_to_device(solver->residuum, queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->projection[0], queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->projection[1], queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->projection[2], queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->solution[0], queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->solution[1], queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->solution[2], queue, CL_TRUE);
+    error |= linalgcl_matrix_copy_to_device(solver->temp_matrix, queue, CL_TRUE);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_minres_solver_release(&solver);
+
+        return error;
+    }
+
     // set solver pointer
     *solverPointer = solver;
 
@@ -203,7 +266,34 @@ linalgcl_error_t ert_minres_solver_create(ert_minres_solver_t* solverPointer,
 
 // release solver
 linalgcl_error_t ert_minres_solver_release(ert_minres_solver_t* solverPointer) {
+    // check input
+    if ((solverPointer == NULL) || (*solverPointer == NULL)) {
+        return LINALGCL_ERROR;
+    }
 
+    // get solver
+    ert_minres_solver_t solver = *solverPointer;
+
+    // release matrices
+    linalgcl_matrix_release(&solver->residuum);
+    linalgcl_matrix_release(&solver->projection[0]);
+    linalgcl_matrix_release(&solver->projection[1]);
+    linalgcl_matrix_release(&solver->projection[2]);
+    linalgcl_matrix_release(&solver->solution[0]);
+    linalgcl_matrix_release(&solver->solution[1]);
+    linalgcl_matrix_release(&solver->solution[2]);
+    linalgcl_matrix_release(&solver->temp_matrix);
+
+    // release program
+    ert_minres_solver_program_release(&solver->program);
+
+    // free struct
+    free(solver);
+
+    // set solver pointer to NULL
+    *solverPointer = NULL;
+
+    return LINALGCL_SUCCESS;
 }
 
 // solve minres
@@ -257,8 +347,103 @@ linalgcl_error_t ert_minres_solver_solve(ert_minres_solver_t solver,
     }
 
     // iterate
-    for (linalgcl_size_t i = 0; i < 1; i++) {
+    linalgcl_matrix_data_t alpha, beta1, beta2, temp_number;
+    for (linalgcl_size_t i = 0; i < 30; i++) {
+        // update memory p2, p1 = p1, p0  s2, s1 = s1, s0
+        linalgcl_matrix_copy(solver->projection[2], solver->projection[1], queue, CL_TRUE);
+        linalgcl_matrix_copy(solver->projection[1], solver->projection[0], queue, CL_TRUE);
+        linalgcl_matrix_copy(solver->solution[2], solver->solution[1], queue, CL_TRUE);
+        linalgcl_matrix_copy(solver->solution[1], solver->solution[0], queue, CL_TRUE);
 
+        // calc alpha on CPU
+        clFinish(queue);
+        linalgcl_matrix_copy_to_host(solver->residuum, queue, CL_TRUE);
+        linalgcl_matrix_copy_to_host(solver->solution[1], queue, CL_TRUE);
+
+        alpha = 0.0;
+        temp_number = 0.0;
+        for (linalgcl_size_t k = 0; k < solver->residuum->size_x; k++) {
+            alpha += solver->residuum->host_data[k] * solver->solution[1]->host_data[k];
+            temp_number += solver->solution[1]->host_data[k] * solver->solution[1]->host_data[k];
+        }
+        alpha = alpha / temp_number;
+        printf("iteration: %d, alpha: %f\n", i, alpha);
+
+        // continue on GPU
+        // update x
+        linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->projection[1], alpha,
+            matrix_program, queue);
+        linalgcl_matrix_add(x, x, solver->temp_matrix, matrix_program, queue);
+
+        // update residuum
+        linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->solution[1], -alpha,
+            matrix_program, queue);
+        linalgcl_matrix_add(solver->residuum, solver->residuum, solver->temp_matrix,
+            matrix_program, queue);
+
+        // update projection
+        linalgcl_matrix_copy(solver->projection[0], solver->solution[1], queue, CL_FALSE);
+        linalgcl_sparse_matrix_vector_multiply(solver->solution[0], solver->grid->system_matrix,
+            solver->solution[1], matrix_program, queue);
+
+        // calc beta1 on CPU
+        clFinish(queue);
+        linalgcl_matrix_copy_to_host(solver->solution[0], queue, CL_TRUE);
+        linalgcl_matrix_copy_to_host(solver->solution[1], queue, CL_TRUE);
+
+        beta1 = 0.0;
+        temp_number = 0.0;
+        for (linalgcl_size_t k = 0; k < solver->solution[0]->size_x; k++) {
+            beta1 += solver->solution[0]->host_data[k] * solver->solution[1]->host_data[k];
+            temp_number += solver->solution[1]->host_data[k] * solver->solution[1]->host_data[k];
+        }
+        beta1 = beta1 / temp_number;
+        printf("iteration: %d, beta1: %f\n", i, beta1);
+
+        // continue on GPU
+        // update projection
+        linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->projection[1], -beta1,
+            matrix_program, queue);
+        linalgcl_matrix_add(solver->projection[0], solver->projection[0], solver->temp_matrix,
+            matrix_program, queue);
+
+        // update solution
+        linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->solution[1], -beta1,
+            matrix_program, queue);
+        linalgcl_matrix_add(solver->solution[0], solver->solution[0], solver->temp_matrix,
+            matrix_program, queue);
+
+        if (i > 0) {
+            // calc beta2 on CPU
+            clFinish(queue);
+            linalgcl_matrix_copy_to_host(solver->solution[0], queue, CL_TRUE);
+            linalgcl_matrix_copy_to_host(solver->solution[2], queue, CL_TRUE);
+
+            beta2 = 0.0;
+            temp_number = 0.0;
+            for (linalgcl_size_t k = 0; k < solver->solution[0]->size_x; k++) {
+                beta2 += solver->solution[0]->host_data[k] * solver->solution[2]->host_data[k];
+                temp_number += solver->solution[2]->host_data[k] * solver->solution[2]->host_data[k];
+            }
+            beta2 = beta2 / temp_number;
+            printf("iteration: %d, beta2: %f\n", i, beta2);
+
+            // continue on GPU
+            // update projection
+            linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->projection[2], -beta2,
+                matrix_program, queue);
+            linalgcl_matrix_add(solver->projection[0], solver->projection[0], solver->temp_matrix,
+                matrix_program, queue);
+
+            // update solution
+            linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->solution[2], -beta2,
+                matrix_program, queue);
+            linalgcl_matrix_add(solver->solution[0], solver->solution[0], solver->temp_matrix,
+                matrix_program, queue);
+        }
+
+        // sync iteration
+        clFinish(queue);
     }
 
     return LINALGCL_SUCCESS;

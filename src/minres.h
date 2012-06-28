@@ -31,6 +31,7 @@ typedef struct {
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t projection[3];
     linalgcl_matrix_t solution[3];
+    linalgcl_matrix_t temp_matrix;
     ert_minres_solver_program_t program;
 } ert_minres_solver_s;
 typedef ert_minres_solver_s* ert_minres_solver_t;
