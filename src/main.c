@@ -31,7 +31,7 @@
 #include "basis.h"
 #include "image.h"
 #include "grid.h"
-#include "minres.h"
+#include "gradient.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
@@ -116,15 +116,15 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    /*// create image
+    // create image
     ert_image_t image;
     ert_image_create(&image, 1000, 1000, mesh, context, device_id);
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);*/
+    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
 
     // create solver
-    ert_minres_solver_t solver;
-    error = ert_minres_solver_create(&solver, grid, context, device_id, queue);
+    ert_gradient_solver_t solver;
+    error = ert_gradient_solver_create(&solver, grid, context, device_id, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // solve
-    error = ert_minres_solver_solve(solver, x, f, program, queue);
+    error = ert_gradient_solver_solve(solver, x, f, program, queue);
 
     printf("success: %d\n", error);
 
@@ -170,18 +170,18 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f\n", end - start);
 
-    /* ert_image_calc(image, x, queue);
+    ert_image_calc(image, x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
-    system("python src/script.py");*/
+    system("python src/script.py");
 
     // cleanup
     linalgcl_matrix_release(&x);
     linalgcl_matrix_release(&f);
-    ert_minres_solver_release(&solver);
+    ert_gradient_solver_release(&solver);
     ert_grid_release(&grid);
-    //ert_image_release(&image);
+    ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 

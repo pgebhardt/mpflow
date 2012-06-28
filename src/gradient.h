@@ -16,42 +16,46 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ERT_MINRES_H
-#define ERT_MINRES_H
+#ifndef ERT_GRADIENT_H
+#define ERT_GRADIENT_H
 
-// minres solver program struct
+// gradient solver program struct
 typedef struct {
     cl_program program;
-} ert_minres_solver_program_s;
-typedef ert_minres_solver_program_s* ert_minres_solver_program_t;
+    cl_kernel kernel_regularize_system_matrix;
+} ert_gradient_solver_program_s;
+typedef ert_gradient_solver_program_s* ert_gradient_solver_program_t;
 
-// minres solver struct
+// gradient solver struct
 typedef struct {
     ert_grid_t grid;
     linalgcl_matrix_t residuum;
-    linalgcl_matrix_t projection[3];
-    linalgcl_matrix_t solution[3];
+    linalgcl_matrix_t projection;
     linalgcl_matrix_t temp_matrix;
-    ert_minres_solver_program_t program;
-} ert_minres_solver_s;
-typedef ert_minres_solver_s* ert_minres_solver_t;
+    ert_gradient_solver_program_t program;
+} ert_gradient_solver_s;
+typedef ert_gradient_solver_s* ert_gradient_solver_t;
 
-// create new minres program
-linalgcl_error_t ert_minres_solver_program_create(ert_minres_solver_program_t* programPointer,
+// create new gradient program
+linalgcl_error_t ert_gradient_solver_program_create(ert_gradient_solver_program_t* programPointer,
     cl_context context, cl_device_id device_id, const char* path);
 
-// release minres program
-linalgcl_error_t ert_minres_solver_program_release(ert_minres_solver_program_t* programPointer);
+// release gradient program
+linalgcl_error_t ert_gradient_solver_program_release(ert_gradient_solver_program_t* programPointer);
 
 // create solver
-linalgcl_error_t ert_minres_solver_create(ert_minres_solver_t* solverPointer,
+linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer,
     ert_grid_t grid, cl_context context, cl_device_id device_id, cl_command_queue queue);
 
 // release solver
-linalgcl_error_t ert_minres_solver_release(ert_minres_solver_t* solverPointer);
+linalgcl_error_t ert_gradient_solver_release(ert_gradient_solver_t* solverPointer);
 
-// solve minres
-linalgcl_error_t ert_minres_solver_solve(ert_minres_solver_t solver,
+// regularize_system_matrix
+linalgcl_error_t ert_gradient_solver_regularize_system_matrix(ert_gradient_solver_t solver,
+    linalgcl_matrix_data_t sigma, cl_command_queue queue);
+
+// solve gradient
+linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
     linalgcl_matrix_t x, linalgcl_matrix_t f,
     linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
