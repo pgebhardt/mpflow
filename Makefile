@@ -25,12 +25,12 @@ CFLAGS = -fblocks
 
 # linux libraries
 ifeq ($(UNAME), Linux)
-LDFLAGS = -lBlocksRuntime -lactor -llinalgcl -lm -ldispatch -lamdocl64
+LDFLAGS = -llinalgcl -lm -lamdocl64
 endif
 
 # osx libraries
 ifeq ($(UNAME), Darwin)
-LDFLAGS = -lactor -llinalgcl -lm -framework opencl
+LDFLAGS = -llinalgcl -lm -framework opencl
 endif
 
 # Directories

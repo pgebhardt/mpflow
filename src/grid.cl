@@ -1,20 +1,20 @@
-
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #define BLOCK_SIZE (16)
 
-__kernel void update_system_matrix(__global float* system_matrix_values,
-    __global float* system_matrix_column_ids,
-    __global float* gradient_matrix_transposed_values,
-    __global float* gradient_matrix_transposed_column_ids,
-    __global float* gradient_matrix_transposed,
-    __global float* sigma,
-    __global float* area,
+__kernel void update_system_matrix(__global double* system_matrix_values,
+    __global double* system_matrix_column_ids,
+    __global double* gradient_matrix_transposed_values,
+    __global double* gradient_matrix_transposed_column_ids,
+    __global double* gradient_matrix_transposed,
+    __global double* sigma,
+    __global double* area,
     unsigned int element_count) {
     // get ids
     unsigned int i = get_global_id(0);
     unsigned int j = system_matrix_column_ids[(i * BLOCK_SIZE) + get_global_id(1)];
 
     // calc system_matrix_element
-    float element = 0.0;
+    double element = 0.0;
     unsigned int id = 0;
 
     for (unsigned int k = 0; k < BLOCK_SIZE; k++) {
@@ -30,8 +30,8 @@ __kernel void update_system_matrix(__global float* system_matrix_values,
         (j != 0)) ? element : 0.0;
 }
 
-__kernel void unfold_system_matrix(__global float* result, __global float* system_matrix_values,
-    __global float* system_matrix_column_ids, unsigned int size_y) {
+__kernel void unfold_system_matrix(__global double* result, __global double* system_matrix_values,
+    __global double* system_matrix_column_ids, unsigned int size_y) {
     // get id
     unsigned int i = get_global_id(0);
 
@@ -45,8 +45,8 @@ __kernel void unfold_system_matrix(__global float* result, __global float* syste
     }
 }
 
-__kernel void regulize_system_matrix(__global float* system_matrix,
-    unsigned int size_y, float lambda) {
+__kernel void regulize_system_matrix(__global double* system_matrix,
+    unsigned int size_y, double lambda) {
     // get id
     unsigned int i = get_global_id(0);
 

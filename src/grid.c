@@ -439,6 +439,7 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
 
         return LINALGCL_ERROR;
     }
+
     return LINALGCL_SUCCESS;
 }
 

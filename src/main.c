@@ -26,7 +26,6 @@
 #include <CL/cl.h>
 #endif
 
-#include <actor/actor.h>
 #include <linalgcl/linalgcl.h>
 #include "mesh.h"
 #include "basis.h"
@@ -53,7 +52,7 @@ static void print_matrix(linalgcl_matrix_t matrix) {
     }
 }
 
-static actor_process_function_t main_process = ^(actor_process_t self) {
+int main(int argc, char* argv[]) {
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
     cl_int cl_error = CL_SUCCESS;
@@ -64,7 +63,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // check success
     if (cl_error != CL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // Create a compute context 
@@ -72,14 +71,14 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // check success
     if (cl_error != CL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // Create a command commands
     cl_command_queue queue = clCreateCommandQueue(context, device_id, 0, &cl_error);
 
     if (cl_error != CL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // create matrix program
@@ -89,7 +88,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        printf("Matrix programm laden ging nicht!\n");
+        return EXIT_FAILURE;
     }
 
     // create mesh
@@ -98,7 +98,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        printf("Mesh erzeugen ging nicht!\n");
+        return EXIT_FAILURE;
     }
 
     // copy matrices to device
@@ -111,14 +112,15 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        printf("Grid erzeugen ging nicht!\n");
+        return EXIT_FAILURE;
     }
 
-    // create image
+    /*// create image
     ert_image_t image;
     ert_image_create(&image, 1000, 1000, mesh, context, device_id);
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);*/
 
     // create solver
     ert_minres_solver_t solver;
@@ -126,7 +128,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // x vector
@@ -168,55 +170,20 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f\n", end - start);
 
-    ert_image_calc(image, x, queue);
+    /* ert_image_calc(image, x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
-    system("python src/script.py");
+    system("python src/script.py");*/
 
     // cleanup
     linalgcl_matrix_release(&x);
     linalgcl_matrix_release(&f);
     ert_minres_solver_release(&solver);
     ert_grid_release(&grid);
-    ert_image_release(&image);
+    //ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 
-    return ACTOR_SUCCESS;
-};
-
-int main(int argc, char* argv[]) {
-    // error
-    actor_error_t error = ACTOR_SUCCESS;
-
-    // create node
-    actor_node_t node = NULL;
-    error = actor_node_create(&node, 0, 100);
-
-    // check success
-    if (error != ACTOR_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // start main process
-    error = actor_spawn(node, NULL, main_process);
-
-    // check success
-    if (error != ACTOR_SUCCESS) {
-        // cleanup
-        actor_node_release(&node);
-
-        return EXIT_FAILURE;
-    }
-
-    // wait for processes to complete
-    while (actor_node_wait_for_processes(node, 10.0) != ACTOR_SUCCESS) {
-        // wait
-    }
-
-    // cleanup
-    actor_node_release(&node);
-
     return EXIT_SUCCESS;
-}
+};
