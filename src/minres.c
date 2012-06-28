@@ -221,12 +221,12 @@ linalgcl_error_t ert_minres_solver_solve(ert_minres_solver_t solver,
 
     // init matrices
     // calc residuum r = b - A * x
-    error  = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue,
-        solver->residuum, solver->grid->system_matrix, x);
-    error += linalgcl_matrix_scalar_multiply(matrix_program, queue,
-        solver->residuum, solver->residuum, -1.0);
-    error += linalgcl_matrix_add(matrix_program, queue,
-        solver->residuum, solver->residuum, f);
+    error  = linalgcl_sparse_matrix_vector_multiply(solver->residuum, solver->grid->system_matrix, x,
+        matrix_program, queue);
+    error |= linalgcl_matrix_scalar_multiply(solver->residuum, solver->residuum, -1.0,
+        matrix_program, queue);
+    error |= linalgcl_matrix_add(solver->residuum, solver->residuum, f,
+        matrix_program, queue);
     clFinish(queue);
 
     // check success
@@ -235,22 +235,26 @@ linalgcl_error_t ert_minres_solver_solve(ert_minres_solver_t solver,
     }
 
     // p0 = r
-    error  = linalgcl_matrix_copy(matrix_program, queue,
-        solver->projection[0], solver->residuum);
+    error  = linalgcl_matrix_copy(solver->projection[0], solver->residuum,
+        queue, CL_FALSE);
 
     // s0 = A * p0 = A * r
-    error += linalgcl_sparse_matrix_vector_multiply(matrix_program, queue,
-        solver->solution[0], solver->grid->system_matrix, solver->residuum);
+    error |= linalgcl_sparse_matrix_vector_multiply(solver->solution[0],
+        solver->grid->system_matrix, solver->residuum,
+        matrix_program, queue);
 
     // p1 = p0 = r
-    error += linalgcl_matrix_copy(matrix_program, queue,
-        solver->projection[1], solver->residuum);
+    error |= linalgcl_matrix_copy(solver->projection[1], solver->residuum,
+        queue, CL_TRUE);
 
     // s1 = s0
-    clFinish(queue);
-    error += linalgcl_matrix_copy(matrix_program, queue,
-        solver->solution[1], solver->solution[0]);
-    clFinish(queue);
+    error |= linalgcl_matrix_copy(solver->solution[1], solver->solution[0],
+        queue, CL_TRUE);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
+    }
 
     // iterate
     for (linalgcl_size_t i = 0; i < 1; i++) {

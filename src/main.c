@@ -32,7 +32,7 @@
 #include "basis.h"
 #include "image.h"
 #include "grid.h"
-#include "solver.h"
+#include "minres.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
@@ -79,9 +79,6 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     cl_command_queue queue = clCreateCommandQueue(context, device_id, 0, &cl_error);
 
     if (cl_error != CL_SUCCESS) {
-        // cleanup
-        clReleaseContext(context);
-
         return ACTOR_ERROR;
     }
 
@@ -92,82 +89,55 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        clReleaseContext(context);
-
         return ACTOR_ERROR;
     }
 
     // create mesh
-    ert_mesh_t mesh[3];
-    error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 16.0, context);
-    error += ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
+    ert_mesh_t mesh;
+    error  = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        clReleaseContext(context);
-        clReleaseCommandQueue(queue);
-
         return ACTOR_ERROR;
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(mesh[0]->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[0]->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[1]->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[1]->elements, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->vertices, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->elements, queue, CL_TRUE);
+
+    // create grid
+    ert_grid_t grid;
+    error = ert_grid_create(&grid, program, mesh, context, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return ACTOR_ERROR;
+    }
 
     // create image
     ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);
+    ert_image_create(&image, 1000, 1000, mesh, context, device_id);
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
 
     // create solver
-    ert_solver_t solver;
-    error = ert_solver_create(&solver, 3, context, device_id);
-
-    error += ert_solver_add_coarser_grid(solver, mesh[0], program,
-        context, queue);
-    error += ert_solver_add_coarser_grid(solver, mesh[1], program,
-        context, queue);
-    clFinish(queue);
+    ert_minres_solver_t solver;
+    error = ert_minres_solver_create(&solver, grid, context, device_id, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
-
         return ACTOR_ERROR;
     }
 
-    // calc intergrid transfer matrices
-    error  = ert_grid_init_intergrid_transfer_matrices(solver->grids[0], NULL,
-        solver->grids[1], program, context, queue);
-    error += ert_grid_init_intergrid_transfer_matrices(solver->grids[1],
-        solver->grids[0], NULL, program, context, queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        printf("intergrid transfer ging nicht!\n");
-
-        return ACTOR_ERROR;
-    }
-
+    // x vector
     linalgcl_matrix_t x;
-    linalgcl_matrix_create(&x, context, mesh[0]->vertex_count, 1);
-
-    for (linalgcl_size_t i = 0; i < mesh[0]->vertex_count; i++) {
-        x->host_data[i] = 1.0;
-    }
-
+    linalgcl_matrix_create(&x, context, mesh->vertex_count, 1);
     linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
 
+    // right hand side
     linalgcl_matrix_t j, f;
     linalgcl_matrix_create(&j, context, 10, 1);
-    linalgcl_matrix_create(&f, context, mesh[0]->vertex_count, 1);
+    linalgcl_matrix_create(&f, context, mesh->vertex_count, 1);
 
     // set j
     linalgcl_matrix_set_element(j, 1.0, 1, 0);
@@ -176,8 +146,7 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
 
     // calc f matrix
     // f = B * j
-    linalgcl_matrix_multiply(program, queue, f,
-        solver->grids[0]->exitation_matrix, j);
+    linalgcl_matrix_multiply(f, grid->exitation_matrix, j, program, queue);
     clFinish(queue);
     linalgcl_matrix_release(&j);
     linalgcl_matrix_copy_to_host(f, queue, CL_TRUE);
@@ -189,20 +158,17 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    error = ert_solver_v_cycle(solver, x, f, program, context, queue);
-    clFinish(queue);
+    // solve
+    error = ert_minres_solver_solve(solver, x, f, program, queue);
+
+    printf("success: %d\n", error);
 
     // get end time
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f\n", end - start);
 
-    if (error != LINALGCL_SUCCESS) {
-        printf("Multigrid geht nicht!\n");
-        return ACTOR_ERROR;
-    }
-
-    ert_image_calc(image, solver->grids[0]->x, queue);
+    ert_image_calc(image, x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
@@ -211,7 +177,8 @@ static actor_process_function_t main_process = ^(actor_process_t self) {
     // cleanup
     linalgcl_matrix_release(&x);
     linalgcl_matrix_release(&f);
-    ert_solver_release(&solver);
+    ert_minres_solver_release(&solver);
+    ert_grid_release(&grid);
     ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
