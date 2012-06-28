@@ -29,9 +29,12 @@ typedef ert_gradient_solver_program_s* ert_gradient_solver_program_t;
 // gradient solver struct
 typedef struct {
     ert_grid_t grid;
+    linalgcl_matrix_t system_matrix;
+    linalgcl_sparse_matrix_t system_matrix_sparse;
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t projection;
     linalgcl_matrix_t temp_matrix;
+    linalgcl_matrix_t temp_vector;
     ert_gradient_solver_program_t program;
 } ert_gradient_solver_s;
 typedef ert_gradient_solver_s* ert_gradient_solver_t;
@@ -45,14 +48,15 @@ linalgcl_error_t ert_gradient_solver_program_release(ert_gradient_solver_program
 
 // create solver
 linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer,
-    ert_grid_t grid, cl_context context, cl_device_id device_id, cl_command_queue queue);
+    ert_grid_t grid, linalgcl_matrix_program_t matrix_program,
+    cl_context context, cl_device_id device_id, cl_command_queue queue);
 
 // release solver
 linalgcl_error_t ert_gradient_solver_release(ert_gradient_solver_t* solverPointer);
 
 // regularize_system_matrix
 linalgcl_error_t ert_gradient_solver_regularize_system_matrix(ert_gradient_solver_t solver,
-    linalgcl_matrix_data_t sigma, cl_command_queue queue);
+    linalgcl_matrix_data_t sigma, linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
 // solve gradient
 linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,

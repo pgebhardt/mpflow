@@ -199,9 +199,11 @@ linalgcl_error_t ert_gradient_solver_program_release(ert_gradient_solver_program
 
 // create gradient solver
 linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer,
-    ert_grid_t grid, cl_context context, cl_device_id device_id, cl_command_queue queue) {
+    ert_grid_t grid, linalgcl_matrix_program_t matrix_program,
+    cl_context context, cl_device_id device_id, cl_command_queue queue) {
     // check input
-    if ((solverPointer == NULL) || (grid == NULL) || (context == NULL) || (queue == NULL)) {
+    if ((solverPointer == NULL) || (grid == NULL) || (matrix_program == NULL) ||
+        (context == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -221,18 +223,27 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
 
     // init struct
     solver->grid = grid;
+    solver->system_matrix = NULL;
+    solver->system_matrix_sparse = NULL;
     solver->residuum = NULL;
     solver->projection = NULL;
     solver->temp_matrix = NULL;
+    solver->temp_vector = NULL;
     solver->program = NULL;
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->residuum, context,
+    error  = linalgcl_matrix_create(&solver->system_matrix, context,
+        solver->grid->system_matrix->size_x, solver->grid->system_matrix->size_y);
+    error |= linalgcl_matrix_create(&solver->residuum, context,
         solver->grid->mesh->vertex_count, 1);
     error |= linalgcl_matrix_create(&solver->projection, context,
         solver->grid->mesh->vertex_count, 1);
     error |= linalgcl_matrix_create(&solver->temp_matrix, context,
+        solver->system_matrix->size_x, solver->system_matrix->size_y);
+    error |= linalgcl_matrix_create(&solver->temp_vector, context,
         solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_sparse_matrix_create(&solver->system_matrix_sparse, solver->system_matrix,
+        matrix_program, context, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -243,9 +254,11 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
     }
 
     // copy data to device
-    error  = linalgcl_matrix_copy_to_device(solver->residuum, queue, CL_FALSE);
+    error  = linalgcl_matrix_copy_to_device(solver->system_matrix, queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->residuum, queue, CL_FALSE);
     error |= linalgcl_matrix_copy_to_device(solver->projection, queue, CL_FALSE);
     error |= linalgcl_matrix_copy_to_device(solver->temp_matrix, queue, CL_TRUE);
+    error |= linalgcl_matrix_copy_to_device(solver->temp_vector, queue, CL_TRUE);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -284,9 +297,12 @@ linalgcl_error_t ert_gradient_solver_release(ert_gradient_solver_t* solverPointe
     ert_gradient_solver_t solver = *solverPointer;
 
     // release matrices
+    linalgcl_matrix_release(&solver->system_matrix);
+    linalgcl_sparse_matrix_release(&solver->system_matrix_sparse);
     linalgcl_matrix_release(&solver->residuum);
     linalgcl_matrix_release(&solver->projection);
     linalgcl_matrix_release(&solver->temp_matrix);
+    linalgcl_matrix_release(&solver->temp_vector);
 
     // release program
     ert_gradient_solver_program_release(&solver->program);
@@ -302,22 +318,29 @@ linalgcl_error_t ert_gradient_solver_release(ert_gradient_solver_t* solverPointe
 
 // regularize_system_matrix
 linalgcl_error_t ert_gradient_solver_regularize_system_matrix(ert_gradient_solver_t solver,
-    linalgcl_matrix_data_t sigma, cl_command_queue queue) {
+    linalgcl_matrix_data_t sigma, linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
     // check input
-    if ((solver == NULL) || (queue == NULL)) {
+    if ((solver == NULL) || (matrix_program == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
+    // unfold system_matrix
+    linalgcl_sparse_matrix_unfold(solver->temp_matrix, solver->grid->system_matrix, matrix_program, queue);
+    clFinish(queue);
+
     // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
     cl_int cl_error = CL_SUCCESS;
 
     // set kernel arguments
     cl_error  = clSetKernelArg(solver->program->kernel_regularize_system_matrix,
-        0, sizeof(cl_mem), &solver->grid->system_matrix->values->device_data);
+        0, sizeof(cl_mem), &solver->system_matrix->device_data);
     cl_error |= clSetKernelArg(solver->program->kernel_regularize_system_matrix,
-        1, sizeof(cl_mem), &solver->grid->system_matrix->column_ids->device_data);
+        1, sizeof(cl_mem), &solver->temp_matrix->device_data);
     cl_error |= clSetKernelArg(solver->program->kernel_regularize_system_matrix,
-        2, sizeof(linalgcl_matrix_data_t), &sigma);
+        2, sizeof(linalgcl_size_t), &solver->system_matrix->size_y);
+    cl_error |= clSetKernelArg(solver->program->kernel_regularize_system_matrix,
+        3, sizeof(linalgcl_matrix_data_t), &sigma);
 
     // check success
     if (cl_error != CL_SUCCESS) {
@@ -325,15 +348,25 @@ linalgcl_error_t ert_gradient_solver_regularize_system_matrix(ert_gradient_solve
     }
 
     // execute kernel_update_system_matrix
-    size_t global = solver->grid->system_matrix->size_x;
-    size_t local = LINALGCL_BLOCK_SIZE;
+    size_t global[2] = { solver->system_matrix->size_x, solver->system_matrix->size_y };
+    size_t local[2] = { LINALGCL_BLOCK_SIZE, LINALGCL_BLOCK_SIZE };
 
     cl_error = clEnqueueNDRangeKernel(queue, solver->program->kernel_regularize_system_matrix,
-        1, NULL, &global, &local, 0, NULL, NULL);
+        2, NULL, global, local, 0, NULL, NULL);
 
     // check success
     if (cl_error != CL_SUCCESS) {
         return LINALGCL_ERROR;
+    }
+
+    // convert to sparse matrix
+    clFinish(queue);
+    error = linalgcl_sparse_matrix_convert(solver->system_matrix_sparse, solver->system_matrix,
+        matrix_program, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
     }
 
     return LINALGCL_SUCCESS;
@@ -354,19 +387,18 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
 
     // init matrices
     // regularize system matrix
-    error = ert_gradient_solver_regularize_system_matrix(solver, 1E-3, queue);
+    ert_gradient_solver_regularize_system_matrix(solver, 1E-6, matrix_program, queue);
 
-    // check
-    if (error != LINALGCL_SUCCESS) {
-        return error;
-    }
+    // regularize f
+    linalgcl_sparse_matrix_vector_multiply(solver->temp_vector, solver->grid->system_matrix,
+        f, matrix_program, queue);
 
-    // calc residuum r = b - A * x
-    error  = linalgcl_sparse_matrix_vector_multiply(solver->residuum, solver->grid->system_matrix, x,
+    // calc residuum r = f - A * x
+    error  = linalgcl_matrix_multiply(solver->residuum, solver->system_matrix, x,
         matrix_program, queue);
     error |= linalgcl_matrix_scalar_multiply(solver->residuum, solver->residuum, -1.0,
         matrix_program, queue);
-    error |= linalgcl_matrix_add(solver->residuum, solver->residuum, f,
+    error |= linalgcl_matrix_add(solver->residuum, solver->residuum, solver->temp_vector,
         matrix_program, queue);
     clFinish(queue);
 
@@ -386,41 +418,36 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
 
     // iterate
     linalgcl_matrix_data_t alpha, beta, rsold;
-    while (1) {
+    for (linalgcl_size_t i = 0; i < 1000; i++) {
         // calc A * p
-        linalgcl_sparse_matrix_vector_multiply(solver->temp_matrix,
-            solver->grid->system_matrix, solver->projection, matrix_program, queue);
+        linalgcl_matrix_multiply(solver->temp_vector,
+            solver->system_matrix, solver->projection, matrix_program, queue);
 
         // calc alpha on CPU
         clFinish(queue);
         linalgcl_matrix_copy_to_host(solver->residuum, queue, CL_TRUE);
         linalgcl_matrix_copy_to_host(solver->projection, queue, CL_TRUE);
-        linalgcl_matrix_copy_to_host(solver->temp_matrix, queue, CL_TRUE);
+        linalgcl_matrix_copy_to_host(solver->temp_vector, queue, CL_TRUE);
 
         alpha = 0.0;
         rsold = 0.0;
         for (linalgcl_size_t k = 0; k < solver->residuum->size_x; k++) {
             rsold += solver->residuum->host_data[k] * solver->residuum->host_data[k];
-            alpha += solver->projection->host_data[k] * solver->temp_matrix->host_data[k];
+            alpha += solver->projection->host_data[k] * solver->temp_vector->host_data[k];
         }
         alpha = rsold / alpha;
 
-        // check error
-        if (sqrt(rsold) <= 1E-3) {
-            break;
-        }
-
         // continue on GPU
         // update residuum
-        linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->temp_matrix, -alpha,
+        linalgcl_matrix_scalar_multiply(solver->temp_vector, solver->temp_vector, -alpha,
             matrix_program, queue);
-        linalgcl_matrix_add(solver->residuum, solver->residuum, solver->temp_matrix,
+        linalgcl_matrix_add(solver->residuum, solver->residuum, solver->temp_vector,
             matrix_program, queue);
 
         // update x
-        linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->projection, alpha,
+        linalgcl_matrix_scalar_multiply(solver->temp_vector, solver->projection, alpha,
             matrix_program, queue);
-        linalgcl_matrix_add(x, x, solver->temp_matrix, matrix_program, queue);
+        linalgcl_matrix_add(x, x, solver->temp_vector, matrix_program, queue);
 
         // calc beta on CPU
         clFinish(queue);
@@ -433,9 +460,9 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
         beta = beta / rsold;
 
         // update projection
-        linalgcl_matrix_scalar_multiply(solver->temp_matrix, solver->projection, beta,
+        linalgcl_matrix_scalar_multiply(solver->temp_vector, solver->projection, beta,
             matrix_program, queue);
-        linalgcl_matrix_add(solver->projection, solver->residuum, solver->temp_matrix,
+        linalgcl_matrix_add(solver->projection, solver->residuum, solver->temp_vector,
             matrix_program, queue);
 
         // sync iteration

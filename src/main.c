@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
 
     // create solver
     ert_gradient_solver_t solver;
-    error = ert_gradient_solver_create(&solver, grid, context, device_id, queue);
+    error = ert_gradient_solver_create(&solver, grid, program, context, device_id, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
