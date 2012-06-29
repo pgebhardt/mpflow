@@ -275,7 +275,7 @@ linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
     linalgcl_error_t error = LINALGCL_ERROR;
 
     // create matrices
-    linalgcl_matrix_t temp1, temp2;
+    linalgcl_matrix_t temp1, temp2, rh, rH, e;
     linalgcl_matrix_t rh = solver->grids[0]->r;
     linalgcl_matrix_t rH = solver->grids[1]->r;
     linalgcl_matrix_t eh = solver->grids[0]->e;

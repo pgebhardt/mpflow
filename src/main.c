@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 
     // create mesh
     ert_mesh_t mesh;
-    error  = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
+    error  = ert_mesh_create(&mesh, 1.0, 1.0 / 4.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -154,6 +154,16 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_copy_to_host(f, queue, CL_TRUE);
     linalgcl_matrix_save("f.txt", f);
 
+    // regularize system matrix
+    ert_gradient_solver_regularize_system_matrix(solver, 1E-6, program, queue);
+    // linalgcl_sparse_matrix_unfold(solver->system_matrix, solver->grid->system_matrix,
+    //    program, queue);
+
+    // regularize f
+    linalgcl_sparse_matrix_vector_multiply(solver->temp_vector, solver->grid->system_matrix,
+        f, program, queue);
+    // linalgcl_matrix_copy(solver->temp_vector, f, queue, CL_TRUE);
+
     // get start time
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -167,6 +177,7 @@ int main(int argc, char* argv[]) {
 
     // get end time
     gettimeofday(&tv, NULL);
+    clFinish(queue);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f\n", end - start);
 

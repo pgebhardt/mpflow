@@ -17,5 +17,3 @@ __kernel void regularize_system_matrix(__global float* result, __global float* s
     // set result
     result[(i * size_y) + j] = (i == j) ? element + sigma : element;
 }
-
-
