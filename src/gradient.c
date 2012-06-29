@@ -91,7 +91,7 @@ linalgcl_error_t ert_gradient_solver_program_create(ert_gradient_solver_program_
     }
 
     // get file length
-    linalgcl_size_t length = 0;
+    size_t length = 0;
     fseek(file, 0, SEEK_END);
     length = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -123,7 +123,7 @@ linalgcl_error_t ert_gradient_solver_program_create(ert_gradient_solver_program_
 
     // create program from source buffer
     program->program = clCreateProgramWithSource(context, 1,
-        (const char**)&buffer, NULL, &cl_error);
+        (const char**)&buffer, &length, &cl_error);
     free(buffer);
 
     // check success
