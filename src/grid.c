@@ -212,14 +212,26 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     grid->restrict_phi = NULL;
     grid->restrict_sigma = NULL;
     grid->prolongate_phi = NULL;
+    grid->residuum = NULL;
+    grid->error = NULL;
+    grid->x = NULL;
+    grid->f = NULL;
 
     // create matrices
     error  = linalgcl_matrix_create(&grid->gradient_matrix, context,
         grid->mesh->vertex_count, 2 * grid->mesh->element_count);
-    error += linalgcl_matrix_create(&grid->sigma, context,
+    error |= linalgcl_matrix_create(&grid->sigma, context,
         grid->mesh->element_count, 1);
-    error += linalgcl_matrix_create(&grid->area, context,
+    error |= linalgcl_matrix_create(&grid->area, context,
         grid->mesh->element_count, 1);
+    error |= linalgcl_matrix_create(&grid->residuum, context,
+        grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&grid->error, context,
+        grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&grid->x, context,
+        grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&grid->f, context,
+        grid->mesh->vertex_count, 1);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -228,6 +240,15 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
 
         return error;
     }
+
+    // copy data to device
+    linalgcl_matrix_copy_to_device(grid->gradient_matrix, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->area, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->residuum, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->error, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->x, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->f, queue, CL_TRUE);
 
     // init to uniform sigma
     for (linalgcl_size_t i = 0; i < grid->sigma->size_x; i++) {
@@ -282,6 +303,10 @@ linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
     linalgcl_sparse_matrix_release(&grid->restrict_phi);
     linalgcl_sparse_matrix_release(&grid->restrict_sigma);
     linalgcl_sparse_matrix_release(&grid->prolongate_phi);
+    linalgcl_matrix_release(&grid->residuum);
+    linalgcl_matrix_release(&grid->error);
+    linalgcl_matrix_release(&grid->x);
+    linalgcl_matrix_release(&grid->f);
 
     // free struct
     free(grid);

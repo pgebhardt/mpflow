@@ -25,6 +25,7 @@ typedef struct {
     linalgcl_size_t grid_count;
     linalgcl_size_t max_grids;
     ert_grid_program_t grid_program;
+    ert_gradient_solver_t gradient_solver;
 } ert_solver_s;
 typedef ert_solver_s* ert_solver_t;
 
@@ -41,7 +42,7 @@ linalgcl_error_t ert_solver_add_coarser_grid(ert_solver_t solver,
     cl_context context, cl_command_queue queue);
 
 // do v cycle
-linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t initial_guess,
+linalgcl_error_t ert_solver_solve(ert_solver_t solver, linalgcl_matrix_t initial_guess,
     linalgcl_matrix_t f, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_command_queue queue);
 

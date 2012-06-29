@@ -30,6 +30,7 @@
 #include "basis.h"
 #include "mesh.h"
 #include "grid.h"
+#include "gradient.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -79,6 +80,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->grid_count = 0;
     solver->max_grids = max_grids;
     solver->grid_program = NULL;
+    solver->gradient_solver = NULL;
 
     // load program
     error = ert_grid_program_create(&solver->grid_program, context, device_id,
@@ -127,6 +129,8 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
         ert_grid_release(&solver->grids[i]);
     }
     free(solver->grids);
+
+    ert_gradient_solver_release(&solver->gradient_solver);
 
     // free struct
     free(solver);
@@ -188,8 +192,13 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
     }
 
     if (n >= solver->grid_count - 1) {
+        // regularize f
+        linalgcl_sparse_matrix_vector_multiply(solver->gradient_solver->temp_vector,
+            solver->gradient_solver->grid->system_matrix, f, matrix_program, queue);
+
         // calc error
-        // TODO: needs gradient solver as soon as ready
+        error = ert_gradient_solver_solve(solver->gradient_solver, solver->grids[n]->x, f, matrix_program,
+            queue);
 
         // check success
         if (error != LINALGCL_SUCCESS) {
@@ -200,23 +209,24 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
     }
     else {
         // calc residuum r = f - A * x
-        error  = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, temp1,
-            solver->grids[n]->system_matrix, solver->grids[n]->x);
-        error += linalgcl_matrix_scalar_multiply(matrix_program, queue, temp2, temp1, -1.0);
-        error += linalgcl_matrix_add(matrix_program, queue, solver->grids[n]->r, f, temp2);
+        error  = linalgcl_sparse_matrix_vector_multiply(temp1, solver->grids[n]->system_matrix,
+            solver->grids[n]->x, matrix_program, queue);
+        error += linalgcl_matrix_scalar_multiply(temp2, temp1, -1.0, matrix_program, queue);
+        error += linalgcl_matrix_add(solver->grids[n]->residuum, f, temp2, matrix_program, queue);
 
         // check error
         clFinish(queue);
-        linalgcl_matrix_copy_to_host(solver->grids[n]->r, queue, CL_TRUE);
+        linalgcl_matrix_copy_to_host(solver->grids[n]->residuum, queue, CL_TRUE);
         linalgcl_matrix_data_t rmax = 0.0;
-        for (linalgcl_size_t k = 0; k < solver->grids[n]->r->size_x; k++) {
-            rmax = fabs(solver->grids[n]->r->host_data[k]) > rmax ? fabs(solver->grids[n]->r->host_data[k]) : rmax;
+        for (linalgcl_size_t k = 0; k < solver->grids[n]->residuum->size_x; k++) {
+            rmax = fabs(solver->grids[n]->residuum->host_data[k]) > rmax ?
+                fabs(solver->grids[n]->residuum->host_data[k]) : rmax;
         }
         printf("Multigrid error %f\n", sqrt(rmax));
 
         // calc coarser residuum 
-        error = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, solver->grids[n + 1]->f,
-            solver->grids[n]->restrict_phi, solver->grids[n]->r);
+        error = linalgcl_sparse_matrix_vector_multiply(solver->grids[n + 1]->f,
+            solver->grids[n]->restrict_phi, solver->grids[n]->residuum, matrix_program, queue);
 
         // check success
         if (error != LINALGCL_SUCCESS) {
@@ -234,8 +244,8 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
         }
 
         // prolongate error
-        error = linalgcl_sparse_matrix_vector_multiply(matrix_program, queue, solver->grids[n]->e,
-            solver->grids[n + 1]->prolongate_phi, solver->grids[n + 1]->x);
+        error = linalgcl_sparse_matrix_vector_multiply(solver->grids[n]->error,
+            solver->grids[n + 1]->prolongate_phi, solver->grids[n + 1]->x, matrix_program, queue);
 
         // check success
         if (error != LINALGCL_SUCCESS) {
@@ -244,8 +254,8 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
         }
 
         // update x
-        error = linalgcl_matrix_add(matrix_program, queue, solver->grids[n]->x,
-            solver->grids[n]->x, solver->grids[n]->e);
+        error = linalgcl_matrix_add(solver->grids[n]->x, solver->grids[n]->x, solver->grids[n]->error,
+            matrix_program, queue);
 
         // check success
         if (error != LINALGCL_SUCCESS) {
@@ -262,7 +272,7 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
 }
 
 // do v cycle
-linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
+linalgcl_error_t ert_solver_solve(ert_solver_t solver, linalgcl_matrix_t x,
     linalgcl_matrix_t f, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_command_queue queue) {
     // check input
@@ -275,16 +285,15 @@ linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
     linalgcl_error_t error = LINALGCL_ERROR;
 
     // create matrices
-    linalgcl_matrix_t temp1, temp2, rh, rH, e;
-    linalgcl_matrix_t rh = solver->grids[0]->r;
-    linalgcl_matrix_t rH = solver->grids[1]->r;
-    linalgcl_matrix_t eh = solver->grids[0]->e;
-    linalgcl_matrix_t eH = solver->grids[1]->e;
+    linalgcl_matrix_t temp1, temp2;
+    linalgcl_matrix_t rh = solver->grids[0]->residuum;
+    linalgcl_matrix_t rH = solver->grids[1]->residuum;
+    linalgcl_matrix_t eh = solver->grids[0]->error;
+    linalgcl_matrix_t eH = solver->grids[1]->error;
     error = linalgcl_matrix_create(&temp1, context, solver->grids[0]->mesh->vertex_count, 1);
     error += linalgcl_matrix_create(&temp2, context, solver->grids[0]->mesh->vertex_count, 1);
 
-    linalgcl_matrix_copy(matrix_program, queue, solver->grids[0]->x, x);
-    clFinish(queue);
+    linalgcl_matrix_copy(solver->grids[0]->x, x, queue, CL_TRUE);
 
     // v cycle
     for (linalgcl_size_t i = 0; i < 50; i++) {
@@ -292,11 +301,13 @@ linalgcl_error_t ert_solver_v_cycle(ert_solver_t solver, linalgcl_matrix_t x,
         ert_solver_multigrid(solver, 0, f, matrix_program, context, queue);
 
         // calc error
-        linalgcl_matrix_copy_to_host(solver->grids[0]->e, queue, CL_TRUE);
+        linalgcl_matrix_copy_to_host(solver->grids[0]->error, queue, CL_TRUE);
         linalgcl_matrix_data_t error_max = 0.0;
-        for (linalgcl_size_t k = 0; k < solver->grids[0]->e->size_x; k++) {
-            error_max = solver->grids[0]->e->host_data[k] > error_max ? solver->grids[0]->e->host_data[k] : error_max;
+        for (linalgcl_size_t k = 0; k < solver->grids[0]->error->size_x; k++) {
+            error_max = solver->grids[0]->error->host_data[k] > error_max ?
+                solver->grids[0]->error->host_data[k] : error_max;
         }
+        printf("Error: %f\n", error_max);
     }
 
     // cleanup

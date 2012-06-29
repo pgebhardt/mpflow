@@ -419,7 +419,6 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
         linalgcl_matrix_copy_to_host(solver->temp_number, queue, CL_TRUE);
 
         alpha = rsold / solver->temp_number->host_data[0];
-        printf("error: %f\n", sqrt(rsold));
 
         // update residuum
         linalgcl_matrix_scalar_multiply(solver->temp_vector, solver->temp_vector, -alpha,

@@ -38,11 +38,11 @@ SRC = src
 BUILD = build
 
 # Object files
-_OBJ = main.o mesh.o basis.o grid.o image.o gradient.o
+_OBJ = main.o mesh.o basis.o grid.o image.o gradient.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Dependencies
-_DEPS = mesh.h basis.h grid.h image.h gradient.h
+_DEPS = mesh.h basis.h grid.h image.h gradient.h solver.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file

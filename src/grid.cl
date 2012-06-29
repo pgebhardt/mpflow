@@ -13,7 +13,7 @@ __kernel void update_system_matrix(__global float* system_matrix_values,
     unsigned int j = system_matrix_column_ids[(i * BLOCK_SIZE) + get_global_id(1)];
 
     // calc system_matrix_element
-    float element = 0.0;
+    float element = 0.0f;
     unsigned int id = 0;
 
     for (unsigned int k = 0; k < BLOCK_SIZE; k++) {
@@ -26,7 +26,7 @@ __kernel void update_system_matrix(__global float* system_matrix_values,
     }
 
     system_matrix_values[(i * BLOCK_SIZE) + get_global_id(1)] = (((j == 0) && (get_global_id(1) == 0)) ||
-        (j != 0)) ? element : 0.0;
+        (j != 0)) ? element : 0.0f;
 }
 
 __kernel void unfold_system_matrix(__global float* result, __global float* system_matrix_values,
