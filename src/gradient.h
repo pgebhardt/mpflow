@@ -23,6 +23,7 @@
 typedef struct {
     cl_program program;
     cl_kernel kernel_regularize_system_matrix;
+    cl_kernel kernel_update_vector;
 } ert_gradient_solver_program_s;
 typedef ert_gradient_solver_program_s* ert_gradient_solver_program_t;
 
@@ -32,6 +33,8 @@ typedef struct {
     linalgcl_matrix_t system_matrix;
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t projection;
+    linalgcl_matrix_t rsold;
+    linalgcl_matrix_t rsnew;
     linalgcl_matrix_t temp_matrix;
     linalgcl_matrix_t temp_vector;
     linalgcl_matrix_t temp_number;

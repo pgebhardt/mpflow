@@ -95,9 +95,9 @@ int main(int argc, char* argv[]) {
 
     // create mesh
     ert_mesh_t mesh[3];
-    error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 4.0, context);
-    error  = ert_mesh_create(&mesh[1], 1.0, 1.0 / 2.0, context);
-    error  = ert_mesh_create(&mesh[2], 1.0, 1.0 / 1.0, context);
+    error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 16.0, context);
+    error  = ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
+    error  = ert_mesh_create(&mesh[2], 1.0, 1.0 / 4.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
