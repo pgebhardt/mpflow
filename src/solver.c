@@ -185,18 +185,13 @@ linalgcl_error_t ert_solver_add_coarser_grid(ert_solver_t solver,
 
     // add new gradient_solver
     error = ert_gradient_solver_create(&solver->gradient_solver[solver->grid_count],
-        mesh->vertex_count, matrix_program, context, device_id, queue);
+        solver->grids[solver->grid_count]->system_matrix, matrix_program, context,
+        device_id, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
         return error;
     }
-
-    // regularize system matrix
-    linalgcl_sparse_matrix_unfold(solver->gradient_solver[solver->grid_count]->system_matrix,
-        solver->grids[solver->grid_count]->system_matrix, matrix_program, queue);
-    ert_gradient_solver_regularize_system_matrix(solver->gradient_solver[solver->grid_count],
-        0.0, matrix_program, queue);
 
     // increment grid counter
     solver->grid_count++;
@@ -212,10 +207,6 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n, li
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
     if (n >= depth - 1) {
-        // regularize f
-        linalgcl_sparse_matrix_vector_multiply(solver->gradient_solver[n]->temp_vector,
-            solver->grids[n]->system_matrix, f, matrix_program, queue);
-
         // calc error
         error = ert_gradient_solver_solve(solver->gradient_solver[n], solver->grids[n]->x, f, matrix_program,
             queue);
@@ -316,7 +307,7 @@ linalgcl_error_t ert_solver_solve(ert_solver_t solver, linalgcl_matrix_t x,
     linalgcl_matrix_copy(solver->grids[0]->x, x, queue, CL_TRUE);
 
     // v cycle
-    linalgcl_size_t cycles = 15;
+    linalgcl_size_t cycles = 5;
     linalgcl_size_t depth = solver->grid_count;
 
     for (linalgcl_size_t i = 0; i < cycles; i++) {

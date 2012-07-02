@@ -94,11 +94,9 @@ int main(int argc, char* argv[]) {
     }
 
     // create mesh
-    ert_mesh_t mesh[4];
-    error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 16.0, context);
-    error |= ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
-    error |= ert_mesh_create(&mesh[2], 1.0, 1.0 / 4.0, context);
-    error |= ert_mesh_create(&mesh[3], 1.0, 1.0 / 2.0, context);
+    ert_mesh_t mesh;
+    error = ert_mesh_create(&mesh, 1.0, 1.0 / 16.0, context);
+    printf("Generated mesh!\n");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -107,23 +105,19 @@ int main(int argc, char* argv[]) {
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(mesh[0]->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[0]->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[1]->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[1]->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[2]->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[2]->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[3]->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh[3]->elements, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->vertices, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->elements, queue, CL_TRUE);
+
+    // create grid
+    ert_grid_t grid = NULL;
+    error = ert_grid_create(&grid, program, mesh, context, queue);
 
     // create solver
-    ert_solver_t solver;
-    error = ert_solver_create(&solver, 4, context, device_id);
+    ert_gradient_solver_t solver = NULL;
+    error |= ert_gradient_solver_create(&solver, grid->system_matrix,
+        program, context, device_id, queue);
 
-    error += ert_solver_add_coarser_grid(solver, mesh[0], program, context, device_id, queue);
-    error += ert_solver_add_coarser_grid(solver, mesh[1], program, context, device_id, queue);
-    error += ert_solver_add_coarser_grid(solver, mesh[2], program, context, device_id, queue);
-    error += ert_solver_add_coarser_grid(solver, mesh[3], program, context, device_id, queue);
+    printf("Created solver and grids!\n");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -131,49 +125,21 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // calc intergrid transfer matrices
-    error  = ert_grid_init_intergrid_transfer_matrices(solver->grids[0], NULL,
-        solver->grids[1], program, context, queue);
-    error |= ert_grid_init_intergrid_transfer_matrices(solver->grids[1], solver->grids[0],
-        solver->grids[2], program, context, queue);
-    error |= ert_grid_init_intergrid_transfer_matrices(solver->grids[2], solver->grids[1],
-        solver->grids[3], program, context, queue);
-    error |= ert_grid_init_intergrid_transfer_matrices(solver->grids[3], solver->grids[2],
-        NULL, program, context, queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        printf("intergrid transfer erzeugen ging nicht!\n");
-        return EXIT_FAILURE;
-    }
-
-    // calc smoothing matrices
-    error  = ert_grid_init_smoothing_matrix(solver->grids[0], program, context, queue);
-    error += ert_grid_init_smoothing_matrix(solver->grids[1], program, context, queue);
-    error += ert_grid_init_smoothing_matrix(solver->grids[2], program, context, queue);
-    error += ert_grid_init_smoothing_matrix(solver->grids[3], program, context, queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        printf("Smoothing matrices erzeugen ging nicht!\n");
-        return EXIT_FAILURE;
-    }
-
     // create image
     ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh[0], context, device_id);
+    ert_image_create(&image, 1000, 1000, mesh, context, device_id);
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
 
     // x vector
     linalgcl_matrix_t x;
-    linalgcl_matrix_create(&x, context, mesh[0]->vertex_count, 1);
+    linalgcl_matrix_create(&x, context, mesh->vertex_count, 1);
     linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
 
     // right hand side
     linalgcl_matrix_t j, f;
     linalgcl_matrix_create(&j, context, 10, 1);
-    linalgcl_matrix_create(&f, context, mesh[0]->vertex_count, 1);
+    linalgcl_matrix_create(&f, context, mesh->vertex_count, 1);
 
     // set j
     linalgcl_matrix_set_element(j, 1.0, 1, 0);
@@ -182,7 +148,8 @@ int main(int argc, char* argv[]) {
 
     // calc f matrix
     // f = B * j
-    linalgcl_matrix_multiply(f, solver->grids[0]->exitation_matrix, j, program, queue);
+    linalgcl_matrix_multiply(f, grid->exitation_matrix, j, program, queue);
+    printf("Calced start vector and right side!\n");
 
     // get start time
     struct timeval tv;
@@ -191,7 +158,7 @@ int main(int argc, char* argv[]) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // solve
-    error = ert_solver_solve(solver, x, f, program, context, queue);
+    ert_gradient_solver_solve(solver, x, f, program, queue);
 
     printf("success: %d\n", error);
 
@@ -201,17 +168,19 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f\n", end - start);
 
-    ert_image_calc(image, solver->grids[0]->x, queue);
+    ert_image_calc(image, x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
     system("python src/script.py");
+    system("rm image.txt");
 
     // cleanup
     linalgcl_matrix_release(&x);
     linalgcl_matrix_release(&f);
     linalgcl_matrix_release(&j);
-    ert_solver_release(&solver);
+    ert_gradient_solver_release(&solver);
+    ert_grid_release(&grid);
     ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);

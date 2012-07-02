@@ -1,4 +1,3 @@
-
 #define BLOCK_SIZE (16)
 
 float test(float ax, float ay, float bx, float by, float cx, float cy) {

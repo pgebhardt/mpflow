@@ -22,18 +22,19 @@
 // gradient solver program struct
 typedef struct {
     cl_program program;
-    cl_kernel kernel_regularize_system_matrix;
+    cl_kernel kernel_add_scalar;
     cl_kernel kernel_update_vector;
 } ert_gradient_solver_program_s;
 typedef ert_gradient_solver_program_s* ert_gradient_solver_program_t;
 
 // gradient solver struct
 typedef struct {
-    linalgcl_matrix_t system_matrix;
+    linalgcl_sparse_matrix_t system_matrix;
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t projection;
     linalgcl_matrix_t rsold;
     linalgcl_matrix_t rsnew;
+    linalgcl_matrix_t ones;
     linalgcl_matrix_t temp_matrix;
     linalgcl_matrix_t temp_vector;
     linalgcl_matrix_t temp_number;
@@ -50,7 +51,7 @@ linalgcl_error_t ert_gradient_solver_program_release(ert_gradient_solver_program
 
 // create solver
 linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer,
-    linalgcl_size_t size, linalgcl_matrix_program_t matrix_program,
+    linalgcl_sparse_matrix_t system_matrix, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_device_id device_id, cl_command_queue queue);
 
 // release solver
