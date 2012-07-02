@@ -214,10 +214,10 @@ linalgcl_error_t ert_gradient_solver_program_release(ert_gradient_solver_program
 
 // create gradient solver
 linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer,
-    ert_grid_t grid, linalgcl_matrix_program_t matrix_program,
+    linalgcl_size_t size, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_device_id device_id, cl_command_queue queue) {
     // check input
-    if ((solverPointer == NULL) || (grid == NULL) || (matrix_program == NULL) ||
+    if ((solverPointer == NULL) || (size == 0) || (matrix_program == NULL) ||
         (context == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
@@ -237,7 +237,6 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
     }
 
     // init struct
-    solver->grid = grid;
     solver->system_matrix = NULL;
     solver->residuum = NULL;
     solver->projection = NULL;
@@ -249,18 +248,13 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
     solver->program = NULL;
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->system_matrix, context,
-        solver->grid->system_matrix->size_x, solver->grid->system_matrix->size_y);
-    error |= linalgcl_matrix_create(&solver->residuum, context,
-        solver->grid->mesh->vertex_count, 1);
-    error |= linalgcl_matrix_create(&solver->projection, context,
-        solver->grid->mesh->vertex_count, 1);
+    error  = linalgcl_matrix_create(&solver->system_matrix, context, size, size);
+    error |= linalgcl_matrix_create(&solver->residuum, context, size, 1);
+    error |= linalgcl_matrix_create(&solver->projection, context, size, 1);
     error |= linalgcl_matrix_create(&solver->rsold, context, 1, 1);
     error |= linalgcl_matrix_create(&solver->rsnew, context, 1, 1);
-    error |= linalgcl_matrix_create(&solver->temp_matrix, context,
-        solver->system_matrix->size_x, solver->system_matrix->size_y);
-    error |= linalgcl_matrix_create(&solver->temp_vector, context,
-        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->temp_matrix, context, size, size);
+    error |= linalgcl_matrix_create(&solver->temp_vector, context, size, 1);
     error |= linalgcl_matrix_create(&solver->temp_number, context, 1, 1);
 
     // check success
@@ -345,19 +339,15 @@ linalgcl_error_t ert_gradient_solver_regularize_system_matrix(ert_gradient_solve
         return LINALGCL_ERROR;
     }
 
-    // unfold system_matrix
-    linalgcl_sparse_matrix_unfold(solver->temp_matrix, solver->grid->system_matrix, matrix_program, queue);
-    clFinish(queue);
-
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
     cl_int cl_error = CL_SUCCESS;
 
     // set kernel arguments
     cl_error  = clSetKernelArg(solver->program->kernel_regularize_system_matrix,
-        0, sizeof(cl_mem), &solver->system_matrix->device_data);
+        0, sizeof(cl_mem), &solver->temp_matrix->device_data);
     cl_error |= clSetKernelArg(solver->program->kernel_regularize_system_matrix,
-        1, sizeof(cl_mem), &solver->temp_matrix->device_data);
+        1, sizeof(cl_mem), &solver->system_matrix->device_data);
     cl_error |= clSetKernelArg(solver->program->kernel_regularize_system_matrix,
         2, sizeof(linalgcl_size_t), &solver->system_matrix->size_y);
     cl_error |= clSetKernelArg(solver->program->kernel_regularize_system_matrix,
@@ -380,10 +370,13 @@ linalgcl_error_t ert_gradient_solver_regularize_system_matrix(ert_gradient_solve
         return LINALGCL_ERROR;
     }
 
+    // copy matrices
+    linalgcl_matrix_copy(solver->system_matrix, solver->temp_matrix, queue, CL_TRUE);
+
     return LINALGCL_SUCCESS;
 }
 
-// regularize_system_matrix
+// update vector
 linalgcl_error_t ert_gradient_update_vector(ert_gradient_solver_t solver,
     linalgcl_matrix_t result, linalgcl_matrix_t x1, linalgcl_matrix_data_t sign,
     linalgcl_matrix_t x2, linalgcl_matrix_t r1, linalgcl_matrix_t r2, cl_command_queue queue) {

@@ -29,7 +29,6 @@ typedef ert_gradient_solver_program_s* ert_gradient_solver_program_t;
 
 // gradient solver struct
 typedef struct {
-    ert_grid_t grid;
     linalgcl_matrix_t system_matrix;
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t projection;
@@ -51,7 +50,7 @@ linalgcl_error_t ert_gradient_solver_program_release(ert_gradient_solver_program
 
 // create solver
 linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer,
-    ert_grid_t grid, linalgcl_matrix_program_t matrix_program,
+    linalgcl_size_t size, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_device_id device_id, cl_command_queue queue);
 
 // release solver

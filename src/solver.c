@@ -194,7 +194,7 @@ linalgcl_error_t ert_solver_multigrid(ert_solver_t solver, linalgcl_size_t n,
     if (n >= solver->grid_count - 1) {
         // regularize f
         linalgcl_sparse_matrix_vector_multiply(solver->gradient_solver->temp_vector,
-            solver->gradient_solver->grid->system_matrix, f, matrix_program, queue);
+            solver->grids[n]->system_matrix, f, matrix_program, queue);
 
         // calc error
         error = ert_gradient_solver_solve(solver->gradient_solver, solver->grids[n]->x, f, matrix_program,
