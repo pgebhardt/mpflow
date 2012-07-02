@@ -94,10 +94,11 @@ int main(int argc, char* argv[]) {
     }
 
     // create mesh
-    ert_mesh_t mesh[3];
+    ert_mesh_t mesh[4];
     error  = ert_mesh_create(&mesh[0], 1.0, 1.0 / 16.0, context);
-    error  = ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
-    error  = ert_mesh_create(&mesh[2], 1.0, 1.0 / 4.0, context);
+    error |= ert_mesh_create(&mesh[1], 1.0, 1.0 / 8.0, context);
+    error |= ert_mesh_create(&mesh[2], 1.0, 1.0 / 4.0, context);
+    error |= ert_mesh_create(&mesh[3], 1.0, 1.0 / 2.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -112,14 +113,17 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_copy_to_device(mesh[1]->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[2]->vertices, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh[2]->elements, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh[3]->vertices, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh[3]->elements, queue, CL_TRUE);
 
     // create solver
     ert_solver_t solver;
-    error = ert_solver_create(&solver, 3, context, device_id);
+    error = ert_solver_create(&solver, 4, context, device_id);
 
     error += ert_solver_add_coarser_grid(solver, mesh[0], program, context, device_id, queue);
     error += ert_solver_add_coarser_grid(solver, mesh[1], program, context, device_id, queue);
     error += ert_solver_add_coarser_grid(solver, mesh[2], program, context, device_id, queue);
+    error += ert_solver_add_coarser_grid(solver, mesh[3], program, context, device_id, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -133,6 +137,8 @@ int main(int argc, char* argv[]) {
     error |= ert_grid_init_intergrid_transfer_matrices(solver->grids[1], solver->grids[0],
         solver->grids[2], program, context, queue);
     error |= ert_grid_init_intergrid_transfer_matrices(solver->grids[2], solver->grids[1],
+        solver->grids[3], program, context, queue);
+    error |= ert_grid_init_intergrid_transfer_matrices(solver->grids[3], solver->grids[2],
         NULL, program, context, queue);
 
     // check success
@@ -145,6 +151,7 @@ int main(int argc, char* argv[]) {
     error  = ert_grid_init_smoothing_matrix(solver->grids[0], program, context, queue);
     error += ert_grid_init_smoothing_matrix(solver->grids[1], program, context, queue);
     error += ert_grid_init_smoothing_matrix(solver->grids[2], program, context, queue);
+    error += ert_grid_init_smoothing_matrix(solver->grids[3], program, context, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {

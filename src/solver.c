@@ -316,19 +316,17 @@ linalgcl_error_t ert_solver_solve(ert_solver_t solver, linalgcl_matrix_t x,
     linalgcl_matrix_copy(solver->grids[0]->x, x, queue, CL_TRUE);
 
     // v cycle
-    linalgcl_size_t cycles = 5;
+    linalgcl_size_t cycles = 15;
     linalgcl_size_t depth = solver->grid_count;
 
-    for (linalgcl_size_t j = 0; j < 5; j++) {
-        for (linalgcl_size_t i = 0; i < cycles; i++) {
-            // calc depth
-            depth = cycles - i > solver->grid_count ? solver->grid_count : cycles - i;
-            printf("cycle %d: depth %d\n", i, depth);
+    for (linalgcl_size_t i = 0; i < cycles; i++) {
+        // calc depth
+        depth = cycles - i > solver->grid_count ? solver->grid_count : cycles - i;
+        printf("cycle %d: depth %d\n", i, depth);
 
-            // do Multigrid step
-            ert_solver_multigrid(solver, 0, depth,
-                f, matrix_program, context, queue);
-        }
+        // do Multigrid step
+        ert_solver_multigrid(solver, 0, depth,
+            f, matrix_program, context, queue);
     }
 
     // cleanup
