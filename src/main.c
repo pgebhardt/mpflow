@@ -117,9 +117,9 @@ int main(int argc, char* argv[]) {
     ert_solver_t solver;
     error = ert_solver_create(&solver, 3, context, device_id);
 
-    error += ert_solver_add_coarser_grid(solver, mesh[0], program, context, queue);
-    error += ert_solver_add_coarser_grid(solver, mesh[1], program, context, queue);
-    error += ert_solver_add_coarser_grid(solver, mesh[2], program, context, queue);
+    error += ert_solver_add_coarser_grid(solver, mesh[0], program, context, device_id, queue);
+    error += ert_solver_add_coarser_grid(solver, mesh[1], program, context, device_id, queue);
+    error += ert_solver_add_coarser_grid(solver, mesh[2], program, context, device_id, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -141,13 +141,14 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // create gradient_solver
-    error  = ert_gradient_solver_create(&solver->gradient_solver, mesh[0]->vertex_count,
-        program, context, device_id, queue);
+    // calc smoothing matrices
+    error  = ert_grid_init_smoothing_matrix(solver->grids[0], program, context, queue);
+    error += ert_grid_init_smoothing_matrix(solver->grids[1], program, context, queue);
+    error += ert_grid_init_smoothing_matrix(solver->grids[2], program, context, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        printf("Conjugate gradient solver nicht erzeugt!\n");
+        printf("Smoothing matrices erzeugen ging nicht!\n");
         return EXIT_FAILURE;
     }
 
@@ -176,16 +177,6 @@ int main(int argc, char* argv[]) {
     // f = B * j
     linalgcl_matrix_multiply(f, solver->grids[0]->exitation_matrix, j, program, queue);
 
-    // regularize system matrix
-    linalgcl_sparse_matrix_unfold(solver->gradient_solver->system_matrix, solver->grids[0]->system_matrix,
-        program, queue);
-    clFinish(queue);
-    ert_gradient_solver_regularize_system_matrix(solver->gradient_solver, 1E-6, program, queue);
-
-    // regularize f
-    linalgcl_sparse_matrix_vector_multiply(solver->gradient_solver->temp_vector,
-        solver->grids[0]->system_matrix, f, program, queue);
-
     // get start time
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -193,8 +184,7 @@ int main(int argc, char* argv[]) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // solve
-    // error = ert_solver_solve(solver, x, f, program, context, queue);
-    ert_gradient_solver_solve(solver->gradient_solver, x, f, program, queue);
+    error = ert_solver_solve(solver, x, f, program, context, queue);
 
     printf("success: %d\n", error);
 
@@ -204,8 +194,7 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f\n", end - start);
 
-    // ert_image_calc(image, solver->grids[0]->x, queue);
-    ert_image_calc(image, x, queue);
+    ert_image_calc(image, solver->grids[0]->x, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);

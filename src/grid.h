@@ -38,10 +38,13 @@ typedef struct {
     linalgcl_sparse_matrix_t restrict_phi;
     linalgcl_sparse_matrix_t restrict_sigma;
     linalgcl_sparse_matrix_t prolongate_phi;
+    linalgcl_sparse_matrix_t smooth_phi;
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t error;
     linalgcl_matrix_t x;
     linalgcl_matrix_t f;
+    linalgcl_matrix_t temp1;
+    linalgcl_matrix_t temp2;
 } ert_grid_s;
 typedef ert_grid_s* ert_grid_t;
 
@@ -76,6 +79,11 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
 // init intergrid transfer matrices
 linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
     ert_grid_t finer_grid, ert_grid_t coarser_grid, 
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue);
+
+// init smoothing matrix
+linalgcl_error_t ert_grid_init_smoothing_matrix(ert_grid_t grid,
     linalgcl_matrix_program_t matrix_program, cl_context context,
     cl_command_queue queue);
 

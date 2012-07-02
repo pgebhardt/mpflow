@@ -467,12 +467,12 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
 
     // iterate
     linalgcl_matrix_data_t alpha, beta, rsold;
-    for (linalgcl_size_t i = 0; i < 2000; i++) {
+    for (linalgcl_size_t i = 0; i < 50; i++) {
         // check error
         linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
+        printf("gradient solver error: %f\n", sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x);
 
-        if (sqrt(solver->rsold->host_data[0]) <= 0.01) {
-            printf("Stopped after %d iterations!\n", i);
+        if (sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x <= 1e-4) {
             break;
         }
 

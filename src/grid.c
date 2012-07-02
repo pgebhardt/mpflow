@@ -212,6 +212,7 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     grid->restrict_phi = NULL;
     grid->restrict_sigma = NULL;
     grid->prolongate_phi = NULL;
+    grid->smooth_phi = NULL;
     grid->residuum = NULL;
     grid->error = NULL;
     grid->x = NULL;
@@ -232,6 +233,14 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
         grid->mesh->vertex_count, 1);
     error |= linalgcl_matrix_create(&grid->f, context,
         grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&grid->temp1, context, grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&grid->temp2, context, grid->mesh->vertex_count, 1);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
+    }
+
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -248,7 +257,9 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     linalgcl_matrix_copy_to_device(grid->residuum, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(grid->error, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(grid->x, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(grid->f, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(grid->f, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->temp1, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->temp2, queue, CL_TRUE);
 
     // init to uniform sigma
     for (linalgcl_size_t i = 0; i < grid->sigma->size_x; i++) {
@@ -303,10 +314,13 @@ linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
     linalgcl_sparse_matrix_release(&grid->restrict_phi);
     linalgcl_sparse_matrix_release(&grid->restrict_sigma);
     linalgcl_sparse_matrix_release(&grid->prolongate_phi);
+    linalgcl_sparse_matrix_release(&grid->smooth_phi);
     linalgcl_matrix_release(&grid->residuum);
     linalgcl_matrix_release(&grid->error);
     linalgcl_matrix_release(&grid->x);
     linalgcl_matrix_release(&grid->f);
+    linalgcl_matrix_release(&grid->temp1);
+    linalgcl_matrix_release(&grid->temp2);
 
     // free struct
     free(grid);
@@ -729,6 +743,80 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
         if (error != LINALGCL_SUCCESS) {
             return error;
         }
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
+// init smoothing matrix
+linalgcl_error_t ert_grid_init_smoothing_matrix(ert_grid_t grid,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue) {
+    // check input
+    if ((grid == NULL) || (matrix_program == NULL) || (context == NULL) ||
+        (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // smoothing factor
+    linalgcl_matrix_data_t smoothing_factor = 2.0;
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
+    // matrices
+    linalgcl_matrix_t smooth_phi;
+    error = linalgcl_matrix_create(&smooth_phi, context, grid->mesh->vertex_count,
+        grid->mesh->vertex_count);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
+    }
+
+    // fill restrict_phi matrix
+    linalgcl_matrix_data_t x[2], y[2];
+    linalgcl_matrix_data_t distance;
+    linalgcl_matrix_data_t row_count = 0.0;
+
+    for (linalgcl_size_t i = 0; i < grid->mesh->vertex_count; i++) {
+
+        row_count = 0.0;
+        for (linalgcl_size_t j = 0; j < grid->mesh->vertex_count; j++) {
+            // get vertices
+            linalgcl_matrix_get_element(grid->mesh->vertices, &x[0], i, 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &y[0], i, 1);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &x[1], j, 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &y[1], j, 1);
+
+            // check distance
+            distance = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
+
+            if (distance <= smoothing_factor * grid->mesh->distance) {
+                linalgcl_matrix_set_element(smooth_phi, 1.0 - distance /
+                    (smoothing_factor * grid->mesh->distance), i, j);
+                row_count += 1.0 - distance / (smoothing_factor * grid->mesh->distance);
+            }
+        }
+
+        // normalize row
+        if (row_count != 0.0) {
+            for (linalgcl_size_t j = 0; j < grid->mesh->vertex_count; j++) {
+                smooth_phi->host_data[(i * smooth_phi->size_y) + j] /= row_count;
+            }
+        }
+    }
+
+    // copy matrices to device
+    error  = linalgcl_matrix_copy_to_device(smooth_phi, queue, CL_TRUE);
+
+    // create sparse matrix
+    error |= linalgcl_sparse_matrix_create(&grid->smooth_phi, smooth_phi, matrix_program,
+        context, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
     }
 
     return LINALGCL_SUCCESS;
