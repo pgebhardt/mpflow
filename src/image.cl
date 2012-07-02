@@ -8,9 +8,9 @@ bool pointInTriangle(float px, float py, float ax, float ay, float bx, float by,
     float cx, float cy) {
     bool b1, b2, b3;
 
-    b1 = test(px, py, ax, ay, bx, by) <= 0.0001;
-    b2 = test(px, py, bx, by, cx, cy) <= 0.0001;
-    b3 = test(px, py, cx, cy, ax, ay) <= 0.0001;
+    b1 = test(px, py, ax, ay, bx, by) <= 0.0001f;
+    b2 = test(px, py, bx, by, cx, cy) <= 0.0001f;
+    b3 = test(px, py, cx, cy, ax, ay) <= 0.0001f;
 
     return ((b1 == b2) && (b2 == b3));
 }
@@ -39,8 +39,8 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
     }
 
     // step size
-    float dx = 2.0 / ((float)size_x - 1.0);
-    float dy = 2.0 / ((float)size_y - 1.0);
+    float dx = 2.0f / ((float)size_x - 1.0f);
+    float dy = 2.0f / ((float)size_y - 1.0f);
 
     // start and stop indices
     int iStart = (int)(min(min(xVertex[0], xVertex[1]),
@@ -53,13 +53,13 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
         yVertex[2]) / dy) + size_y / 2;
 
     // calc triangle
-    float pixel = 0.0;
+    float pixel = 0.0f;
     float x, y;
     for (int i = iStart; i <= iEnd; i++) {
         for (int j = jStart; j <= jEnd; j++) {
             // calc coordinate
-            x = (float)i * dx - 1.0;
-            y = (float)j * dy - 1.0;
+            x = (float)i * dx - 1.0f;
+            y = (float)j * dy - 1.0f;
 
             // calc pixel
             pixel  = phi[id[0]] * (basis[0][0] + basis[0][1] * x + basis[0][2] * y);

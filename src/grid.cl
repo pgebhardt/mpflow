@@ -28,27 +28,3 @@ __kernel void update_system_matrix(__global float* system_matrix_values,
     system_matrix_values[(i * BLOCK_SIZE) + get_global_id(1)] = (((j == 0) && (get_global_id(1) == 0)) ||
         (j != 0)) ? element : 0.0f;
 }
-
-__kernel void unfold_system_matrix(__global float* result, __global float* system_matrix_values,
-    __global float* system_matrix_column_ids, unsigned int size_y) {
-    // get id
-    unsigned int i = get_global_id(0);
-
-    unsigned int column_id = 0;
-
-    for (unsigned int j = 0; j < BLOCK_SIZE; j++) {
-        // get column_id
-        column_id = (unsigned int)system_matrix_column_ids[(i * BLOCK_SIZE) + j];
-
-        result[(i * size_y) + column_id] += system_matrix_values[(i * BLOCK_SIZE) + j];
-    }
-}
-
-__kernel void regulize_system_matrix(__global float* system_matrix,
-    unsigned int size_y, float lambda) {
-    // get id
-    unsigned int i = get_global_id(0);
-
-    system_matrix[(i * size_y) + i] -= lambda * lambda;
-}
-
