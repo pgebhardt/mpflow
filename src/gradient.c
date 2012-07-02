@@ -465,6 +465,7 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
     // calc rsold
     error += linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum,
         solver->residuum, matrix_program, queue);
+    linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -473,7 +474,15 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
 
     // iterate
     linalgcl_matrix_data_t alpha, beta, rsold;
-    for (linalgcl_size_t i = 0; i < 1000; i++) {
+    for (linalgcl_size_t i = 0; i < 2000; i++) {
+        // check error
+        linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
+
+        if (sqrt(solver->rsold->host_data[0]) <= 0.01) {
+            printf("Stopped after %d iterations!\n", i);
+            break;
+        }
+
         // calc A * p
         linalgcl_matrix_multiply(solver->temp_vector, solver->system_matrix,
             solver->projection, matrix_program, queue);
@@ -499,10 +508,7 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
             solver->projection, solver->rsnew, solver->rsold, queue);
 
         // update rsold
-        linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_FALSE);
-
-        // sync iteration
-        clFinish(queue);
+        linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_TRUE);
     }
 
     return LINALGCL_SUCCESS;

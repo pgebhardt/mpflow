@@ -296,7 +296,7 @@ linalgcl_error_t ert_solver_solve(ert_solver_t solver, linalgcl_matrix_t x,
     linalgcl_matrix_copy(solver->grids[0]->x, x, queue, CL_TRUE);
 
     // v cycle
-    for (linalgcl_size_t i = 0; i < 5; i++) {
+    for (linalgcl_size_t i = 0; i < 50; i++) {
         // do Multigrid step
         ert_solver_multigrid(solver, 0, f, matrix_program, context, queue);
 
