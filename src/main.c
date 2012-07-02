@@ -167,10 +167,6 @@ int main(int argc, char* argv[]) {
     // calc f matrix
     // f = B * j
     linalgcl_matrix_multiply(f, solver->grids[0]->exitation_matrix, j, program, queue);
-    clFinish(queue);
-    linalgcl_matrix_release(&j);
-    linalgcl_matrix_copy_to_host(f, queue, CL_TRUE);
-    linalgcl_matrix_save("f.txt", f);
 
     // regularize system matrix
     ert_gradient_solver_regularize_system_matrix(solver->gradient_solver, 1E-6, program, queue);
@@ -201,6 +197,7 @@ int main(int argc, char* argv[]) {
     // cleanup
     linalgcl_matrix_release(&x);
     linalgcl_matrix_release(&f);
+    linalgcl_matrix_release(&j);
     ert_solver_release(&solver);
     ert_image_release(&image);
     clReleaseCommandQueue(queue);

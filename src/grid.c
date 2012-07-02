@@ -449,11 +449,6 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     error += linalgcl_sparse_matrix_create(&grid->gradient_matrix_sparse,
         grid->gradient_matrix, matrix_program, context, queue);
 
-    char buffer[1024];
-    sprintf(buffer, "system_matrix-%d.txt", grid->mesh->vertex_count);
-    linalgcl_matrix_copy_to_host(system_matrix, queue, CL_TRUE);
-    linalgcl_matrix_save(buffer, system_matrix);
-
     // cleanup
     linalgcl_matrix_release(&system_matrix);
 
@@ -602,9 +597,6 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
         return LINALGCL_ERROR;
     }
 
-    // smoothing factor
-    linalgcl_matrix_data_t smoothing_factor = 2.0;
-
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
@@ -644,10 +636,10 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
                 // check distance
                 distance = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
 
-                if (distance <= smoothing_factor * grid->mesh->distance) {
+                if (distance <= coarser_grid->mesh->distance) {
                     linalgcl_matrix_set_element(restrict_phi, 1.0 - distance /
-                        (smoothing_factor * grid->mesh->distance), i, j);
-                    row_count += 1.0 - distance / (smoothing_factor * grid->mesh->distance);
+                        coarser_grid->mesh->distance, i, j);
+                    row_count += 1.0 - distance / coarser_grid->mesh->distance;
                 }
             }
 
@@ -708,10 +700,10 @@ linalgcl_error_t ert_grid_init_intergrid_transfer_matrices(ert_grid_t grid,
                 // check distance
                 distance = sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1]));
 
-                if (distance <= smoothing_factor * grid->mesh->distance) {
+                if (distance <= grid->mesh->distance) {
                     linalgcl_matrix_set_element(prolongate_phi, 1.0 - distance /
-                        (smoothing_factor * grid->mesh->distance), i, j);
-                    row_count += 1.0 - distance / (smoothing_factor * grid->mesh->distance);
+                        grid->mesh->distance, i, j);
+                    row_count += 1.0 - distance / grid->mesh->distance;
                 }
             }
 
