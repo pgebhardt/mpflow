@@ -496,10 +496,11 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
     linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
     if (sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x > 1e-4) {
-        solver->iterations += 1;
+        solver->iterations += 5;
     }
-    else if (sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x < 5e-5) {
-        solver->iterations -= 5;
+    else if ((sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x < 5e-5) &&
+        (solver->iterations > 1)) {
+        solver->iterations -= 1;
     }
 
     return LINALGCL_SUCCESS;
