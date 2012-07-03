@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // solve
-    ert_gradient_solver_solve(solver, x, f, program, queue);
+    ert_gradient_solver_solve_singular(solver, x, f, program, queue);
 
     // get end time
     gettimeofday(&tv, NULL);

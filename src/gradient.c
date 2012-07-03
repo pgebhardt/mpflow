@@ -341,7 +341,7 @@ linalgcl_error_t ert_gradient_solver_release(ert_gradient_solver_t* solverPointe
     return LINALGCL_SUCCESS;
 }
 
-// orthogonal_matrix_vector_product
+// add scalar
 linalgcl_error_t ert_gradient_add_scalar(ert_gradient_solver_t solver,
     linalgcl_matrix_t vector, linalgcl_matrix_t scalar,
     cl_command_queue queue) {
@@ -431,6 +431,73 @@ linalgcl_error_t ert_gradient_update_vector(ert_gradient_solver_t solver,
 
 // solve gradient
 linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
+    linalgcl_matrix_t x, linalgcl_matrix_t f,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (x == NULL) || (f == NULL) || 
+        (matrix_program == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // init matrices
+    // calc residuum r = f - A * x
+    linalgcl_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x, matrix_program, queue);
+    linalgcl_matrix_scalar_multiply(solver->residuum, solver->residuum, -1.0, matrix_program, queue);
+    linalgcl_matrix_add(solver->residuum, solver->residuum, f, matrix_program, queue);
+
+    // p = r
+    linalgcl_matrix_copy(solver->projection, solver->residuum, queue, CL_FALSE);
+
+    // calc rsold
+    linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, matrix_program, queue);
+
+    // iterate
+    for (linalgcl_size_t i = 0; i < solver->iterations; i++) {
+        // calc A * p
+        linalgcl_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
+            solver->projection, matrix_program, queue);
+
+        // calc p * A * p
+        linalgcl_matrix_vector_dot_product(solver->temp_number, solver->projection,
+            solver->temp_vector, matrix_program, queue);
+
+        // update residuum
+        ert_gradient_update_vector(solver, solver->residuum, solver->residuum, -1.0,
+            solver->temp_vector, solver->rsold, solver->temp_number, queue);
+
+        // update x
+        ert_gradient_update_vector(solver, x, x, 1.0, solver->projection, solver->rsold,
+            solver->temp_number, queue);
+
+        // calc rsnew
+        linalgcl_matrix_vector_dot_product(solver->rsnew, solver->residuum,
+            solver->residuum, matrix_program, queue);
+
+        // update projection
+        ert_gradient_update_vector(solver, solver->projection, solver->residuum, 1.0,
+            solver->projection, solver->rsnew, solver->rsold, queue);
+
+        // update rsold
+        linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_TRUE);
+    }
+
+    // check error
+    linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
+
+    if (sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x > 1e-4) {
+        solver->iterations += 5;
+    }
+    else if ((sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x < 5e-5) &&
+        (solver->iterations > 1)) {
+        solver->iterations -= 1;
+    }
+
+    return LINALGCL_SUCCESS;
+
+}
+
+// solve singular
+linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver,
     linalgcl_matrix_t x, linalgcl_matrix_t f,
     linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
     // check input

@@ -69,4 +69,9 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
     linalgcl_matrix_t x, linalgcl_matrix_t f,
     linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
+// solve singular gradient
+linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver,
+    linalgcl_matrix_t x, linalgcl_matrix_t f,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
+
 #endif
