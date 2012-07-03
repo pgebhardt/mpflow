@@ -503,7 +503,7 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
 
     // TODO: variable elektrodenzahl und geometrie
     linalgcl_size_t electrode_count = 8;
-    linalgcl_matrix_data_t element_area = 2.0 * M_PI * 1.0 /
+    linalgcl_matrix_data_t element_area = 2.0 * M_PI * grid->mesh->radius /
         (linalgcl_matrix_data_t)(electrode_count * 2);
     error = linalgcl_matrix_create(&grid->exitation_matrix, context,
         grid->mesh->vertex_count, electrode_count);
@@ -524,13 +524,13 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
 
     for (linalgcl_size_t i = 0; i < electrode_count; i++) {
         // calc electrode start and end
-        electrode_start[0] = 1.0 * cos(2.0 * M_PI * (linalgcl_matrix_data_t)i /
+        electrode_start[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)i /
             (linalgcl_matrix_data_t)electrode_count);
-        electrode_start[1] = 1.0 * sin(2.0 * M_PI * (linalgcl_matrix_data_t)i /
+        electrode_start[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)i /
             (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[0] = 1.0 * cos(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
+        electrode_end[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
             (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[1] = 1.0 * sin(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
+        electrode_end[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
             (linalgcl_matrix_data_t)electrode_count);
 
         for (linalgcl_size_t j = 0; j < grid->mesh->boundary_count; j++) {

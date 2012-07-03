@@ -51,6 +51,7 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     }
 
     // init struct
+    mesh->radius = radius;
     mesh->distance = distance;
     mesh->vertex_count = 0;
     mesh->element_count = 0;
@@ -60,7 +61,7 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     mesh->boundary = NULL;
 
     // create vertex memory
-    error = linalgcl_matrix_create(&mesh->vertices, context, 2 * (linalgcl_size_t)(radius * radius /
+    error = linalgcl_matrix_create(&mesh->vertices, context, 2 * (linalgcl_size_t)(mesh->radius * mesh->radius /
         (0.25 * mesh->distance * mesh->distance)), 2);
 
     // check success
@@ -75,8 +76,8 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     linalgcl_matrix_t vertices;
     linalgcl_matrix_data_t r = sqrt(3.0 * mesh->distance * mesh->distance / 4.0);
     error = linalgcl_matrix_create(&vertices, context,
-        (linalgcl_size_t)(3.0 * radius / mesh->distance + 1),
-        (linalgcl_size_t)(3.0 * radius / mesh->distance + 1));
+        (linalgcl_size_t)(3.0 * mesh->radius / mesh->distance + 1),
+        (linalgcl_size_t)(3.0 * mesh->radius / mesh->distance + 1));
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -92,12 +93,12 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     for (linalgcl_size_t i = 0; i < vertices->size_x; i++) {
         for (linalgcl_size_t j = 0; j < vertices->size_y; j++) {
             // calc x and y
-            x = 1.25 * radius - mesh->distance * (linalgcl_matrix_data_t)i +
+            x = 1.25 * mesh->radius - mesh->distance * (linalgcl_matrix_data_t)i +
                 (linalgcl_matrix_data_t)(j % 2) * 0.5 * mesh->distance;
-            y = (int)(radius / r + 1) * r - r * (linalgcl_matrix_data_t)j;
+            y = (int)(mesh->radius / r + 1) * r - r * (linalgcl_matrix_data_t)j;
 
             // check point
-            if (x * x + y * y < radius - 0.5 * mesh->distance) {
+            if (x * x + y * y < mesh->radius - 0.5 * mesh->distance) {
                 // set vertex
                 linalgcl_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
                 linalgcl_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);
@@ -107,10 +108,10 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
                 mesh->vertex_count++;
             }
-            else if (x * x + y * y < radius + mesh->distance) {
+            else if (x * x + y * y < mesh->radius + mesh->distance) {
                 // calc new x and y
-                x = x / sqrt(x * x + y * y) * radius;
-                y = y / sqrt(x * x + y * y) * radius;
+                x = x / sqrt(x * x + y * y) * mesh->radius;
+                y = y / sqrt(x * x + y * y) * mesh->radius;
 
                 // set vertex
                 linalgcl_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
@@ -130,7 +131,7 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
     // create boundary matrix
     error = linalgcl_matrix_create(&mesh->boundary, context,
-        (linalgcl_size_t)(3.0 * M_PI * radius / mesh->distance), 1);
+        (linalgcl_size_t)(3.0 * M_PI * mesh->radius / mesh->distance), 1);
 
     // check success
     if (error != LINALGCL_SUCCESS) {

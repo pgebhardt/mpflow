@@ -21,6 +21,7 @@
 
 // mesh struct
 typedef struct {
+    linalgcl_matrix_data_t radius;
     linalgcl_matrix_data_t distance;
     linalgcl_size_t vertex_count;
     linalgcl_size_t element_count;
