@@ -434,49 +434,27 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
         return LINALGCL_ERROR;
     }
 
-    // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
-
     // init matrices
     // calc residuum r = f - A * x
-    error  = linalgcl_matrix_vector_dot_product(solver->temp_number, x, solver->ones,
-        matrix_program, queue);
-    error |= linalgcl_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x,
-        matrix_program, queue);
-    error |= ert_gradient_add_scalar(solver, solver->residuum, solver->temp_number, queue);
-    error |= linalgcl_matrix_scalar_multiply(solver->residuum, solver->residuum, -1.0,
-        matrix_program, queue);
-    error |= linalgcl_matrix_add(solver->residuum, solver->residuum, f,
-        matrix_program, queue);
-    clFinish(queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return error;
-    }
+    linalgcl_matrix_vector_dot_product(solver->temp_number, x, solver->ones, matrix_program, queue);
+    linalgcl_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x, matrix_program, queue);
+    ert_gradient_add_scalar(solver, solver->residuum, solver->temp_number, queue);
+    linalgcl_matrix_scalar_multiply(solver->residuum, solver->residuum, -1.0, matrix_program, queue);
+    linalgcl_matrix_add(solver->residuum, solver->residuum, f, matrix_program, queue);
 
     // p = r
-    error  = linalgcl_matrix_copy(solver->projection, solver->residuum,
-        queue, CL_FALSE);
+    linalgcl_matrix_copy(solver->projection, solver->residuum, queue, CL_FALSE);
 
     // calc rsold
-    error += linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum,
-        solver->residuum, matrix_program, queue);
+    linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, matrix_program, queue);
     linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return error;
-    }
-
     // iterate
-    linalgcl_matrix_data_t alpha, beta, rsold;
-    for (linalgcl_size_t i = 0; i < 100; i++) {
+    for (linalgcl_size_t i = 0; i < 2000; i++) {
         // check error
         linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
 
         if (sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x <= 1e-4) {
-            printf("stopped after %d iterations!\n", i);
             break;
         }
 

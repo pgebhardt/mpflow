@@ -32,7 +32,6 @@
 #include "image.h"
 #include "grid.h"
 #include "gradient.h"
-#include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
@@ -166,7 +165,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     clFinish(queue);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-    printf("Solving time: %f\n", end - start);
+    printf("Solving time: %f ms\n", (end - start) * 1E3);
 
     ert_image_calc(image, x, queue);
     clFinish(queue);
