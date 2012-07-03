@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
 
     // create grid
     ert_grid_t grid = NULL;
-    error = ert_grid_create(&grid, program, mesh, context, queue);
+    error = ert_grid_create(&grid, program, mesh, context, device_id, queue);
 
     // create solver
     ert_gradient_solver_t solver = NULL;

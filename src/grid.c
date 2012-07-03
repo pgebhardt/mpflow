@@ -180,7 +180,7 @@ linalgcl_error_t ert_grid_program_release(ert_grid_program_t* programPointer) {
 // create solver grid
 linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     linalgcl_matrix_program_t matrix_program, ert_mesh_t mesh,
-    cl_context context, cl_command_queue queue) {
+    cl_context context, cl_device_id device_id, cl_command_queue queue) {
     // check input
     if ((gridPointer == NULL) || (mesh == NULL) ||
         (context == NULL) || (queue == NULL)) {
@@ -209,6 +209,7 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     grid->gradient_matrix = NULL;
     grid->sigma = NULL;
     grid->area = NULL;
+    grid->program = NULL;
 
     // create matrices
     error  = linalgcl_matrix_create(&grid->gradient_matrix, context,
@@ -223,6 +224,19 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
         return error;
     }
 
+    // init to uniform sigma
+    for (linalgcl_size_t i = 0; i < grid->mesh->element_count; i++) {
+        linalgcl_matrix_set_element(grid->sigma, 1.0, i, 0);
+    }
+
+    // copy data to device
+    linalgcl_matrix_copy_to_device(grid->gradient_matrix, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->area, queue, CL_FALSE);
+
+    // create program
+    error = ert_grid_program_create(&grid->program, context, device_id,
+        "src/grid.cl");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -231,19 +245,6 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
 
         return error;
     }
-
-    // copy data to device
-    linalgcl_matrix_copy_to_device(grid->gradient_matrix, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(grid->area, queue, CL_FALSE);
-
-    // init to uniform sigma
-    for (linalgcl_size_t i = 0; i < grid->mesh->element_count; i++) {
-        linalgcl_matrix_set_element(grid->sigma, 1.0, i, 0);
-    }
-
-    // copy sigma matrix to device
-    linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_FALSE);
 
     // init system matrix
     error = ert_grid_init_system_matrix(grid, matrix_program, context, queue);
@@ -282,6 +283,7 @@ linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
     linalgcl_sparse_matrix_release(&grid->gradient_matrix_sparse);
     linalgcl_matrix_release(&grid->sigma);
     linalgcl_matrix_release(&grid->area);
+    ert_grid_program_release(&grid->program);
 
     // free struct
     free(grid);
@@ -442,9 +444,9 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
 
 // update system matrix
 linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
-    ert_grid_program_t grid_program, cl_command_queue queue) {
+    cl_command_queue queue) {
     // check input
-    if ((grid == NULL) || (grid_program == NULL) || (queue == NULL)) {
+    if ((grid == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -452,21 +454,21 @@ linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
     cl_int cl_error = CL_SUCCESS;
 
     // set kernel arguments
-    cl_error  = clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error  = clSetKernelArg(grid->program->kernel_update_system_matrix,
         0, sizeof(cl_mem), &grid->system_matrix->values->device_data);
-    cl_error += clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         1, sizeof(cl_mem), &grid->system_matrix->column_ids->device_data);
-    cl_error += clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         2, sizeof(cl_mem), &grid->gradient_matrix_sparse->values->device_data);
-    cl_error += clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         3, sizeof(cl_mem), &grid->gradient_matrix_sparse->column_ids->device_data);
-    cl_error += clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         4, sizeof(cl_mem), &grid->gradient_matrix->device_data);
-    cl_error += clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         5, sizeof(cl_mem), &grid->sigma->device_data);
-    cl_error += clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         6, sizeof(cl_mem), &grid->area->device_data);
-    cl_error += clSetKernelArg(grid_program->kernel_update_system_matrix,
+    cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         7, sizeof(unsigned int), &grid->gradient_matrix->size_y);
 
     // check success
@@ -479,7 +481,7 @@ linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
     size_t local[2] = { LINALGCL_BLOCK_SIZE, LINALGCL_BLOCK_SIZE };
 
     cl_error = clEnqueueNDRangeKernel(queue,
-        grid_program->kernel_update_system_matrix, 2,
+        grid->program->kernel_update_system_matrix, 2,
         NULL, global, local, 0, NULL, NULL);
 
     // check success

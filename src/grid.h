@@ -35,6 +35,7 @@ typedef struct {
     linalgcl_matrix_t gradient_matrix;
     linalgcl_matrix_t sigma;
     linalgcl_matrix_t area;
+    ert_grid_program_t program;
 } ert_grid_s;
 typedef ert_grid_s* ert_grid_t;
 
@@ -48,7 +49,7 @@ linalgcl_error_t ert_grid_program_release(ert_grid_program_t* programPointer);
 // create grid
 linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     linalgcl_matrix_program_t matrix_program, ert_mesh_t mesh,
-    cl_context context, cl_command_queue queue);
+    cl_context context, cl_device_id device_id, cl_command_queue queue);
 
 // release grid
 linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer);
@@ -60,7 +61,7 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
 
 // update system matrix
 linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
-    ert_grid_program_t grid_program, cl_command_queue queue);
+    cl_command_queue queue);
 
 // init exitation matrix
 linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
