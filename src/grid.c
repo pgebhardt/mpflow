@@ -238,13 +238,8 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     linalgcl_matrix_copy_to_device(grid->area, queue, CL_FALSE);
 
     // init to uniform sigma
-    for (linalgcl_size_t i = 0; i < grid->sigma->size_x; i++) {
-        if (i < grid->mesh->element_count) {
-            linalgcl_matrix_set_element(grid->sigma, 1.0, i, 0);
-        }
-        else {
-            linalgcl_matrix_set_element(grid->sigma, 0.0, i, 0);
-        }
+    for (linalgcl_size_t i = 0; i < grid->mesh->element_count; i++) {
+        linalgcl_matrix_set_element(grid->sigma, 1.0, i, 0);
     }
 
     // copy sigma matrix to device
@@ -373,8 +368,10 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
             (x[2] - x[0]) * (y[1] - y[0]));
 
         linalgcl_matrix_set_element(grid->area, area, k, 0);
-        linalgcl_matrix_set_element(sigma_matrix, area, 2 * k, 2 * k);
-        linalgcl_matrix_set_element(sigma_matrix, area, 2 * k + 1, 2 * k + 1);
+        linalgcl_matrix_set_element(sigma_matrix, grid->sigma->host_data[k] * area,
+            2 * k, 2 * k);
+        linalgcl_matrix_set_element(sigma_matrix, grid->sigma->host_data[k] * area,
+            2 * k + 1, 2 * k + 1);
 
         // cleanup
         ert_basis_release(&basis[0]);
