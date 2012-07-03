@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     // create solver
     ert_gradient_solver_t solver = NULL;
     error |= ert_gradient_solver_create(&solver, grid->system_matrix,
-        program, context, device_id, queue);
+        mesh->vertex_count, program, context, device_id, queue);
 
     printf("Created solver and grids!\n");
 
@@ -159,13 +159,12 @@ int main(int argc, char* argv[]) {
     // solve
     ert_gradient_solver_solve(solver, x, f, program, queue);
 
-    printf("success: %d\n", error);
-
     // get end time
     gettimeofday(&tv, NULL);
     clFinish(queue);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f ms\n", (end - start) * 1E3);
+    printf("iterations: %d\n", solver->iterations);
 
     ert_image_calc(image, x, queue);
     clFinish(queue);

@@ -1,10 +1,10 @@
 #define BLOCK_SIZE (16)
 
-__kernel void add_scalar(__global float* vector, __global float* scalar) {
+__kernel void add_scalar(__global float* vector, __global float* scalar, unsigned int size) {
     // get id
     unsigned int i = get_global_id(0);
 
-    vector[i] += scalar[0];
+    vector[i] += i < size ? scalar[0] : 0.0f;
 }
 
 __kernel void update_vector(__global float* result, __global float* x1, float sign,
