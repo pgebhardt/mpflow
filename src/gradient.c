@@ -454,7 +454,7 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
     linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
     // iterate
-    for (linalgcl_size_t i = 0; i < 1000; i++) {
+    for (linalgcl_size_t i = 0; i < solver->size; i++) {
         // check error
         linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
         if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-4) {
@@ -519,7 +519,7 @@ linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver
     linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
     // iterate
-    for (linalgcl_size_t i = 0; i < 1000; i++) {
+    for (linalgcl_size_t i = 0; i < solver->size; i++) {
         // check error
         linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
         if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-4) {
