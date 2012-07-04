@@ -254,13 +254,13 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
     // create matrices
     error  = linalgcl_matrix_create(&solver->residuum, context, solver->size, 1);
     error |= linalgcl_matrix_create(&solver->projection, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->rsold, context, 1, 1);
-    error |= linalgcl_matrix_create(&solver->rsnew, context, 1, 1);
+    error |= linalgcl_matrix_create(&solver->rsold, context, solver->size, 1);
+    error |= linalgcl_matrix_create(&solver->rsnew, context, solver->size, 1);
     error |= linalgcl_matrix_create(&solver->ones, context, solver->size, 1);
     error |= linalgcl_matrix_create(&solver->temp_matrix, context, solver->size,
         solver->size);
     error |= linalgcl_matrix_create(&solver->temp_vector, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->temp_number, context, 1, 1);
+    error |= linalgcl_matrix_create(&solver->temp_number, context, solver->size, 1);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -278,6 +278,8 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
     // copy data to device
     error  = linalgcl_matrix_copy_to_device(solver->residuum, queue, CL_FALSE);
     error |= linalgcl_matrix_copy_to_device(solver->projection, queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->rsold, queue, CL_FALSE);
+    error |= linalgcl_matrix_copy_to_device(solver->rsnew, queue, CL_FALSE);
     error |= linalgcl_matrix_copy_to_device(solver->ones, queue, CL_FALSE);
     error |= linalgcl_matrix_copy_to_device(solver->temp_matrix, queue, CL_TRUE);
     error |= linalgcl_matrix_copy_to_device(solver->temp_vector, queue, CL_TRUE);
@@ -555,7 +557,7 @@ linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver
 
     // substract mean
     linalgcl_matrix_vector_dot_product(solver->temp_number, solver->ones, x, matrix_program, queue);
-    linalgcl_matrix_scalar_multiply(solver->temp_number, solver->temp_number, -1.0,
+    linalgcl_matrix_scalar_multiply(solver->temp_number, solver->temp_number, -1.0 / solver->size,
         matrix_program, queue);
     ert_gradient_add_scalar(solver, x, solver->temp_number, queue);
 
