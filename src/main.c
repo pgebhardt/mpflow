@@ -160,11 +160,10 @@ int main(int argc, char* argv[]) {
     ert_gradient_solver_solve_singular(solver, x, f, program, queue);
 
     // get end time
-    gettimeofday(&tv, NULL);
     clFinish(queue);
+    gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f ms\n", (end - start) * 1E3);
-    printf("iterations: %d\n", solver->iterations);
 
     ert_image_calc(image, x, queue);
     clFinish(queue);

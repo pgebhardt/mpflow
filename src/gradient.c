@@ -238,7 +238,6 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
     }
 
     // init struct
-    solver->iterations = 90;
     solver->size = size;
     solver->system_matrix = system_matrix;
     solver->residuum = NULL;
@@ -452,9 +451,16 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
 
     // calc rsold
     linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, matrix_program, queue);
+    linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
     // iterate
-    for (linalgcl_size_t i = 0; i < solver->iterations; i++) {
+    for (linalgcl_size_t i = 0; i < 1000; i++) {
+        // check error
+        linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
+        if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-4) {
+            break;
+        }
+
         // calc A * p
         linalgcl_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
             solver->projection, matrix_program, queue);
@@ -481,17 +487,6 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
 
         // update rsold
         linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_TRUE);
-    }
-
-    // check error
-    linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
-
-    if (sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x > 1e-4) {
-        solver->iterations += 5;
-    }
-    else if ((sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x < 5e-5) &&
-        (solver->iterations > 1)) {
-        solver->iterations -= 1;
     }
 
     return LINALGCL_SUCCESS;
@@ -521,9 +516,16 @@ linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver
 
     // calc rsold
     linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, matrix_program, queue);
+    linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
     // iterate
-    for (linalgcl_size_t i = 0; i < solver->iterations; i++) {
+    for (linalgcl_size_t i = 0; i < 1000; i++) {
+        // check error
+        linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
+        if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-4) {
+            break;
+        }
+
         // calc A * p
         linalgcl_matrix_vector_dot_product(solver->temp_number, solver->projection, solver->ones,
             matrix_program, queue);
@@ -557,20 +559,9 @@ linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver
 
     // substract mean
     linalgcl_matrix_vector_dot_product(solver->temp_number, solver->ones, x, matrix_program, queue);
-    linalgcl_matrix_scalar_multiply(solver->temp_number, solver->temp_number, -1.0 / solver->size,
+    linalgcl_matrix_scalar_multiply(solver->temp_number, solver->temp_number, -1.0,
         matrix_program, queue);
     ert_gradient_add_scalar(solver, x, solver->temp_number, queue);
-
-    // check error
-    linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
-
-    if (sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x > 1e-4) {
-        solver->iterations += 5;
-    }
-    else if ((sqrt(solver->rsold->host_data[0]) / solver->system_matrix->size_x < 5e-5) &&
-        (solver->iterations > 1)) {
-        solver->iterations -= 1;
-    }
 
     return LINALGCL_SUCCESS;
 
