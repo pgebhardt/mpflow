@@ -492,6 +492,27 @@ linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
     return LINALGCL_SUCCESS;
 }
 
+linalgcl_matrix_data_t ert_grid_angle(linalgcl_matrix_data_t x, linalgcl_matrix_data_t y) {
+    if (x > 0.0f) {
+        return atan(y / x);
+    }
+    else if ((x < 0.0f) && (y >= 0.0f)) {
+        return atan(y / x) + M_PI;
+    }
+    else if ((x < 0.0f) && (y < 0.0f)) {
+        return atan(y / x) - M_PI;
+    }
+    else if ((x == 0.0f) && (y > 0.0f)) {
+        return M_PI / 2.0f;
+    }
+    else if ((x == 0.0f) && (y < 0.0f)) {
+        return - M_PI / 2.0f;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
 // init exitation matrix
 linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     cl_context context, cl_command_queue queue) {
@@ -523,6 +544,7 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     linalgcl_matrix_data_t electrode_start[2];
     linalgcl_matrix_data_t electrode_end[2];
     linalgcl_matrix_data_t element = 0.0;
+    linalgcl_matrix_data_t radius, angle;
 
     for (linalgcl_size_t i = 0; i < electrode_count; i++) {
         // calc electrode start and end
@@ -540,7 +562,7 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
             linalgcl_matrix_get_element(grid->mesh->boundary, &id[0], j, 0);
 
             linalgcl_matrix_get_element(grid->mesh->vertices, &x[0], ((linalgcl_size_t)id[0] - 1) % grid->mesh->boundary_count, 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &y[0], ((linalgcl_size_t)id[0] - 1) & grid->mesh->boundary_count, 1);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &y[0], ((linalgcl_size_t)id[0] - 1) % grid->mesh->boundary_count, 1);
             linalgcl_matrix_get_element(grid->mesh->vertices, &x[1], (linalgcl_size_t)id[0], 0);
             linalgcl_matrix_get_element(grid->mesh->vertices, &y[1], (linalgcl_size_t)id[0], 1);
             linalgcl_matrix_get_element(grid->mesh->vertices, &x[2], ((linalgcl_size_t)id[0] + 1) % grid->mesh->boundary_count, 0);
@@ -551,9 +573,10 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
                              sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2])));
 
             // set matrix element
-            if ((x[1] >= fmin(electrode_start[0], electrode_end[0])) && (x[1] <= fmax(electrode_start[0], electrode_end[0])) &&
-                (y[1] >= fmin(electrode_start[1], electrode_end[1])) && (y[1] <= fmax(electrode_start[1], electrode_end[1])) &&
-                ((linalgcl_size_t)id[0] != 0)) {
+            if (((ert_grid_angle(x[1], y[1]) <= ert_grid_angle(electrode_end[0], electrode_end[1])) &&
+                (ert_grid_angle(x[1], y[1]) >= ert_grid_angle(electrode_start[0], electrode_start[1]))) ||
+                ((ert_grid_angle(x[1], y[1]) >= ert_grid_angle(electrode_end[0], electrode_end[1])) &&
+                (ert_grid_angle(x[1], y[1]) <= ert_grid_angle(electrode_start[0], electrode_start[1])))) {
                 linalgcl_matrix_set_element(grid->exitation_matrix, element, (linalgcl_size_t)id[0], i);
             }
         }

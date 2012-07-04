@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
 
     // right hand side
     linalgcl_matrix_t j, f;
-    linalgcl_matrix_create(&j, context, 10, 1);
+    linalgcl_matrix_create(&j, context, 8, 1);
     linalgcl_matrix_create(&f, context, mesh->vertex_count, 1);
 
     // set j
