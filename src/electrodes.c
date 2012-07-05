@@ -161,7 +161,8 @@ linalgcl_error_t ert_electrodes_get_vertices(ert_electrodes_t electrodes,
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
     // delta angle for electrodes
-    linalgcl_matrix_data_t delta_angle = 2.0f * M_PI / (2.0f * (linalgcl_matrix_data_t)electrodes->count);
+    linalgcl_matrix_data_t delta_angle = M_PI / (linalgcl_matrix_data_t)electrodes->count;
+    linalgcl_matrix_data_t offset = delta_angle / 2.0f;
 
     // get vertex per electrode count for first electrode
     linalgcl_size_t vertex_count = 0;
@@ -205,6 +206,7 @@ linalgcl_error_t ert_electrodes_get_vertices(ert_electrodes_t electrodes,
         // calc radius and angle
         radius = sqrt(x * x + y * y);
         angle = ert_electrodes_angle(x, y);
+        angle -= offset;
         angle += angle < 0.0f ? 2.0f * M_PI : 0.0f;
 
         // check radius and angle

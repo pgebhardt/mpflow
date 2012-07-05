@@ -539,7 +539,9 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     linalgcl_matrix_data_t id = 0.0f;
     linalgcl_matrix_data_t node[2], neighbour[2];
     linalgcl_matrix_data_t element = 0.0f;
-    linalgcl_matrix_data_t distance = 0.0f;
+    linalgcl_matrix_data_t node_angle = 0.0f;
+    linalgcl_matrix_data_t delta_angle = 0.0f;
+    linalgcl_matrix_data_t closest_node[2];
 
     for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
         for (linalgcl_size_t j = 0; j < electrodes->vertex_count[i]; j++) {
@@ -550,13 +552,19 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
             linalgcl_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcl_size_t)id, 0);
             linalgcl_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcl_size_t)id, 1);
 
+            // calc node angle
+            node_angle = ert_grid_angle(node[0], node[1]);
+
             // get neighbours
+            // TODO: get closest neighbours
             element = 0.0f;
+            closest_node[0] = -1.0f;
+            closest_node[1] = 2.0f * M_PI;
             for (linalgcl_size_t k = 0; k < electrodes->vertex_count[i]; k++) {
                 // get node id
                 linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, k, 0);
 
-                // check for current node
+                // skip current node
                 if ((linalgcl_size_t)id == j) {
                     continue;
                 }
@@ -565,14 +573,67 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
                 linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)id, 0);
                 linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)id, 1);
 
-                // check distance
-                distance = sqrt((node[0] - neighbour[0]) * (node[0] - neighbour[0]) +
-                                (node[1] - neighbour[1]) * (node[1] - neighbour[1]));
-                if (distance > grid->mesh->distance) {
+                // calc delta angle
+                delta_angle = node_angle - ert_grid_angle(neighbour[0], neighbour[1]);
+
+                // skip right nodes
+                if (delta_angle <= 0.0f) {
                     continue;
                 }
 
-                element += 0.5 * distance / element_area;
+                if (delta_angle < closest_node[1]) {
+                    closest_node[0] = id;
+                    closest_node[1] = delta_angle;
+                }
+            }
+
+            if (closest_node[0] >= 0.0f) {
+                // get neighbour
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)closest_node[0], 0);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)closest_node[0], 1);
+
+                // calc element
+                element += sqrt((node[0] - neighbour[0]) * (node[0] - neighbour[0]) +
+                                (node[1] - neighbour[1]) * (node[1] - neighbour[1])) * 0.5f / element_area;
+            }
+
+            closest_node[0] = -1.0f;
+            closest_node[1] = 2.0f * M_PI;
+            for (linalgcl_size_t k = 0; k < electrodes->vertex_count[i]; k++) {
+                // get node id
+                linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, k, 0);
+
+                // skip current node
+                if ((linalgcl_size_t)id == j) {
+                    continue;
+                }
+
+                // get coordinates
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)id, 0);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)id, 1);
+
+                // calc delta angle
+                delta_angle = node_angle - ert_grid_angle(neighbour[0], neighbour[1]);
+
+                // skip right nodes
+                if (delta_angle >= 0.0f) {
+                    continue;
+                }
+
+                if (delta_angle > closest_node[1]) {
+                    closest_node[0] = id;
+                    closest_node[1] = delta_angle;
+                }
+            }
+
+            if (closest_node[0] >= 0.0f) {
+                // get neighbour
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)closest_node[0], 0);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)closest_node[0], 1);
+
+                // calc element
+                element += sqrt((node[0] - neighbour[0]) * (node[0] - neighbour[0]) +
+                                (node[1] - neighbour[1]) * (node[1] - neighbour[1])) * 0.5f / element_area;
             }
 
             // set element
