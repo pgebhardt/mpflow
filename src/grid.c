@@ -556,7 +556,6 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
             node_angle = ert_grid_angle(node[0], node[1]);
 
             // get neighbours
-            // TODO: get closest neighbours
             element = 0.0f;
             closest_node[0] = -1.0f;
             closest_node[1] = 2.0f * M_PI;
@@ -596,6 +595,7 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
                 element += sqrt((node[0] - neighbour[0]) * (node[0] - neighbour[0]) +
                                 (node[1] - neighbour[1]) * (node[1] - neighbour[1])) * 0.5f / element_area;
             }
+            // TODO: calc left edge of electrode and use it as neighbour
 
             closest_node[0] = -1.0f;
             closest_node[1] = 2.0f * M_PI;

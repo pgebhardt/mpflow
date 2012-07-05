@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 
 #ifdef __APPLE__
@@ -27,6 +28,42 @@
 
 #include <linalgcl/linalgcl.h>
 #include "mesh.h"
+
+linalgcl_matrix_data_t ert_mesh_angle(linalgcl_matrix_data_t x,
+    linalgcl_matrix_data_t y) {
+    if (x > 0.0f) {
+        return atan(y / x);
+    }
+    else if ((x < 0.0f) && (y >= 0.0f)) {
+        return atan(y / x) + M_PI;
+    }
+    else if ((x < 0.0f) && (y < 0.0f)) {
+        return atan(y / x) - M_PI;
+    }
+    else if ((x == 0.0f) && (y > 0.0f)) {
+        return M_PI / 2.0f;
+    }
+    else if ((x == 0.0f) && (y < 0.0f)) {
+        return - M_PI / 2.0f;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+int compare_boundary(const void* a, const void* b) {
+    linalgcl_matrix_data_t temp = ((linalgcl_matrix_data_t*)a)[1] - ((linalgcl_matrix_data_t*)b)[1];
+
+    if (temp > 0) {
+        return 1;
+    }
+    else if (temp < 0) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
+}
 
 linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     linalgcl_matrix_data_t radius, linalgcl_matrix_data_t distance,
@@ -143,44 +180,34 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     }
 
     // get boundary vertices
-    // look from right to left
-    linalgcl_matrix_data_t id = NAN;
+    linalgcl_matrix_data_t boundary[mesh->boundary->size_x * 2];
+    linalgcl_matrix_data_t id;
+    linalgcl_matrix_data_t angle;
 
-    for (linalgcl_size_t i = 0; i < vertices->size_x; i++) {
-        for (linalgcl_size_t j = 0; j < vertices->size_y; j++) {
-            // get vertex id
-            linalgcl_matrix_get_element(vertices, &id, i, j);
+    for (linalgcl_size_t i = 0; i < mesh->vertex_count; i++) {
+        // get vertex
+        linalgcl_matrix_get_element(mesh->vertices, &x, i, 0);
+        linalgcl_matrix_get_element(mesh->vertices, &y, i, 1);
 
-            // check elements
-            if (!isnan(id)) {
-                // add new boundary vertex
-                linalgcl_matrix_set_element(mesh->boundary, id, mesh->boundary_count, 0);
+        // calc radius and angle
+        radius = sqrt(x * x + y * y);
+        angle = ert_mesh_angle(x, y);
+        angle += angle < 0.0f ? 2.0 * M_PI : 0.0f;
 
-                // increment boundary count
-                mesh->boundary_count++;
-
-                break;
-            }
+        // check radius and angle
+        if (radius >= mesh->radius - mesh->distance / 4.0f) {
+            boundary[mesh->boundary_count * 2 + 0] = (linalgcl_matrix_data_t)i;
+            boundary[mesh->boundary_count * 2 + 1] = angle;
+            mesh->boundary_count++;
         }
     }
 
-    // look from left to right
-    for (int i = vertices->size_x - 1; i >= 0; i--) {
-        for (int j = vertices->size_y - 1; j >= 0; j--) {
-            // get vertex id
-            linalgcl_matrix_get_element(vertices, &id, i, j);
+    // sort boundary
+    qsort(boundary, mesh->boundary_count, 2 * sizeof(linalgcl_matrix_data_t), compare_boundary);
 
-            // check elements
-            if ((!isnan(id)) && (id != mesh->boundary->host_data[mesh->boundary_count - 1])) {
-                // add new boundary vertex
-                linalgcl_matrix_set_element(mesh->boundary, id, mesh->boundary_count, 0);
-
-                // increment boundary count
-                mesh->boundary_count++;
-
-                break;
-            }
-        }
+    // write boundary ids to matrix
+    for (linalgcl_size_t i = 0; i < mesh->boundary_count; i++) {
+        linalgcl_matrix_set_element(mesh->boundary, boundary[i * 2], i, 0);
     }
 
     // create elements
