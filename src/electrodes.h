@@ -23,6 +23,7 @@
 typedef struct {
     linalgcl_size_t count;
     linalgcl_matrix_t* electrode_vertices;
+    linalgcl_size_t* vertex_count;
 } ert_electrodes_s;
 typedef ert_electrodes_s* ert_electrodes_t;
 

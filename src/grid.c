@@ -30,6 +30,7 @@
 #include <linalgcl/linalgcl.h>
 #include "basis.h"
 #include "mesh.h"
+#include "electrodes.h"
 #include "grid.h"
 
 // create new grid program
@@ -256,9 +257,6 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
 
         return error;
     }
-
-    // create exitation matrix
-    error = ert_grid_init_exitation_matrix(grid, context, queue);
 
     // set grid pointer
     *gridPointer = grid;
@@ -515,7 +513,7 @@ linalgcl_matrix_data_t ert_grid_angle(linalgcl_matrix_data_t x, linalgcl_matrix_
 
 // init exitation matrix
 linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
-    cl_context context, cl_command_queue queue) {
+    ert_electrodes_t electrodes, cl_context context, cl_command_queue queue) {
     // check input
     if ((grid == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
@@ -524,61 +522,63 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
-    // TODO: variable elektrodenzahl und geometrie
-    linalgcl_size_t electrode_count = 8;
-    linalgcl_matrix_data_t element_area = 2.0 * M_PI * grid->mesh->radius /
-        (linalgcl_matrix_data_t)(electrode_count * 2);
+    // create exitation_matrix
     error = linalgcl_matrix_create(&grid->exitation_matrix, context,
-        grid->mesh->vertex_count, electrode_count);
+        grid->mesh->vertex_count, electrodes->count);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        ert_grid_release(&grid);
-
         return LINALGCL_ERROR;
     }
 
+    // calc electrode area
+    linalgcl_matrix_data_t element_area = 2.0 * M_PI * grid->mesh->radius /
+        (linalgcl_matrix_data_t)(electrodes->count * 2);
+
     // fill exitation_matrix matrix
-    linalgcl_matrix_data_t id[3], x[3], y[3];
-    linalgcl_matrix_data_t electrode_start[2];
-    linalgcl_matrix_data_t electrode_end[2];
-    linalgcl_matrix_data_t element = 0.0;
-    linalgcl_matrix_data_t radius, angle;
+    linalgcl_matrix_data_t id = 0.0f;
+    linalgcl_matrix_data_t node[2], neighbour[2];
+    linalgcl_matrix_data_t element = 0.0f;
+    linalgcl_matrix_data_t distance = 0.0f;
 
-    for (linalgcl_size_t i = 0; i < electrode_count; i++) {
-        // calc electrode start and end
-        electrode_start[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)i /
-            (linalgcl_matrix_data_t)electrode_count);
-        electrode_start[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)i /
-            (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[0] = grid->mesh->radius * cos(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
-            (linalgcl_matrix_data_t)electrode_count);
-        electrode_end[1] = grid->mesh->radius * sin(2.0 * M_PI * (linalgcl_matrix_data_t)(i + 1) /
-            (linalgcl_matrix_data_t)electrode_count);
+    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
+        for (linalgcl_size_t j = 0; j < electrodes->vertex_count[i]; j++) {
+            // get node id
+            linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, j, 0);
 
-        for (linalgcl_size_t j = 0; j < grid->mesh->boundary_count; j++) {
-            // get boundary vertices
-            linalgcl_matrix_get_element(grid->mesh->boundary, &id[0], j, 0);
+            // get coordinates
+            linalgcl_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcl_size_t)id, 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcl_size_t)id, 1);
 
-            linalgcl_matrix_get_element(grid->mesh->vertices, &x[0], ((linalgcl_size_t)id[0] - 1) % grid->mesh->boundary_count, 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &y[0], ((linalgcl_size_t)id[0] - 1) % grid->mesh->boundary_count, 1);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &x[1], (linalgcl_size_t)id[0], 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &y[1], (linalgcl_size_t)id[0], 1);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &x[2], ((linalgcl_size_t)id[0] + 1) % grid->mesh->boundary_count, 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &y[2], ((linalgcl_size_t)id[0] + 1) % grid->mesh->boundary_count, 1);
+            // get neighbours
+            element = 0.0f;
+            for (linalgcl_size_t k = 0; k < electrodes->vertex_count[i]; k++) {
+                // get node id
+                linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, k, 0);
 
-            // calc matrix element
-            element = 0.5 * (sqrt((x[0] - x[1]) * (x[0] - x[1]) + (y[0] - y[1]) * (y[0] - y[1])) +
-                             sqrt((x[1] - x[2]) * (x[1] - x[2]) + (y[1] - y[2]) * (y[1] - y[2])));
+                // check for current node
+                if ((linalgcl_size_t)id == j) {
+                    continue;
+                }
 
-            // set matrix element
-            if (((ert_grid_angle(x[1], y[1]) <= ert_grid_angle(electrode_end[0], electrode_end[1])) &&
-                (ert_grid_angle(x[1], y[1]) >= ert_grid_angle(electrode_start[0], electrode_start[1]))) ||
-                ((ert_grid_angle(x[1], y[1]) >= ert_grid_angle(electrode_end[0], electrode_end[1])) &&
-                (ert_grid_angle(x[1], y[1]) <= ert_grid_angle(electrode_start[0], electrode_start[1])))) {
-                linalgcl_matrix_set_element(grid->exitation_matrix, element, (linalgcl_size_t)id[0], i);
+                // get coordinates
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)id, 0);
+                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)id, 1);
+
+                // check distance
+                distance = sqrt((node[0] - neighbour[0]) * (node[0] - neighbour[0]) +
+                                (node[1] - neighbour[1]) * (node[1] - neighbour[1]));
+                if (distance > grid->mesh->distance) {
+                    continue;
+                }
+
+                element += 0.5 * distance / element_area;
             }
+
+            // set element
+            linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, j, 0);
+            linalgcl_matrix_set_element(grid->exitation_matrix, element,
+                (linalgcl_size_t)id, i);
         }
     }
 

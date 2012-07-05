@@ -110,9 +110,8 @@ int main(int argc, char* argv[]) {
 
     // create electrodes
     ert_electrodes_t electrodes;
-    error = ert_electrodes_create(&electrodes, 8);
+    error = ert_electrodes_create(&electrodes, 4);
     error += ert_electrodes_get_vertices(electrodes, mesh, context);
-    print_matrix(electrodes->electrode_vertices[0]);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -121,7 +120,13 @@ int main(int argc, char* argv[]) {
 
     // create grid
     ert_grid_t grid = NULL;
-    error = ert_grid_create(&grid, program, mesh, context, device_id, queue);
+    error  = ert_grid_create(&grid, program, mesh, context, device_id, queue);
+    error |= ert_grid_init_exitation_matrix(grid, electrodes, context, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return EXIT_FAILURE;
+    }
 
     // create solver
     ert_gradient_solver_t solver = NULL;
@@ -149,12 +154,11 @@ int main(int argc, char* argv[]) {
 
     // right hand side
     linalgcl_matrix_t j, f;
-    linalgcl_matrix_create(&j, context, 8, 1);
+    linalgcl_matrix_create(&j, context, electrodes->count, 1);
     linalgcl_matrix_create(&f, context, mesh->vertex_count, 1);
 
     // set j
     linalgcl_matrix_set_element(j, 1.0, 1, 0);
-    linalgcl_matrix_set_element(j, -1.0, 5, 0);
     linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
 
     // calc f matrix

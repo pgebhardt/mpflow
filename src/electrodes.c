@@ -56,6 +56,7 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     // init struct
     electrodes->count = count;
     electrodes->electrode_vertices = NULL;
+    electrodes->vertex_count = NULL;
 
     // create electrode vertices memory
     electrodes->electrode_vertices = malloc(sizeof(linalgcl_matrix_s) *
@@ -72,6 +73,22 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     // init matrix pointer to NULL
     for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
         electrodes->electrode_vertices[i] = NULL;
+    }
+
+    // create vertex per electrode count
+    electrodes->vertex_count = malloc(sizeof(linalgcl_size_t) * electrodes->count);
+
+    // check success
+    if (electrodes->vertex_count == NULL) {
+        // cleanup
+        ert_electrodes_release(&electrodes);
+
+        return LINALGCL_ERROR;
+    }
+
+    // set vertex counts
+    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
+        electrodes->vertex_count[i] = 0;
     }
 
     // set electrodesPointer
@@ -95,6 +112,11 @@ linalgcl_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer) {
         linalgcl_matrix_release(&electrodes->electrode_vertices[i]);
     }
     free(electrodes->electrode_vertices);
+
+    // free vertex count
+    if (electrodes->vertex_count != NULL) {
+        free(electrodes->vertex_count);
+    }
 
     // free struct
     free(electrodes);
@@ -175,11 +197,6 @@ linalgcl_error_t ert_electrodes_get_vertices(ert_electrodes_t electrodes,
     linalgcl_size_t electrode;
     linalgcl_matrix_data_t id;
 
-    linalgcl_size_t* count = malloc(sizeof(linalgcl_size_t) * electrodes->count);
-    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
-        count[i] = 0;
-    }
-
     for (linalgcl_size_t i = 0; i < mesh->vertex_count; i++) {
         // get vertex
         linalgcl_matrix_get_element(mesh->vertices, &x, i, 0);
@@ -199,15 +216,12 @@ linalgcl_error_t ert_electrodes_get_vertices(ert_electrodes_t electrodes,
                 id = (linalgcl_matrix_data_t)i;
 
                 linalgcl_matrix_set_element(electrodes->electrode_vertices[electrode / 2],
-                    id, count[electrode / 2], 0);
+                    id, electrodes->vertex_count[electrode / 2], 0);
 
-                count[electrode / 2]++;
+                electrodes->vertex_count[electrode / 2]++;
             }
         }
     }
-
-    // cleanup
-    free(count);
 
     return LINALGCL_SUCCESS;
 }

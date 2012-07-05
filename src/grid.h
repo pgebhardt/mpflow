@@ -65,6 +65,6 @@ linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
 
 // init exitation matrix
 linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
-    cl_context context, cl_command_queue queue);
+    ert_electrodes_t electrodes, cl_context context, cl_command_queue queue);
 
 #endif

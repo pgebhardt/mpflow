@@ -29,7 +29,6 @@
 #include <linalgcl/linalgcl.h>
 #include "basis.h"
 #include "mesh.h"
-#include "grid.h"
 #include "gradient.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -457,7 +456,7 @@ linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
     for (linalgcl_size_t i = 0; i < solver->size; i++) {
         // check error
         linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
-        if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-4) {
+        if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-5) {
             break;
         }
 
@@ -522,7 +521,7 @@ linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver
     for (linalgcl_size_t i = 0; i < solver->size; i++) {
         // check error
         linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
-        if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-4) {
+        if (sqrt(solver->rsold->host_data[0]) / solver->size <= 1e-5) {
             break;
         }
 
