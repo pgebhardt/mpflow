@@ -16,7 +16,7 @@ bool pointInTriangle(float px, float py, float ax, float ay, float bx, float by,
 }
 
 __kernel void calc_image(__global float* image, __global float* elements, __global float* phi,
-    unsigned int size_x, unsigned int size_y) {
+    unsigned int size_x, unsigned int size_y, float radius) {
     // get id
     unsigned int k = get_global_id(0);
 
@@ -39,8 +39,8 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
     }
 
     // step size
-    float dx = 2.0f / ((float)size_x - 1.0f);
-    float dy = 2.0f / ((float)size_y - 1.0f);
+    float dx = 2.0f * radius / ((float)size_x - 1.0f);
+    float dy = 2.0f * radius / ((float)size_y - 1.0f);
 
     // start and stop indices
     int iStart = (int)(min(min(xVertex[0], xVertex[1]),
@@ -58,8 +58,8 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
     for (int i = iStart; i <= iEnd; i++) {
         for (int j = jStart; j <= jEnd; j++) {
             // calc coordinate
-            x = (float)i * dx - 1.0f;
-            y = (float)j * dy - 1.0f;
+            x = (float)i * dx - radius;
+            y = (float)j * dy - radius;
 
             // calc pixel
             pixel  = phi[id[0]] * (basis[0][0] + basis[0][1] * x + basis[0][2] * y);

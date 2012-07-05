@@ -135,7 +135,7 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
             y = (int)(mesh->radius / r + 1) * r - r * (linalgcl_matrix_data_t)j;
 
             // check point
-            if (x * x + y * y < mesh->radius - 0.5 * mesh->distance) {
+            if (sqrt(x * x + y * y) < mesh->radius - 0.25f * mesh->distance) {
                 // set vertex
                 linalgcl_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
                 linalgcl_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);
@@ -145,7 +145,7 @@ linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
                 mesh->vertex_count++;
             }
-            else if (x * x + y * y < mesh->radius + mesh->distance) {
+            else if (sqrt(x * x + y * y) < mesh->radius + 0.5f * mesh->distance) {
                 // calc new x and y
                 x = x / sqrt(x * x + y * y) * mesh->radius;
                 y = y / sqrt(x * x + y * y) * mesh->radius;

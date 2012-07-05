@@ -203,6 +203,7 @@ linalgcl_error_t ert_image_create(ert_image_t* imagePointer, linalgcl_size_t siz
     image->elements = NULL;
     image->image = NULL;
     image->program = NULL;
+    image->mesh = mesh;
 
     // create matrices
     error  = linalgcl_matrix_create(&image->elements, context,
@@ -326,6 +327,8 @@ linalgcl_error_t ert_image_calc(ert_image_t image,
         3, sizeof(linalgcl_size_t), &image->image->size_x);
     cl_error += clSetKernelArg(image->program->kernel_calc_image,
         4, sizeof(linalgcl_size_t), &image->image->size_y);
+    cl_error += clSetKernelArg(image->program->kernel_calc_image,
+        5, sizeof(linalgcl_matrix_data_t), &image->mesh->radius);
 
     // check success
     if (cl_error != CL_SUCCESS) {

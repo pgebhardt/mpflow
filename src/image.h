@@ -31,6 +31,7 @@ typedef struct {
     linalgcl_matrix_t elements;
     linalgcl_matrix_t image;
     ert_image_program_t program;
+    ert_mesh_t mesh;
 } ert_image_s;
 typedef ert_image_s* ert_image_t;
 

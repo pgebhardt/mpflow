@@ -75,7 +75,6 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     // fill electrode vectors
     linalgcl_matrix_data_t angle = 0.0f;
     linalgcl_matrix_data_t delta_angle = M_PI / (linalgcl_matrix_data_t)electrodes->count;
-    printf("delta_angle: %f\n", delta_angle);
     for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
         // calc start angle
         angle = (linalgcl_matrix_data_t)i * 2.0f * delta_angle;
@@ -85,7 +84,7 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
         electrodes->electrode_start[i * 2 + 1] = mesh->radius * sin(angle);
 
         // calc end angle
-        angle += delta_angle;
+        angle += size / mesh->radius;
 
         // calc end coordinates
         electrodes->electrode_end[i * 2 + 0] = mesh->radius * cos(angle);
