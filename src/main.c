@@ -30,6 +30,7 @@
 #include "mesh.h"
 #include "basis.h"
 #include "image.h"
+#include "electrodes.h"
 #include "grid.h"
 #include "gradient.h"
 
@@ -107,6 +108,17 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_copy_to_device(mesh->vertices, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(mesh->elements, queue, CL_TRUE);
 
+    // create electrodes
+    ert_electrodes_t electrodes;
+    error = ert_electrodes_create(&electrodes, 8);
+    error += ert_electrodes_get_vertices(electrodes, mesh, context);
+    print_matrix(electrodes->electrode_vertices[0]);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
     // create grid
     ert_grid_t grid = NULL;
     error = ert_grid_create(&grid, program, mesh, context, device_id, queue);
@@ -178,6 +190,7 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_release(&j);
     ert_gradient_solver_release(&solver);
     ert_grid_release(&grid);
+    ert_electrodes_release(&electrodes);
     ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);

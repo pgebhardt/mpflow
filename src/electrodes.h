@@ -21,14 +21,20 @@
 
 // electrodes struct
 typedef struct {
+    linalgcl_size_t count;
+    linalgcl_matrix_t* electrode_vertices;
 } ert_electrodes_s;
 typedef ert_electrodes_s* ert_electrodes_t;
 
 // create electrodes
 linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
-    ert_mesh_t mesh);
+    linalgcl_size_t count);
 
 // release electrodes
 linalgcl_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer);
+
+// get vertices for electrodes
+linalgcl_error_t ert_electrodes_get_vertices(ert_electrodes_t electrodes,
+    ert_mesh_t mesh, cl_context context);
 
 #endif
