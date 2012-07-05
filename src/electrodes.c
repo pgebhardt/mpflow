@@ -33,9 +33,9 @@
 
 // create electrodes
 linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
-    linalgcl_size_t count) {
+    linalgcl_size_t count, ert_mesh_t mesh) {
     // check input
-    if ((electrodesPointer == NULL) || (count == 0)) {
+    if ((electrodesPointer == NULL) || (count == 0) || (mesh == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -55,8 +55,43 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
 
     // init struct
     electrodes->count = count;
+    electrodes->electrode_start = NULL;
+    electrodes->electrode_end = NULL;
     electrodes->electrode_vertices = NULL;
     electrodes->vertex_count = NULL;
+
+    // create electrode vectors
+    electrodes->electrode_start = malloc(sizeof(linalgcl_matrix_data_t) *
+        electrodes->count * 2);
+    electrodes->electrode_end = malloc(sizeof(linalgcl_matrix_data_t) *
+        electrodes->count * 2);
+
+    // check success
+    if ((electrodes->electrode_start == NULL) || (electrodes->electrode_end == NULL)) {
+        // cleanup
+        ert_electrodes_release(&electrodes);
+
+        return LINALGCL_ERROR;
+    }
+
+    // fill electrode vectors
+    linalgcl_matrix_data_t angle = 0.0f;
+    linalgcl_matrix_data_t delta_angle = M_PI / (linalgcl_matrix_data_t)electrodes->count;
+    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
+        // calc start angle
+        angle = (linalgcl_matrix_data_t)i * 2.0f * delta_angle;
+
+        // calc start coordinates
+        electrodes->electrode_start[i * 2 + 0] = mesh->radius * cos(angle);
+        electrodes->electrode_start[i * 2 + 1] = mesh->radius * sin(angle);
+
+        // calc end angle
+        angle += delta_angle;
+
+        // calc end coordinates
+        electrodes->electrode_end[i * 2 + 0] = mesh->radius * cos(angle);
+        electrodes->electrode_end[i * 2 + 1] = mesh->radius * sin(angle);
+    }
 
     // create electrode vertices memory
     electrodes->electrode_vertices = malloc(sizeof(linalgcl_matrix_s) *
@@ -106,6 +141,14 @@ linalgcl_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer) {
 
     // get electrodes
     ert_electrodes_t electrodes = *electrodesPointer;
+
+    // free electrode vectors
+    if (electrodes->electrode_start != NULL) {
+        free(electrodes->electrode_start);
+    }
+    if (electrodes->electrode_end != NULL) {
+        free(electrodes->electrode_end);
+    }
 
     // release electrode vertices
     for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
