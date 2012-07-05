@@ -33,7 +33,7 @@
 
 // create electrodes
 linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
-    linalgcl_size_t count, ert_mesh_t mesh) {
+    linalgcl_size_t count, linalgcl_matrix_data_t size, ert_mesh_t mesh) {
     // check input
     if ((electrodesPointer == NULL) || (count == 0) || (mesh == NULL)) {
         return LINALGCL_ERROR;
@@ -57,8 +57,6 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     electrodes->count = count;
     electrodes->electrode_start = NULL;
     electrodes->electrode_end = NULL;
-    electrodes->electrode_vertices = NULL;
-    electrodes->vertex_count = NULL;
 
     // create electrode vectors
     electrodes->electrode_start = malloc(sizeof(linalgcl_matrix_data_t) *
@@ -77,6 +75,7 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     // fill electrode vectors
     linalgcl_matrix_data_t angle = 0.0f;
     linalgcl_matrix_data_t delta_angle = M_PI / (linalgcl_matrix_data_t)electrodes->count;
+    printf("delta_angle: %f\n", delta_angle);
     for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
         // calc start angle
         angle = (linalgcl_matrix_data_t)i * 2.0f * delta_angle;
@@ -91,39 +90,6 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
         // calc end coordinates
         electrodes->electrode_end[i * 2 + 0] = mesh->radius * cos(angle);
         electrodes->electrode_end[i * 2 + 1] = mesh->radius * sin(angle);
-    }
-
-    // create electrode vertices memory
-    electrodes->electrode_vertices = malloc(sizeof(linalgcl_matrix_s) *
-        electrodes->count);
-
-    // check success
-    if (electrodes->electrode_vertices == NULL) {
-        // cleanup
-        ert_electrodes_release(&electrodes);
-
-        return LINALGCL_ERROR;
-    }
-
-    // init matrix pointer to NULL
-    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
-        electrodes->electrode_vertices[i] = NULL;
-    }
-
-    // create vertex per electrode count
-    electrodes->vertex_count = malloc(sizeof(linalgcl_size_t) * electrodes->count);
-
-    // check success
-    if (electrodes->vertex_count == NULL) {
-        // cleanup
-        ert_electrodes_release(&electrodes);
-
-        return LINALGCL_ERROR;
-    }
-
-    // set vertex counts
-    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
-        electrodes->vertex_count[i] = 0;
     }
 
     // set electrodesPointer
@@ -150,123 +116,11 @@ linalgcl_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer) {
         free(electrodes->electrode_end);
     }
 
-    // release electrode vertices
-    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
-        linalgcl_matrix_release(&electrodes->electrode_vertices[i]);
-    }
-    free(electrodes->electrode_vertices);
-
-    // free vertex count
-    if (electrodes->vertex_count != NULL) {
-        free(electrodes->vertex_count);
-    }
-
     // free struct
     free(electrodes);
 
     // set electrodesPointer to NULL
     *electrodesPointer = NULL;
-
-    return LINALGCL_SUCCESS;
-}
-
-linalgcl_matrix_data_t ert_electrodes_angle(linalgcl_matrix_data_t x,
-    linalgcl_matrix_data_t y) {
-    if (x > 0.0f) {
-        return atan(y / x);
-    }
-    else if ((x < 0.0f) && (y >= 0.0f)) {
-        return atan(y / x) + M_PI;
-    }
-    else if ((x < 0.0f) && (y < 0.0f)) {
-        return atan(y / x) - M_PI;
-    }
-    else if ((x == 0.0f) && (y > 0.0f)) {
-        return M_PI / 2.0f;
-    }
-    else if ((x == 0.0f) && (y < 0.0f)) {
-        return - M_PI / 2.0f;
-    }
-    else {
-        return 0.0f;
-    }
-}
-
-// get vertices for electrodes
-linalgcl_error_t ert_electrodes_get_vertices(ert_electrodes_t electrodes,
-    ert_mesh_t mesh, cl_context context) {
-    // check input
-    if ((electrodes == NULL) || (mesh == NULL) || (context == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
-
-    // delta angle for electrodes
-    linalgcl_matrix_data_t delta_angle = M_PI / (linalgcl_matrix_data_t)electrodes->count;
-    linalgcl_matrix_data_t offset = delta_angle / 2.0f;
-
-    // get vertex per electrode count for first electrode
-    linalgcl_size_t vertex_count = 0;
-    linalgcl_matrix_data_t angle, radius;
-    linalgcl_matrix_data_t x, y;
-
-    for (linalgcl_size_t i = 0; i < mesh->vertex_count; i++) {
-        // get vertex
-        linalgcl_matrix_get_element(mesh->vertices, &x, i, 0);
-        linalgcl_matrix_get_element(mesh->vertices, &y, i, 1);
-
-        // calc radius and angle
-        radius = sqrt(x * x + y * y);
-        angle = ert_electrodes_angle(x, y);
-
-        // check radius and angle
-        if ((radius >= mesh->radius - mesh->distance / 4.0f) && (angle >= 0.0f) && (angle <= delta_angle)) {
-            vertex_count++;
-        }
-    }
-
-    // create matrices
-    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
-        error += linalgcl_matrix_create(&electrodes->electrode_vertices[i], context, vertex_count * 2, 1);
-    }
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return error;
-    }
-
-    // fill matrices
-    linalgcl_size_t electrode;
-    linalgcl_matrix_data_t id;
-
-    for (linalgcl_size_t i = 0; i < mesh->vertex_count; i++) {
-        // get vertex
-        linalgcl_matrix_get_element(mesh->vertices, &x, i, 0);
-        linalgcl_matrix_get_element(mesh->vertices, &y, i, 1);
-
-        // calc radius and angle
-        radius = sqrt(x * x + y * y);
-        angle = ert_electrodes_angle(x, y);
-        angle -= offset;
-        angle += angle < 0.0f ? 2.0f * M_PI : 0.0f;
-
-        // check radius and angle
-        if ((radius >= mesh->radius - mesh->distance / 4.0f)) {
-            electrode = (linalgcl_size_t)(angle / delta_angle);
-
-            if (electrode % 2 == 0) {
-                // get electrode id
-                id = (linalgcl_matrix_data_t)i;
-
-                linalgcl_matrix_set_element(electrodes->electrode_vertices[electrode / 2],
-                    id, electrodes->vertex_count[electrode / 2], 0);
-
-                electrodes->vertex_count[electrode / 2]++;
-            }
-        }
-    }
 
     return LINALGCL_SUCCESS;
 }

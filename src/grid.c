@@ -521,17 +521,33 @@ linalgcl_matrix_data_t ert_grid_integrate_basis(linalgcl_matrix_data_t* node,
     linalgcl_matrix_data_t start_angle = ert_grid_angle(electrode_start[0], electrode_start[1]);
     linalgcl_matrix_data_t end_angle = ert_grid_angle(electrode_end[0], electrode_end[1]);
 
+    // shift angles
+    start_angle -= node_angle;
+    end_angle -= node_angle;
+    left_angle -= node_angle;
+    right_angle -= node_angle;
+
+    // correct angles
+    start_angle += start_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+    end_angle += end_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+    left_angle += left_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+    right_angle += right_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+    start_angle -= start_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+    end_angle -= end_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+    left_angle -= left_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+    right_angle -= right_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
+
     // calc integral
     linalgcl_matrix_data_t integral = 0.0f;
 
-    if ((node_angle >= start_angle) && (node_angle <= end_angle)) {
+    if ((start_angle <= 0.0f) && (end_angle >= 0.0f)) {
         // component of left node
         integral += 0.5 * sqrt((node[0] - left[0]) * (node[0] - left[0]) +
                                (node[1] - left[1]) * (node[1] - left[1]));
 
         if (left_angle < start_angle) {
-            integral -= 0.5 * sqrt((electrode_start[0] - left[0]) * (electrode_start[0] - left[0]) +
-                                   (electrode_start[1] - left[1]) * (electrode_start[1] - left[1]));
+            integral -= 0.5 * sqrt((left[0] - electrode_start[0]) * (left[0] - electrode_start[0]) +
+                                   (left[1] - electrode_start[1]) * (left[1] - electrode_start[1]));
         }
 
         // component of right node
@@ -539,23 +555,24 @@ linalgcl_matrix_data_t ert_grid_integrate_basis(linalgcl_matrix_data_t* node,
                                (node[1] - right[1]) * (node[1] - right[1]));
 
         if (right_angle > end_angle) {
-            integral -= 0.5 * sqrt((electrode_end[0] - right[0]) * (electrode_end[0] - right[0]) +
-                                   (electrode_end[1] - right[1]) * (electrode_end[1] - right[1]));
+            integral -= 0.5 * sqrt((right[0] - electrode_end[0]) * (right[0] - electrode_end[0]) +
+                                   (right[1] - electrode_end[1]) * (right[1] - electrode_end[1]));
         }
+
     }
-    else if (left_angle <= end_angle) {
+    else if ((left_angle >= start_angle) && (left_angle <= end_angle)) {
         integral += 0.5 * sqrt((node[0] - left[0]) * (node[0] - left[0]) +
                                (node[1] - left[1]) * (node[1] - left[1]));
 
-        integral -= 0.5 * sqrt((electrode_end[0] - left[0]) * (electrode_end[0] - left[0]) +
-                               (electrode_end[1] - left[1]) * (electrode_end[1] - left[1]));
+        integral -= 0.5 * sqrt((electrode_end[0] - node[0]) * (electrode_end[0] - node[0]) +
+                               (electrode_end[1] - node[1]) * (electrode_end[1] - node[1]));
     }
-    else if (right_angle >= start_angle) {
+    else if ((right_angle >= start_angle) && (right_angle <= end_angle)) {
         integral += 0.5 * sqrt((node[0] - right[0]) * (node[0] - right[0]) +
                                (node[1] - right[1]) * (node[1] - right[1]));
 
-        integral -= 0.5 * sqrt((electrode_start[0] - right[0]) * (electrode_start[0] - right[0]) +
-                               (electrode_start[1] - right[1]) * (electrode_start[1] - right[1]));
+        integral -= 0.5 * sqrt((electrode_start[0] - node[0]) * (electrode_start[0] - node[0]) +
+                               (electrode_start[1] - node[1]) * (electrode_start[1] - node[1]));
     }
 
     return integral;
@@ -608,7 +625,7 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
             linalgcl_matrix_set_element(grid->exitation_matrix,
                 ert_grid_integrate_basis(node, left, right,
                     &electrodes->electrode_start[j * 2], &electrodes->electrode_end[j * 2]) / element_area,
-                    i, j);
+                    (linalgcl_size_t)id[1], j);
         }
     }
 

@@ -24,20 +24,14 @@ typedef struct {
     linalgcl_size_t count;
     linalgcl_matrix_data_t* electrode_start;
     linalgcl_matrix_data_t* electrode_end;
-    linalgcl_matrix_t* electrode_vertices;
-    linalgcl_size_t* vertex_count;
 } ert_electrodes_s;
 typedef ert_electrodes_s* ert_electrodes_t;
 
 // create electrodes
 linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
-    linalgcl_size_t count, ert_mesh_t mesh);
+    linalgcl_size_t count, linalgcl_matrix_data_t size, ert_mesh_t mesh);
 
 // release electrodes
 linalgcl_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer);
-
-// get vertices for electrodes
-linalgcl_error_t ert_electrodes_get_vertices(ert_electrodes_t electrodes,
-    ert_mesh_t mesh, cl_context context);
 
 #endif
