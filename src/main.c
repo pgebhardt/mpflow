@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 
     // create electrodes
     ert_electrodes_t electrodes;
-    error = ert_electrodes_create(&electrodes, 20);
+    error = ert_electrodes_create(&electrodes, 20, mesh);
     error += ert_electrodes_get_vertices(electrodes, mesh, context);
 
     // check success
@@ -158,8 +158,7 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_create(&f, context, mesh->vertex_count, 1);
 
     // set j
-    linalgcl_matrix_set_element(j, -1.0f, 1, 0);
-    linalgcl_matrix_set_element(j, 1.0f, 19, 0);
+    linalgcl_matrix_set_element(j, 1.0f, 5, 0);
     linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
 
     // calc f matrix

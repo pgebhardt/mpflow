@@ -511,6 +511,56 @@ linalgcl_matrix_data_t ert_grid_angle(linalgcl_matrix_data_t x, linalgcl_matrix_
     }
 }
 
+linalgcl_matrix_data_t ert_grid_integrate_basis(linalgcl_matrix_data_t* node,
+    linalgcl_matrix_data_t* left, linalgcl_matrix_data_t* right,
+    linalgcl_matrix_data_t* electrode_start, linalgcl_matrix_data_t* electrode_end) {
+    // calc angles
+    linalgcl_matrix_data_t node_angle = ert_grid_angle(node[0], node[1]);
+    linalgcl_matrix_data_t left_angle = ert_grid_angle(left[0], left[1]);
+    linalgcl_matrix_data_t right_angle = ert_grid_angle(right[0], right[1]);
+    linalgcl_matrix_data_t start_angle = ert_grid_angle(electrode_start[0], electrode_start[1]);
+    linalgcl_matrix_data_t end_angle = ert_grid_angle(electrode_end[0], electrode_end[1]);
+
+    // calc integral
+    linalgcl_matrix_data_t integral = 0.0f;
+
+    if ((node_angle >= start_angle) && (node_angle <= end_angle)) {
+        // component of left node
+        integral += 0.5 * sqrt((node[0] - left[0]) * (node[0] - left[0]) +
+                               (node[1] - left[1]) * (node[1] - left[1]));
+
+        if (left_angle < start_angle) {
+            integral -= 0.5 * sqrt((electrode_start[0] - left[0]) * (electrode_start[0] - left[0]) +
+                                   (electrode_start[1] - left[1]) * (electrode_start[1] - left[1]));
+        }
+
+        // component of right node
+        integral += 0.5 * sqrt((node[0] - right[0]) * (node[0] - right[0]) +
+                               (node[1] - right[1]) * (node[1] - right[1]));
+
+        if (right_angle > end_angle) {
+            integral -= 0.5 * sqrt((electrode_end[0] - right[0]) * (electrode_end[0] - right[0]) +
+                                   (electrode_end[1] - right[1]) * (electrode_end[1] - right[1]));
+        }
+    }
+    else if (left_angle <= end_angle) {
+        integral += 0.5 * sqrt((node[0] - left[0]) * (node[0] - left[0]) +
+                               (node[1] - left[1]) * (node[1] - left[1]));
+
+        integral -= 0.5 * sqrt((electrode_end[0] - left[0]) * (electrode_end[0] - left[0]) +
+                               (electrode_end[1] - left[1]) * (electrode_end[1] - left[1]));
+    }
+    else if (right_angle >= start_angle) {
+        integral += 0.5 * sqrt((node[0] - right[0]) * (node[0] - right[0]) +
+                               (node[1] - right[1]) * (node[1] - right[1]));
+
+        integral -= 0.5 * sqrt((electrode_start[0] - right[0]) * (electrode_start[0] - right[0]) +
+                               (electrode_start[1] - right[1]) * (electrode_start[1] - right[1]));
+    }
+
+    return integral;
+}
+
 // init exitation matrix
 linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     ert_electrodes_t electrodes, cl_context context, cl_command_queue queue) {
@@ -536,110 +586,29 @@ linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
         (linalgcl_matrix_data_t)(electrodes->count * 2);
 
     // fill exitation_matrix matrix
-    linalgcl_matrix_data_t id = 0.0f;
-    linalgcl_matrix_data_t node[2], neighbour[2];
-    linalgcl_matrix_data_t element = 0.0f;
-    linalgcl_matrix_data_t node_angle = 0.0f;
-    linalgcl_matrix_data_t delta_angle = 0.0f;
-    linalgcl_matrix_data_t closest_node[2];
+    linalgcl_matrix_data_t id[3];
+    linalgcl_matrix_data_t node[2], left[2], right[2];
 
-    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
-        for (linalgcl_size_t j = 0; j < electrodes->vertex_count[i]; j++) {
-            // get node id
-            linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, j, 0);
+    for (int i = 0; i < grid->mesh->boundary_count; i++) {
+        for (int j = 0; j < electrodes->count; j++) {
+            // get boundary node id
+            linalgcl_matrix_get_element(grid->mesh->boundary, &id[0], i - 1 < 0 ? grid->mesh->boundary_count - 1 : i - 1, 0);
+            linalgcl_matrix_get_element(grid->mesh->boundary, &id[1], i, 0);
+            linalgcl_matrix_get_element(grid->mesh->boundary, &id[2], (i + 1) % grid->mesh->boundary_count, 0);
 
             // get coordinates
-            linalgcl_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcl_size_t)id, 0);
-            linalgcl_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcl_size_t)id, 1);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &left[0], (linalgcl_size_t)id[0], 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &left[1], (linalgcl_size_t)id[0], 1);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcl_size_t)id[1], 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcl_size_t)id[1], 1);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &right[0], (linalgcl_size_t)id[2], 0);
+            linalgcl_matrix_get_element(grid->mesh->vertices, &right[1], (linalgcl_size_t)id[2], 1);
 
-            // calc node angle
-            node_angle = ert_grid_angle(node[0], node[1]);
-
-            // get neighbours
-            element = 0.0f;
-            closest_node[0] = -1.0f;
-            closest_node[1] = 2.0f * M_PI;
-            for (linalgcl_size_t k = 0; k < electrodes->vertex_count[i]; k++) {
-                // get node id
-                linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, k, 0);
-
-                // skip current node
-                if ((linalgcl_size_t)id == j) {
-                    continue;
-                }
-
-                // get coordinates
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)id, 0);
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)id, 1);
-
-                // calc delta angle
-                delta_angle = node_angle - ert_grid_angle(neighbour[0], neighbour[1]);
-
-                // skip right nodes
-                if (delta_angle <= 0.0f) {
-                    continue;
-                }
-
-                if (delta_angle < closest_node[1]) {
-                    closest_node[0] = id;
-                    closest_node[1] = delta_angle;
-                }
-            }
-
-            if (closest_node[0] >= 0.0f) {
-                // get neighbour
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)closest_node[0], 0);
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)closest_node[0], 1);
-
-                // calc element
-                element += sqrt((node[0] - neighbour[0]) * (node[0] - neighbour[0]) +
-                                (node[1] - neighbour[1]) * (node[1] - neighbour[1])) * 0.5f / element_area;
-            }
-            // TODO: calc left edge of electrode and use it as neighbour
-
-            closest_node[0] = -1.0f;
-            closest_node[1] = 2.0f * M_PI;
-            for (linalgcl_size_t k = 0; k < electrodes->vertex_count[i]; k++) {
-                // get node id
-                linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, k, 0);
-
-                // skip current node
-                if ((linalgcl_size_t)id == j) {
-                    continue;
-                }
-
-                // get coordinates
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)id, 0);
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)id, 1);
-
-                // calc delta angle
-                delta_angle = node_angle - ert_grid_angle(neighbour[0], neighbour[1]);
-
-                // skip right nodes
-                if (delta_angle >= 0.0f) {
-                    continue;
-                }
-
-                if (delta_angle > closest_node[1]) {
-                    closest_node[0] = id;
-                    closest_node[1] = delta_angle;
-                }
-            }
-
-            if (closest_node[0] >= 0.0f) {
-                // get neighbour
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[0], (linalgcl_size_t)closest_node[0], 0);
-                linalgcl_matrix_get_element(grid->mesh->vertices, &neighbour[1], (linalgcl_size_t)closest_node[0], 1);
-
-                // calc element
-                element += sqrt((node[0] - neighbour[0]) * (node[0] - neighbour[0]) +
-                                (node[1] - neighbour[1]) * (node[1] - neighbour[1])) * 0.5f / element_area;
-            }
-
-            // set element
-            linalgcl_matrix_get_element(electrodes->electrode_vertices[i], &id, j, 0);
-            linalgcl_matrix_set_element(grid->exitation_matrix, element,
-                (linalgcl_size_t)id, i);
+            // calc element
+            linalgcl_matrix_set_element(grid->exitation_matrix,
+                ert_grid_integrate_basis(node, left, right,
+                    &electrodes->electrode_start[j * 2], &electrodes->electrode_end[j * 2]) / element_area,
+                    i, j);
         }
     }
 
