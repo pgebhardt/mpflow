@@ -59,10 +59,6 @@ linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer
 // release solver
 linalgcl_error_t ert_gradient_solver_release(ert_gradient_solver_t* solverPointer);
 
-// regularize_system_matrix
-linalgcl_error_t ert_gradient_solver_regularize_system_matrix(ert_gradient_solver_t solver,
-    linalgcl_matrix_data_t sigma, linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
-
 // solve gradient
 linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
     linalgcl_matrix_t x, linalgcl_matrix_t f, linalgcl_matrix_data_t tolerance,

@@ -158,9 +158,7 @@ int main(int argc, char* argv[]) {
 
     // set j
     linalgcl_matrix_set_element(j, 1.0f, 0, 0);
-    linalgcl_matrix_set_element(j, -1.0f, 9, 0);
-    linalgcl_matrix_set_element(j, 1.0f, 18, 0);
-    linalgcl_matrix_set_element(j, -1.0f, 27, 0);
+    linalgcl_matrix_set_element(j, -1.0f, 18, 0);
     linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
 
     printf("Calced start vector and right side!\n");
