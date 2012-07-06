@@ -82,6 +82,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->grid = NULL;
     solver->gradient_solver = NULL;
     solver->electrodes = electrodes;
+    solver->voltage_calculation = NULL;
     solver->sigma = NULL;
     solver->current = NULL;
     solver->voltage = NULL;
@@ -117,7 +118,9 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->sigma = solver->grid->sigma;
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->current, context,
+    error  = linalgcl_matrix_create(&solver->voltage_calculation, context,
+        solver->grid->exitation_matrix->size_y, solver->grid->exitation_matrix->size_x);
+    error |= linalgcl_matrix_create(&solver->current, context,
         solver->electrodes->count, 1);
     error |= linalgcl_matrix_create(&solver->voltage, context,
         solver->electrodes->count, 1);
@@ -135,10 +138,15 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     }
 
     // copy matrices to device
+    linalgcl_matrix_copy_to_device(solver->voltage_calculation, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->current, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->voltage, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->f, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->phi, queue, CL_TRUE);
+
+    // calc voltage calculation matrix
+    linalgcl_matrix_transpose(solver->voltage_calculation, solver->grid->exitation_matrix,  
+        matrix_program, queue);
 
     // set solver pointer
     *solverPointer = solver;
@@ -160,6 +168,7 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_grid_release(&solver->grid);
     ert_gradient_solver_release(&solver->gradient_solver);
     ert_electrodes_release(&solver->electrodes);
+    linalgcl_matrix_release(&solver->voltage_calculation);
     linalgcl_matrix_release(&solver->current);
     linalgcl_matrix_release(&solver->voltage);
     linalgcl_matrix_release(&solver->f);
@@ -192,6 +201,10 @@ linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
     // solve for phi
     error |= ert_gradient_solver_solve_singular(solver->gradient_solver,
         solver->phi, solver->f, 1E-5, matrix_program, queue);
+
+    // calc voltage
+    error |= linalgcl_matrix_multiply(solver->voltage, solver->voltage_calculation,
+        solver->phi, matrix_program, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {

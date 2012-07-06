@@ -24,6 +24,7 @@ typedef struct {
     ert_grid_t grid;
     ert_gradient_solver_t gradient_solver;
     ert_electrodes_t electrodes;
+    linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;
     linalgcl_matrix_t current;
     linalgcl_matrix_t voltage;

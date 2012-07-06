@@ -513,60 +513,60 @@ linalgcl_matrix_data_t ert_grid_angle(linalgcl_matrix_data_t x, linalgcl_matrix_
 
 linalgcl_matrix_data_t ert_grid_integrate_basis(linalgcl_matrix_data_t* node,
     linalgcl_matrix_data_t* left, linalgcl_matrix_data_t* right,
-    linalgcl_matrix_data_t* electrode_start, linalgcl_matrix_data_t* electrode_end) {
-    // calc angles
-    linalgcl_matrix_data_t node_angle = ert_grid_angle(node[0], node[1]);
-    linalgcl_matrix_data_t left_angle = ert_grid_angle(left[0], left[1]);
-    linalgcl_matrix_data_t right_angle = ert_grid_angle(right[0], right[1]);
-    linalgcl_matrix_data_t start_angle = ert_grid_angle(electrode_start[0], electrode_start[1]);
-    linalgcl_matrix_data_t end_angle = ert_grid_angle(electrode_end[0], electrode_end[1]);
-
-    // correct angles
-    end_angle += end_angle < start_angle ? 2.0f * M_PI : 0.0f;
-    right_angle += right_angle < node_angle ? 2.0f * M_PI : 0.0f;
-
-    // shift angles
-    start_angle -= node_angle;
-    end_angle -= node_angle;
-    left_angle -= node_angle;
-    right_angle -= node_angle;
-
-    // calc integral
+    linalgcl_matrix_data_t* start, linalgcl_matrix_data_t* end) {
+    // integral
     linalgcl_matrix_data_t integral = 0.0f;
 
-    if ((start_angle <= 0.0f) && (end_angle >= 0.0f)) {
-        // component of left node
-        integral += 0.5 * sqrt((node[0] - left[0]) * (node[0] - left[0]) +
-                               (node[1] - left[1]) * (node[1] - left[1]));
+    // calc angle of node
+    linalgcl_matrix_data_t angle = ert_grid_angle(node[0], node[1]);
+    linalgcl_matrix_data_t radius = start[0] * start[0] + start[1] * start[1];
 
-        if (left_angle < start_angle) {
-            integral -= 0.5 * sqrt((left[0] - electrode_start[0]) * (left[0] - electrode_start[0]) +
-                                   (left[1] - electrode_start[1]) * (left[1] - electrode_start[1]));
+    // calc s parameter
+    linalgcl_matrix_data_t sleft = radius * (ert_grid_angle(left[0], left[1]) - angle);
+    linalgcl_matrix_data_t sright = radius * (ert_grid_angle(right[0], right[1]) - angle);
+    linalgcl_matrix_data_t sstart = radius * (ert_grid_angle(start[0], start[1]) - angle);
+    linalgcl_matrix_data_t send = radius * (ert_grid_angle(end[0], end[1]) - angle);
+
+    // correct s parameter
+    sleft -= (sleft > sright) && (sleft > 0.0f) ? radius * 2.0f * M_PI : 0.0f;
+    sright += (sleft > sright) && (sleft < 0.0f) ? radius * 2.0f * M_PI : 0.0f;
+    sstart -= (sstart > send) && (sstart > 0.0f) ? radius * 2.0f * M_PI : 0.0f;
+    sstart += (sstart > send) && (sstart < 0.0f) ? radius * 2.0f * M_PI : 0.0f;
+
+    // integrate left triangle
+    if ((sstart < 0.0f) && (send > sleft)) {
+        if ((send >= 0.0f) && (sstart <= sleft)) {
+            integral = -0.5f * sleft;
         }
-
-        // component of right node
-        integral += 0.5 * sqrt((node[0] - right[0]) * (node[0] - right[0]) +
-                               (node[1] - right[1]) * (node[1] - right[1]));
-
-        if (right_angle > end_angle) {
-            integral -= 0.5 * sqrt((right[0] - electrode_end[0]) * (right[0] - electrode_end[0]) +
-                                   (right[1] - electrode_end[1]) * (right[1] - electrode_end[1]));
+        else if ((send >= 0.0f) && (sstart > sleft)) {
+            integral = -(sstart - 0.5 * sstart * sstart / sleft);
         }
-
+        else if ((send < 0.0f) && (sstart <= sleft)) {
+            integral = (send - 0.5 * send * send / sleft) -
+                       (sleft - 0.5 * sleft * sleft / sleft);
+        }
+        else if ((send < 0.0f) && (sstart > sleft)) {
+            integral = (send - 0.5 * send * send / sleft) -
+                       (sstart - 0.5 * sstart * sstart / sleft);
+        }
     }
-    else if ((left_angle >= start_angle) && (left_angle <= end_angle)) {
-        integral += 0.5 * sqrt((node[0] - left[0]) * (node[0] - left[0]) +
-                               (node[1] - left[1]) * (node[1] - left[1]));
 
-        integral -= 0.5 * sqrt((electrode_end[0] - node[0]) * (electrode_end[0] - node[0]) +
-                               (electrode_end[1] - node[1]) * (electrode_end[1] - node[1]));
-    }
-    else if ((right_angle >= start_angle) && (right_angle <= end_angle)) {
-        integral += 0.5 * sqrt((node[0] - right[0]) * (node[0] - right[0]) +
-                               (node[1] - right[1]) * (node[1] - right[1]));
-
-        integral -= 0.5 * sqrt((electrode_start[0] - node[0]) * (electrode_start[0] - node[0]) +
-                               (electrode_start[1] - node[1]) * (electrode_start[1] - node[1]));
+    // integrate right triangle
+    if ((send > 0.0f) && (sright > sstart)) {
+        if ((sstart <= 0.0f) && (send >= sright)) {
+            integral += 0.5f * sright;
+        }
+        else if ((sstart <= 0.0f) && (send < sright)) {
+            integral += (send - 0.5f * send * send / sright);
+        }
+        else if ((sstart > 0.0f) && (send >= sright)) {
+            integral += (sright - 0.5f * sright * sright / sright) -
+                        (sstart - 0.5f * sstart * sstart / sright);
+        }
+        else if ((sstart > 0.0f) && (send < sright)) {
+            integral += (send - 0.5f * send * send / sright) -
+                        (sstart - 0.5f * sstart * sstart / sright);
+        }
     }
 
     return integral;

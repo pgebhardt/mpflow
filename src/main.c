@@ -137,9 +137,9 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
 
-    // set j
-    linalgcl_matrix_set_element(solver->current, 1.0f, 0, 0);
-    linalgcl_matrix_set_element(solver->current, -1.0f, 18, 0);
+    // set electrode current
+    linalgcl_matrix_set_element(solver->current, 1.0f, 1, 0);
+    linalgcl_matrix_set_element(solver->current, -1.0f, 0, 0);
     linalgcl_matrix_copy_to_device(solver->current, queue, CL_TRUE);
 
     printf("Calced start vector and right side!\n");
@@ -158,6 +158,11 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f ms\n", (end - start) * 1E3);
+
+    // voltage
+    linalgcl_matrix_copy_to_host(solver->voltage, queue, CL_TRUE);
+    printf("Voltage:\n");
+    print_matrix(solver->voltage);
 
     ert_image_calc(image, solver->phi, queue);
     clFinish(queue);
