@@ -158,12 +158,11 @@ int main(int argc, char* argv[]) {
 
     // set j
     linalgcl_matrix_set_element(j, 1.0f, 0, 0);
-    linalgcl_matrix_set_element(j, -1.0f, 20, 0);
+    linalgcl_matrix_set_element(j, -1.0f, 9, 0);
+    linalgcl_matrix_set_element(j, 1.0f, 18, 0);
+    linalgcl_matrix_set_element(j, -1.0f, 27, 0);
     linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
 
-    // calc f matrix
-    // f = B * j
-    linalgcl_matrix_multiply(f, grid->exitation_matrix, j, program, queue);
     printf("Calced start vector and right side!\n");
 
     // get start time
@@ -172,6 +171,9 @@ int main(int argc, char* argv[]) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
+    // calc f matrix
+    // f = B * j
+    linalgcl_matrix_multiply(f, grid->exitation_matrix, j, program, queue);
     // solve
     ert_gradient_solver_solve_singular(solver, x, f, 1E-5, program, queue);
 

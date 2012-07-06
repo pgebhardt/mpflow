@@ -521,21 +521,15 @@ linalgcl_matrix_data_t ert_grid_integrate_basis(linalgcl_matrix_data_t* node,
     linalgcl_matrix_data_t start_angle = ert_grid_angle(electrode_start[0], electrode_start[1]);
     linalgcl_matrix_data_t end_angle = ert_grid_angle(electrode_end[0], electrode_end[1]);
 
+    // correct angles
+    end_angle += end_angle < start_angle ? 2.0f * M_PI : 0.0f;
+    right_angle += right_angle < node_angle ? 2.0f * M_PI : 0.0f;
+
     // shift angles
     start_angle -= node_angle;
     end_angle -= node_angle;
     left_angle -= node_angle;
     right_angle -= node_angle;
-
-    // correct angles
-    start_angle += start_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
-    end_angle += end_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
-    left_angle += left_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
-    right_angle += right_angle < -2.0f * M_PI ? 2.0f * M_PI : 0.0f;
-    start_angle -= start_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
-    end_angle -= end_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
-    left_angle -= left_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
-    right_angle -= right_angle > 2.0f * M_PI ? 2.0f * M_PI : 0.0f;
 
     // calc integral
     linalgcl_matrix_data_t integral = 0.0f;
