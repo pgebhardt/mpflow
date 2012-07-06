@@ -33,6 +33,7 @@
 #include "electrodes.h"
 #include "grid.h"
 #include "gradient.h"
+#include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
@@ -117,26 +118,16 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // create grid
-    ert_grid_t grid = NULL;
-    error  = ert_grid_create(&grid, program, mesh, context, device_id, queue);
-    error |= ert_grid_init_exitation_matrix(grid, electrodes, context, queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return EXIT_FAILURE;
-    }
 
     // create solver
-    ert_gradient_solver_t solver = NULL;
-    error |= ert_gradient_solver_create(&solver, grid->system_matrix,
-        mesh->vertex_count, program, context, device_id, queue);
-
-    printf("Created solver and grids!\n");
+    ert_solver_t solver;
+    error = ert_solver_create(&solver, mesh, electrodes,
+        program, context, device_id, queue);
+    printf("Solver erstellt!\n");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        printf("Solver erzeugen ging nicht!\n");
+        printf("Kann keinen Solver erstellen!\n");
         return EXIT_FAILURE;
     }
 
@@ -146,20 +137,10 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
 
-    // x vector
-    linalgcl_matrix_t x;
-    linalgcl_matrix_create(&x, context, mesh->vertex_count, 1);
-    linalgcl_matrix_copy_to_device(x, queue, CL_TRUE);
-
-    // right hand side
-    linalgcl_matrix_t j, f;
-    linalgcl_matrix_create(&j, context, electrodes->count, 1);
-    linalgcl_matrix_create(&f, context, mesh->vertex_count, 1);
-
     // set j
-    linalgcl_matrix_set_element(j, 1.0f, 0, 0);
-    linalgcl_matrix_set_element(j, -1.0f, 18, 0);
-    linalgcl_matrix_copy_to_device(j, queue, CL_TRUE);
+    linalgcl_matrix_set_element(solver->current, 1.0f, 0, 0);
+    linalgcl_matrix_set_element(solver->current, -1.0f, 18, 0);
+    linalgcl_matrix_copy_to_device(solver->current, queue, CL_TRUE);
 
     printf("Calced start vector and right side!\n");
 
@@ -169,11 +150,8 @@ int main(int argc, char* argv[]) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // calc f matrix
-    // f = B * j
-    linalgcl_matrix_multiply(f, grid->exitation_matrix, j, program, queue);
     // solve
-    ert_gradient_solver_solve_singular(solver, x, f, 1E-5, program, queue);
+    ert_solver_forward_solve(solver, program, queue);
 
     // get end time
     clFinish(queue);
@@ -181,7 +159,7 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f ms\n", (end - start) * 1E3);
 
-    ert_image_calc(image, x, queue);
+    ert_image_calc(image, solver->phi, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
@@ -189,12 +167,7 @@ int main(int argc, char* argv[]) {
     system("rm image.txt");
 
     // cleanup
-    linalgcl_matrix_release(&x);
-    linalgcl_matrix_release(&f);
-    linalgcl_matrix_release(&j);
-    ert_gradient_solver_release(&solver);
-    ert_grid_release(&grid);
-    ert_electrodes_release(&electrodes);
+    ert_solver_release(&solver);
     ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);

@@ -27,6 +27,8 @@ typedef struct {
     linalgcl_matrix_t sigma;
     linalgcl_matrix_t current;
     linalgcl_matrix_t voltage;
+    linalgcl_matrix_t f;
+    linalgcl_matrix_t phi;
 } ert_solver_s;
 typedef ert_solver_s* ert_solver_t;
 
@@ -38,5 +40,9 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 
 // release solver
 linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
+
+// forward solving
+linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
 #endif

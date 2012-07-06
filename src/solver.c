@@ -29,9 +29,9 @@
 #include <linalgcl/linalgcl.h>
 #include "basis.h"
 #include "mesh.h"
+#include "electrodes.h"
 #include "grid.h"
 #include "gradient.h"
-#include "electrodes.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -85,6 +85,60 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->sigma = NULL;
     solver->current = NULL;
     solver->voltage = NULL;
+    solver->f = NULL;
+
+    // create grid
+    error  = ert_grid_create(&solver->grid, matrix_program, mesh, context,
+        device_id, queue);
+    error |= ert_grid_init_exitation_matrix(solver->grid, solver->electrodes, context, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_release(&solver);
+
+        return error;
+    }
+
+    // create gradient solver
+    error = ert_gradient_solver_create(&solver->gradient_solver,
+        solver->grid->system_matrix, solver->grid->mesh->vertex_count,
+        matrix_program, context, device_id, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_release(&solver);
+
+        return error;
+    }
+
+    // set sigma matrix
+    solver->sigma = solver->grid->sigma;
+
+    // create matrices
+    error  = linalgcl_matrix_create(&solver->current, context,
+        solver->electrodes->count, 1);
+    error |= linalgcl_matrix_create(&solver->voltage, context,
+        solver->electrodes->count, 1);
+    error |= linalgcl_matrix_create(&solver->f, context,
+        solver->grid->mesh->vertex_count, 1);
+    error |= linalgcl_matrix_create(&solver->phi, context,
+        solver->grid->mesh->vertex_count, 1);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_release(&solver);
+
+        return error;
+    }
+
+    // copy matrices to device
+    linalgcl_matrix_copy_to_device(solver->current, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->voltage, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->f, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_TRUE);
 
     // set solver pointer
     *solverPointer = solver;
@@ -108,12 +162,41 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_electrodes_release(&solver->electrodes);
     linalgcl_matrix_release(&solver->current);
     linalgcl_matrix_release(&solver->voltage);
+    linalgcl_matrix_release(&solver->f);
+    linalgcl_matrix_release(&solver->phi);
 
     // free struct
     free(solver);
 
     // set solver pointer to NULL
     *solverPointer = NULL;
+
+    return LINALGCL_SUCCESS;
+}
+
+// forward solving
+linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (matrix_program == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+
+    // calc right side
+    error = linalgcl_matrix_multiply(solver->f, solver->grid->exitation_matrix,
+    solver->current, matrix_program, queue);
+
+    // solve for phi
+    error |= ert_gradient_solver_solve_singular(solver->gradient_solver,
+        solver->phi, solver->f, 1E-5, matrix_program, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        return error;
+    }
 
     return LINALGCL_SUCCESS;
 }
