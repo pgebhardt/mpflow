@@ -37,10 +37,11 @@ typedef struct {
     linalgcl_size_t drive_count;
     linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;
-    linalgcl_matrix_t current;
-    linalgcl_matrix_t voltage;
-    linalgcl_matrix_t f;
     linalgcl_matrix_t phi;
+    linalgcl_matrix_t applied_phi;
+    linalgcl_matrix_t lead_phi;
+    linalgcl_matrix_t* applied_f;
+    linalgcl_matrix_t* lead_f;
 } ert_solver_s;
 typedef ert_solver_s* ert_solver_t;
 
@@ -53,12 +54,18 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 
 // create solver
 linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
-    ert_mesh_t mesh, ert_electrodes_t electrodes,
-    linalgcl_matrix_program_t matrix_program,
+    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t measurment_count,
+    linalgcl_size_t drive_count, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_device_id device_id, cl_command_queue queue);
 
 // release solver
 linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
+
+// calc excitaion
+linalgcl_error_t ert_solver_calc_excitaion(ert_solver_t solver,
+    linalgcl_matrix_t drive_pattern, linalgcl_matrix_t measurment_pattern,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue);
 
 // forward solving
 linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,

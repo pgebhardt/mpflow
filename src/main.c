@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
 
     // create solver
     ert_solver_t solver;
-    error = ert_solver_create(&solver, mesh, electrodes,
+    error = ert_solver_create(&solver, mesh, electrodes, 9, 18,
         program, context, device_id, queue);
 
     // check success
@@ -127,11 +127,6 @@ int main(int argc, char* argv[]) {
         printf("Kann keinen Solver erstellen!\n");
         return EXIT_FAILURE;
     }
-
-    // set electrode current
-    linalgcl_matrix_set_element(solver->current, 1.0f, 8, 0);
-    linalgcl_matrix_set_element(solver->current, -1.0f, 6, 0);
-    linalgcl_matrix_copy_to_device(solver->current, queue, CL_TRUE);
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
@@ -160,10 +155,10 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f ms\n", (end - start) * 1E3);
 
-    // voltage
+    /*// voltage
     linalgcl_matrix_copy_to_host(solver->voltage, queue, CL_TRUE);
     printf("Voltage:\n");
-    print_matrix(solver->voltage);
+    print_matrix(solver->voltage);*/
 
     linalgcl_matrix_copy_to_host(solver->phi, queue, CL_TRUE);
     linalgcl_matrix_save("phi.txt", solver->phi);

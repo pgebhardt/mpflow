@@ -1,7 +1,7 @@
 #define BLOCK_SIZE (16)
 
 __kernel void copy_to_column(__global float* matrix, __global float* vector, unsigned int column,
-    unigned int size_y) {
+    unsigned int size_y) {
     // get id
     unsigned int i = get_global_id(0);
 
@@ -9,7 +9,7 @@ __kernel void copy_to_column(__global float* matrix, __global float* vector, uns
 }
 
 __kernel void copy_from_column(__global float* matrix, __global float* vector, unsigned int column,
-    unigned int size_y) {
+    unsigned int size_y) {
     // get id
     unsigned int i = get_global_id(0);
 
