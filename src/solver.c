@@ -80,6 +80,7 @@ linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
     program->program = NULL;
     program->kernel_copy_to_column = NULL;
     program->kernel_copy_from_column = NULL;
+    program->kernel_calc_jacobian = NULL;
 
     // read program file
     // open file
@@ -177,6 +178,17 @@ linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
         return LINALGCL_ERROR;
     }
 
+    program->kernel_calc_jacobian = clCreateKernel(program->program,
+        "calc_jacobian", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
     // set program pointer
     *programPointer = program;
 
@@ -203,6 +215,10 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 
     if (program->kernel_copy_from_column != NULL) {
         clReleaseKernel(program->kernel_copy_from_column);
+    }
+
+    if (program->kernel_calc_jacobian != NULL) {
+        clReleaseKernel(program->kernel_calc_jacobian);
     }
 
     // free struct
@@ -246,6 +262,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->electrodes = electrodes;
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
+    solver->jacobian = NULL;
     solver->voltage_calculation = NULL;
     solver->sigma = NULL;
     solver->phi = NULL;
@@ -295,7 +312,9 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->sigma = solver->grid->sigma;
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->voltage_calculation, context,
+    error  = linalgcl_matrix_create(&solver->jacobian, context,
+        solver->measurment_count, solver->grid->mesh->element_count);
+    error |= linalgcl_matrix_create(&solver->voltage_calculation, context,
         solver->grid->exitation_matrix->size_y, solver->grid->exitation_matrix->size_x);
     error |= linalgcl_matrix_create(&solver->phi, context,
         solver->grid->mesh->vertex_count, 1);
@@ -313,6 +332,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     }
 
     // copy matrices to device
+    linalgcl_matrix_copy_to_device(solver->jacobian, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->voltage_calculation, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->phi, queue, CL_TRUE);
     linalgcl_matrix_copy_to_device(solver->applied_phi, queue, CL_TRUE);
@@ -388,17 +408,18 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_grid_release(&solver->grid);
     ert_gradient_solver_release(&solver->gradient_solver);
     ert_electrodes_release(&solver->electrodes);
+    linalgcl_matrix_release(&solver->jacobian);
     linalgcl_matrix_release(&solver->voltage_calculation);
     linalgcl_matrix_release(&solver->phi);
     linalgcl_matrix_release(&solver->applied_phi);
     linalgcl_matrix_release(&solver->lead_phi);
 
-    /*if (solver->lead_f != NULL) {
+    if (solver->lead_f != NULL) {
         for (linalgcl_size_t i = 0; i < solver->measurment_count; i++) {
             linalgcl_matrix_release(&solver->lead_f[i]);
         }
         free(solver->lead_f);
-    }*/
+    }
 
     if (solver->applied_f != NULL) {
         for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
@@ -538,8 +559,91 @@ linalgcl_error_t ert_solver_calc_excitaion(ert_solver_t solver,
             current, matrix_program, queue);
     }
 
+    // create measurment pattern
+    for (linalgcl_size_t i = 0; i < solver->measurment_count; i++) {
+        // create matrix
+        linalgcl_matrix_create(&solver->lead_f[i], context, solver->grid->mesh->vertex_count, 1);
+
+        // get current pattern
+        ert_solver_copy_from_column(solver, measurment_pattern, current, i, queue);
+
+        // calc f
+        linalgcl_matrix_multiply(solver->lead_f[i], solver->grid->exitation_matrix,
+            current, matrix_program, queue);
+    }
+
     // cleanup
     linalgcl_matrix_release(&current);
+
+    return LINALGCL_SUCCESS;
+}
+
+// calc jacobian
+linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    linalgcl_error_t error = LINALGCL_SUCCESS;
+    cl_int cl_error = CL_SUCCESS;
+
+    // solve measurment patterns
+    for (linalgcl_size_t i = 0; i < solver->measurment_count; i++) {
+        // copy current applied phi to vector
+        error = ert_solver_copy_from_column(solver, solver->lead_phi,
+            solver->phi, i, queue);
+
+        // solve for phi
+        error |= ert_gradient_solver_solve_singular(solver->gradient_solver,
+            solver->phi, solver->lead_f[i], 1E-5, matrix_program, queue);
+
+        // copy vector to applied phi
+        error |= ert_solver_copy_to_column(solver, solver->lead_phi,
+            solver->phi, i, queue);
+
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            return error;
+        }
+    }
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(solver->program->kernel_calc_jacobian,
+        0, sizeof(cl_mem), &solver->jacobian->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        1, sizeof(cl_mem), &solver->applied_phi->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        2, sizeof(cl_mem), &solver->lead_phi->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        3, sizeof(cl_mem), &solver->grid->gradient_matrix_sparse->values->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        4, sizeof(cl_mem), &solver->grid->gradient_matrix_sparse->column_ids->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        5, sizeof(cl_mem), &solver->grid->area->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        6, sizeof(linalgcl_size_t), &solver->applied_phi->size_y);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        7, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global[2] = { solver->jacobian->size_x, solver->jacobian->size_y };
+    size_t local[2] = { LINALGCL_BLOCK_SIZE, LINALGCL_BLOCK_SIZE };
+
+    cl_error = clEnqueueNDRangeKernel(queue, solver->program->kernel_calc_jacobian,
+        2, NULL, global, local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
 
     return LINALGCL_SUCCESS;
 }

@@ -24,6 +24,7 @@ typedef struct {
     cl_program program;
     cl_kernel kernel_copy_to_column;
     cl_kernel kernel_copy_from_column;
+    cl_kernel kernel_calc_jacobian;
 } ert_solver_program_s;
 typedef ert_solver_program_s* ert_solver_program_t;
 
@@ -35,6 +36,7 @@ typedef struct {
     ert_electrodes_t electrodes;
     linalgcl_size_t measurment_count;
     linalgcl_size_t drive_count;
+    linalgcl_matrix_t jacobian;
     linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;
     linalgcl_matrix_t phi;
@@ -66,6 +68,10 @@ linalgcl_error_t ert_solver_calc_excitaion(ert_solver_t solver,
     linalgcl_matrix_t drive_pattern, linalgcl_matrix_t measurment_pattern,
     linalgcl_matrix_program_t matrix_program, cl_context context,
     cl_command_queue queue);
+
+// calc jacobian
+linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
 // forward solving
 linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,

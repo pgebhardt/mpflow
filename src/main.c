@@ -130,15 +130,16 @@ int main(int argc, char* argv[]) {
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        if (i < mesh->element_count / 2) {
-            linalgcl_matrix_set_element(solver->sigma, 50.0f * 1E-3, i, 0);
-        }
-        else {
-            linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
-        }
+        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
+
+    // solve
+    ert_solver_forward_solve(solver, program, queue);
+
+    // calc jacobian
+    ert_solver_calc_jacobian(solver, program, queue);
 
     // get start time
     struct timeval tv;
@@ -146,8 +147,8 @@ int main(int argc, char* argv[]) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // solve
-    ert_solver_forward_solve(solver, program, queue);
+    // calc jacobian
+    ert_solver_calc_jacobian(solver, program, queue);
 
     // get end time
     clFinish(queue);
@@ -155,14 +156,18 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f ms\n", (end - start) * 1E3);
 
-    /*// voltage
-    linalgcl_matrix_copy_to_host(solver->voltage, queue, CL_TRUE);
-    printf("Voltage:\n");
-    print_matrix(solver->voltage);*/
+    // voltage
+    linalgcl_matrix_t voltage;
+    linalgcl_matrix_create(&voltage, context, electrodes->count, 18);
+    linalgcl_matrix_multiply(voltage, solver->voltage_calculation, solver->applied_phi,
+        program, queue);
+    clFinish(queue);
+    linalgcl_matrix_copy_to_host(voltage, queue, CL_TRUE);
+    linalgcl_matrix_save("voltage.txt", voltage);
+    linalgcl_matrix_release(&voltage);
 
-    linalgcl_matrix_copy_to_host(solver->phi, queue, CL_TRUE);
-    linalgcl_matrix_save("phi.txt", solver->phi);
-    linalgcl_matrix_save("vertices.txt", mesh->vertices);
+    linalgcl_matrix_copy_to_host(solver->jacobian, queue, CL_TRUE);
+    linalgcl_matrix_save("jacobian.txt", solver->jacobian);
 
     // cleanup
     ert_solver_release(&solver);

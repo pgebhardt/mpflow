@@ -207,13 +207,14 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     grid->system_matrix = NULL;
     grid->exitation_matrix = NULL;
     grid->gradient_matrix_sparse = NULL;
-    grid->gradient_matrix = NULL;
+    grid->gradient_matrix_transposed_sparse = NULL;
+    grid->gradient_matrix_transposed = NULL;
     grid->sigma = NULL;
     grid->area = NULL;
     grid->program = NULL;
 
     // create matrices
-    error  = linalgcl_matrix_create(&grid->gradient_matrix, context,
+    error  = linalgcl_matrix_create(&grid->gradient_matrix_transposed, context,
         grid->mesh->vertex_count, 2 * grid->mesh->element_count);
     error |= linalgcl_matrix_create(&grid->sigma, context,
         grid->mesh->element_count, 1);
@@ -231,7 +232,7 @@ linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
     }
 
     // copy data to device
-    linalgcl_matrix_copy_to_device(grid->gradient_matrix, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(grid->gradient_matrix_transposed, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(grid->area, queue, CL_FALSE);
 
@@ -277,8 +278,9 @@ linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer) {
     // cleanup
     ert_mesh_release(&grid->mesh);
     linalgcl_sparse_matrix_release(&grid->system_matrix);
-    linalgcl_matrix_release(&grid->gradient_matrix);
+    linalgcl_matrix_release(&grid->gradient_matrix_transposed);
     linalgcl_sparse_matrix_release(&grid->gradient_matrix_sparse);
+    linalgcl_sparse_matrix_release(&grid->gradient_matrix_transposed_sparse);
     linalgcl_matrix_release(&grid->sigma);
     linalgcl_matrix_release(&grid->area);
     ert_grid_program_release(&grid->program);
@@ -332,7 +334,7 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     for (linalgcl_size_t i = 0; i < gradient_matrix->size_x; i++) {
         for (linalgcl_size_t j = 0; j < gradient_matrix->size_y; j++) {
             linalgcl_matrix_set_element(gradient_matrix, 0.0, i, j);
-            linalgcl_matrix_set_element(grid->gradient_matrix, 0.0, j, i);
+            linalgcl_matrix_set_element(grid->gradient_matrix_transposed, 0.0, j, i);
         }
     }
 
@@ -357,9 +359,9 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
                 basis[i]->gradient[0], 2 * k, (linalgcl_size_t)id[i]);
             linalgcl_matrix_set_element(gradient_matrix,
                 basis[i]->gradient[1], 2 * k + 1, (linalgcl_size_t)id[i]);
-            linalgcl_matrix_set_element(grid->gradient_matrix,
+            linalgcl_matrix_set_element(grid->gradient_matrix_transposed,
                 basis[i]->gradient[0], (linalgcl_size_t)id[i], 2 * k);
-            linalgcl_matrix_set_element(grid->gradient_matrix,
+            linalgcl_matrix_set_element(grid->gradient_matrix_transposed,
                 basis[i]->gradient[1], (linalgcl_size_t)id[i], 2 * k + 1);
         }
 
@@ -381,7 +383,7 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
 
     // copy matrices to device
     error  = linalgcl_matrix_copy_to_device(gradient_matrix, queue, CL_TRUE);
-    error += linalgcl_matrix_copy_to_device(grid->gradient_matrix, queue, CL_TRUE);
+    error += linalgcl_matrix_copy_to_device(grid->gradient_matrix_transposed, queue, CL_TRUE);
     error += linalgcl_matrix_copy_to_device(sigma_matrix, queue, CL_TRUE);
     error += linalgcl_matrix_copy_to_device(grid->sigma, queue, CL_TRUE);
     error += linalgcl_matrix_copy_to_device(grid->area, queue, CL_TRUE);
@@ -401,15 +403,11 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     linalgcl_matrix_t temp = NULL;
     error = linalgcl_matrix_create(&temp, context, grid->mesh->vertex_count,
         2 * grid->mesh->element_count);
-    error += linalgcl_matrix_multiply(temp, grid->gradient_matrix, sigma_matrix,
+    error += linalgcl_matrix_multiply(temp, grid->gradient_matrix_transposed, sigma_matrix,
         matrix_program, queue);
     error += linalgcl_matrix_multiply(system_matrix, temp, gradient_matrix,
         matrix_program, queue);
     clFinish(queue);
-
-    // cleanup
-    linalgcl_matrix_release(&sigma_matrix);
-    linalgcl_matrix_release(&gradient_matrix);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -423,10 +421,14 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     // create sparse matrices
     error = linalgcl_sparse_matrix_create(&grid->system_matrix, system_matrix,
         matrix_program, context, queue);
-    error += linalgcl_sparse_matrix_create(&grid->gradient_matrix_sparse,
-        grid->gradient_matrix, matrix_program, context, queue);
+    error |= linalgcl_sparse_matrix_create(&grid->gradient_matrix_transposed_sparse,
+        grid->gradient_matrix_transposed, matrix_program, context, queue);
+    error |= linalgcl_sparse_matrix_create(&grid->gradient_matrix_sparse,
+        gradient_matrix, matrix_program, context, queue);
 
     // cleanup
+    linalgcl_matrix_release(&sigma_matrix);
+    linalgcl_matrix_release(&gradient_matrix);
     linalgcl_matrix_release(&system_matrix);
 
     // check success
@@ -457,17 +459,17 @@ linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
     cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         1, sizeof(cl_mem), &grid->system_matrix->column_ids->device_data);
     cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
-        2, sizeof(cl_mem), &grid->gradient_matrix_sparse->values->device_data);
+        2, sizeof(cl_mem), &grid->gradient_matrix_transposed_sparse->values->device_data);
     cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
-        3, sizeof(cl_mem), &grid->gradient_matrix_sparse->column_ids->device_data);
+        3, sizeof(cl_mem), &grid->gradient_matrix_transposed_sparse->column_ids->device_data);
     cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
-        4, sizeof(cl_mem), &grid->gradient_matrix->device_data);
+        4, sizeof(cl_mem), &grid->gradient_matrix_transposed->device_data);
     cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         5, sizeof(cl_mem), &grid->sigma->device_data);
     cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
         6, sizeof(cl_mem), &grid->area->device_data);
     cl_error += clSetKernelArg(grid->program->kernel_update_system_matrix,
-        7, sizeof(unsigned int), &grid->gradient_matrix->size_y);
+        7, sizeof(unsigned int), &grid->gradient_matrix_transposed->size_y);
 
     // check success
     if (cl_error != CL_SUCCESS) {
