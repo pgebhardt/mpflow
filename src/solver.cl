@@ -33,10 +33,10 @@ __kernel void calc_jacobian(__global float* jacobian, __global float* applied_ph
     for (unsigned int k = 0; k < BLOCK_SIZE; k++) {
         id = gradient_matrix_column_ids[2 * j * BLOCK_SIZE + k];
 
-        grad_applied_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * applied_phi[0 * phi_size + id];
-        grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * applied_phi[0 * phi_size + id];
-        grad_lead_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * lead_phi[i * phi_size + id];
-        grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * lead_phi[i * phi_size + id];
+        grad_applied_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * applied_phi[id * phi_size + 0];
+        grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * applied_phi[id * phi_size + 0];
+        grad_lead_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * lead_phi[id * phi_size + i];
+        grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * lead_phi[id * phi_size + i];
     }
     element = -area[j] * (grad_applied_phi.x * grad_lead_phi.x + grad_applied_phi.y * grad_lead_phi.y);
 
