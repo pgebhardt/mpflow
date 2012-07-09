@@ -19,11 +19,22 @@
 #ifndef ERT_SOLVER_H
 #define ERT_SOLVER_H
 
+// solver program struct
+typedef struct {
+    cl_program program;
+    cl_kernel kernel_copy_to_column;
+    cl_kernel kernel_copy_from_column;
+} ert_solver_program_s;
+typedef ert_solver_program_s* ert_solver_program_t;
+
 // solver struct
 typedef struct {
+    ert_solver_program_t program;
     ert_grid_t grid;
     ert_gradient_solver_t gradient_solver;
     ert_electrodes_t electrodes;
+    linalgcl_size_t measurment_count;
+    linalgcl_size_t drive_count;
     linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;
     linalgcl_matrix_t current;
@@ -32,6 +43,13 @@ typedef struct {
     linalgcl_matrix_t phi;
 } ert_solver_s;
 typedef ert_solver_s* ert_solver_t;
+
+// create new solver program
+linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
+    cl_context context, cl_device_id device_id, const char* path);
+
+// release solver program
+linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer);
 
 // create solver
 linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,

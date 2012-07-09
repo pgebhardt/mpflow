@@ -8,9 +8,9 @@ bool pointInTriangle(float px, float py, float ax, float ay, float bx, float by,
     float cx, float cy) {
     bool b1, b2, b3;
 
-    b1 = test(px, py, ax, ay, bx, by) <= 0.0001f;
-    b2 = test(px, py, bx, by, cx, cy) <= 0.0001f;
-    b3 = test(px, py, cx, cy, ax, ay) <= 0.0001f;
+    b1 = test(px, py, ax, ay, bx, by) <= 0.00000045f;
+    b2 = test(px, py, bx, by, cx, cy) <= 0.00000045f;
+    b3 = test(px, py, cx, cy, ax, ay) <= 0.00000045f;
 
     return ((b1 == b2) && (b2 == b3));
 }

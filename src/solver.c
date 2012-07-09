@@ -53,6 +53,167 @@ static void print_matrix(linalgcl_matrix_t matrix) {
     }
 }
 
+// create new solver program
+linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
+    cl_context context, cl_device_id device_id, const char* path) {
+    // check input
+    if ((programPointer == NULL) || (context == NULL) || (path == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+    linalgcl_error_t linalgcl_error = LINALGCL_SUCCESS;
+
+    // init program pointer
+    *programPointer = NULL;
+
+    // create program struct
+    ert_solver_program_t program = malloc(sizeof(ert_solver_program_s));
+
+    // check success
+    if (program == NULL) {
+        return LINALGCL_ERROR;
+    }
+
+    // init struct
+    program->program = NULL;
+    program->kernel_copy_to_column = NULL;
+    program->kernel_copy_from_column = NULL;
+
+    // read program file
+    // open file
+    FILE* file = fopen(path, "r");
+
+    // check success
+    if (file == NULL) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // get file length
+    size_t length = 0;
+    fseek(file, 0, SEEK_END);
+    length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // allocate buffer
+    char* buffer = malloc(sizeof(char) * length);
+
+    // check success
+    if (buffer == NULL) {
+        // cleanup
+        fclose(file);
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // fread file
+    if (fread(buffer, sizeof(char), length, file) != length) {
+        // cleanup
+        free(buffer);
+        fclose(file);
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // close file
+    fclose(file);
+
+    // create program from source buffer
+    program->program = clCreateProgramWithSource(context, 1,
+        (const char**)&buffer, &length, &cl_error);
+    free(buffer);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // build program
+    cl_error = clBuildProgram(program->program, 0, NULL, NULL, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // print build error log
+        char buffer[2048];
+        clGetProgramBuildInfo(program->program, device_id, CL_PROGRAM_BUILD_LOG,
+            sizeof(buffer), buffer, NULL);
+        printf("%s\n", buffer);
+
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // create kernel
+    program->kernel_copy_to_column = clCreateKernel(program->program,
+        "copy_to_column", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    program->kernel_copy_from_column = clCreateKernel(program->program,
+        "copy_from_column", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    // set program pointer
+    *programPointer = program;
+
+    return LINALGCL_SUCCESS;
+}
+
+// release solver program
+linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer) {
+    // check input
+    if ((programPointer == NULL) || (*programPointer == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // get program
+    ert_solver_program_t program = *programPointer;
+
+    if (program->program != NULL) {
+        clReleaseProgram(program->program);
+    }
+
+    if (program->kernel_copy_to_column != NULL) {
+        clReleaseKernel(program->kernel_copy_to_column);
+    }
+
+    if (program->kernel_copy_from_column != NULL) {
+        clReleaseKernel(program->kernel_copy_from_column);
+    }
+
+    // free struct
+    free(program);
+
+    // set program pointer to NULL
+    *programPointer = NULL;
+
+    return LINALGCL_SUCCESS;
+}
+
 // create solver
 linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     ert_mesh_t mesh, ert_electrodes_t electrodes,
@@ -79,6 +240,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     }
 
     // init struct
+    solver->program = NULL;
     solver->grid = NULL;
     solver->gradient_solver = NULL;
     solver->electrodes = electrodes;
@@ -87,6 +249,17 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->current = NULL;
     solver->voltage = NULL;
     solver->f = NULL;
+
+    // create program
+    error = ert_solver_program_create(&solver->program, context, device_id, "src/solver.cl");
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_release(&solver);
+
+        return error;
+    }
 
     // create grid
     error  = ert_grid_create(&solver->grid, matrix_program, mesh, context,
@@ -165,6 +338,7 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_solver_t solver = *solverPointer;
 
     // cleanup
+    ert_solver_program_release(&solver->program);
     ert_grid_release(&solver->grid);
     ert_gradient_solver_release(&solver->gradient_solver);
     ert_electrodes_release(&solver->electrodes);

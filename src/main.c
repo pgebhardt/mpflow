@@ -96,8 +96,7 @@ int main(int argc, char* argv[]) {
 
     // create mesh
     ert_mesh_t mesh;
-    error = ert_mesh_create(&mesh, 1.0, 1.0 / 18.0, context);
-    printf("Generated mesh!\n");
+    error = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0, context);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -111,19 +110,17 @@ int main(int argc, char* argv[]) {
 
     // create electrodes
     ert_electrodes_t electrodes;
-    error = ert_electrodes_create(&electrodes, 36, 0.003 / 0.045, mesh);
+    error = ert_electrodes_create(&electrodes, 36, 0.005, mesh);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
         return EXIT_FAILURE;
     }
 
-
     // create solver
     ert_solver_t solver;
     error = ert_solver_create(&solver, mesh, electrodes,
         program, context, device_id, queue);
-    printf("Solver erstellt!\n");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -131,18 +128,22 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // create image
-    ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh, context, device_id);
-    linalgcl_matrix_copy_to_device(image->elements, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
-
     // set electrode current
-    linalgcl_matrix_set_element(solver->current, 1.0f, 1, 0);
-    linalgcl_matrix_set_element(solver->current, -1.0f, 0, 0);
+    linalgcl_matrix_set_element(solver->current, 1.0f, 8, 0);
+    linalgcl_matrix_set_element(solver->current, -1.0f, 6, 0);
     linalgcl_matrix_copy_to_device(solver->current, queue, CL_TRUE);
 
-    printf("Calced start vector and right side!\n");
+    // set sigma
+    for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
+        if (i < mesh->element_count / 2) {
+            linalgcl_matrix_set_element(solver->sigma, 50.0f * 1E-3, i, 0);
+        }
+        else {
+            linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+        }
+    }
+    linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
+    ert_grid_update_system_matrix(solver->grid, queue);
 
     // get start time
     struct timeval tv;
@@ -164,16 +165,12 @@ int main(int argc, char* argv[]) {
     printf("Voltage:\n");
     print_matrix(solver->voltage);
 
-    ert_image_calc(image, solver->phi, queue);
-    clFinish(queue);
-    linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
-    linalgcl_matrix_save("image.txt", image->image);
-    system("python src/script.py");
-    system("rm image.txt");
+    linalgcl_matrix_copy_to_host(solver->phi, queue, CL_TRUE);
+    linalgcl_matrix_save("phi.txt", solver->phi);
+    linalgcl_matrix_save("vertices.txt", mesh->vertices);
 
     // cleanup
     ert_solver_release(&solver);
-    ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 

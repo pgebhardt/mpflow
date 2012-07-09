@@ -558,7 +558,7 @@ linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver
 
     // substract mean
     linalgcl_matrix_vector_dot_product(solver->temp_number, solver->ones, x, matrix_program, queue);
-    linalgcl_matrix_scalar_multiply(solver->temp_number, solver->temp_number, -1.0,
+    linalgcl_matrix_scalar_multiply(solver->temp_number, solver->temp_number, -1.0 / solver->size,
         matrix_program, queue);
     ert_gradient_add_scalar(solver, x, solver->temp_number, queue);
 
