@@ -30,7 +30,7 @@ __kernel void calc_jacobian(__global float* jacobian, __global float* applied_ph
     float2 grad_lead_phi = {0.0f, 0.0f};
     unsigned int id = 0;
 
-    for (unsigned int k = 0; k < BLOCK_SIZE; k++) {
+    for (unsigned int k = 0; k < 3; k++) {
         id = gradient_matrix_column_ids[2 * j * BLOCK_SIZE + k];
 
         grad_applied_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * applied_phi[id * phi_size + 0];
