@@ -128,18 +128,23 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Create image
+    ert_image_t image;
+    ert_image_create(&image, 1000, 1000, mesh, context, device_id);
+    linalgcl_matrix_copy_to_device(image->elements, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
+
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+        if (i < mesh->element_count / 2) {
+            linalgcl_matrix_set_element(solver->sigma, 15.0f * 1E-3, i, 0);
+        }
+        else {
+            linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+        }
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
-
-    // solve
-    ert_solver_forward_solve(solver, program, queue);
-
-    // calc jacobian
-    ert_solver_calc_jacobian(solver, program, queue);
 
     // get start time
     struct timeval tv;
@@ -147,8 +152,8 @@ int main(int argc, char* argv[]) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // calc jacobian
-    ert_solver_calc_jacobian(solver, program, queue);
+    // solve
+    ert_solver_forward_solve(solver, program, queue);
 
     // get end time
     clFinish(queue);
@@ -156,21 +161,34 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     printf("Solving time: %f ms\n", (end - start) * 1E3);
 
-    // voltage
-    linalgcl_matrix_t voltage;
-    linalgcl_matrix_create(&voltage, context, electrodes->count, 18);
-    linalgcl_matrix_multiply(voltage, solver->voltage_calculation, solver->applied_phi,
-        program, queue);
+    // calc image
+    ert_image_calc(image, solver->sigma, queue);
     clFinish(queue);
+    linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
+    linalgcl_matrix_save("image.txt", image->image);
+    system("python src/script.py");
+
+    // voltage
+    linalgcl_matrix_t voltage, potential;
+    linalgcl_matrix_create(&voltage, context, solver->measurment_pattern->size_x, 18);
+    linalgcl_matrix_create(&potential, context, electrodes->count, 18);
+
+    linalgcl_matrix_multiply(potential, solver->voltage_calculation, solver->applied_phi,
+        program, queue);
+    linalgcl_matrix_multiply(voltage, solver->measurment_pattern, potential, program, queue);
+    clFinish(queue);
+
     linalgcl_matrix_copy_to_host(voltage, queue, CL_TRUE);
     linalgcl_matrix_save("voltage.txt", voltage);
     linalgcl_matrix_release(&voltage);
+    linalgcl_matrix_release(&potential);
 
     linalgcl_matrix_copy_to_host(solver->jacobian, queue, CL_TRUE);
     linalgcl_matrix_save("jacobian.txt", solver->jacobian);
 
     // cleanup
     ert_solver_release(&solver);
+    ert_image_release(&image);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 

@@ -262,6 +262,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->electrodes = electrodes;
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
+    solver->measurment_pattern = NULL;
     solver->jacobian = NULL;
     solver->voltage_calculation = NULL;
     solver->sigma = NULL;
@@ -375,6 +376,12 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     error = ert_solver_calc_excitaion(solver, drive_pattern, measurment_pattern,
         matrix_program, context, queue);
 
+    // transpose measurment pattern
+    error |= linalgcl_matrix_create(&solver->measurment_pattern, context,
+        measurment_pattern->size_y, measurment_pattern->size_x);
+    error |= linalgcl_matrix_transpose(solver->measurment_pattern, measurment_pattern,
+        matrix_program, queue);
+
     // cleanup
     linalgcl_matrix_release(&measurment_pattern);
     linalgcl_matrix_release(&drive_pattern);
@@ -408,6 +415,7 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_grid_release(&solver->grid);
     ert_gradient_solver_release(&solver->gradient_solver);
     ert_electrodes_release(&solver->electrodes);
+    linalgcl_matrix_release(&solver->measurment_pattern);
     linalgcl_matrix_release(&solver->jacobian);
     linalgcl_matrix_release(&solver->voltage_calculation);
     linalgcl_matrix_release(&solver->phi);

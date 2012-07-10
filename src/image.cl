@@ -15,7 +15,7 @@ bool pointInTriangle(float px, float py, float ax, float ay, float bx, float by,
     return ((b1 == b2) && (b2 == b3));
 }
 
-__kernel void calc_image(__global float* image, __global float* elements, __global float* phi,
+__kernel void calc_image(__global float* image, __global float* elements, __global float* sigma,
     unsigned int size_x, unsigned int size_y, float radius) {
     // get id
     unsigned int k = get_global_id(0);
@@ -31,11 +31,6 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
         // coordinates
         xVertex[i] = elements[(k * 2 * BLOCK_SIZE) + 3 + 2 * i];
         yVertex[i] = elements[(k * 2 * BLOCK_SIZE) + 4 + 2 * i];
-
-        // basis coefficients
-        basis[i][0] = elements[(k * 2 * BLOCK_SIZE) + 9 + 3 * i];
-        basis[i][1] = elements[(k * 2 * BLOCK_SIZE) + 10 + 3 * i];
-        basis[i][2] = elements[(k * 2 * BLOCK_SIZE) + 11 + 3 * i];
     }
 
     // step size
@@ -62,9 +57,7 @@ __kernel void calc_image(__global float* image, __global float* elements, __glob
             y = (float)j * dy - radius;
 
             // calc pixel
-            pixel  = phi[id[0]] * (basis[0][0] + basis[0][1] * x + basis[0][2] * y);
-            pixel += phi[id[1]] * (basis[1][0] + basis[1][1] * x + basis[1][2] * y);
-            pixel += phi[id[2]] * (basis[2][0] + basis[2][1] * x + basis[2][2] * y);
+            pixel  = sigma[k];
 
             // set pixel
             if (pointInTriangle(x, y, xVertex[0], yVertex[0], xVertex[1], yVertex[1],

@@ -37,6 +37,7 @@ typedef struct {
     linalgcl_size_t measurment_count;
     linalgcl_size_t drive_count;
     linalgcl_matrix_t jacobian;
+    linalgcl_matrix_t measurment_pattern;
     linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;
     linalgcl_matrix_t phi;
