@@ -262,7 +262,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->electrodes = electrodes;
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
-    solver->measurment_pattern = NULL;
     solver->jacobian = NULL;
     solver->voltage_calculation = NULL;
     solver->sigma = NULL;
@@ -271,6 +270,8 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->lead_phi = NULL;
     solver->applied_f = NULL;
     solver->lead_f = NULL;
+    solver->calculated_voltage = NULL;
+    solver->measured_voltage = NULL;
 
     // create program
     error = ert_solver_program_create(&solver->program, context, device_id, "src/solver.cl");
@@ -314,7 +315,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 
     // create matrices
     error  = linalgcl_matrix_create(&solver->voltage_calculation, context,
-        solver->grid->exitation_matrix->size_y, solver->grid->exitation_matrix->size_x);
+        solver->measurment_count, solver->grid->exitation_matrix->size_x);
     error |= linalgcl_matrix_create(&solver->phi, context,
         solver->grid->mesh->vertex_count, 1);
     error |= linalgcl_matrix_create(&solver->applied_phi, context,
@@ -323,6 +324,8 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         solver->grid->mesh->vertex_count, solver->measurment_count);
     error |= linalgcl_matrix_create(&solver->jacobian, context,
         solver->lead_phi->size_y * solver->applied_phi->size_y, solver->grid->mesh->element_count);
+    error |= linalgcl_matrix_create(&solver->calculated_voltage, context,
+        solver->measurment_count, solver->drive_count);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -335,9 +338,10 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     // copy matrices to device
     linalgcl_matrix_copy_to_device(solver->jacobian, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->voltage_calculation, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(solver->applied_phi, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(solver->lead_phi, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->applied_phi, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->lead_phi, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->calculated_voltage, queue, CL_TRUE);
 
     // create f matrix storage
     solver->applied_f = malloc(sizeof(linalgcl_matrix_t) * solver->drive_count);
@@ -350,10 +354,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 
         return LINALGCL_ERROR;
     }
-
-    // calc voltage calculation matrix
-    linalgcl_matrix_transpose(solver->voltage_calculation, solver->grid->exitation_matrix,  
-        matrix_program, queue);
 
     // load measurment pattern and drive pattern
     linalgcl_matrix_t measurment_pattern, drive_pattern;
@@ -376,15 +376,34 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     error = ert_solver_calc_excitaion(solver, drive_pattern, measurment_pattern,
         matrix_program, context, queue);
 
-    // transpose measurment pattern
-    error |= linalgcl_matrix_create(&solver->measurment_pattern, context,
+    // calc voltage calculation matrix
+    linalgcl_matrix_t temp1, temp2;
+    error |= linalgcl_matrix_create(&temp1, context,
         measurment_pattern->size_y, measurment_pattern->size_x);
-    error |= linalgcl_matrix_transpose(solver->measurment_pattern, measurment_pattern,
+    error  = linalgcl_matrix_create(&temp2, context,
+        solver->grid->exitation_matrix->size_y, solver->grid->exitation_matrix->size_x);
+
+    // transpose measurment pattern
+    error |= linalgcl_matrix_transpose(temp1, measurment_pattern,
+        matrix_program, queue);
+
+    // transpose exitation_matrix
+    error |= linalgcl_matrix_transpose(temp2, solver->grid->exitation_matrix,
+        matrix_program, queue);
+
+    // calc voltage_calculation matrix
+    printf("voltage_calculation: (%d, %d)\ntemp1: (%d, %d)\ntemp2: (%d, %d)\n",
+        solver->voltage_calculation->size_x, solver->voltage_calculation->size_y,
+        temp1->size_x, temp1->size_y, temp2->size_x, temp2->size_y);
+
+    error |= linalgcl_matrix_multiply(solver->voltage_calculation, temp1, temp2,
         matrix_program, queue);
 
     // cleanup
     linalgcl_matrix_release(&measurment_pattern);
     linalgcl_matrix_release(&drive_pattern);
+    linalgcl_matrix_release(&temp1);
+    linalgcl_matrix_release(&temp2);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -415,12 +434,13 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_grid_release(&solver->grid);
     ert_gradient_solver_release(&solver->gradient_solver);
     ert_electrodes_release(&solver->electrodes);
-    linalgcl_matrix_release(&solver->measurment_pattern);
     linalgcl_matrix_release(&solver->jacobian);
     linalgcl_matrix_release(&solver->voltage_calculation);
     linalgcl_matrix_release(&solver->phi);
     linalgcl_matrix_release(&solver->applied_phi);
     linalgcl_matrix_release(&solver->lead_phi);
+    linalgcl_matrix_release(&solver->calculated_voltage);
+    linalgcl_matrix_release(&solver->measured_voltage);
 
     if (solver->lead_f != NULL) {
         for (linalgcl_size_t i = 0; i < solver->measurment_count; i++) {

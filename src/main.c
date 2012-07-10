@@ -175,19 +175,15 @@ int main(int argc, char* argv[]) {
     system("python src/script.py");
 
     // voltage
-    linalgcl_matrix_t voltage, potential;
-    linalgcl_matrix_create(&voltage, context, solver->measurment_pattern->size_x, 18);
-    linalgcl_matrix_create(&potential, context, electrodes->count, 18);
+    linalgcl_matrix_t voltage;
+    linalgcl_matrix_create(&voltage, context, 9, 18);
 
-    linalgcl_matrix_multiply(potential, solver->voltage_calculation, solver->applied_phi,
-        program, queue);
-    linalgcl_matrix_multiply(voltage, solver->measurment_pattern, potential, program, queue);
+    linalgcl_matrix_multiply(voltage, solver->voltage_calculation, solver->applied_phi, program, queue);
     clFinish(queue);
 
     linalgcl_matrix_copy_to_host(voltage, queue, CL_TRUE);
     linalgcl_matrix_save("voltage.txt", voltage);
     linalgcl_matrix_release(&voltage);
-    linalgcl_matrix_release(&potential);
 
     linalgcl_matrix_copy_to_host(solver->jacobian, queue, CL_TRUE);
     linalgcl_matrix_save("jacobian.txt", solver->jacobian);

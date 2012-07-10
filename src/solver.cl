@@ -47,3 +47,30 @@ __kernel void calc_jacobian(__global float* jacobian, __global float* applied_ph
     // set matrix element
     jacobian[(i * jacobian_size) + j] = element;
 }
+
+__kernel void regularize_jacobian(__global float* result, __global float* jacobian,
+    float alpha, unsigned int size_x, unsigned int size_y) {
+    // get id
+    unsigned int i = get_global_id(0);
+    unsigned int j = get_global_id(1);
+
+    // calc Jt * J
+    float element = 0;
+    for (unsigned int k = 0; k < size_x; k++) {
+        element += jacobian[(k * size_y) + i] * jacobian[(k * size_y) + j];
+    }
+
+    // regularize
+    element += i == j ? alpha : 0.0f;
+
+    // set element
+    result[(i * size_y) + j] = element;
+}
+
+__kernel void calc_sigma_excitation(__global float* result, __global float* jacobian,
+    __global float* solved_voltage, __global float* measured_voltag,
+    __global float* sigma, __global float* sigma_n, float alpha, unsigned int size_y) {
+    // get id
+    unsigned int i = get_global_id(0);
+
+}
