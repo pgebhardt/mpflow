@@ -68,9 +68,24 @@ __kernel void regularize_jacobian(__global float* result, __global float* jacobi
 }
 
 __kernel void calc_sigma_excitation(__global float* result, __global float* jacobian,
-    __global float* solved_voltage, __global float* measured_voltag,
-    __global float* sigma, __global float* sigma_n, float alpha, unsigned int size_y) {
+    __global float* calculated_voltage, __global float* measured_voltage,
+    __global float* initial_sigma, __global float* sigma, float alpha, unsigned int size_x,
+    unsigned int size_y) {
     // get id
     unsigned int i = get_global_id(0);
 
+    // calc sigma difference
+    float dSigma = sigma[i] - initial_sigma[i];
+
+    // calc element
+    float element = 0.0f;
+    for (unsigned int j = 0; j < size_x; j++) {
+        element += jacobian[(i * size_y) + j] * (calculated_voltage[j] - measured_voltage[j]);
+    }
+
+    // regularize
+    element -= alpha * (sigma[i] - initial_sigma[i]);
+
+    // set element
+    result[i] = element;
 }
