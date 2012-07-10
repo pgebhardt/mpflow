@@ -392,10 +392,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         matrix_program, queue);
 
     // calc voltage_calculation matrix
-    printf("voltage_calculation: (%d, %d)\ntemp1: (%d, %d)\ntemp2: (%d, %d)\n",
-        solver->voltage_calculation->size_x, solver->voltage_calculation->size_y,
-        temp1->size_x, temp1->size_y, temp2->size_x, temp2->size_y);
-
     error |= linalgcl_matrix_multiply(solver->voltage_calculation, temp1, temp2,
         matrix_program, queue);
 
@@ -708,6 +704,10 @@ linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
             return error;
         }
     }
+
+    // calc voltage
+    error = linalgcl_matrix_multiply(solver->calculated_voltage, solver->voltage_calculation,
+        solver->applied_phi, matrix_program, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {

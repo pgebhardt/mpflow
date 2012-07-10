@@ -148,8 +148,6 @@ int main(int argc, char* argv[]) {
 
     // solve
     ert_solver_forward_solve(solver, program, queue);
-
-    // calc jacobian
     ert_solver_calc_jacobian(solver, program, queue);
 
     // get start time
@@ -158,7 +156,8 @@ int main(int argc, char* argv[]) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // calc jacobian
+    // solve
+    ert_solver_forward_solve(solver, program, queue);
     ert_solver_calc_jacobian(solver, program, queue);
 
     // get end time
@@ -175,15 +174,8 @@ int main(int argc, char* argv[]) {
     system("python src/script.py");
 
     // voltage
-    linalgcl_matrix_t voltage;
-    linalgcl_matrix_create(&voltage, context, 9, 18);
-
-    linalgcl_matrix_multiply(voltage, solver->voltage_calculation, solver->applied_phi, program, queue);
-    clFinish(queue);
-
-    linalgcl_matrix_copy_to_host(voltage, queue, CL_TRUE);
-    linalgcl_matrix_save("voltage.txt", voltage);
-    linalgcl_matrix_release(&voltage);
+    linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue, CL_TRUE);
+    linalgcl_matrix_save("voltage.txt", solver->calculated_voltage);
 
     linalgcl_matrix_copy_to_host(solver->jacobian, queue, CL_TRUE);
     linalgcl_matrix_save("jacobian.txt", solver->jacobian);
