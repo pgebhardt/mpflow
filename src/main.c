@@ -146,14 +146,20 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
 
+    // solve
+    ert_solver_forward_solve(solver, program, queue);
+
+    // calc jacobian
+    ert_solver_calc_jacobian(solver, program, queue);
+
     // get start time
     struct timeval tv;
     gettimeofday(&tv, NULL);
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // solve
-    ert_solver_forward_solve(solver, program, queue);
+    // calc jacobian
+    ert_solver_calc_jacobian(solver, program, queue);
 
     // get end time
     clFinish(queue);

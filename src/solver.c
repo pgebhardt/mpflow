@@ -313,9 +313,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->sigma = solver->grid->sigma;
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->jacobian, context,
-        solver->measurment_count, solver->grid->mesh->element_count);
-    error |= linalgcl_matrix_create(&solver->voltage_calculation, context,
+    error  = linalgcl_matrix_create(&solver->voltage_calculation, context,
         solver->grid->exitation_matrix->size_y, solver->grid->exitation_matrix->size_x);
     error |= linalgcl_matrix_create(&solver->phi, context,
         solver->grid->mesh->vertex_count, 1);
@@ -323,6 +321,8 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         solver->grid->mesh->vertex_count, solver->drive_count);
     error |= linalgcl_matrix_create(&solver->lead_phi, context,
         solver->grid->mesh->vertex_count, solver->measurment_count);
+    error |= linalgcl_matrix_create(&solver->jacobian, context,
+        solver->lead_phi->size_y * solver->applied_phi->size_y, solver->grid->mesh->element_count);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -635,6 +635,8 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
         6, sizeof(linalgcl_size_t), &solver->applied_phi->size_y);
     cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
         7, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_jacobian,
+        8, sizeof(linalgcl_size_t), &solver->lead_phi->size_y);
 
     // check success
     if (cl_error != CL_SUCCESS) {

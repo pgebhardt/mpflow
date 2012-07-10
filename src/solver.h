@@ -78,4 +78,12 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
 linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
     linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
+// calc regularized jacobian
+linalgcl_error_t ert_solver_calc_regularized_jacobian(ert_solver_t,
+    cl_command_queue queue);
+
+// calc regularized sigma excitaion
+linalgcl_error_t ert_solver_calc_regularized_sigma_excitation(ert_solver_t solver,
+    cl_command_queue queue);
+
 #endif

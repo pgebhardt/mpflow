@@ -19,10 +19,14 @@ __kernel void copy_from_column(__global float* matrix, __global float* vector, u
 __kernel void calc_jacobian(__global float* jacobian, __global float* applied_phi,
     __global float* lead_phi, __global float* gradient_matrix_values,
     __global float* gradient_matrix_column_ids, __global float* area,
-    unsigned int phi_size, unsigned int jacobian_size) {
+    unsigned int phi_size, unsigned int jacobian_size, unsigned int measurment_count) {
     // get id
     unsigned int i = get_global_id(0);
     unsigned int j = get_global_id(1);
+
+    // calc measurment and drive id
+    unsigned int measurment_id = i % measurment_count;
+    unsigned int drive_id = i / measurment_count;
 
     // calc matrix element
     float element = 0.0f;
@@ -33,10 +37,10 @@ __kernel void calc_jacobian(__global float* jacobian, __global float* applied_ph
     for (unsigned int k = 0; k < 3; k++) {
         id = gradient_matrix_column_ids[2 * j * BLOCK_SIZE + k];
 
-        grad_applied_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * applied_phi[id * phi_size + 0];
-        grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * applied_phi[id * phi_size + 0];
-        grad_lead_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * lead_phi[id * phi_size + i];
-        grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * lead_phi[id * phi_size + i];
+        grad_applied_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * applied_phi[id * phi_size + drive_id];
+        grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * applied_phi[id * phi_size + drive_id];
+        grad_lead_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + id] * lead_phi[id * phi_size + measurment_id];
+        grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + id] * lead_phi[id * phi_size + measurment_id];
     }
     element = -area[j] * (grad_applied_phi.x * grad_lead_phi.x + grad_applied_phi.y * grad_lead_phi.y);
 
