@@ -136,12 +136,7 @@ int main(int argc, char* argv[]) {
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        if (i < mesh->element_count / 2) {
-            linalgcl_matrix_set_element(solver->sigma, 15.0f * 1E-3, i, 0);
-        }
-        else {
-            linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
-        }
+        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
@@ -149,18 +144,6 @@ int main(int argc, char* argv[]) {
     // solve
     ert_solver_forward_solve(solver, program, queue);
     ert_solver_calc_jacobian(solver, program, queue);
-
-    // set sigma
-    for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        if (i < mesh->element_count / 2) {
-            linalgcl_matrix_set_element(solver->sigma, 13.0f * 1E-3, i, 0);
-        }
-        else {
-            linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
-        }
-    }
-    linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
-    ert_grid_update_system_matrix(solver->grid, queue);
 
     // get start time
     struct timeval tv;
@@ -168,9 +151,8 @@ int main(int argc, char* argv[]) {
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // solve
-    ert_solver_forward_solve(solver, program, queue);
-    ert_solver_calc_jacobian(solver, program, queue);
+    // inverse
+    // ert_solver_inverse_solve(solver, program, context, queue);
 
     // get end time
     clFinish(queue);
