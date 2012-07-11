@@ -2,3 +2,5 @@ ert
 *.swp
 *.o
 build
+forward_solver
+measured_voltage.txt
