@@ -38,7 +38,7 @@ SRC = src
 BUILD = build
 
 # Object files
-_OBJ = main.o mesh.o basis.o grid.o image.o gradient.o electrodes.o solver.o
+_OBJ = mesh.o basis.o grid.o image.o gradient.o electrodes.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Dependencies
@@ -47,10 +47,14 @@ DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file
 BIN = ert
+FORWARD_SOLVER = forward_solver
 
 # Rule for library
-$(BIN): $(OBJ) $(DEPS)
-	$(CC) $(CFLAGS) -o $(BIN) $(OBJ) $(LDFLAGS)
+$(BIN): src/main.o $(OBJ) $(DEPS)
+	$(CC) $(CFLAGS) -o $(BIN) src/main.o $(OBJ) $(LDFLAGS)
+
+$(FORWARD_SOLVER): src/forward_solver.o $(OBJ) $(DEPS)
+	$(CC) $(CFLAGS) -o $(FORWARD_SOLVER) src/forward_solver.o $(OBJ) $(LDFLAGS)
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
