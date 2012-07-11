@@ -25,6 +25,8 @@ typedef struct {
     cl_kernel kernel_copy_to_column;
     cl_kernel kernel_copy_from_column;
     cl_kernel kernel_calc_jacobian;
+    cl_kernel kernel_regularize_jacobian;
+    cl_kernel kernel_calc_sigma_excitation;
 } ert_solver_program_s;
 typedef ert_solver_program_s* ert_solver_program_t;
 
@@ -32,11 +34,13 @@ typedef ert_solver_program_s* ert_solver_program_t;
 typedef struct {
     ert_solver_program_t program;
     ert_grid_t grid;
-    ert_gradient_solver_t gradient_solver;
+    ert_gradient_solver_t forward_solver;
+    ert_gradient_solver_t backward_solver;
     ert_electrodes_t electrodes;
     linalgcl_size_t measurment_count;
     linalgcl_size_t drive_count;
     linalgcl_matrix_t jacobian;
+    linalgcl_matrix_t regularized_jacobian;
     linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;
     linalgcl_matrix_t phi;
@@ -79,12 +83,9 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
 linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
     linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
-// calc regularized jacobian
-linalgcl_error_t ert_solver_calc_regularized_jacobian(ert_solver_t,
-    cl_command_queue queue);
-
-// calc regularized sigma excitaion
-linalgcl_error_t ert_solver_calc_regularized_sigma_excitation(ert_solver_t solver,
+// inverse solving
+linalgcl_error_t ert_solver_inverse_solve(ert_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
     cl_command_queue queue);
 
 #endif

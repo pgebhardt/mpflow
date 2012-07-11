@@ -81,6 +81,8 @@ linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
     program->kernel_copy_to_column = NULL;
     program->kernel_copy_from_column = NULL;
     program->kernel_calc_jacobian = NULL;
+    program->kernel_regularize_jacobian = NULL;
+    program->kernel_calc_sigma_excitation = NULL;
 
     // read program file
     // open file
@@ -189,6 +191,28 @@ linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
         return LINALGCL_ERROR;
     }
 
+    program->kernel_regularize_jacobian = clCreateKernel(program->program,
+        "regularize_jacobian", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    program->kernel_calc_sigma_excitation = clCreateKernel(program->program,
+        "calc_sigma_excitation", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_solver_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
     // set program pointer
     *programPointer = program;
 
@@ -219,6 +243,14 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 
     if (program->kernel_calc_jacobian != NULL) {
         clReleaseKernel(program->kernel_calc_jacobian);
+    }
+
+    if (program->kernel_regularize_jacobian != NULL) {
+        clReleaseKernel(program->kernel_regularize_jacobian);
+    }
+
+    if (program->kernel_calc_sigma_excitation != NULL) {
+        clReleaseKernel(program->kernel_calc_sigma_excitation);
     }
 
     // free struct
@@ -258,11 +290,13 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     // init struct
     solver->program = NULL;
     solver->grid = NULL;
-    solver->gradient_solver = NULL;
+    solver->forward_solver = NULL;
+    solver->backward_solver = NULL;
     solver->electrodes = electrodes;
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
     solver->jacobian = NULL;
+    solver->regularized_jacobian = NULL;
     solver->voltage_calculation = NULL;
     solver->sigma = NULL;
     solver->phi = NULL;
@@ -297,19 +331,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         return error;
     }
 
-    // create gradient solver
-    error = ert_gradient_solver_create(&solver->gradient_solver,
-        solver->grid->system_matrix, solver->grid->mesh->vertex_count,
-        matrix_program, context, device_id, queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        ert_solver_release(&solver);
-
-        return error;
-    }
-
     // set sigma matrix
     solver->sigma = solver->grid->sigma;
 
@@ -324,6 +345,8 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         solver->grid->mesh->vertex_count, solver->measurment_count);
     error |= linalgcl_matrix_create(&solver->jacobian, context,
         solver->lead_phi->size_y * solver->applied_phi->size_y, solver->grid->mesh->element_count);
+    error |= linalgcl_matrix_create(&solver->regularized_jacobian, context,
+        solver->grid->mesh->element_count, solver->grid->mesh->element_count);
     error |= linalgcl_matrix_create(&solver->calculated_voltage, context,
         solver->measurment_count, solver->drive_count);
 
@@ -337,6 +360,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 
     // copy matrices to device
     linalgcl_matrix_copy_to_device(solver->jacobian, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->regularized_jacobian, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->voltage_calculation, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->phi, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->applied_phi, queue, CL_FALSE);
@@ -353,6 +377,23 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         ert_solver_release(&solver);
 
         return LINALGCL_ERROR;
+    }
+
+    // create gradient solver
+    error  = ert_gradient_solver_create(&solver->forward_solver,
+        NULL, solver->grid->system_matrix, solver->grid->mesh->vertex_count,
+        matrix_program, context, device_id, queue);
+
+    error |= ert_gradient_solver_create(&solver->backward_solver,
+        solver->regularized_jacobian, NULL, solver->grid->mesh->element_count,
+        matrix_program, context, device_id, queue);
+
+    // check success
+    if (error != LINALGCL_SUCCESS) {
+        // cleanup
+        ert_solver_release(&solver);
+
+        return error;
     }
 
     // load measurment pattern and drive pattern
@@ -428,9 +469,11 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     // cleanup
     ert_solver_program_release(&solver->program);
     ert_grid_release(&solver->grid);
-    ert_gradient_solver_release(&solver->gradient_solver);
+    ert_gradient_solver_release(&solver->forward_solver);
+    ert_gradient_solver_release(&solver->backward_solver);
     ert_electrodes_release(&solver->electrodes);
     linalgcl_matrix_release(&solver->jacobian);
+    linalgcl_matrix_release(&solver->regularized_jacobian);
     linalgcl_matrix_release(&solver->voltage_calculation);
     linalgcl_matrix_release(&solver->phi);
     linalgcl_matrix_release(&solver->applied_phi);
@@ -621,7 +664,7 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
             solver->phi, i, queue);
 
         // solve for phi
-        error |= ert_gradient_solver_solve_singular(solver->gradient_solver,
+        error |= ert_gradient_solver_solve_singular(solver->forward_solver,
             solver->phi, solver->lead_f[i], 1E-5, matrix_program, queue);
 
         // copy vector to applied phi
@@ -692,7 +735,7 @@ linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
             solver->phi, i, queue);
 
         // solve for phi
-        error |= ert_gradient_solver_solve_singular(solver->gradient_solver,
+        error |= ert_gradient_solver_solve_singular(solver->forward_solver,
             solver->phi, solver->applied_f[i], 1E-5, matrix_program, queue);
 
         // copy vector to applied phi
@@ -713,6 +756,128 @@ linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
     if (error != LINALGCL_SUCCESS) {
         return error;
     }
+
+    return LINALGCL_SUCCESS;
+}
+
+// regularize jacobian
+linalgcl_error_t ert_solver_regularize_jacobian(ert_solver_t solver,
+    linalgcl_matrix_t matrix, linalgcl_matrix_data_t alpha, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (matrix == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(solver->program->kernel_regularize_jacobian,
+        0, sizeof(cl_mem), &matrix->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_regularize_jacobian,
+        1, sizeof(cl_mem), &solver->jacobian->device_data);
+    cl_error  = clSetKernelArg(solver->program->kernel_regularize_jacobian,
+        2, sizeof(linalgcl_matrix_data_t), &alpha);
+    cl_error  = clSetKernelArg(solver->program->kernel_regularize_jacobian,
+        3, sizeof(linalgcl_size_t), &solver->jacobian->size_x);
+    cl_error  = clSetKernelArg(solver->program->kernel_regularize_jacobian,
+        4, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global[2] = { solver->jacobian->size_y, solver->jacobian->size_y };
+    size_t local[2] = { LINALGCL_BLOCK_SIZE, LINALGCL_BLOCK_SIZE };
+
+    cl_error = clEnqueueNDRangeKernel(queue, solver->program->kernel_regularize_jacobian,
+        2, NULL, global, local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
+// calc sigma excitaion
+linalgcl_error_t ert_solver_calc_sigma_excitation(ert_solver_t solver,
+    linalgcl_matrix_t matrix, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (matrix == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(solver->program->kernel_calc_sigma_excitation,
+        0, sizeof(cl_mem), &matrix->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_sigma_excitation,
+        1, sizeof(cl_mem), &solver->jacobian->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_sigma_excitation,
+        2, sizeof(cl_mem), &solver->calculated_voltage->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_sigma_excitation,
+        3, sizeof(cl_mem), &solver->measured_voltage->device_data);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_sigma_excitation,
+        4, sizeof(linalgcl_size_t), &solver->calculated_voltage->size_y);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_sigma_excitation,
+        5, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
+    cl_error |= clSetKernelArg(solver->program->kernel_calc_sigma_excitation,
+        6, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global = solver->jacobian->size_y;
+    size_t local = LINALGCL_BLOCK_SIZE;
+
+    cl_error = clEnqueueNDRangeKernel(queue, solver->program->kernel_calc_sigma_excitation,
+        1, NULL, &global, &local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
+// inverse solving
+linalgcl_error_t ert_solver_inverse_solve(ert_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (matrix_program == NULL) || (context == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // create matrices
+    linalgcl_matrix_t f, dSigma;
+    linalgcl_matrix_create(&f, context, solver->jacobian->size_y, 1);
+    linalgcl_matrix_create(&dSigma, context, solver->jacobian->size_y, 1);
+
+    // calc matrices
+    ert_solver_regularize_jacobian(solver, solver->regularized_jacobian, 1E-1, queue);
+    ert_solver_calc_sigma_excitation(solver, f, queue);
+    linalgcl_matrix_copy_to_device(dSigma, queue, CL_TRUE);
+
+    // solve backward problem
+    ert_gradient_solver_solve(solver->backward_solver, dSigma, f, 1E-4, matrix_program, queue);
+
+    // add delta Sigma
+    linalgcl_matrix_add(solver->sigma, solver->sigma, dSigma, matrix_program, queue);
+
+    // cleanup
+    linalgcl_matrix_release(&f);
+    linalgcl_matrix_release(&dSigma);
 
     return LINALGCL_SUCCESS;
 }
