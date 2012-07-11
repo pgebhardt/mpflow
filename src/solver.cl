@@ -40,12 +40,16 @@ __kernel void calc_jacobian(__global float* jacobian, __global float* applied_ph
         idy = gradient_matrix_column_ids[(2 * j + 1) * BLOCK_SIZE + k];
 
         // x gradient
-        grad_applied_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + k] * applied_phi[idx * drive_count + drive_id];
-        grad_lead_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + k] * lead_phi[idx * measurment_count + measurment_id];
+        if (!((idx == 0) && (k != 0))) {
+            grad_applied_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + k] * applied_phi[idx * drive_count + drive_id];
+            grad_lead_phi.x += gradient_matrix_values[2 * j * BLOCK_SIZE + k] * lead_phi[idx * measurment_count + measurment_id];
+        }
 
         // y gradient
-        grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + k] * applied_phi[idy * drive_count + drive_id];
-        grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + k] * lead_phi[idy * measurment_count + measurment_id];
+        if (!((idy == 0) && (k != 0))) {
+            grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + k] * applied_phi[idy * drive_count + drive_id];
+            grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + k] * lead_phi[idy * measurment_count + measurment_id];
+        }
     }
     element = area[j] * (grad_applied_phi.x * grad_lead_phi.x + grad_applied_phi.y * grad_lead_phi.y);
 

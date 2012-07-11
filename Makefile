@@ -50,11 +50,11 @@ BIN = ert
 FORWARD_SOLVER = forward_solver
 
 # Rule for library
-$(BIN): src/main.o $(OBJ) $(DEPS)
-	$(CC) $(CFLAGS) -o $(BIN) src/main.o $(OBJ) $(LDFLAGS)
+$(BIN): $(BUILD)/main.o $(OBJ) $(DEPS)
+	$(CC) $(CFLAGS) -o $(BIN) $(BUILD)/main.o $(OBJ) $(LDFLAGS)
 
 $(FORWARD_SOLVER): src/forward_solver.o $(OBJ) $(DEPS)
-	$(CC) $(CFLAGS) -o $(FORWARD_SOLVER) src/forward_solver.o $(OBJ) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $(FORWARD_SOLVER) $(BUILD)/forward_solver.o $(OBJ) $(LDFLAGS)
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)

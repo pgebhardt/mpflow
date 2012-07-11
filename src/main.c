@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-4, i, 0);
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
