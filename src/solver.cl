@@ -51,7 +51,7 @@ __kernel void calc_jacobian(__global float* jacobian, __global float* applied_ph
             grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * BLOCK_SIZE + k] * lead_phi[idy * measurment_count + measurment_id];
         }
     }
-    element = area[j] * (grad_applied_phi.x * grad_lead_phi.x + grad_applied_phi.y * grad_lead_phi.y);
+    element = -area[j] * (grad_applied_phi.x * grad_lead_phi.x + grad_applied_phi.y * grad_lead_phi.y);
 
     // set matrix element
     jacobian[(i * jacobian_size) + j] = element;
