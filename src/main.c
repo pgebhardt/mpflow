@@ -59,12 +59,17 @@ int main(int argc, char* argv[]) {
     linalgcl_error_t error = LINALGCL_SUCCESS;
     cl_int cl_error = CL_SUCCESS;
 
+    // Get Platform
+    cl_platform_id platform;
+    clGetPlatformIDs(1, &platform, NULL);
+
     // Connect to a compute device
     cl_device_id device_id;
-    cl_error = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+    cl_error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
 
     // check success
     if (cl_error != CL_SUCCESS) {
+        printf("Kein Device gefunden!\n");
         return EXIT_FAILURE;
     }
 
@@ -141,18 +146,14 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
 
-    // solve
-    ert_solver_forward_solve(solver, program, queue);
-    ert_solver_calc_jacobian(solver, program, queue);
-
     // get start time
     struct timeval tv;
     gettimeofday(&tv, NULL);
     clFinish(queue);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // inverse
-    // ert_solver_inverse_solve(solver, program, context, queue);
+    // solve
+    ert_solver_forward_solve(solver, program, queue);
 
     // get end time
     clFinish(queue);

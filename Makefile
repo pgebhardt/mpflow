@@ -25,7 +25,7 @@ CFLAGS = -fblocks
 
 # linux libraries
 ifeq ($(UNAME), Linux)
-LDFLAGS = -llinalgcl -lm -lamdocl64
+LDFLAGS = -lOpenCL -llinalgcl -lm
 endif
 
 # osx libraries
@@ -53,7 +53,7 @@ FORWARD_SOLVER = forward_solver
 $(BIN): $(BUILD)/main.o $(OBJ) $(DEPS)
 	$(CC) $(CFLAGS) -o $(BIN) $(BUILD)/main.o $(OBJ) $(LDFLAGS)
 
-$(FORWARD_SOLVER): src/forward_solver.o $(OBJ) $(DEPS)
+$(FORWARD_SOLVER): $(BUILD)/forward_solver.o $(OBJ) $(DEPS)
 	$(CC) $(CFLAGS) -o $(FORWARD_SOLVER) $(BUILD)/forward_solver.o $(OBJ) $(LDFLAGS)
 
 # Rule for object files

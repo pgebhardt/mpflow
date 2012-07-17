@@ -59,9 +59,13 @@ int main(int argc, char* argv[]) {
     linalgcl_error_t error = LINALGCL_SUCCESS;
     cl_int cl_error = CL_SUCCESS;
 
+    // Get Platform
+    cl_platform_id platform;
+    clGetPlatformIDs(1, &platform, NULL);
+
     // Connect to a compute device
     cl_device_id device_id;
-    cl_error = clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+    cl_error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
 
     // check success
     if (cl_error != CL_SUCCESS) {
