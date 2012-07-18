@@ -16,22 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ERT_GRADIENT_H
-#define ERT_GRADIENT_H
+#ifndef ERT_FORWARD_H
+#define ERT_FORWARD_H
 
-// gradient solver program struct
+// forward solver program struct
 typedef struct {
     cl_program program;
     cl_kernel kernel_add_scalar;
     cl_kernel kernel_update_vector;
-} ert_gradient_solver_program_s;
-typedef ert_gradient_solver_program_s* ert_gradient_solver_program_t;
+} ert_forward_solver_program_s;
+typedef ert_forward_solver_program_s* ert_forward_solver_program_t;
 
-// gradient solver struct
+// forward solver struct
 typedef struct {
     linalgcl_size_t size;
-    linalgcl_matrix_t system_matrix;
-    linalgcl_sparse_matrix_t system_matrix_sparse;
+    linalgcl_sparse_matrix_t system_matrix;
     linalgcl_matrix_t residuum;
     linalgcl_matrix_t projection;
     linalgcl_matrix_t rsold;
@@ -40,38 +39,33 @@ typedef struct {
     linalgcl_matrix_t temp_matrix;
     linalgcl_matrix_t temp_vector;
     linalgcl_matrix_t temp_number;
-    ert_gradient_solver_program_t program;
-} ert_gradient_solver_s;
-typedef ert_gradient_solver_s* ert_gradient_solver_t;
+    ert_forward_solver_program_t program;
+} ert_forward_solver_s;
+typedef ert_forward_solver_s* ert_forward_solver_t;
 
-// create new gradient program
-linalgcl_error_t ert_gradient_solver_program_create(ert_gradient_solver_program_t* programPointer,
+// create new forward program
+linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t* programPointer,
     cl_context context, cl_device_id device_id, const char* path);
 
-// release gradient program
-linalgcl_error_t ert_gradient_solver_program_release(ert_gradient_solver_program_t* programPointer);
+// release forward program
+linalgcl_error_t ert_forward_solver_program_release(ert_forward_solver_program_t* programPointer);
 
 // create solver
-linalgcl_error_t ert_gradient_solver_create(ert_gradient_solver_t* solverPointer,
-    linalgcl_matrix_t system_matrix, linalgcl_sparse_matrix_t system_matrix_sparse,
-    linalgcl_size_t size, linalgcl_matrix_program_t matrix_program,
-    cl_context context, cl_device_id device_id, cl_command_queue queue);
+linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
+    linalgcl_sparse_matrix_t system_matrix, linalgcl_size_t size,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_device_id device_id, cl_command_queue queue);
 
 // release solver
-linalgcl_error_t ert_gradient_solver_release(ert_gradient_solver_t* solverPointer);
+linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer);
 
 // update vector
-linalgcl_error_t ert_gradient_update_vector(ert_gradient_solver_t solver,
+linalgcl_error_t ert_forward_update_vector(ert_forward_solver_t solver,
     linalgcl_matrix_t result, linalgcl_matrix_t x1, linalgcl_matrix_data_t sign,
     linalgcl_matrix_t x2, linalgcl_matrix_t r1, linalgcl_matrix_t r2, cl_command_queue queue);
 
-// solve gradient
-linalgcl_error_t ert_gradient_solver_solve(ert_gradient_solver_t solver,
-    linalgcl_matrix_t x, linalgcl_matrix_t f, linalgcl_matrix_data_t tolerance,
-    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
-
-// solve singular gradient
-linalgcl_error_t ert_gradient_solver_solve_singular(ert_gradient_solver_t solver,
+// solve forward
+linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
     linalgcl_matrix_t x, linalgcl_matrix_t f, linalgcl_matrix_data_t tolerance,
     linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 

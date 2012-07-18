@@ -32,7 +32,7 @@
 #include "image.h"
 #include "electrodes.h"
 #include "grid.h"
-#include "gradient.h"
+#include "forward.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-4, i, 0);
+        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
     printf("Solving time: %f ms\n", (end - start) * 1E3);
 
     // calc image
-    ert_image_calc(image, solver->sigma, queue);
+    ert_image_calc(image, solver->phi, queue);
     clFinish(queue);
     linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);

@@ -31,7 +31,7 @@
 #include "mesh.h"
 #include "electrodes.h"
 #include "grid.h"
-#include "gradient.h"
+#include "forward.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -291,7 +291,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->program = NULL;
     solver->grid = NULL;
     solver->forward_solver = NULL;
-    solver->backward_solver = NULL;
     solver->electrodes = electrodes;
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
@@ -379,13 +378,9 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         return LINALGCL_ERROR;
     }
 
-    // create gradient solver
-    error  = ert_gradient_solver_create(&solver->forward_solver,
-        NULL, solver->grid->system_matrix, solver->grid->mesh->vertex_count,
-        matrix_program, context, device_id, queue);
-
-    error |= ert_gradient_solver_create(&solver->backward_solver,
-        solver->regularized_jacobian, NULL, solver->grid->mesh->element_count,
+    // create forward solver
+    error  = ert_forward_solver_create(&solver->forward_solver,
+        solver->grid->system_matrix, solver->grid->mesh->vertex_count,
         matrix_program, context, device_id, queue);
 
     // check success
@@ -471,8 +466,7 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     // cleanup
     ert_solver_program_release(&solver->program);
     ert_grid_release(&solver->grid);
-    ert_gradient_solver_release(&solver->forward_solver);
-    ert_gradient_solver_release(&solver->backward_solver);
+    ert_forward_solver_release(&solver->forward_solver);
     ert_electrodes_release(&solver->electrodes);
     linalgcl_matrix_release(&solver->jacobian);
     linalgcl_matrix_release(&solver->regularized_jacobian);
@@ -666,7 +660,7 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
             solver->phi, i, queue);
 
         // solve for phi
-        error |= ert_gradient_solver_solve_singular(solver->forward_solver,
+        error |= ert_forward_solver_solve(solver->forward_solver,
             solver->phi, solver->lead_f[i], 1E-5, matrix_program, queue);
 
         // copy vector to applied phi
@@ -737,8 +731,8 @@ linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
             solver->phi, i, queue);
 
         // solve for phi
-        error |= ert_gradient_solver_solve_singular(solver->forward_solver,
-            solver->phi, solver->applied_f[i], 1E-5, matrix_program, queue);
+        error |= ert_forward_solver_solve(solver->forward_solver,
+            solver->phi, solver->applied_f[i], 1E-6, matrix_program, queue);
 
         // copy vector to applied phi
         error |= ert_solver_copy_to_column(solver, solver->applied_phi,
@@ -864,26 +858,6 @@ linalgcl_error_t ert_solver_inverse_solve(ert_solver_t solver,
     if ((solver == NULL) || (matrix_program == NULL) || (context == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
-
-    // create matrices
-    linalgcl_matrix_t f, dSigma;
-    linalgcl_matrix_create(&f, context, solver->jacobian->size_y, 1);
-    linalgcl_matrix_create(&dSigma, context, solver->jacobian->size_y, 1);
-
-    // calc matrices
-    ert_solver_regularize_jacobian(solver, solver->regularized_jacobian, 0.0f, queue);
-    ert_solver_calc_sigma_excitation(solver, f, queue);
-    linalgcl_matrix_copy_to_device(dSigma, queue, CL_TRUE);
-
-    // solve backward problem
-    ert_gradient_solver_solve(solver->backward_solver, dSigma, f, 1E-5, matrix_program, queue);
-
-    // add delta Sigma
-    linalgcl_matrix_add(solver->sigma, solver->sigma, dSigma, matrix_program, queue);
-
-    // cleanup
-    linalgcl_matrix_release(&f);
-    linalgcl_matrix_release(&dSigma);
 
     return LINALGCL_SUCCESS;
 }
