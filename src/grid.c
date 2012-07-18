@@ -381,8 +381,6 @@ linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
         ert_basis_release(&basis[2]);
     }
 
-    linalgcl_matrix_save("gradient_matrix.txt", gradient_matrix);
-
     // copy matrices to device
     error  = linalgcl_matrix_copy_to_device(gradient_matrix, queue, CL_TRUE);
     error += linalgcl_matrix_copy_to_device(grid->gradient_matrix_transposed, queue, CL_TRUE);

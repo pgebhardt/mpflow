@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
 
     // voltage
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue, CL_TRUE);
-    linalgcl_matrix_save("measured_voltage.txt", solver->calculated_voltage);
+    linalgcl_matrix_save("input/measured_voltage.txt", solver->calculated_voltage);
 
     // cleanup
     ert_solver_release(&solver);

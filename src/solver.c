@@ -393,9 +393,9 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 
     // load measurment pattern and drive pattern
     linalgcl_matrix_t measurment_pattern, drive_pattern;
-    error  = linalgcl_matrix_load(&measurment_pattern, context, "measurment_pattern.txt");
-    error |= linalgcl_matrix_load(&drive_pattern, context, "drive_pattern.txt");
-    error |= linalgcl_matrix_load(&solver->measured_voltage, context, "measured_voltage.txt");
+    error  = linalgcl_matrix_load(&measurment_pattern, context, "input/measurment_pattern.txt");
+    error |= linalgcl_matrix_load(&drive_pattern, context, "input/drive_pattern.txt");
+    error |= linalgcl_matrix_load(&solver->measured_voltage, context, "input/measured_voltage.txt");
 
     // check success
     if (error != LINALGCL_SUCCESS) {

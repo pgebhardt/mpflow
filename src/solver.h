@@ -68,6 +68,16 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 // release solver
 linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
 
+// copy to column
+linalgcl_error_t ert_solver_copy_to_column(ert_solver_t solver,
+    linalgcl_matrix_t matrix, linalgcl_matrix_t vector, linalgcl_size_t column,
+    cl_command_queue queue);
+
+// copy from column
+linalgcl_error_t ert_solver_copy_from_column(ert_solver_t solver,
+    linalgcl_matrix_t matrix, linalgcl_matrix_t vector, linalgcl_size_t column,
+    cl_command_queue queue);
+
 // calc excitaion
 linalgcl_error_t ert_solver_calc_excitaion(ert_solver_t solver,
     linalgcl_matrix_t drive_pattern, linalgcl_matrix_t measurment_pattern,

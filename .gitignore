@@ -1,6 +1,7 @@
-ert
 *.swp
 *.o
-build
+ert
 forward_solver
-measured_voltage.txt
+build
+output
+input/measured_voltage.txt
