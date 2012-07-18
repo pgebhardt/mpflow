@@ -27,6 +27,7 @@
 #endif
 
 #include <linalgcl/linalgcl.h>
+#include <actor/actor.h>
 #include "mesh.h"
 #include "basis.h"
 #include "image.h"
@@ -54,7 +55,63 @@ static void print_matrix(linalgcl_matrix_t matrix) {
     }
 }
 
-int main(int argc, char* argv[]) {
+// forward solving process
+actor_error_t forward_process(actor_process_t self, ert_solver_t solver,
+    linalgcl_matrix_program_t program, cl_command_queue queue) {
+    // error
+    actor_error_t error = ACTOR_SUCCESS;
+
+    // message
+    actor_message_t message = NULL;
+
+    // frame counter
+    linalgcl_size_t frames = 0;;
+
+    // get start time
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // run loop
+    while (1) {
+        // increment frame counter
+        frames++;
+
+        // solve forward
+        ert_solver_forward_solve(solver, program, queue);
+
+        // receive message
+        error = actor_receive(self, &message, 0.0);
+
+        // check for timeout
+        if (error == ACTOR_ERROR_TIMEOUT) {
+            continue;
+        }
+
+        // check for end of main process
+        if (message->type == ACTOR_TYPE_ERROR_MESSAGE) {
+            // cleanup
+            actor_message_release(&message);
+
+            break;
+        }
+
+        // cleanup
+        actor_message_release(&message);
+    }
+
+    // get end time
+    gettimeofday(&tv, NULL);
+    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // print frames per second
+    printf("Frames per second: %f\n", (double)frames / (end - start));
+
+    return ACTOR_SUCCESS;
+}
+
+// main process
+actor_error_t main_process(actor_process_t main) {
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
     cl_int cl_error = CL_SUCCESS;
@@ -64,39 +121,38 @@ int main(int argc, char* argv[]) {
     clGetPlatformIDs(1, &platform, NULL);
 
     // Connect to a compute device
-    cl_device_id device_id;
-    cl_error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+    cl_device_id device_id[2];
+    cl_error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, device_id, NULL);
 
     // check success
     if (cl_error != CL_SUCCESS) {
-        printf("Kein Device gefunden!\n");
-        return EXIT_FAILURE;
+        return ACTOR_ERROR;
     }
 
     // Create a compute context 
-    cl_context context = clCreateContext(0, 1, &device_id, NULL, NULL, &cl_error);
+    cl_context context = clCreateContext(0, 2, device_id, NULL, NULL, &cl_error);
 
     // check success
     if (cl_error != CL_SUCCESS) {
-        return EXIT_FAILURE;
+        return ACTOR_ERROR;
     }
 
     // Create a command commands
-    cl_command_queue queue = clCreateCommandQueue(context, device_id, 0, &cl_error);
+    cl_command_queue queue0 = clCreateCommandQueue(context, device_id[0], 0, &cl_error);
+    cl_command_queue queue1 = clCreateCommandQueue(context, device_id[1], 0, &cl_error);
 
     if (cl_error != CL_SUCCESS) {
-        return EXIT_FAILURE;
+        return ACTOR_ERROR;
     }
 
     // create matrix program
     linalgcl_matrix_program_t program = NULL;
-    error = linalgcl_matrix_create_programm(&program, context, device_id,
+    error = linalgcl_matrix_create_programm(&program, context, device_id[0],
         "/usr/local/include/linalgcl/matrix.cl");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        printf("Matrix programm laden ging nicht!\n");
-        return EXIT_FAILURE;
+        return ACTOR_ERROR;
     }
 
     // create mesh
@@ -105,13 +161,12 @@ int main(int argc, char* argv[]) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        printf("Mesh erzeugen ging nicht!\n");
-        return EXIT_FAILURE;
+        return ACTOR_ERROR;
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(mesh->vertices, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh->elements, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->vertices, queue0, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->elements, queue0, CL_TRUE);
 
     // create electrodes
     ert_electrodes_t electrodes;
@@ -119,67 +174,110 @@ int main(int argc, char* argv[]) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return EXIT_FAILURE;
+        return ACTOR_ERROR;
     }
 
     // create solver
     ert_solver_t solver;
     error = ert_solver_create(&solver, mesh, electrodes, 9, 18,
-        program, context, device_id, queue);
+        program, context, device_id[0], queue0);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        printf("Kann keinen Solver erstellen!\n");
-        return EXIT_FAILURE;
+        return ACTOR_ERROR;
     }
 
     // Create image
     ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh, context, device_id);
-    linalgcl_matrix_copy_to_device(image->elements, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(image->image, queue, CL_TRUE);
+    ert_image_create(&image, 1000, 1000, mesh, context, device_id[0]);
+    linalgcl_matrix_copy_to_device(image->elements, queue0, CL_FALSE);
+    linalgcl_matrix_copy_to_device(image->image, queue0, CL_TRUE);
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
         linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
     }
-    linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
-    ert_grid_update_system_matrix(solver->grid, queue);
+    linalgcl_matrix_copy_to_device(solver->sigma, queue0, CL_TRUE);
+    ert_grid_update_system_matrix(solver->grid, queue0);
+    clFinish(queue0);
 
-    // get start time
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    clFinish(queue);
-    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+    // start forward solving process
+    actor_process_id_t forward;
+    actor_spawn(main->node, &forward, ^actor_error_t(actor_process_t self) {
+        // link to main process
+        actor_process_link(self, main->nid, main->pid);
 
-    // solve
-    ert_solver_forward_solve(solver, program, queue);
+        return forward_process(self, solver, program, queue0);
+    });
 
-    // get end time
-    clFinish(queue);
-    gettimeofday(&tv, NULL);
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-    printf("Solving time: %f ms\n", (end - start) * 1E3);
+    // change sigma slowly
+    for (linalgcl_size_t i = 0; i < 20; i++) {
+        // set sigma
+        for (linalgcl_size_t i = 0; i < mesh->element_count / 2; i++) {
+            linalgcl_matrix_set_element(solver->sigma, (10.0f + (linalgcl_matrix_data_t)(i + 1) * 4.0f) * 1E-3, i, 0);
+        }
+        linalgcl_matrix_copy_to_device(solver->sigma, queue1, CL_TRUE);
+        ert_grid_update_system_matrix(solver->grid, queue1);
+
+        // sleep a bit
+        actor_process_sleep(main, 0.5);
+    }
+
+    // stop forward process
+    actor_send(main, main->nid, forward, ACTOR_TYPE_ERROR_MESSAGE,
+        &forward, sizeof(actor_process_id_t));
+
+    // wait for forward process to stop
+    actor_message_t message = NULL;
+    actor_receive(main, &message, 10.0);
+    actor_message_release(&message);
 
     // calc image
-    ert_image_calc(image, solver->phi, queue);
-    clFinish(queue);
-    linalgcl_matrix_copy_to_host(image->image, queue, CL_TRUE);
+    ert_image_calc(image, solver->phi, queue0);
+    clFinish(queue0);
+    linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
     linalgcl_matrix_save("image.txt", image->image);
     system("python src/script.py");
 
     // voltage
-    linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue0, CL_TRUE);
     linalgcl_matrix_save("voltage.txt", solver->calculated_voltage);
-
-    linalgcl_matrix_copy_to_host(solver->jacobian, queue, CL_TRUE);
-    linalgcl_matrix_save("jacobian.txt", solver->jacobian);
 
     // cleanup
     ert_solver_release(&solver);
     ert_image_release(&image);
-    clReleaseCommandQueue(queue);
+    clReleaseCommandQueue(queue0);
+    clReleaseCommandQueue(queue1);
     clReleaseContext(context);
+
+    return ACTOR_SUCCESS;
+}
+
+int main(int argc, char* argv[]) {
+    // create node
+    actor_node_t node = NULL;
+    if (actor_node_create(&node, 0, 10) != ACTOR_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    // start main process
+    actor_spawn(node, NULL, ^actor_error_t(actor_process_t self) {
+            // call main process
+            actor_error_t error = main_process(self);
+
+            // print result
+            printf("main process died with result: %s!\n", actor_error_string(error));
+
+            return error;
+        });
+
+    // wait for processes to complete
+    while (actor_node_wait_for_processes(node, 10.0f) == ACTOR_ERROR_TIMEOUT) {
+
+    }
+
+    // release node
+    actor_node_release(&node);
 
     return EXIT_SUCCESS;
 };

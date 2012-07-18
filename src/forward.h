@@ -67,6 +67,7 @@ linalgcl_error_t ert_forward_update_vector(ert_forward_solver_t solver,
 // solve forward
 linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
     linalgcl_matrix_t x, linalgcl_matrix_t f, linalgcl_matrix_data_t tolerance,
-    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
+    linalgcl_size_t max_iter,linalgcl_matrix_program_t matrix_program,
+    cl_command_queue queue);
 
 #endif

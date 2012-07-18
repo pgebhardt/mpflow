@@ -32,7 +32,7 @@
 #include "image.h"
 #include "electrodes.h"
 #include "grid.h"
-#include "gradient.h"
+#include "forward.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {

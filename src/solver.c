@@ -661,7 +661,7 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
 
         // solve for phi
         error |= ert_forward_solver_solve(solver->forward_solver,
-            solver->phi, solver->lead_f[i], 1E-5, matrix_program, queue);
+            solver->phi, solver->lead_f[i], 1E-6, 100, matrix_program, queue);
 
         // copy vector to applied phi
         error |= ert_solver_copy_to_column(solver, solver->lead_phi,
@@ -732,7 +732,7 @@ linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
 
         // solve for phi
         error |= ert_forward_solver_solve(solver->forward_solver,
-            solver->phi, solver->applied_f[i], 1E-6, matrix_program, queue);
+            solver->phi, solver->applied_f[i], 1E-6, 100, matrix_program, queue);
 
         // copy vector to applied phi
         error |= ert_solver_copy_to_column(solver, solver->applied_phi,
