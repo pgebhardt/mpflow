@@ -211,11 +211,14 @@ actor_error_t main_process(actor_process_t main) {
     });
     printf("Forward solving process started!\n");
 
+    // sleep a bit
+    actor_process_sleep(main, 0.5);
+
     // change sigma slowly
     for (linalgcl_size_t k = 0; k < 5; k++) {
-        for (linalgcl_size_t i = 1; i <= 40; i++) {
+        for (linalgcl_size_t i = 1; i <= 20; i++) {
             // set sigma
-            for (linalgcl_size_t j = 0; j < mesh->element_count / 2; j++) {
+            for (linalgcl_size_t j = 0; j < mesh->element_count / 4; j++) {
                 linalgcl_matrix_set_element(solver->sigma, (10.0f + (linalgcl_matrix_data_t)i * 1.0f) * 1E-3, j, 0);
             }
             linalgcl_matrix_copy_to_device(solver->sigma, queue1, CL_TRUE);
@@ -224,9 +227,9 @@ actor_error_t main_process(actor_process_t main) {
             // sleep a bit
             actor_process_sleep(main, 0.04);
         }
-        for (int i = 39; i >= 0; i--) {
+        for (int i = 19; i >= 0; i--) {
             // set sigma
-            for (linalgcl_size_t j = 0; j < mesh->element_count / 2; j++) {
+            for (linalgcl_size_t j = 0; j < mesh->element_count / 4; j++) {
                 linalgcl_matrix_set_element(solver->sigma, (10.0f + (linalgcl_matrix_data_t)i * 1.0f) * 1E-3, j, 0);
             }
             linalgcl_matrix_copy_to_device(solver->sigma, queue1, CL_TRUE);
