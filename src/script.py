@@ -1,12 +1,13 @@
 from pylab import *
+import sys
 
 
 def main():
-    image = loadtxt('image.txt')
+    image = loadtxt('output/image.txt')
     imshow(image)
     CS = contour(image, colors='k')
     clabel(CS, fontsize=9, inline=1)
-    show()
+    savefig('output/anregung-{}.png'.format(sys.argv[1]));
 
 
 if __name__ == '__main__':

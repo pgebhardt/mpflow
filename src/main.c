@@ -209,39 +209,52 @@ actor_error_t main_process(actor_process_t main) {
 
         return forward_process(self, solver, program, queue0);
     });
+    printf("Forward solving process started!\n");
 
-    // change sigma slowly
-    for (linalgcl_size_t i = 0; i < 20; i++) {
+    /*// change sigma slowly
+    for (linalgcl_size_t i = 0; i < 40; i++) {
         // set sigma
         for (linalgcl_size_t i = 0; i < mesh->element_count / 2; i++) {
-            linalgcl_matrix_set_element(solver->sigma, (10.0f + (linalgcl_matrix_data_t)(i + 1) * 4.0f) * 1E-3, i, 0);
+            linalgcl_matrix_set_element(solver->sigma, (10.0f + (linalgcl_matrix_data_t)(i + 1) * 2.0f) * 1E-3, i, 0);
         }
         linalgcl_matrix_copy_to_device(solver->sigma, queue1, CL_TRUE);
         ert_grid_update_system_matrix(solver->grid, queue1);
 
         // sleep a bit
-        actor_process_sleep(main, 0.5);
-    }
+        actor_process_sleep(main, 0.25);
+    }*/
+    actor_process_sleep(main, 1.0);
 
     // stop forward process
     actor_send(main, main->nid, forward, ACTOR_TYPE_ERROR_MESSAGE,
         &forward, sizeof(actor_process_id_t));
+    printf("Send stop signal to forward solving process!\n");
 
     // wait for forward process to stop
     actor_message_t message = NULL;
     actor_receive(main, &message, 10.0);
     actor_message_release(&message);
+    printf("Forward solving process stopped!\n");
 
-    // calc image
-    ert_image_calc(image, solver->phi, queue0);
-    clFinish(queue0);
-    linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
-    linalgcl_matrix_save("image.txt", image->image);
-    system("python src/script.py");
+    // calc images
+    char buffer[1024];
+    for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
+        // copy current phi to vector
+        ert_solver_copy_from_column(solver, solver->applied_phi, solver->phi,
+            i, queue0);
+
+        // calc image
+        ert_image_calc(image, solver->phi, queue0);
+        clFinish(queue0);
+        linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
+        linalgcl_matrix_save("output/image.txt", image->image);
+        sprintf(buffer, "python src/script.py %d", i);
+        system(buffer);
+    }
 
     // voltage
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue0, CL_TRUE);
-    linalgcl_matrix_save("voltage.txt", solver->calculated_voltage);
+    linalgcl_matrix_save("output/voltage.txt", solver->calculated_voltage);
 
     // cleanup
     ert_solver_release(&solver);
