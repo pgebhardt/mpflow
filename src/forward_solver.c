@@ -134,13 +134,39 @@ int main(int argc, char* argv[]) {
     }
 
     // set sigma
+    linalgcl_matrix_data_t id;
+    linalgcl_matrix_data_t x, y;
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        if (i < mesh->element_count / 4) {
-            linalgcl_matrix_set_element(solver->sigma, 20.0f * 1E-3, i, 0);
+        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+    }
+
+    for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
+        // check element
+        linalgcl_matrix_get_element(mesh->elements, &id, i, 0);
+        linalgcl_matrix_get_element(mesh->vertices, &x, (linalgcl_size_t)id, 0);
+        linalgcl_matrix_get_element(mesh->vertices, &y, (linalgcl_size_t)id, 1);
+
+        if ((x - 0.005) * (x - 0.005) + (y - 0.005) * (y - 0.005) > 0.02 * 0.02) {
+            continue;
         }
-        else {
-            linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+
+        linalgcl_matrix_get_element(mesh->elements, &id, i, 1);
+        linalgcl_matrix_get_element(mesh->vertices, &x, (linalgcl_size_t)id, 0);
+        linalgcl_matrix_get_element(mesh->vertices, &y, (linalgcl_size_t)id, 1);
+
+        if ((x - 0.005) * (x - 0.005) + (y - 0.005) * (y - 0.005) > 0.02 * 0.02) {
+            continue;
         }
+
+        linalgcl_matrix_get_element(mesh->elements, &id, i, 2);
+        linalgcl_matrix_get_element(mesh->vertices, &x, (linalgcl_size_t)id, 0);
+        linalgcl_matrix_get_element(mesh->vertices, &y, (linalgcl_size_t)id, 1);
+
+        if ((x - 0.005) * (x - 0.005) + (y - 0.005) * (y - 0.005) > 0.02 * 0.02) {
+            continue;
+        }
+
+        linalgcl_matrix_set_element(solver->sigma, 1.0f * 1E-5, i, 0);
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);

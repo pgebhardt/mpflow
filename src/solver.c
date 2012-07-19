@@ -908,6 +908,10 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
             matrix_program, queue);
         ert_grid_update_system_matrix(solver->grid, queue);
 
+        if (frames > 200) {
+            break;
+        }
+
         // receive stop message
         if (actor_receive(self, &message, 0.0) == ACTOR_ERROR_TIMEOUT) {
             continue;

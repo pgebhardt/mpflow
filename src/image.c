@@ -57,7 +57,8 @@ linalgcl_error_t ert_image_program_create(ert_image_program_t* programPointer,
 
     // init struct
     program->program = NULL;
-    program->kernel_calc_image = NULL;
+    program->kernel_calc_image_phi = NULL;
+    program->kernel_calc_image_sigma = NULL;
 
     // read program file
     // open file
@@ -133,8 +134,19 @@ linalgcl_error_t ert_image_program_create(ert_image_program_t* programPointer,
     }
 
     // create kernel
-    program->kernel_calc_image = clCreateKernel(program->program,
-        "calc_image", &cl_error);
+    program->kernel_calc_image_phi = clCreateKernel(program->program,
+        "calc_image_phi", &cl_error);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        // cleanup
+        ert_image_program_release(&program);
+
+        return LINALGCL_ERROR;
+    }
+
+    program->kernel_calc_image_sigma = clCreateKernel(program->program,
+        "calc_image_sigma", &cl_error);
 
     // check success
     if (cl_error != CL_SUCCESS) {
@@ -164,8 +176,12 @@ linalgcl_error_t ert_image_program_release(ert_image_program_t* programPointer) 
         clReleaseProgram(program->program);
     }
 
-    if (program->kernel_calc_image != NULL) {
-        clReleaseKernel(program->kernel_calc_image);
+    if (program->kernel_calc_image_phi != NULL) {
+        clReleaseKernel(program->kernel_calc_image_phi);
+    }
+
+    if (program->kernel_calc_image_sigma != NULL) {
+        clReleaseKernel(program->kernel_calc_image_sigma);
     }
 
     // free struct
@@ -306,7 +322,7 @@ linalgcl_error_t ert_image_release(ert_image_t* imagePointer) {
 }
 
 // calc image
-linalgcl_error_t ert_image_calc(ert_image_t image,
+linalgcl_error_t ert_image_calc_phi(ert_image_t image,
     linalgcl_matrix_t phi, cl_command_queue queue) {
     // check input
     if ((image == NULL) || (phi == NULL) || (queue == NULL)) {
@@ -317,17 +333,17 @@ linalgcl_error_t ert_image_calc(ert_image_t image,
     cl_int cl_error = CL_SUCCESS;
 
     // set kernel arguments
-    cl_error  = clSetKernelArg(image->program->kernel_calc_image,
+    cl_error  = clSetKernelArg(image->program->kernel_calc_image_phi,
         0, sizeof(cl_mem), &image->image->device_data);
-    cl_error += clSetKernelArg(image->program->kernel_calc_image,
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_phi,
         1, sizeof(cl_mem), &image->elements->device_data);
-    cl_error += clSetKernelArg(image->program->kernel_calc_image,
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_phi,
         2, sizeof(cl_mem), &phi->device_data);
-    cl_error += clSetKernelArg(image->program->kernel_calc_image,
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_phi,
         3, sizeof(linalgcl_size_t), &image->image->size_x);
-    cl_error += clSetKernelArg(image->program->kernel_calc_image,
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_phi,
         4, sizeof(linalgcl_size_t), &image->image->size_y);
-    cl_error += clSetKernelArg(image->program->kernel_calc_image,
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_phi,
         5, sizeof(linalgcl_matrix_data_t), &image->mesh->radius);
 
     // check success
@@ -339,7 +355,52 @@ linalgcl_error_t ert_image_calc(ert_image_t image,
     size_t global = image->elements->size_x;
     size_t local = LINALGCL_BLOCK_SIZE;
 
-    cl_error = clEnqueueNDRangeKernel(queue, image->program->kernel_calc_image,
+    cl_error = clEnqueueNDRangeKernel(queue, image->program->kernel_calc_image_phi,
+        1, NULL, &global, &local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
+// calc image
+linalgcl_error_t ert_image_calc_sigma(ert_image_t image,
+    linalgcl_matrix_t sigma, cl_command_queue queue) {
+    // check input
+    if ((image == NULL) || (sigma == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(image->program->kernel_calc_image_sigma,
+        0, sizeof(cl_mem), &image->image->device_data);
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_sigma,
+        1, sizeof(cl_mem), &image->elements->device_data);
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_sigma,
+        2, sizeof(cl_mem), &sigma->device_data);
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_sigma,
+        3, sizeof(linalgcl_size_t), &image->image->size_x);
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_sigma,
+        4, sizeof(linalgcl_size_t), &image->image->size_y);
+    cl_error += clSetKernelArg(image->program->kernel_calc_image_sigma,
+        5, sizeof(linalgcl_matrix_data_t), &image->mesh->radius);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global = image->elements->size_x;
+    size_t local = LINALGCL_BLOCK_SIZE;
+
+    cl_error = clEnqueueNDRangeKernel(queue, image->program->kernel_calc_image_sigma,
         1, NULL, &global, &local, 0, NULL, NULL);
 
     // check success

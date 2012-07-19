@@ -66,9 +66,9 @@ __kernel void calc_gradient(__global float* gradient, __global float* jacobian,
     // calc element
     float element = 0.0f;
     for (unsigned int j = 0; j < size_x; j++) {
-        element += 2.0f * (measured_voltage[j] - calculated_voltage[j]) * jacobian[j * size_y + i];
+        element += 2.0f * (measured_voltage[(j % 16) * 32 + j / 16] - calculated_voltage[(j % 16) * 32 + j / 16]) * jacobian[j * size_y + i];
     }
 
     // set element
-    gradient[i] = element;
+    gradient[i] = -element;
 }

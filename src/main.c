@@ -206,7 +206,7 @@ actor_error_t main_process(actor_process_t main) {
             i, queue0);
 
         // calc image
-        ert_image_calc(image, phi, queue0);
+        ert_image_calc_phi(image, phi, queue0);
         clFinish(queue0);
         linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
         linalgcl_matrix_save("output/image.txt", image->image);
@@ -214,6 +214,14 @@ actor_error_t main_process(actor_process_t main) {
         system(buffer);
     }
     linalgcl_matrix_release(&phi);
+
+    // calc image
+    ert_image_calc_sigma(image, solver->sigma, queue0);
+    clFinish(queue0);
+    linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
+    linalgcl_matrix_save("output/image.txt", image->image);
+    sprintf(buffer, "python src/script.py %d", solver->drive_count);
+    system(buffer);
 
     // voltage
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue0, CL_TRUE);

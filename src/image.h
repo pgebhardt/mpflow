@@ -22,7 +22,8 @@
 // ert image program
 typedef struct {
     cl_program program;
-    cl_kernel kernel_calc_image;
+    cl_kernel kernel_calc_image_phi;
+    cl_kernel kernel_calc_image_sigma;
 } ert_image_program_s;
 typedef ert_image_program_s* ert_image_program_t;
 
@@ -50,7 +51,11 @@ linalgcl_error_t ert_image_create(ert_image_t* imagePointer, linalgcl_size_t siz
 linalgcl_error_t ert_image_release(ert_image_t* imagePointer);
 
 // calc image
-linalgcl_error_t ert_image_calc(ert_image_t image, linalgcl_matrix_t phi,
+linalgcl_error_t ert_image_calc_phi(ert_image_t image, linalgcl_matrix_t phi,
+    cl_command_queue queue);
+
+// calc image
+linalgcl_error_t ert_image_calc_sigma(ert_image_t image, linalgcl_matrix_t sigma,
     cl_command_queue queue);
 
 #endif
