@@ -32,9 +32,11 @@ typedef ert_solver_program_s* ert_solver_program_t;
 
 // solver struct
 typedef struct {
-    ert_solver_program_t program;
+    ert_solver_program_t program0;
+    ert_solver_program_t program1;
     ert_grid_t grid;
-    ert_forward_solver_t forward_solver;
+    ert_forward_solver_t forward_solver_applied;
+    ert_forward_solver_t forward_solver_lead;
     ert_electrodes_t electrodes;
     linalgcl_size_t measurment_count;
     linalgcl_size_t drive_count;
@@ -42,7 +44,6 @@ typedef struct {
     linalgcl_matrix_t regularized_jacobian;
     linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;
-    linalgcl_matrix_t phi;
     linalgcl_matrix_t applied_phi;
     linalgcl_matrix_t lead_phi;
     linalgcl_matrix_t* applied_f;
@@ -69,12 +70,12 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
 
 // copy to column
-linalgcl_error_t ert_solver_copy_to_column(ert_solver_t solver,
+linalgcl_error_t ert_solver_copy_to_column(ert_solver_program_t program,
     linalgcl_matrix_t matrix, linalgcl_matrix_t vector, linalgcl_size_t column,
     cl_command_queue queue);
 
 // copy from column
-linalgcl_error_t ert_solver_copy_from_column(ert_solver_t solver,
+linalgcl_error_t ert_solver_copy_from_column(ert_solver_program_t program,
     linalgcl_matrix_t matrix, linalgcl_matrix_t vector, linalgcl_size_t column,
     cl_command_queue queue);
 
@@ -86,14 +87,15 @@ linalgcl_error_t ert_solver_calc_excitaion(ert_solver_t solver,
 
 // calc jacobian
 linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
-    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
+    ert_solver_program_t program, cl_command_queue queue);
 
 // forward solving
-linalgcl_error_t ert_solver_forward_solve(ert_solver_t solver,
-    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
+actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_context context,
+    cl_command_queue queue);
 
 // inverse solving
-linalgcl_error_t ert_solver_inverse_solve(ert_solver_t solver,
+actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
     linalgcl_matrix_program_t matrix_program, cl_context context,
     cl_command_queue queue);
 

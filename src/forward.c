@@ -493,7 +493,9 @@ linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
             solver->projection, solver->rsnew, solver->rsold, queue);
 
         // update rsold
-        linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_TRUE);
+        linalgcl_matrix_t temp = solver->rsold;
+        solver->rsold = solver->rsnew;
+        solver->rsnew = temp;
     }
 
     return LINALGCL_SUCCESS;
