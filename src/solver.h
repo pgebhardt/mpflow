@@ -25,8 +25,7 @@ typedef struct {
     cl_kernel kernel_copy_to_column;
     cl_kernel kernel_copy_from_column;
     cl_kernel kernel_calc_jacobian;
-    cl_kernel kernel_regularize_jacobian;
-    cl_kernel kernel_calc_sigma_excitation;
+    cl_kernel kernel_calc_gradient;
 } ert_solver_program_s;
 typedef ert_solver_program_s* ert_solver_program_t;
 
@@ -41,6 +40,7 @@ typedef struct {
     linalgcl_size_t measurment_count;
     linalgcl_size_t drive_count;
     linalgcl_matrix_t jacobian;
+    linalgcl_matrix_t gradient;
     linalgcl_matrix_t regularized_jacobian;
     linalgcl_matrix_t voltage_calculation;
     linalgcl_matrix_t sigma;

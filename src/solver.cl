@@ -57,46 +57,18 @@ __kernel void calc_jacobian(__global float* jacobian, __global float* applied_ph
     jacobian[(i * jacobian_size) + j] = element;
 }
 
-__kernel void regularize_jacobian(__global float* result, __global float* jacobian,
-    float alpha, unsigned int element_count, unsigned int size_x, unsigned int size_y) {
+__kernel void calc_gradient(__global float* gradient, __global float* jacobian,
+    __global float* measured_voltage, __global float* calculated_voltage, unsigned int size_x,
+    unsigned int size_y) {
     // get id
     unsigned int i = get_global_id(0);
-    unsigned int j = get_global_id(1);
-
-    // calc Jt * J
-    float element = 0;
-    for (unsigned int k = 0; k < size_x; k++) {
-        element += jacobian[k * size_y + i] * jacobian[(k * size_y) + j];
-    }
-
-    // regularize
-    element += i == j ? alpha : 0.0f;
-
-    // set element
-    result[i * size_y + j] = i < element_count ? element : 0.0f;
-}
-
-__kernel void calc_sigma_excitation(__global float* result, __global float* jacobian,
-    __global float* calculated_voltage, __global float* measured_voltage,
-    unsigned int measurment_count, unsigned int drive_count, unsigned int size_x, unsigned int size_y) {
-    // get id
-    unsigned int i = get_global_id(0);
-
-    // voltage ids
-    unsigned int iVolt = 0;
-    unsigned int jVolt = 0;
 
     // calc element
     float element = 0.0f;
     for (unsigned int j = 0; j < size_x; j++) {
-        // calc voltage ids
-        iVolt = j % measurment_count;
-        jVolt = j / measurment_count;
-
-        element += jacobian[j * size_y + i] * (-calculated_voltage[iVolt * drive_count + jVolt] +
-            measured_voltage[iVolt * drive_count + jVolt]);
+        element += 2.0f * (measured_voltage[j] - calculated_voltage[j]) * jacobian[j * size_y + i];
     }
 
     // set element
-    result[i] = element;
+    gradient[i] = element;
 }

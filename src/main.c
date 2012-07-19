@@ -158,6 +158,8 @@ actor_error_t main_process(actor_process_t main) {
     });
     printf("Forward solving process started!\n");
 
+    actor_process_sleep(main, 0.5);
+
     // start inverse solving process
     actor_process_id_t inverse = ACTOR_INVALID_ID;
     actor_spawn(main->node, &inverse, ^actor_error_t(actor_process_t self) {
@@ -216,6 +218,12 @@ actor_error_t main_process(actor_process_t main) {
     // voltage
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue0, CL_TRUE);
     linalgcl_matrix_save("output/voltage.txt", solver->calculated_voltage);
+    linalgcl_matrix_copy_to_host(solver->gradient, queue0, CL_TRUE);
+    linalgcl_matrix_save("output/gradient.txt", solver->gradient);
+    linalgcl_matrix_copy_to_host(solver->jacobian, queue0, CL_TRUE);
+    linalgcl_matrix_save("output/jacobian.txt", solver->jacobian);
+    linalgcl_matrix_copy_to_host(solver->sigma, queue0, CL_TRUE);
+    linalgcl_matrix_save("output/sigma.txt", solver->sigma);
 
     // cleanup
     ert_solver_release(&solver);

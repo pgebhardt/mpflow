@@ -27,6 +27,7 @@
 #endif
 
 #include <linalgcl/linalgcl.h>
+#include <actor/actor.h>
 #include "mesh.h"
 #include "basis.h"
 #include "image.h"
@@ -134,8 +135,8 @@ int main(int argc, char* argv[]) {
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        if (i < mesh->element_count / 2) {
-            linalgcl_matrix_set_element(solver->sigma, 100.0f * 1E-3, i, 0);
+        if (i < mesh->element_count / 4) {
+            linalgcl_matrix_set_element(solver->sigma, 20.0f * 1E-3, i, 0);
         }
         else {
             linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
@@ -145,7 +146,7 @@ int main(int argc, char* argv[]) {
     ert_grid_update_system_matrix(solver->grid, queue);
 
     // solve
-    ert_solver_forward_solve(solver, program, queue);
+    ert_solver_forward(NULL, solver, program, context, queue);
 
     // voltage
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue, CL_TRUE);

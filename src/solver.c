@@ -83,8 +83,7 @@ linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
     program->kernel_copy_to_column = NULL;
     program->kernel_copy_from_column = NULL;
     program->kernel_calc_jacobian = NULL;
-    program->kernel_regularize_jacobian = NULL;
-    program->kernel_calc_sigma_excitation = NULL;
+    program->kernel_calc_gradient = NULL;
 
     // read program file
     // open file
@@ -193,19 +192,8 @@ linalgcl_error_t ert_solver_program_create(ert_solver_program_t* programPointer,
         return LINALGCL_ERROR;
     }
 
-    program->kernel_regularize_jacobian = clCreateKernel(program->program,
-        "regularize_jacobian", &cl_error);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // cleanup
-        ert_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    program->kernel_calc_sigma_excitation = clCreateKernel(program->program,
-        "calc_sigma_excitation", &cl_error);
+    program->kernel_calc_gradient = clCreateKernel(program->program,
+        "calc_gradient", &cl_error);
 
     // check success
     if (cl_error != CL_SUCCESS) {
@@ -247,12 +235,8 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
         clReleaseKernel(program->kernel_calc_jacobian);
     }
 
-    if (program->kernel_regularize_jacobian != NULL) {
-        clReleaseKernel(program->kernel_regularize_jacobian);
-    }
-
-    if (program->kernel_calc_sigma_excitation != NULL) {
-        clReleaseKernel(program->kernel_calc_sigma_excitation);
+    if (program->kernel_calc_gradient != NULL) {
+        clReleaseKernel(program->kernel_calc_gradient);
     }
 
     // free struct
@@ -299,6 +283,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
     solver->jacobian = NULL;
+    solver->gradient = NULL;
     solver->regularized_jacobian = NULL;
     solver->voltage_calculation = NULL;
     solver->sigma = NULL;
@@ -346,6 +331,8 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         solver->grid->mesh->vertex_count, solver->measurment_count);
     error |= linalgcl_matrix_create(&solver->jacobian, context,
         solver->lead_phi->size_y * solver->applied_phi->size_y, solver->grid->mesh->element_count);
+    error |= linalgcl_matrix_create(&solver->gradient, context,
+        solver->jacobian->size_y, 1);
     error |= linalgcl_matrix_create(&solver->regularized_jacobian, context,
         solver->grid->mesh->element_count, solver->grid->mesh->element_count);
     error |= linalgcl_matrix_create(&solver->calculated_voltage, context,
@@ -361,6 +348,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 
     // copy matrices to device
     linalgcl_matrix_copy_to_device(solver->jacobian, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->gradient, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->regularized_jacobian, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->voltage_calculation, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->applied_phi, queue, CL_FALSE);
@@ -475,6 +463,7 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_forward_solver_release(&solver->forward_solver_lead);
     ert_electrodes_release(&solver->electrodes);
     linalgcl_matrix_release(&solver->jacobian);
+    linalgcl_matrix_release(&solver->gradient);
     linalgcl_matrix_release(&solver->regularized_jacobian);
     linalgcl_matrix_release(&solver->voltage_calculation);
     linalgcl_matrix_release(&solver->applied_phi);
@@ -697,6 +686,51 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
     return LINALGCL_SUCCESS;
 }
 
+// calc gradient
+linalgcl_error_t ert_solver_calc_gradient(ert_solver_t solver,
+    ert_solver_program_t program, cl_command_queue queue) {
+    // check input
+    if ((solver == NULL) || (program == NULL) || (queue == NULL)) {
+        return LINALGCL_ERROR;
+    }
+
+    // error
+    cl_int cl_error = CL_SUCCESS;
+
+    // set kernel arguments
+    cl_error  = clSetKernelArg(program->kernel_calc_gradient,
+        0, sizeof(cl_mem), &solver->gradient->device_data);
+    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
+        1, sizeof(cl_mem), &solver->jacobian->device_data);
+    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
+        2, sizeof(cl_mem), &solver->measured_voltage->device_data);
+    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
+        3, sizeof(cl_mem), &solver->calculated_voltage->device_data);
+    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
+        4, sizeof(linalgcl_size_t), &solver->jacobian->size_x);
+    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
+        5, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    // execute kernel_update_system_matrix
+    size_t global = solver->jacobian->size_y;
+    size_t local = LINALGCL_BLOCK_SIZE;
+
+    cl_error = clEnqueueNDRangeKernel(queue, program->kernel_calc_gradient,
+        1, NULL, &global, &local, 0, NULL, NULL);
+
+    // check success
+    if (cl_error != CL_SUCCESS) {
+        return LINALGCL_ERROR;
+    }
+
+    return LINALGCL_SUCCESS;
+}
+
 // forward solving
 actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
     linalgcl_matrix_program_t matrix_program, cl_context context,
@@ -756,6 +790,10 @@ actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
 
                 return ACTOR_ERROR;
             }
+        }
+
+        if (self == NULL) {
+            break;
         }
 
         // receive stop message
@@ -859,6 +897,16 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
 
         // calc jacobian
         ert_solver_calc_jacobian(solver, solver->program1, queue);
+
+        // calc gradient
+        ert_solver_calc_gradient(solver, solver->program1, queue);
+
+        // add to sigma
+        linalgcl_matrix_scalar_multiply(solver->gradient, solver->gradient,
+            0.0001f, matrix_program, queue);
+        linalgcl_matrix_add(solver->sigma, solver->sigma, solver->gradient,
+            matrix_program, queue);
+        ert_grid_update_system_matrix(solver->grid, queue);
 
         // receive stop message
         if (actor_receive(self, &message, 0.0) == ACTOR_ERROR_TIMEOUT) {
