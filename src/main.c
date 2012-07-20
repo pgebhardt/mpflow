@@ -83,6 +83,7 @@ actor_error_t main_process(actor_process_t main) {
     }
 
     // Create a command commands
+    // TODO: Leider werden nicht beide GPUs verwendet
     cl_command_queue queue0 = clCreateCommandQueue(context, device_id[0], 0, &cl_error);
     cl_command_queue queue1 = clCreateCommandQueue(context, device_id[1], 0, &cl_error);
 
@@ -162,12 +163,12 @@ actor_error_t main_process(actor_process_t main) {
 
     // start inverse solving process
     actor_process_id_t inverse = ACTOR_INVALID_ID;
-    actor_spawn(main->node, &inverse, ^actor_error_t(actor_process_t self) {
+    /*actor_spawn(main->node, &inverse, ^actor_error_t(actor_process_t self) {
         // link to main process
         actor_process_link(self, main->nid, main->pid);
 
         return ert_solver_inverse(self, solver, program1, context, queue1);
-    });
+    });*/
     printf("Inverse solving process started!\n");
 
     // sleep a bit
@@ -190,11 +191,11 @@ actor_error_t main_process(actor_process_t main) {
     printf("Send stop signal to inverse solving process!\n");
 
     // wait for forward process to stop
-    actor_receive(main, &message, 4.0);
+    actor_receive(main, &message, 2.0);
     actor_message_release(&message);
     printf("Inverse solving process stopped!\n");
 
-    // create buffer
+    /*// create buffer
     linalgcl_matrix_t phi;
     linalgcl_matrix_create(&phi, context, solver->applied_phi->size_x, 1);
 
@@ -231,7 +232,7 @@ actor_error_t main_process(actor_process_t main) {
     linalgcl_matrix_copy_to_host(solver->jacobian, queue0, CL_TRUE);
     linalgcl_matrix_save("output/jacobian.txt", solver->jacobian);
     linalgcl_matrix_copy_to_host(solver->sigma, queue0, CL_TRUE);
-    linalgcl_matrix_save("output/sigma.txt", solver->sigma);
+    linalgcl_matrix_save("output/sigma.txt", solver->sigma);*/
 
     // cleanup
     ert_solver_release(&solver);

@@ -434,8 +434,8 @@ linalgcl_error_t ert_forward_update_vector(ert_forward_solver_t solver,
 
 // solve forward
 linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
-    linalgcl_matrix_t x, linalgcl_matrix_t f, linalgcl_matrix_data_t tolerance,
-    linalgcl_size_t max_iter, linalgcl_matrix_program_t matrix_program,
+    linalgcl_matrix_t x, linalgcl_matrix_t f,
+    linalgcl_size_t iterations, linalgcl_matrix_program_t matrix_program,
     cl_command_queue queue) {
     // check input
     if ((solver == NULL) || (x == NULL) || (f == NULL) || 
@@ -455,16 +455,9 @@ linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
 
     // calc rsold
     linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, matrix_program, queue);
-    linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_TRUE);
 
     // iterate
-    for (linalgcl_size_t i = 0; i < max_iter; i++) {
-        // check error
-        linalgcl_matrix_copy_to_host(solver->rsold, queue, CL_FALSE);
-        if (sqrt(solver->rsold->host_data[0]) / solver->size <= tolerance) {
-            break;
-        }
-
+    for (linalgcl_size_t i = 0; i < iterations; i++) {
         // calc A * p
         linalgcl_matrix_vector_dot_product(solver->temp_number, solver->projection, solver->ones,
             matrix_program, queue);

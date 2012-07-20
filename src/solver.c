@@ -779,7 +779,7 @@ actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
 
             // solve for phi
             error |= ert_forward_solver_solve(solver->forward_solver_applied,
-                phi, solver->applied_f[i], 1E-6, 100, matrix_program, queue);
+                phi, solver->applied_f[i], 10, matrix_program, queue);
 
             // copy vector to applied phi
             error |= ert_solver_copy_to_column(solver->program0, solver->applied_phi,
@@ -832,7 +832,7 @@ actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // print frames per second
-    printf("Forward: frames per second: %f\n", (double)frames / (end - start));
+    printf("Forward: frames per second: %f\n", (linalgcl_matrix_data_t)frames / (end - start));
 
     return ACTOR_SUCCESS;
 }
@@ -882,7 +882,7 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
 
             // solve for phi
             error |= ert_forward_solver_solve(solver->forward_solver_lead,
-                phi, solver->lead_f[i], 1E-6, 100, matrix_program, queue);
+                phi, solver->lead_f[i], 10, matrix_program, queue);
 
             // copy vector to applied phi
             error |= ert_solver_copy_to_column(solver->program1, solver->lead_phi,
@@ -900,12 +900,12 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
         // calc jacobian
         ert_solver_calc_jacobian(solver, solver->program1, queue);
 
-        // calc gradient
+        /*// calc gradient
         ert_solver_calc_gradient(solver, solver->program1, queue);
 
         // add to sigma
-        /*linalgcl_matrix_scalar_multiply(solver->gradient, solver->gradient,
-            0.00001f, matrix_program, queue);
+        linalgcl_matrix_scalar_multiply(solver->gradient, solver->gradient,
+            0.0001f, matrix_program, queue);
         linalgcl_matrix_add(solver->sigma, solver->sigma, solver->gradient,
             matrix_program, queue);
         ert_grid_update_system_matrix(solver->grid, queue);*/
