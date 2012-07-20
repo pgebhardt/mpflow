@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
     linalgcl_matrix_data_t id;
     linalgcl_matrix_data_t x, y;
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+        linalgcl_matrix_set_element(solver->sigma, 1.0f, i, 0);
     }
 
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        linalgcl_matrix_set_element(solver->sigma, 1.0f * 1E-5, i, 0);
+        linalgcl_matrix_set_element(solver->sigma, 0.1f, i, 0);
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue);
@@ -177,6 +177,10 @@ int main(int argc, char* argv[]) {
     // voltage
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue, CL_TRUE);
     linalgcl_matrix_save("input/measured_voltage.txt", solver->calculated_voltage);
+
+    // save sigma
+    linalgcl_matrix_copy_to_host(solver->sigma, queue, CL_TRUE);
+    linalgcl_matrix_save("input/sigma.txt", solver->sigma);
 
     // cleanup
     ert_solver_release(&solver);

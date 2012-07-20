@@ -707,9 +707,11 @@ linalgcl_error_t ert_solver_calc_gradient(ert_solver_t solver,
     cl_error |= clSetKernelArg(program->kernel_calc_gradient,
         3, sizeof(cl_mem), &solver->calculated_voltage->device_data);
     cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        4, sizeof(linalgcl_size_t), &solver->jacobian->size_x);
+        4, sizeof(cl_mem), &solver->sigma->device_data);
     cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        5, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
+        5, sizeof(linalgcl_size_t), &solver->jacobian->size_x);
+    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
+        6, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
 
     // check success
     if (cl_error != CL_SUCCESS) {
@@ -902,15 +904,11 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
         ert_solver_calc_gradient(solver, solver->program1, queue);
 
         // add to sigma
-        linalgcl_matrix_scalar_multiply(solver->gradient, solver->gradient,
-            0.0001f, matrix_program, queue);
+        /*linalgcl_matrix_scalar_multiply(solver->gradient, solver->gradient,
+            0.00001f, matrix_program, queue);
         linalgcl_matrix_add(solver->sigma, solver->sigma, solver->gradient,
             matrix_program, queue);
-        ert_grid_update_system_matrix(solver->grid, queue);
-
-        if (frames > 200) {
-            break;
-        }
+        ert_grid_update_system_matrix(solver->grid, queue);*/
 
         // receive stop message
         if (actor_receive(self, &message, 0.0) == ACTOR_ERROR_TIMEOUT) {

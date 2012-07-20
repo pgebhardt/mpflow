@@ -142,7 +142,7 @@ actor_error_t main_process(actor_process_t main) {
 
     // set sigma
     for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcl_matrix_set_element(solver->sigma, 10.0f * 1E-3, i, 0);
+        linalgcl_matrix_set_element(solver->sigma, 1.0f, i, 0);
     }
     linalgcl_matrix_copy_to_device(solver->sigma, queue0, CL_TRUE);
     ert_grid_update_system_matrix(solver->grid, queue0);
@@ -215,7 +215,7 @@ actor_error_t main_process(actor_process_t main) {
     }
     linalgcl_matrix_release(&phi);
 
-    // calc image
+    // calc sigma image
     ert_image_calc_sigma(image, solver->sigma, queue0);
     clFinish(queue0);
     linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
@@ -223,7 +223,7 @@ actor_error_t main_process(actor_process_t main) {
     sprintf(buffer, "python src/script.py %d", solver->drive_count);
     system(buffer);
 
-    // voltage
+    // save some data
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue0, CL_TRUE);
     linalgcl_matrix_save("output/voltage.txt", solver->calculated_voltage);
     linalgcl_matrix_copy_to_host(solver->gradient, queue0, CL_TRUE);
