@@ -83,7 +83,6 @@ actor_error_t main_process(actor_process_t main) {
     }
 
     // Create a command commands
-    // TODO: Leider werden nicht beide GPUs verwendet
     cl_command_queue queue0 = clCreateCommandQueue(context, device_id[0], 0, &cl_error);
     cl_command_queue queue1 = clCreateCommandQueue(context, device_id[1], 0, &cl_error);
 
@@ -113,8 +112,8 @@ actor_error_t main_process(actor_process_t main) {
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(mesh->vertices, queue0, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh->elements, queue0, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->vertices, queue1, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->elements, queue1, CL_TRUE);
 
     // create electrodes
     ert_electrodes_t electrodes;
@@ -128,7 +127,7 @@ actor_error_t main_process(actor_process_t main) {
     // create solver
     ert_solver_t solver;
     error = ert_solver_create(&solver, mesh, electrodes, 9, 18,
-        program0, context, device_id[0], queue0);
+        program0, context, device_id[0], queue1);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -138,16 +137,8 @@ actor_error_t main_process(actor_process_t main) {
     // Create image
     ert_image_t image;
     ert_image_create(&image, 1000, 1000, mesh, context, device_id[0]);
-    linalgcl_matrix_copy_to_device(image->elements, queue0, CL_FALSE);
-    linalgcl_matrix_copy_to_device(image->image, queue0, CL_TRUE);
-
-    // set sigma
-    for (linalgcl_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcl_matrix_set_element(solver->sigma, 1.0f, i, 0);
-    }
-    linalgcl_matrix_copy_to_device(solver->sigma, queue0, CL_TRUE);
-    ert_grid_update_system_matrix(solver->grid, queue0);
-    clFinish(queue0);
+    linalgcl_matrix_copy_to_device(image->elements, queue1, CL_FALSE);
+    linalgcl_matrix_copy_to_device(image->image, queue1, CL_TRUE);
 
     // start forward solving process
     actor_process_id_t forward = ACTOR_INVALID_ID;
@@ -155,24 +146,11 @@ actor_error_t main_process(actor_process_t main) {
         // link to main process
         actor_process_link(self, main->nid, main->pid);
 
-        return ert_solver_forward(self, solver, program0, context, queue0);
+        return ert_solver_forward(self, solver, program0, context, queue1);
     });
     printf("Forward solving process started!\n");
 
-    actor_process_sleep(main, 0.5);
-
-    // start inverse solving process
-    actor_process_id_t inverse = ACTOR_INVALID_ID;
-    /*actor_spawn(main->node, &inverse, ^actor_error_t(actor_process_t self) {
-        // link to main process
-        actor_process_link(self, main->nid, main->pid);
-
-        return ert_solver_inverse(self, solver, program1, context, queue1);
-    });*/
-    printf("Inverse solving process started!\n");
-
-    // sleep a bit
-    actor_process_sleep(main, 10.0);
+    actor_process_sleep(main, 5.0);
 
     // stop forward process
     actor_send(main, main->nid, forward, ACTOR_TYPE_ERROR_MESSAGE,
@@ -185,16 +163,6 @@ actor_error_t main_process(actor_process_t main) {
     actor_message_release(&message);
     printf("Forward solving process stopped!\n");
 
-    // stop inverse process
-    actor_send(main, main->nid, inverse, ACTOR_TYPE_ERROR_MESSAGE,
-        &forward, sizeof(actor_process_id_t));
-    printf("Send stop signal to inverse solving process!\n");
-
-    // wait for forward process to stop
-    actor_receive(main, &message, 2.0);
-    actor_message_release(&message);
-    printf("Inverse solving process stopped!\n");
-
     /*// create buffer
     linalgcl_matrix_t phi;
     linalgcl_matrix_create(&phi, context, solver->applied_phi->size_x, 1);
@@ -203,7 +171,7 @@ actor_error_t main_process(actor_process_t main) {
     char buffer[1024];
     for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
         // copy current phi to vector
-        ert_solver_copy_from_column(solver->program0, solver->applied_phi, phi,
+        ert_solver_copy_from_column(solver->programs[0], solver->applied_phi, phi,
             i, queue0);
 
         // calc image
@@ -216,23 +184,9 @@ actor_error_t main_process(actor_process_t main) {
     }
     linalgcl_matrix_release(&phi);
 
-    // calc sigma image
-    ert_image_calc_sigma(image, solver->sigma, queue0);
-    clFinish(queue0);
-    linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
-    linalgcl_matrix_save("output/image.txt", image->image);
-    sprintf(buffer, "python src/script.py %d", solver->drive_count);
-    system(buffer);
-
     // save some data
     linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue0, CL_TRUE);
-    linalgcl_matrix_save("output/voltage.txt", solver->calculated_voltage);
-    linalgcl_matrix_copy_to_host(solver->gradient, queue0, CL_TRUE);
-    linalgcl_matrix_save("output/gradient.txt", solver->gradient);
-    linalgcl_matrix_copy_to_host(solver->jacobian, queue0, CL_TRUE);
-    linalgcl_matrix_save("output/jacobian.txt", solver->jacobian);
-    linalgcl_matrix_copy_to_host(solver->sigma, queue0, CL_TRUE);
-    linalgcl_matrix_save("output/sigma.txt", solver->sigma);*/
+    linalgcl_matrix_save("output/voltage.txt", solver->calculated_voltage);*/
 
     // cleanup
     ert_solver_release(&solver);

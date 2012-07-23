@@ -31,19 +31,13 @@ typedef ert_solver_program_s* ert_solver_program_t;
 
 // solver struct
 typedef struct {
-    ert_solver_program_t program0;
-    ert_solver_program_t program1;
-    ert_grid_t grid;
-    ert_forward_solver_t forward_solver_applied;
-    ert_forward_solver_t forward_solver_lead;
+    ert_solver_program_t* programs;
+    ert_grid_t* grids;
+    ert_forward_solver_t* forward_solver;
     ert_electrodes_t electrodes;
     linalgcl_size_t measurment_count;
     linalgcl_size_t drive_count;
-    linalgcl_matrix_t jacobian;
-    linalgcl_matrix_t gradient;
-    linalgcl_matrix_t regularized_jacobian;
     linalgcl_matrix_t voltage_calculation;
-    linalgcl_matrix_t sigma;
     linalgcl_matrix_t applied_phi;
     linalgcl_matrix_t lead_phi;
     linalgcl_matrix_t* applied_f;
@@ -64,7 +58,7 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t measurment_count,
     linalgcl_size_t drive_count, linalgcl_matrix_program_t matrix_program,
-    cl_context context, cl_device_id device_id, cl_command_queue queue);
+    cl_context context, cl_device_id device, cl_command_queue queue);
 
 // release solver
 linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer);
@@ -91,11 +85,6 @@ linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
 
 // forward solving
 actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
-    linalgcl_matrix_program_t matrix_program, cl_context context,
-    cl_command_queue queue);
-
-// inverse solving
-actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
     linalgcl_matrix_program_t matrix_program, cl_context context,
     cl_command_queue queue);
 

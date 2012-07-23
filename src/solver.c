@@ -252,10 +252,11 @@ linalgcl_error_t ert_solver_program_release(ert_solver_program_t* programPointer
 linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t measurment_count,
     linalgcl_size_t drive_count, linalgcl_matrix_program_t matrix_program,
-    cl_context context, cl_device_id device_id, cl_command_queue queue) {
+    cl_context context, cl_device_id device, cl_command_queue queue) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
-        (matrix_program == NULL) || (context == NULL) || (queue == NULL)) {
+        (matrix_program == NULL) || (context == NULL) || (device == NULL) ||
+        (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -274,19 +275,13 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     }
 
     // init struct
-    solver->program0 = NULL;
-    solver->program1 = NULL;
-    solver->grid = NULL;
-    solver->forward_solver_applied = NULL;
-    solver->forward_solver_lead = NULL;
+    solver->programs = NULL;
+    solver->grids = NULL;
+    solver->forward_solver = NULL;
     solver->electrodes = electrodes;
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
-    solver->jacobian = NULL;
-    solver->gradient = NULL;
-    solver->regularized_jacobian = NULL;
     solver->voltage_calculation = NULL;
-    solver->sigma = NULL;
     solver->applied_phi = NULL;
     solver->lead_phi = NULL;
     solver->applied_f = NULL;
@@ -295,8 +290,12 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     solver->measured_voltage = NULL;
 
     // create program
-    error  = ert_solver_program_create(&solver->program0, context, device_id, "src/solver.cl");
-    error |= ert_solver_program_create(&solver->program1, context, device_id, "src/solver.cl");
+    solver->programs = malloc(sizeof(ert_solver_program_s) * 2);
+
+    error  = ert_solver_program_create(&solver->programs[0], context, device,
+        "src/solver.cl");
+    error |= ert_solver_program_create(&solver->programs[1], context, device,
+        "src/solver.cl");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -306,10 +305,18 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         return error;
     }
 
-    // create grid
-    error  = ert_grid_create(&solver->grid, matrix_program, mesh, context,
-        device_id, queue);
-    error |= ert_grid_init_exitation_matrix(solver->grid, solver->electrodes, context, queue);
+    // create grids
+    solver->grids = malloc(sizeof(ert_grid_s) * 2);
+
+    error  = ert_grid_create(&solver->grids[0], matrix_program, mesh, context,
+        device, queue);
+    error |= ert_grid_create(&solver->grids[1], matrix_program, mesh, context,
+        device, queue);
+
+    error |= ert_grid_init_exitation_matrix(solver->grids[0], solver->electrodes, context,
+        queue);
+    error |= ert_grid_init_exitation_matrix(solver->grids[1], solver->electrodes, context,
+        queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -318,23 +325,14 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
 
         return error;
     }
-
-    // set sigma matrix
-    solver->sigma = solver->grid->sigma;
 
     // create matrices
     error  = linalgcl_matrix_create(&solver->voltage_calculation, context,
-        solver->measurment_count, solver->grid->exitation_matrix->size_x);
+        solver->measurment_count, solver->grids[0]->exitation_matrix->size_x);
     error |= linalgcl_matrix_create(&solver->applied_phi, context,
-        solver->grid->mesh->vertex_count, solver->drive_count);
+        mesh->vertex_count, solver->drive_count);
     error |= linalgcl_matrix_create(&solver->lead_phi, context,
-        solver->grid->mesh->vertex_count, solver->measurment_count);
-    error |= linalgcl_matrix_create(&solver->jacobian, context,
-        solver->lead_phi->size_y * solver->applied_phi->size_y, solver->grid->mesh->element_count);
-    error |= linalgcl_matrix_create(&solver->gradient, context,
-        solver->jacobian->size_y, 1);
-    error |= linalgcl_matrix_create(&solver->regularized_jacobian, context,
-        solver->grid->mesh->element_count, solver->grid->mesh->element_count);
+        mesh->vertex_count, solver->measurment_count);
     error |= linalgcl_matrix_create(&solver->calculated_voltage, context,
         solver->measurment_count, solver->drive_count);
 
@@ -347,9 +345,6 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(solver->jacobian, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(solver->gradient, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(solver->regularized_jacobian, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->voltage_calculation, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->applied_phi, queue, CL_FALSE);
     linalgcl_matrix_copy_to_device(solver->lead_phi, queue, CL_FALSE);
@@ -368,12 +363,14 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     }
 
     // create forward solver
-    error  = ert_forward_solver_create(&solver->forward_solver_applied,
-        solver->grid->system_matrix, solver->grid->mesh->vertex_count,
-        matrix_program, context, device_id, queue);
-    error |= ert_forward_solver_create(&solver->forward_solver_lead,
-        solver->grid->system_matrix, solver->grid->mesh->vertex_count,
-        matrix_program, context, device_id, queue);
+    solver->forward_solver = malloc(sizeof(ert_forward_solver_s) * 2);
+
+    error  = ert_forward_solver_create(&solver->forward_solver[0],
+        solver->grids[0]->system_matrix, mesh->vertex_count,
+        matrix_program, context, device, queue);
+    error |= ert_forward_solver_create(&solver->forward_solver[1],
+        solver->grids[1]->system_matrix, mesh->vertex_count,
+        matrix_program, context, device, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -411,14 +408,15 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     error |= linalgcl_matrix_create(&temp1, context,
         measurment_pattern->size_y, measurment_pattern->size_x);
     error  = linalgcl_matrix_create(&temp2, context,
-        solver->grid->exitation_matrix->size_y, solver->grid->exitation_matrix->size_x);
+        solver->grids[0]->exitation_matrix->size_y,
+        solver->grids[0]->exitation_matrix->size_x);
 
     // transpose measurment pattern
     error |= linalgcl_matrix_transpose(temp1, measurment_pattern,
         matrix_program, queue);
 
     // transpose exitation_matrix
-    error |= linalgcl_matrix_transpose(temp2, solver->grid->exitation_matrix,
+    error |= linalgcl_matrix_transpose(temp2, solver->grids[0]->exitation_matrix,
         matrix_program, queue);
 
     // calc voltage_calculation matrix
@@ -456,15 +454,25 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
     ert_solver_t solver = *solverPointer;
 
     // cleanup
-    ert_solver_program_release(&solver->program0);
-    ert_solver_program_release(&solver->program1);
-    ert_grid_release(&solver->grid);
-    ert_forward_solver_release(&solver->forward_solver_applied);
-    ert_forward_solver_release(&solver->forward_solver_lead);
+    if (solver->programs != NULL) {
+        ert_solver_program_release(&solver->programs[0]);
+        ert_solver_program_release(&solver->programs[1]);
+        free(solver->programs);
+    }
+
+    if (solver->grids != NULL) {
+        ert_grid_release(&solver->grids[0]);
+        ert_grid_release(&solver->grids[1]);
+        free(solver->grids);
+    }
+
+    if (solver->forward_solver != NULL) {
+        ert_forward_solver_release(&solver->forward_solver[0]);
+        ert_forward_solver_release(&solver->forward_solver[1]);
+        free(solver->forward_solver);
+    }
+
     ert_electrodes_release(&solver->electrodes);
-    linalgcl_matrix_release(&solver->jacobian);
-    linalgcl_matrix_release(&solver->gradient);
-    linalgcl_matrix_release(&solver->regularized_jacobian);
     linalgcl_matrix_release(&solver->voltage_calculation);
     linalgcl_matrix_release(&solver->applied_phi);
     linalgcl_matrix_release(&solver->lead_phi);
@@ -606,26 +614,26 @@ linalgcl_error_t ert_solver_calc_excitaion(ert_solver_t solver,
     // create drive pattern
     for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
         // create matrix
-        linalgcl_matrix_create(&solver->applied_f[i], context, solver->grid->mesh->vertex_count, 1);
+        linalgcl_matrix_create(&solver->applied_f[i], context, solver->grids[0]->mesh->vertex_count, 1);
 
         // get current pattern
-        ert_solver_copy_from_column(solver->program0, drive_pattern, current, i, queue);
+        ert_solver_copy_from_column(solver->programs[0], drive_pattern, current, i, queue);
 
         // calc f
-        linalgcl_matrix_multiply(solver->applied_f[i], solver->grid->exitation_matrix,
+        linalgcl_matrix_multiply(solver->applied_f[i], solver->grids[0]->exitation_matrix,
             current, matrix_program, queue);
     }
 
     // create measurment pattern
     for (linalgcl_size_t i = 0; i < solver->measurment_count; i++) {
         // create matrix
-        linalgcl_matrix_create(&solver->lead_f[i], context, solver->grid->mesh->vertex_count, 1);
+        linalgcl_matrix_create(&solver->lead_f[i], context, solver->grids[0]->mesh->vertex_count, 1);
 
         // get current pattern
-        ert_solver_copy_from_column(solver->program0, measurment_pattern, current, i, queue);
+        ert_solver_copy_from_column(solver->programs[0], measurment_pattern, current, i, queue);
 
         // calc f
-        linalgcl_matrix_multiply(solver->lead_f[i], solver->grid->exitation_matrix,
+        linalgcl_matrix_multiply(solver->lead_f[i], solver->grids[0]->exitation_matrix,
             current, matrix_program, queue);
     }
 
@@ -635,7 +643,7 @@ linalgcl_error_t ert_solver_calc_excitaion(ert_solver_t solver,
     return LINALGCL_SUCCESS;
 }
 
-// calc jacobian
+/*// calc jacobian
 linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
     ert_solver_program_t program, cl_command_queue queue) {
     // check input
@@ -731,7 +739,7 @@ linalgcl_error_t ert_solver_calc_gradient(ert_solver_t solver,
     }
 
     return LINALGCL_SUCCESS;
-}
+}*/
 
 // forward solving
 actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
@@ -774,15 +782,15 @@ actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
         // solve drive patterns
         for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
             // copy current applied phi to vector
-            error = ert_solver_copy_from_column(solver->program0, solver->applied_phi,
+            error = ert_solver_copy_from_column(solver->programs[0], solver->applied_phi,
                 phi, i, queue);
 
             // solve for phi
-            error |= ert_forward_solver_solve(solver->forward_solver_applied,
+            error |= ert_forward_solver_solve(solver->forward_solver[0],
                 phi, solver->applied_f[i], 10, matrix_program, queue);
 
             // copy vector to applied phi
-            error |= ert_solver_copy_to_column(solver->program0, solver->applied_phi,
+            error |= ert_solver_copy_to_column(solver->programs[0], solver->applied_phi,
                 phi, i, queue);
 
             // check success
@@ -877,15 +885,15 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
         // solve measurment patterns
         for (linalgcl_size_t i = 0; i < solver->measurment_count; i++) {
             // copy current applied phi to vector
-            error = ert_solver_copy_from_column(solver->program1, solver->lead_phi,
+            error = ert_solver_copy_from_column(solver->programs[1], solver->lead_phi,
                 phi, i, queue);
 
             // solve for phi
-            error |= ert_forward_solver_solve(solver->forward_solver_lead,
+            error |= ert_forward_solver_solve(solver->forward_solver[1],
                 phi, solver->lead_f[i], 10, matrix_program, queue);
 
             // copy vector to applied phi
-            error |= ert_solver_copy_to_column(solver->program1, solver->lead_phi,
+            error |= ert_solver_copy_to_column(solver->programs[1], solver->lead_phi,
                 phi, i, queue);
 
             // check success
@@ -898,7 +906,7 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
         }
 
         // calc jacobian
-        ert_solver_calc_jacobian(solver, solver->program1, queue);
+        // ert_solver_calc_jacobian(solver, solver->program1, queue);
 
         /*// calc gradient
         ert_solver_calc_gradient(solver, solver->program1, queue);
