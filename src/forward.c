@@ -218,13 +218,13 @@ linalgcl_error_t ert_forward_solver_program_release(ert_forward_solver_program_t
 
 // create forward_solver
 linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
-    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t measurment_count,
-    linalgcl_size_t drive_count, linalgcl_matrix_program_t matrix_program,
+    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t count,
+    linalgcl_matrix_t pattern, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_device_id device, cl_command_queue queue) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
-        (matrix_program == NULL) || (context == NULL) || (device == NULL) ||
-        (queue == NULL)) {
+        (pattern == NULL) || (matrix_program == NULL) || (context == NULL) ||
+        (device == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -247,12 +247,10 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     solver->grid = NULL;
     solver->conjugate_solver = NULL;
     solver->electrodes = electrodes;
-    solver->measurment_count = measurment_count;
-    solver->drive_count = drive_count;
-    solver->voltage_calculation = NULL;
+    solver->count = count;
+    solver->pattern = pattern;
     solver->phi = NULL;
     solver->f = NULL;
-    solver->calculated_voltage = NULL;
 
     // create program
     error  = ert_forward_solver_program_create(&solver->program, context, device,
@@ -281,12 +279,8 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->voltage_calculation, context,
-        solver->measurment_count, solver->grid->exitation_matrix->size_x);
-    error |= linalgcl_matrix_create(&solver->phi, context,
-        mesh->vertex_count, solver->drive_count);
-    error |= linalgcl_matrix_create(&solver->calculated_voltage, context,
-        solver->measurment_count, solver->drive_count);
+    error = linalgcl_matrix_create(&solver->phi, context,
+        mesh->vertex_count, solver->count);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -297,12 +291,10 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(solver->voltage_calculation, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(solver->calculated_voltage, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_TRUE);
 
     // create f matrix storage
-    solver->f = malloc(sizeof(linalgcl_matrix_t) * solver->drive_count);
+    solver->f = malloc(sizeof(linalgcl_matrix_t) * solver->count);
 
     // check success
     if (solver->f == NULL) {
@@ -327,52 +319,8 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
         return error;
     }
 
-    // load measurment pattern and drive pattern
-    linalgcl_matrix_t measurment_pattern, drive_pattern;
-    error = linalgcl_matrix_load(&drive_pattern, context, "input/drive_pattern.txt");
-    error = linalgcl_matrix_load(&measurment_pattern, context, "input/measurment_pattern.txt");
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        ert_forward_solver_release(&solver);
-
-        return error;
-    }
-
-    // copy to device
-    linalgcl_matrix_copy_to_device(measurment_pattern, queue, CL_TRUE);
-    linalgcl_matrix_copy_to_device(drive_pattern, queue, CL_TRUE);
-
     // calc excitaion matrices
-    error = ert_forward_solver_calc_excitaion(solver, drive_pattern,
-        matrix_program, context, queue);
-
-    // calc voltage calculation matrix
-    linalgcl_matrix_t temp1, temp2;
-    error |= linalgcl_matrix_create(&temp1, context,
-        measurment_pattern->size_y, measurment_pattern->size_x);
-    error  = linalgcl_matrix_create(&temp2, context,
-        solver->grid->exitation_matrix->size_y,
-        solver->grid->exitation_matrix->size_x);
-
-    // transpose measurment pattern
-    error |= linalgcl_matrix_transpose(temp1, measurment_pattern,
-        matrix_program, queue);
-
-    // transpose exitation_matrix
-    error |= linalgcl_matrix_transpose(temp2, solver->grid->exitation_matrix,
-        matrix_program, queue);
-
-    // calc voltage_calculation matrix
-    error |= linalgcl_matrix_multiply(solver->voltage_calculation, temp1, temp2,
-        matrix_program, queue);
-
-    // cleanup
-    linalgcl_matrix_release(&measurment_pattern);
-    linalgcl_matrix_release(&drive_pattern);
-    linalgcl_matrix_release(&temp1);
-    linalgcl_matrix_release(&temp2);
+    error = ert_forward_solver_calc_excitaion(solver, matrix_program, context, queue);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -403,12 +351,11 @@ linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
     ert_grid_release(&solver->grid);
     ert_conjugate_solver_release(&solver->conjugate_solver);
     ert_electrodes_release(&solver->electrodes);
-    linalgcl_matrix_release(&solver->voltage_calculation);
+    linalgcl_matrix_release(&solver->pattern);
     linalgcl_matrix_release(&solver->phi);
-    linalgcl_matrix_release(&solver->calculated_voltage);
 
     if (solver->f != NULL) {
-        for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
+        for (linalgcl_size_t i = 0; i < solver->count; i++) {
             linalgcl_matrix_release(&solver->f[i]);
         }
         free(solver->f);
@@ -511,11 +458,9 @@ linalgcl_error_t ert_forward_solver_copy_from_column(ert_forward_solver_program_
 
 // calc excitaion
 linalgcl_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
-    linalgcl_matrix_t drive_pattern, linalgcl_matrix_program_t matrix_program,
-    cl_context context, cl_command_queue queue) {
+    linalgcl_matrix_program_t matrix_program, cl_context context, cl_command_queue queue) {
     // check input
-    if ((solver == NULL) || (drive_pattern == NULL) ||
-        (matrix_program == NULL) || (context == NULL) || (queue == NULL)) {
+    if ((solver == NULL) || (matrix_program == NULL) || (context == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
@@ -532,12 +477,12 @@ linalgcl_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
     }
 
     // create drive pattern
-    for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
+    for (linalgcl_size_t i = 0; i < solver->count; i++) {
         // create matrix
         linalgcl_matrix_create(&solver->f[i], context, solver->grid->mesh->vertex_count, 1);
 
         // get current pattern
-        ert_forward_solver_copy_from_column(solver->program, drive_pattern, current, i, queue);
+        ert_forward_solver_copy_from_column(solver->program, solver->pattern, current, i, queue);
 
         // calc f
         linalgcl_matrix_multiply(solver->f[i], solver->grid->exitation_matrix,
@@ -687,7 +632,7 @@ actor_error_t ert_forward_solver_solve(actor_process_t self, ert_forward_solver_
         frames++;
 
         // solve drive patterns
-        for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
+        for (linalgcl_size_t i = 0; i < solver->count; i++) {
             // copy current applied phi to vector
             error = ert_forward_solver_copy_from_column(solver->program, solver->phi,
                 phi, i, queue);
@@ -732,15 +677,6 @@ actor_error_t ert_forward_solver_solve(actor_process_t self, ert_forward_solver_
 
     // cleanup
     linalgcl_matrix_release(&phi);
-
-    // calc voltage
-    error = linalgcl_matrix_multiply(solver->calculated_voltage, solver->voltage_calculation,
-        solver->phi, matrix_program, queue);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
-    }
 
     // get end time
     gettimeofday(&tv, NULL);

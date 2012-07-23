@@ -33,12 +33,10 @@ typedef struct {
     ert_grid_t grid;
     ert_conjugate_solver_t conjugate_solver;
     ert_electrodes_t electrodes;
-    linalgcl_size_t measurment_count;
-    linalgcl_size_t drive_count;
-    linalgcl_matrix_t voltage_calculation;
+    linalgcl_size_t count;
+    linalgcl_matrix_t pattern;
     linalgcl_matrix_t phi;
     linalgcl_matrix_t* f;
-    linalgcl_matrix_t calculated_voltage;
 } ert_forward_solver_s;
 typedef ert_forward_solver_s* ert_forward_solver_t;
 
@@ -51,8 +49,8 @@ linalgcl_error_t ert_forward_solver_program_release(ert_forward_solver_program_t
 
 // create forward_solver
 linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
-    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t measurment_count,
-    linalgcl_size_t drive_count, linalgcl_matrix_program_t matrix_program,
+    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t count,
+    linalgcl_matrix_t pattern, linalgcl_matrix_program_t matrix_program,
     cl_context context, cl_device_id device, cl_command_queue queue);
 
 // release forward_solver

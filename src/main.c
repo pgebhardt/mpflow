@@ -34,7 +34,7 @@
 #include "electrodes.h"
 #include "grid.h"
 #include "conjugate.h"
-#include "solver.h"
+#include "forward.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
@@ -124,13 +124,19 @@ actor_error_t main_process(actor_process_t main) {
         return ACTOR_ERROR;
     }
 
+    // load drive pattern
+    linalgcl_matrix_t drive_pattern;
+    linalgcl_matrix_load(&drive_pattern, context, "input/drive_pattern.txt");
+    linalgcl_matrix_copy_to_device(drive_pattern, queue1, CL_TRUE);
+
     // create solver
-    ert_solver_t solver;
-    error = ert_solver_create(&solver, mesh, electrodes, 9, 18,
+    ert_forward_solver_t solver;
+    error = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
         program0, context, device_id[0], queue1);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
+        printf("Solver erstellen ging nicht!\n");
         return ACTOR_ERROR;
     }
 
@@ -146,7 +152,7 @@ actor_error_t main_process(actor_process_t main) {
         // link to main process
         actor_process_link(self, main->nid, main->pid);
 
-        return ert_solver_forward(self, solver, program0, context, queue1);
+        return ert_forward_solver_solve(self, solver, program0, context, queue1);
     });
     printf("Forward solving process started!\n");
 
@@ -163,15 +169,15 @@ actor_error_t main_process(actor_process_t main) {
     actor_message_release(&message);
     printf("Forward solving process stopped!\n");
 
-    /// create buffer
-    /*linalgcl_matrix_t phi;
-    linalgcl_matrix_create(&phi, context, solver->applied_phi->size_x, 1);
+    // create buffer
+    linalgcl_matrix_t phi;
+    linalgcl_matrix_create(&phi, context, solver->phi->size_x, 1);
 
     // calc images
     char buffer[1024];
-    for (linalgcl_size_t i = 0; i < solver->drive_count; i++) {
+    for (linalgcl_size_t i = 0; i < solver->count; i++) {
         // copy current phi to vector
-        ert_solver_copy_from_column(solver->programs[0], solver->applied_phi, phi,
+        ert_forward_solver_copy_from_column(solver->program, solver->phi, phi,
             i, queue0);
 
         // calc image
@@ -184,15 +190,9 @@ actor_error_t main_process(actor_process_t main) {
     }
     linalgcl_matrix_release(&phi);
 
-    // save some data
-    linalgcl_matrix_copy_to_host(solver->calculated_voltage, queue0, CL_TRUE);
-    linalgcl_matrix_save("output/voltage.txt", solver->calculated_voltage);*/
-
     // cleanup
-    ert_solver_release(&solver);
+    ert_forward_solver_release(&solver);
     ert_image_release(&image);
-    linalgcl_matrix_program_release(&program0);
-    linalgcl_matrix_program_release(&program1);
     clReleaseCommandQueue(queue0);
     clReleaseCommandQueue(queue1);
     clReleaseContext(context);
