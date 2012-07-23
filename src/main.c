@@ -27,7 +27,6 @@
 #endif
 
 #include <linalgcl/linalgcl.h>
-#include <actor/actor.h>
 #include "mesh.h"
 #include "basis.h"
 #include "image.h"
@@ -36,8 +35,7 @@
 #include "conjugate.h"
 #include "forward.h"
 
-// main process
-actor_error_t main_process(actor_process_t main) {
+int main(int argc, char* argv[]) {
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
     cl_int cl_error = CL_SUCCESS;
@@ -52,7 +50,7 @@ actor_error_t main_process(actor_process_t main) {
 
     // check success
     if (cl_error != CL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // Create a compute context 
@@ -60,7 +58,7 @@ actor_error_t main_process(actor_process_t main) {
 
     // check success
     if (cl_error != CL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // Create a command commands
@@ -68,7 +66,7 @@ actor_error_t main_process(actor_process_t main) {
     cl_command_queue queue1 = clCreateCommandQueue(context, device_id[1], 0, &cl_error);
 
     if (cl_error != CL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // create matrix program
@@ -80,7 +78,7 @@ actor_error_t main_process(actor_process_t main) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // create mesh
@@ -89,7 +87,7 @@ actor_error_t main_process(actor_process_t main) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // copy matrices to device
@@ -102,7 +100,7 @@ actor_error_t main_process(actor_process_t main) {
 
     // check success
     if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // load drive pattern
@@ -118,7 +116,7 @@ actor_error_t main_process(actor_process_t main) {
     // check success
     if (error != LINALGCL_SUCCESS) {
         printf("Solver erstellen ging nicht!\n");
-        return ACTOR_ERROR;
+        return EXIT_FAILURE;
     }
 
     // Create image
@@ -146,7 +144,7 @@ actor_error_t main_process(actor_process_t main) {
 
     printf("Frames per second: %f\n", 100.0 / (end - start));
 
-    /*// create buffer
+    // create buffer
     linalgcl_matrix_t phi;
     linalgcl_matrix_create(&phi, context, solver->phi->size_x, 1);
 
@@ -165,7 +163,7 @@ actor_error_t main_process(actor_process_t main) {
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
     }
-    linalgcl_matrix_release(&phi);*/
+    linalgcl_matrix_release(&phi);
 
     // cleanup
     ert_forward_solver_release(&solver);
@@ -173,35 +171,6 @@ actor_error_t main_process(actor_process_t main) {
     clReleaseCommandQueue(queue0);
     clReleaseCommandQueue(queue1);
     clReleaseContext(context);
-
-    return ACTOR_SUCCESS;
-}
-
-int main(int argc, char* argv[]) {
-    // create node
-    actor_node_t node = NULL;
-    if (actor_node_create(&node, 0, 10) != ACTOR_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // start main process
-    actor_spawn(node, NULL, ^actor_error_t(actor_process_t self) {
-            // call main process
-            actor_error_t error = main_process(self);
-
-            // print result
-            printf("main process died with result: %s!\n", actor_error_string(error));
-
-            return error;
-        });
-
-    // wait for processes to complete
-    while (actor_node_wait_for_processes(node, 10.0f) == ACTOR_ERROR_TIMEOUT) {
-
-    }
-
-    // release node
-    actor_node_release(&node);
 
     return EXIT_SUCCESS;
 };

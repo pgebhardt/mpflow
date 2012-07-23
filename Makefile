@@ -25,7 +25,7 @@ CFLAGS = -fblocks
 
 # linux libraries
 ifeq ($(UNAME), Linux)
-LDFLAGS = -L/usr/local/lib -lactor -lOpenCL -llinalgcl -lm -ldispatch -lBlocksRuntime
+LDFLAGS = -L/usr/local/lib -lOpenCL -llinalgcl -lm
 endif
 
 # osx libraries
