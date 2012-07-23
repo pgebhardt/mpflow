@@ -36,6 +36,7 @@ typedef struct {
     linalgcl_size_t count;
     linalgcl_matrix_t pattern;
     linalgcl_matrix_t phi;
+    linalgcl_matrix_t temp;
     linalgcl_matrix_t* f;
 } ert_forward_solver_s;
 typedef ert_forward_solver_s* ert_forward_solver_t;
@@ -71,8 +72,7 @@ linalgcl_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t _solver,
     linalgcl_matrix_program_t matrix_program, cl_context context, cl_command_queue queue);
 
 // forward solving
-actor_error_t ert_forward_solver_solve(actor_process_t self, ert_forward_solver_t solver,
-    linalgcl_matrix_program_t matrix_program, cl_context context,
-    cl_command_queue queue);
+linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue);
 
 #endif

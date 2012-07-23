@@ -250,6 +250,7 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     solver->count = count;
     solver->pattern = pattern;
     solver->phi = NULL;
+    solver->temp = NULL;
     solver->f = NULL;
 
     // create program
@@ -279,8 +280,10 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // create matrices
-    error = linalgcl_matrix_create(&solver->phi, context,
+    error  = linalgcl_matrix_create(&solver->phi, context,
         mesh->vertex_count, solver->count);
+    error |= linalgcl_matrix_create(&solver->temp, context,
+        mesh->vertex_count, 1);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -291,7 +294,8 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_TRUE);
+    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_FALSE);
+    linalgcl_matrix_copy_to_device(solver->temp, queue, CL_TRUE);
 
     // create f matrix storage
     solver->f = malloc(sizeof(linalgcl_matrix_t) * solver->count);
@@ -353,6 +357,7 @@ linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
     ert_electrodes_release(&solver->electrodes);
     linalgcl_matrix_release(&solver->pattern);
     linalgcl_matrix_release(&solver->phi);
+    linalgcl_matrix_release(&solver->temp);
 
     if (solver->f != NULL) {
         for (linalgcl_size_t i = 0; i < solver->count; i++) {
@@ -495,195 +500,36 @@ linalgcl_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
     return LINALGCL_SUCCESS;
 }
 
-/*// calc jacobian
-linalgcl_error_t ert_solver_calc_jacobian(ert_solver_t solver,
-    ert_solver_program_t program, cl_command_queue queue) {
-    // check input
-    if ((solver == NULL) || (program == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-
-    // set kernel arguments
-    cl_error  = clSetKernelArg(program->kernel_calc_jacobian,
-        0, sizeof(cl_mem), &solver->jacobian->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        1, sizeof(cl_mem), &solver->applied_phi->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        2, sizeof(cl_mem), &solver->lead_phi->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        3, sizeof(cl_mem), &solver->grid->gradient_matrix_sparse->values->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        4, sizeof(cl_mem), &solver->grid->gradient_matrix_sparse->column_ids->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        5, sizeof(cl_mem), &solver->grid->area->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        6, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        7, sizeof(linalgcl_size_t), &solver->lead_phi->size_y);
-    cl_error |= clSetKernelArg(program->kernel_calc_jacobian,
-        8, sizeof(linalgcl_size_t), &solver->applied_phi->size_y);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    // execute kernel_update_system_matrix
-    size_t global[2] = { solver->jacobian->size_x, solver->jacobian->size_y };
-    size_t local[2] = { LINALGCL_BLOCK_SIZE, LINALGCL_BLOCK_SIZE };
-
-    cl_error = clEnqueueNDRangeKernel(queue, program->kernel_calc_jacobian,
-        2, NULL, global, local, 0, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    return LINALGCL_SUCCESS;
-}
-
-// calc gradient
-linalgcl_error_t ert_solver_calc_gradient(ert_solver_t solver,
-    ert_solver_program_t program, cl_command_queue queue) {
-    // check input
-    if ((solver == NULL) || (program == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-
-    // set kernel arguments
-    cl_error  = clSetKernelArg(program->kernel_calc_gradient,
-        0, sizeof(cl_mem), &solver->gradient->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        1, sizeof(cl_mem), &solver->jacobian->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        2, sizeof(cl_mem), &solver->measured_voltage->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        3, sizeof(cl_mem), &solver->calculated_voltage->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        4, sizeof(cl_mem), &solver->sigma->device_data);
-    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        5, sizeof(linalgcl_size_t), &solver->jacobian->size_x);
-    cl_error |= clSetKernelArg(program->kernel_calc_gradient,
-        6, sizeof(linalgcl_size_t), &solver->jacobian->size_y);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    // execute kernel_update_system_matrix
-    size_t global = solver->jacobian->size_y;
-    size_t local = LINALGCL_BLOCK_SIZE;
-
-    cl_error = clEnqueueNDRangeKernel(queue, program->kernel_calc_gradient,
-        1, NULL, &global, &local, 0, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    return LINALGCL_SUCCESS;
-}*/
-
 // forward solving
-actor_error_t ert_forward_solver_solve(actor_process_t self, ert_forward_solver_t solver,
-    linalgcl_matrix_program_t matrix_program, cl_context context,
-    cl_command_queue queue) {
+linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
     // check input
-    if ((solver == NULL) || (matrix_program == NULL) || (context == NULL) ||
-        (queue == NULL)) {
+    if ((solver == NULL) || (matrix_program == NULL) || (queue == NULL)) {
         return LINALGCL_ERROR;
     }
 
     // error
     linalgcl_error_t error = LINALGCL_SUCCESS;
 
-    // message
-    actor_message_t message = NULL;
+    // solve pattern
+    for (linalgcl_size_t i = 0; i < solver->count; i++) {
+        // copy current applied phi to vector
+        error = ert_forward_solver_copy_from_column(solver->program, solver->phi,
+            solver->temp, i, queue);
 
-    // frame counter
-    linalgcl_size_t frames = 0;;
+        // solve for phi
+        error |= ert_conjugate_solver_solve(solver->conjugate_solver,
+            solver->temp, solver->f[i], 10, matrix_program, queue);
 
-    // get start time
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+        // copy vector to applied phi
+        error |= ert_forward_solver_copy_to_column(solver->program, solver->phi,
+            solver->temp, i, queue);
 
-    // create phi buffer
-    linalgcl_matrix_t phi = NULL;
-    error = linalgcl_matrix_create(&phi, context, solver->phi->size_x, 1);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return ACTOR_ERROR;
+        // check success
+        if (error != LINALGCL_SUCCESS) {
+            return error;
+        }
     }
 
-    // solve forever
-    while (1) {
-        // increment frame counter
-        frames++;
-
-        // solve drive patterns
-        for (linalgcl_size_t i = 0; i < solver->count; i++) {
-            // copy current applied phi to vector
-            error = ert_forward_solver_copy_from_column(solver->program, solver->phi,
-                phi, i, queue);
-
-            // solve for phi
-            error |= ert_conjugate_solver_solve(solver->conjugate_solver,
-                phi, solver->f[i], 10, matrix_program, queue);
-
-            // copy vector to applied phi
-            error |= ert_forward_solver_copy_to_column(solver->program, solver->phi,
-                phi, i, queue);
-
-            // check success
-            if (error != LINALGCL_SUCCESS) {
-                // cleanup
-                linalgcl_matrix_release(&phi);
-
-                return ACTOR_ERROR;
-            }
-        }
-
-        if (self == NULL) {
-            break;
-        }
-
-        // receive stop message
-        if (actor_receive(self, &message, 0.0) == ACTOR_ERROR_TIMEOUT) {
-            continue;
-        }
-
-        // check for end message
-        if (message->type == ACTOR_TYPE_ERROR_MESSAGE) {
-            // cleanup
-            actor_message_release(&message);
-
-            break;
-        }
-
-        // cleanup
-        actor_message_release(&message);
-    }
-
-    // cleanup
-    linalgcl_matrix_release(&phi);
-
-    // get end time
-    gettimeofday(&tv, NULL);
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    // print frames per second
-    printf("Forward: frames per second: %f\n", (linalgcl_matrix_data_t)frames / (end - start));
-
-    return ACTOR_SUCCESS;
+    return LINALGCL_SUCCESS;
 }

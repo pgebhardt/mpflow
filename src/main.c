@@ -36,25 +36,6 @@
 #include "conjugate.h"
 #include "forward.h"
 
-static void print_matrix(linalgcl_matrix_t matrix) {
-    if (matrix == NULL) {
-        return;
-    }
-
-    // value memory
-    linalgcl_matrix_data_t value = 0.0;
-
-    for (linalgcl_size_t i = 0; i < matrix->size_x; i++) {
-        for (linalgcl_size_t j = 0; j < matrix->size_y; j++) {
-            // get value
-            linalgcl_matrix_get_element(matrix, &value, i, j);
-
-            printf("%f, ", value);
-        }
-        printf("\n");
-    }
-}
-
 // main process
 actor_error_t main_process(actor_process_t main) {
     // error
@@ -112,12 +93,12 @@ actor_error_t main_process(actor_process_t main) {
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(mesh->vertices, queue1, CL_TRUE);
-    linalgcl_matrix_copy_to_device(mesh->elements, queue1, CL_TRUE);
+    linalgcl_matrix_copy_to_device(mesh->vertices, queue0, CL_FALSE);
+    linalgcl_matrix_copy_to_device(mesh->elements, queue0, CL_TRUE);
 
     // create electrodes
     ert_electrodes_t electrodes;
-    error = ert_electrodes_create(&electrodes, 36, 0.005, mesh);
+    error  = ert_electrodes_create(&electrodes, 36, 0.005, mesh);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -127,12 +108,12 @@ actor_error_t main_process(actor_process_t main) {
     // load drive pattern
     linalgcl_matrix_t drive_pattern;
     linalgcl_matrix_load(&drive_pattern, context, "input/drive_pattern.txt");
-    linalgcl_matrix_copy_to_device(drive_pattern, queue1, CL_TRUE);
+    linalgcl_matrix_copy_to_device(drive_pattern, queue0, CL_TRUE);
 
     // create solver
     ert_forward_solver_t solver;
-    error = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
-        program0, context, device_id[0], queue1);
+    error  = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
+        program0, context, device_id[0], queue0);
 
     // check success
     if (error != LINALGCL_SUCCESS) {
@@ -146,30 +127,26 @@ actor_error_t main_process(actor_process_t main) {
     linalgcl_matrix_copy_to_device(image->elements, queue1, CL_FALSE);
     linalgcl_matrix_copy_to_device(image->image, queue1, CL_TRUE);
 
-    // start forward solving process
-    actor_process_id_t forward = ACTOR_INVALID_ID;
-    actor_spawn(main->node, &forward, ^actor_error_t(actor_process_t self) {
-        // link to main process
-        actor_process_link(self, main->nid, main->pid);
+    // get start time
+    struct timeval tv;
+    clFinish(queue0);
+    clFinish(queue1);
+    gettimeofday(&tv, NULL);
+    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-        return ert_forward_solver_solve(self, solver, program0, context, queue1);
-    });
-    printf("Forward solving process started!\n");
+    for (linalgcl_size_t i = 0; i < 100; i++) {
+        ert_forward_solver_solve(solver, program0, queue0);
+    }
 
-    actor_process_sleep(main, 5.0);
+    // get end time
+    clFinish(queue0);
+    clFinish(queue1);
+    gettimeofday(&tv, NULL);
+    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // stop forward process
-    actor_send(main, main->nid, forward, ACTOR_TYPE_ERROR_MESSAGE,
-        &forward, sizeof(actor_process_id_t));
-    printf("Send stop signal to forward solving process!\n");
+    printf("Frames per second: %f\n", 100.0 / (end - start));
 
-    // wait for forward process to stop
-    actor_message_t message = NULL;
-    actor_receive(main, &message, 2.0);
-    actor_message_release(&message);
-    printf("Forward solving process stopped!\n");
-
-    // create buffer
+    /*// create buffer
     linalgcl_matrix_t phi;
     linalgcl_matrix_create(&phi, context, solver->phi->size_x, 1);
 
@@ -188,7 +165,7 @@ actor_error_t main_process(actor_process_t main) {
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
     }
-    linalgcl_matrix_release(&phi);
+    linalgcl_matrix_release(&phi);*/
 
     // cleanup
     ert_forward_solver_release(&solver);

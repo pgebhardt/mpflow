@@ -486,9 +486,8 @@ linalgcl_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
             solver->projection, solver->rsnew, solver->rsold, queue);
 
         // update rsold
-        linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_TRUE);
+        linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_FALSE);
     }
 
     return LINALGCL_SUCCESS;
-
 }
