@@ -33,7 +33,7 @@
 #include "mesh.h"
 #include "electrodes.h"
 #include "grid.h"
-#include "forward.h"
+#include "conjugate.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -277,7 +277,7 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
     // init struct
     solver->programs = NULL;
     solver->grids = NULL;
-    solver->forward_solver = NULL;
+    solver->conjugate_solver = NULL;
     solver->electrodes = electrodes;
     solver->measurment_count = measurment_count;
     solver->drive_count = drive_count;
@@ -362,13 +362,13 @@ linalgcl_error_t ert_solver_create(ert_solver_t* solverPointer,
         return LINALGCL_ERROR;
     }
 
-    // create forward solver
-    solver->forward_solver = malloc(sizeof(ert_forward_solver_s) * 2);
+    // create conjugate solver
+    solver->conjugate_solver = malloc(sizeof(ert_conjugate_solver_s) * 2);
 
-    error  = ert_forward_solver_create(&solver->forward_solver[0],
+    error  = ert_conjugate_solver_create(&solver->conjugate_solver[0],
         solver->grids[0]->system_matrix, mesh->vertex_count,
         matrix_program, context, device, queue);
-    error |= ert_forward_solver_create(&solver->forward_solver[1],
+    error |= ert_conjugate_solver_create(&solver->conjugate_solver[1],
         solver->grids[1]->system_matrix, mesh->vertex_count,
         matrix_program, context, device, queue);
 
@@ -466,10 +466,10 @@ linalgcl_error_t ert_solver_release(ert_solver_t* solverPointer) {
         free(solver->grids);
     }
 
-    if (solver->forward_solver != NULL) {
-        ert_forward_solver_release(&solver->forward_solver[0]);
-        ert_forward_solver_release(&solver->forward_solver[1]);
-        free(solver->forward_solver);
+    if (solver->conjugate_solver != NULL) {
+        ert_conjugate_solver_release(&solver->conjugate_solver[0]);
+        ert_conjugate_solver_release(&solver->conjugate_solver[1]);
+        free(solver->conjugate_solver);
     }
 
     ert_electrodes_release(&solver->electrodes);
@@ -786,7 +786,7 @@ actor_error_t ert_solver_forward(actor_process_t self, ert_solver_t solver,
                 phi, i, queue);
 
             // solve for phi
-            error |= ert_forward_solver_solve(solver->forward_solver[0],
+            error |= ert_conjugate_solver_solve(solver->conjugate_solver[0],
                 phi, solver->applied_f[i], 10, matrix_program, queue);
 
             // copy vector to applied phi
@@ -889,7 +889,7 @@ actor_error_t ert_solver_inverse(actor_process_t self, ert_solver_t solver,
                 phi, i, queue);
 
             // solve for phi
-            error |= ert_forward_solver_solve(solver->forward_solver[1],
+            error |= ert_conjugate_solver_solve(solver->conjugate_solver[1],
                 phi, solver->lead_f[i], 10, matrix_program, queue);
 
             // copy vector to applied phi

@@ -33,7 +33,7 @@ typedef ert_solver_program_s* ert_solver_program_t;
 typedef struct {
     ert_solver_program_t* programs;
     ert_grid_t* grids;
-    ert_forward_solver_t* forward_solver;
+    ert_conjugate_solver_t* conjugate_solver;
     ert_electrodes_t electrodes;
     linalgcl_size_t measurment_count;
     linalgcl_size_t drive_count;

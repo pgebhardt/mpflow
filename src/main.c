@@ -33,7 +33,7 @@
 #include "image.h"
 #include "electrodes.h"
 #include "grid.h"
-#include "forward.h"
+#include "conjugate.h"
 #include "solver.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
@@ -163,8 +163,8 @@ actor_error_t main_process(actor_process_t main) {
     actor_message_release(&message);
     printf("Forward solving process stopped!\n");
 
-    /*// create buffer
-    linalgcl_matrix_t phi;
+    /// create buffer
+    /*linalgcl_matrix_t phi;
     linalgcl_matrix_create(&phi, context, solver->applied_phi->size_x, 1);
 
     // calc images
@@ -191,6 +191,8 @@ actor_error_t main_process(actor_process_t main) {
     // cleanup
     ert_solver_release(&solver);
     ert_image_release(&image);
+    linalgcl_matrix_program_release(&program0);
+    linalgcl_matrix_program_release(&program1);
     clReleaseCommandQueue(queue0);
     clReleaseCommandQueue(queue1);
     clReleaseContext(context);

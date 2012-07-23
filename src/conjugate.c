@@ -29,7 +29,7 @@
 #include <linalgcl/linalgcl.h>
 #include "basis.h"
 #include "mesh.h"
-#include "forward.h"
+#include "conjugate.h"
 
 static void print_matrix(linalgcl_matrix_t matrix) {
     if (matrix == NULL) {
@@ -50,8 +50,8 @@ static void print_matrix(linalgcl_matrix_t matrix) {
     }
 }
 
-// create new forward program
-linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t* programPointer,
+// create new conjugate program
+linalgcl_error_t ert_conjugate_solver_program_create(ert_conjugate_solver_program_t* programPointer,
     cl_context context, cl_device_id device_id, const char* path) {
     // check input
     if ((programPointer == NULL) || (context == NULL) || (path == NULL)) {
@@ -66,7 +66,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
     *programPointer = NULL;
 
     // create program struct
-    ert_forward_solver_program_t program = malloc(sizeof(ert_forward_solver_program_s));
+    ert_conjugate_solver_program_t program = malloc(sizeof(ert_conjugate_solver_program_s));
 
     // check success
     if (program == NULL) {
@@ -85,7 +85,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
     // check success
     if (file == NULL) {
         // cleanup
-        ert_forward_solver_program_release(&program);
+        ert_conjugate_solver_program_release(&program);
 
         return LINALGCL_ERROR;
     }
@@ -103,7 +103,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
     if (buffer == NULL) {
         // cleanup
         fclose(file);
-        ert_forward_solver_program_release(&program);
+        ert_conjugate_solver_program_release(&program);
 
         return LINALGCL_ERROR;
     }
@@ -113,7 +113,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
         // cleanup
         free(buffer);
         fclose(file);
-        ert_forward_solver_program_release(&program);
+        ert_conjugate_solver_program_release(&program);
 
         return LINALGCL_ERROR;
     }
@@ -129,7 +129,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
     // check success
     if (cl_error != CL_SUCCESS) {
         // cleanup
-        ert_forward_solver_program_release(&program);
+        ert_conjugate_solver_program_release(&program);
 
         return LINALGCL_ERROR;
     }
@@ -146,7 +146,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
         printf("%s\n", buffer);
 
         // cleanup
-        ert_forward_solver_program_release(&program);
+        ert_conjugate_solver_program_release(&program);
 
         return LINALGCL_ERROR;
     }
@@ -158,7 +158,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
     // check success
     if (cl_error != CL_SUCCESS) {
         // cleanup
-        ert_forward_solver_program_release(&program);
+        ert_conjugate_solver_program_release(&program);
 
         return LINALGCL_ERROR;
     }
@@ -169,7 +169,7 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
     // check success
     if (cl_error != CL_SUCCESS) {
         // cleanup
-        ert_forward_solver_program_release(&program);
+        ert_conjugate_solver_program_release(&program);
 
         return LINALGCL_ERROR;
     }
@@ -180,15 +180,15 @@ linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t*
     return LINALGCL_SUCCESS;
 }
 
-// release forward program
-linalgcl_error_t ert_forward_solver_program_release(ert_forward_solver_program_t* programPointer) {
+// release conjugate program
+linalgcl_error_t ert_conjugate_solver_program_release(ert_conjugate_solver_program_t* programPointer) {
     // check input
     if ((programPointer == NULL) || (*programPointer == NULL)) {
         return LINALGCL_ERROR;
     }
 
     // get program
-    ert_forward_solver_program_t program = *programPointer;
+    ert_conjugate_solver_program_t program = *programPointer;
 
     if (program->program != NULL) {
         clReleaseProgram(program->program);
@@ -211,8 +211,8 @@ linalgcl_error_t ert_forward_solver_program_release(ert_forward_solver_program_t
     return LINALGCL_SUCCESS;
 }
 
-// create forward solver
-linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
+// create conjugate solver
+linalgcl_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPointer,
     linalgcl_sparse_matrix_t system_matrix, linalgcl_size_t size,
     linalgcl_matrix_program_t matrix_program, cl_context context,
     cl_device_id device_id, cl_command_queue queue) {
@@ -229,7 +229,7 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     *solverPointer = NULL;
 
     // create solver struct
-    ert_forward_solver_t solver = malloc(sizeof(ert_forward_solver_s));
+    ert_conjugate_solver_t solver = malloc(sizeof(ert_conjugate_solver_s));
 
     // check success
     if (solver == NULL) {
@@ -266,7 +266,7 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     // check success
     if (error != LINALGCL_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        ert_conjugate_solver_release(&solver);
 
         return error;
     }
@@ -289,19 +289,19 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     // check success
     if (error != LINALGCL_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        ert_conjugate_solver_release(&solver);
 
         return error;
     }
 
     // create program
-    error = ert_forward_solver_program_create(&solver->program, context,
-        device_id, "src/forward.cl");
+    error = ert_conjugate_solver_program_create(&solver->program, context,
+        device_id, "src/conjugate.cl");
 
     // check success
     if (error != LINALGCL_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        ert_conjugate_solver_release(&solver);
 
         return error;
     }
@@ -313,14 +313,14 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
 }
 
 // release solver
-linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer) {
+linalgcl_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCL_ERROR;
     }
 
     // get solver
-    ert_forward_solver_t solver = *solverPointer;
+    ert_conjugate_solver_t solver = *solverPointer;
 
     // release matrices
     linalgcl_matrix_release(&solver->residuum);
@@ -333,7 +333,7 @@ linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
     linalgcl_matrix_release(&solver->temp_number);
 
     // release program
-    ert_forward_solver_program_release(&solver->program);
+    ert_conjugate_solver_program_release(&solver->program);
 
     // free struct
     free(solver);
@@ -345,7 +345,7 @@ linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
 }
 
 // add scalar
-linalgcl_error_t ert_forward_add_scalar(ert_forward_solver_t solver,
+linalgcl_error_t ert_conjugate_add_scalar(ert_conjugate_solver_t solver,
     linalgcl_matrix_t vector, linalgcl_matrix_t scalar,
     cl_command_queue queue) {
     // check input
@@ -386,7 +386,7 @@ linalgcl_error_t ert_forward_add_scalar(ert_forward_solver_t solver,
 }
 
 // update vector
-linalgcl_error_t ert_forward_update_vector(ert_forward_solver_t solver,
+linalgcl_error_t ert_conjugate_update_vector(ert_conjugate_solver_t solver,
     linalgcl_matrix_t result, linalgcl_matrix_t x1, linalgcl_matrix_data_t sign,
     linalgcl_matrix_t x2, linalgcl_matrix_t r1, linalgcl_matrix_t r2, cl_command_queue queue) {
     // check input
@@ -432,8 +432,8 @@ linalgcl_error_t ert_forward_update_vector(ert_forward_solver_t solver,
     return LINALGCL_SUCCESS;
 }
 
-// solve forward
-linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
+// solve conjugate
+linalgcl_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
     linalgcl_matrix_t x, linalgcl_matrix_t f,
     linalgcl_size_t iterations, linalgcl_matrix_program_t matrix_program,
     cl_command_queue queue) {
@@ -446,7 +446,7 @@ linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
     // calc residuum r = f - A * x
     linalgcl_matrix_vector_dot_product(solver->temp_number, x, solver->ones, matrix_program, queue);
     linalgcl_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x, matrix_program, queue);
-    ert_forward_add_scalar(solver, solver->residuum, solver->temp_number, queue);
+    ert_conjugate_add_scalar(solver, solver->residuum, solver->temp_number, queue);
     linalgcl_matrix_scalar_multiply(solver->residuum, solver->residuum, -1.0, matrix_program, queue);
     linalgcl_matrix_add(solver->residuum, solver->residuum, f, matrix_program, queue);
 
@@ -463,18 +463,18 @@ linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
             matrix_program, queue);
         linalgcl_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
             solver->projection, matrix_program, queue);
-        ert_forward_add_scalar(solver, solver->temp_vector, solver->temp_number, queue);
+        ert_conjugate_add_scalar(solver, solver->temp_vector, solver->temp_number, queue);
 
         // calc p * A * p
         linalgcl_matrix_vector_dot_product(solver->temp_number, solver->projection,
             solver->temp_vector, matrix_program, queue);
 
         // update residuum
-        ert_forward_update_vector(solver, solver->residuum, solver->residuum, -1.0,
+        ert_conjugate_update_vector(solver, solver->residuum, solver->residuum, -1.0,
             solver->temp_vector, solver->rsold, solver->temp_number, queue);
 
         // update x
-        ert_forward_update_vector(solver, x, x, 1.0, solver->projection, solver->rsold,
+        ert_conjugate_update_vector(solver, x, x, 1.0, solver->projection, solver->rsold,
             solver->temp_number, queue);
 
         // calc rsnew
@@ -482,7 +482,7 @@ linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
             solver->residuum, matrix_program, queue);
 
         // update projection
-        ert_forward_update_vector(solver, solver->projection, solver->residuum, 1.0,
+        ert_conjugate_update_vector(solver, solver->projection, solver->residuum, 1.0,
             solver->projection, solver->rsnew, solver->rsold, queue);
 
         // update rsold
