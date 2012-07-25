@@ -16,33 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# get os name
-UNAME = $(shell uname)
-
 # Copmiler and flags
 CC = clang
-CFLAGS = -fblocks
+CFLAGS =
 
-# linux libraries
-ifeq ($(UNAME), Linux)
-LDFLAGS = -L/usr/local/lib -lOpenCL -llinalgcl -lm
-endif
-
-# osx libraries
-ifeq ($(UNAME), Darwin)
-LDFLAGS = -lactor -llinalgcl -lm -framework opencl
-endif
+LDFLAGS = -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lm
 
 # Directories
 SRC = src
 BUILD = build
 
 # Object files
-_OBJ = mesh.o basis.o grid.o image.o conjugate.o electrodes.o forward.o
+_OBJ = mesh.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Dependencies
-_DEPS = mesh.h basis.h grid.h image.h conjugate.h electrodes.h forward.h
+_DEPS = mesh.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file

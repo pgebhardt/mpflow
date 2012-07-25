@@ -19,158 +19,56 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
-#include <linalgcl/linalgcl.h>
+#include <cuda/cuda_runtime.h>
+#include <cuda/cublas_v2.h>
+#include <linalgcu/linalgcu.h>
 #include "mesh.h"
-#include "basis.h"
-#include "image.h"
-#include "electrodes.h"
-#include "grid.h"
-#include "conjugate.h"
-#include "forward.h"
+
+void print_matrix(linalgcu_matrix_t matrix) {
+    if (matrix == NULL) {
+        return;
+    }
+
+    // value memory
+    linalgcu_matrix_data_t value = 0.0;
+
+    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
+        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
+            // get value
+            linalgcu_matrix_get_element(matrix, &value, i, j);
+
+            printf("%f, ", value);
+        }
+        printf("\n");
+    }
+}
 
 int main(int argc, char* argv[]) {
     // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
-    cl_int cl_error = CL_SUCCESS;
+    linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // Get Platform
-    cl_platform_id platform;
-    clGetPlatformIDs(1, &platform, NULL);
-
-    // Connect to a compute device
-    cl_device_id device_id[2];
-    cl_error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, device_id, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // Create a compute context 
-    cl_context context = clCreateContext(0, 2, device_id, NULL, NULL, &cl_error);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // Create a command commands
-    cl_command_queue queue0 = clCreateCommandQueue(context, device_id[0], 0, &cl_error);
-    cl_command_queue queue1 = clCreateCommandQueue(context, device_id[1], 0, &cl_error);
-
-    if (cl_error != CL_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // create matrix program
-    linalgcl_matrix_program_t program0, program1;
-    error  = linalgcl_matrix_create_programm(&program0, context, device_id[0],
-        "/usr/local/include/linalgcl/matrix.cl");
-    error |= linalgcl_matrix_create_programm(&program1, context, device_id[1],
-        "/usr/local/include/linalgcl/matrix.cl");
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return EXIT_FAILURE;
+    // create handle
+    cublasHandle_t handle = NULL;
+    if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
+        return EXIT_SUCCESS;
     }
 
     // create mesh
     ert_mesh_t mesh;
-    error = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0, context);
+    error  = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (error != LINALGCU_SUCCESS) {
         return EXIT_FAILURE;
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(mesh->vertices, queue0, CL_FALSE);
-    linalgcl_matrix_copy_to_device(mesh->elements, queue0, CL_TRUE);
-
-    // create electrodes
-    ert_electrodes_t electrodes;
-    error  = ert_electrodes_create(&electrodes, 36, 0.005, mesh);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // load drive pattern
-    linalgcl_matrix_t drive_pattern;
-    linalgcl_matrix_load(&drive_pattern, context, "input/drive_pattern.txt");
-    linalgcl_matrix_copy_to_device(drive_pattern, queue0, CL_TRUE);
-
-    // create solver
-    ert_forward_solver_t solver;
-    error  = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
-        program0, context, device_id[0], queue0);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        printf("Solver erstellen ging nicht!\n");
-        return EXIT_FAILURE;
-    }
-
-    // Create image
-    ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh, context, device_id[0]);
-    linalgcl_matrix_copy_to_device(image->elements, queue1, CL_FALSE);
-    linalgcl_matrix_copy_to_device(image->image, queue1, CL_TRUE);
-
-    // get start time
-    struct timeval tv;
-    clFinish(queue0);
-    clFinish(queue1);
-    gettimeofday(&tv, NULL);
-    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    for (linalgcl_size_t i = 0; i < 100; i++) {
-        ert_forward_solver_solve(solver, program0, queue0);
-    }
-
-    // get end time
-    clFinish(queue0);
-    clFinish(queue1);
-    gettimeofday(&tv, NULL);
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    printf("Frames per second: %f\n", 100.0 / (end - start));
-
-    // create buffer
-    linalgcl_matrix_t phi;
-    linalgcl_matrix_create(&phi, context, solver->phi->size_x, 1);
-
-    // calc images
-    char buffer[1024];
-    for (linalgcl_size_t i = 0; i < solver->count; i++) {
-        // copy current phi to vector
-        ert_forward_solver_copy_from_column(solver->program, solver->phi, phi,
-            i, queue0);
-
-        // calc image
-        ert_image_calc_phi(image, phi, queue0);
-        clFinish(queue0);
-        linalgcl_matrix_copy_to_host(image->image, queue0, CL_TRUE);
-        linalgcl_matrix_save("output/image.txt", image->image);
-        sprintf(buffer, "python src/script.py %d", i);
-        system(buffer);
-    }
-    linalgcl_matrix_release(&phi);
+    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_FALSE);
+    linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE);
 
     // cleanup
-    ert_forward_solver_release(&solver);
-    ert_image_release(&image);
-    clReleaseCommandQueue(queue0);
-    clReleaseCommandQueue(queue1);
-    clReleaseContext(context);
+    ert_mesh_release(&mesh);
+    cublasDestroy(handle);
 
     return EXIT_SUCCESS;
 };

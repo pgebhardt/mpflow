@@ -21,23 +21,22 @@
 
 // mesh struct
 typedef struct {
-    linalgcl_matrix_data_t radius;
-    linalgcl_matrix_data_t distance;
-    linalgcl_size_t vertex_count;
-    linalgcl_size_t element_count;
-    linalgcl_size_t boundary_count;
-    linalgcl_matrix_t vertices;
-    linalgcl_matrix_t elements;
-    linalgcl_matrix_t boundary;
+    linalgcu_matrix_data_t radius;
+    linalgcu_matrix_data_t distance;
+    linalgcu_size_t vertex_count;
+    linalgcu_size_t element_count;
+    linalgcu_size_t boundary_count;
+    linalgcu_matrix_t vertices;
+    linalgcu_matrix_t elements;
+    linalgcu_matrix_t boundary;
 } ert_mesh_s;
 typedef ert_mesh_s* ert_mesh_t;
 
 // create new mesh
-linalgcl_error_t ert_mesh_create(ert_mesh_t* meshPointer,
-    linalgcl_matrix_data_t radius, linalgcl_matrix_data_t distance,
-    cl_context context);
+linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
+    linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance);
 
 // cleanup mesh
-linalgcl_error_t ert_mesh_release(ert_mesh_t* meshPointer);
+linalgcu_error_t ert_mesh_release(ert_mesh_t* meshPointer);
 
 #endif
