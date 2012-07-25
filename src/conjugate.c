@@ -73,8 +73,8 @@ linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     solver->system_matrix = NULL;
     solver->residuum = NULL;
     solver->projection = NULL;
-    solver->rsold = 0.0f;
-    solver->rsnew = 0.0f;
+    solver->rsold = NULL;
+    solver->rsnew = NULL;
     solver->ones = NULL;
     solver->temp_matrix = NULL;
     solver->temp_vector = NULL;
@@ -85,9 +85,12 @@ linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     // create matrices
     error  = linalgcu_matrix_create(&solver->residuum, solver->size, 1);
     error |= linalgcu_matrix_create(&solver->projection, solver->size, 1);
+    error |= linalgcu_matrix_create(&solver->rsold, solver->size, 1);
+    error |= linalgcu_matrix_create(&solver->rsnew, solver->size, 1);
     error |= linalgcu_matrix_create(&solver->ones, solver->size, 1);
     error |= linalgcu_matrix_create(&solver->temp_matrix, solver->size, solver->size);
     error |= linalgcu_matrix_create(&solver->temp_vector, solver->size, 1);
+    error |= linalgcu_matrix_create(&solver->temp_number, solver->size, 1);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -101,13 +104,7 @@ linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     for (linalgcu_size_t i = 0; i < solver->size; i++) {
         linalgcu_matrix_set_element(solver->ones, 1.0, i, 0);
     }
-
-    // copy data to device
-    error  = linalgcu_matrix_copy_to_device(solver->residuum, LINALGCU_FALSE);
-    error |= linalgcu_matrix_copy_to_device(solver->projection, LINALGCU_FALSE);
-    error |= linalgcu_matrix_copy_to_device(solver->ones, LINALGCU_FALSE);
-    error |= linalgcu_matrix_copy_to_device(solver->temp_matrix, LINALGCU_TRUE);
-    error |= linalgcu_matrix_copy_to_device(solver->temp_vector, LINALGCU_TRUE);
+    error |= linalgcu_matrix_copy_to_device(solver->ones, LINALGCU_TRUE);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -136,9 +133,12 @@ linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPoin
     // release matrices
     linalgcu_matrix_release(&solver->residuum);
     linalgcu_matrix_release(&solver->projection);
+    linalgcu_matrix_release(&solver->rsold);
+    linalgcu_matrix_release(&solver->rsnew);
     linalgcu_matrix_release(&solver->ones);
     linalgcu_matrix_release(&solver->temp_matrix);
     linalgcu_matrix_release(&solver->temp_vector);
+    linalgcu_matrix_release(&solver->temp_number);
 
     // free struct
     free(solver);
@@ -157,16 +157,12 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
     if ((solver == NULL) || (x == NULL) || (f == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
-    // temp
-    linalgcu_matrix_data_t temp_number = 0.0f;
-    linalgcu_matrix_data_t alpha = 0.0f;
-    linalgcu_matrix_data_t beta = 0.0f;
 
     // init matrices
     // calc residuum r = f - A * x
-    linalgcu_matrix_vector_dot_product(&temp_number, x, solver->ones, handle);
+    linalgcu_matrix_vector_dot_product(solver->temp_number, x, solver->ones);
     linalgcu_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x);
-    ert_conjugate_add_scalar(solver->residuum, temp_number);
+    ert_conjugate_add_scalar(solver->residuum, solver->temp_number);
     linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle);
     linalgcu_matrix_add(solver->residuum, f, handle);
 
@@ -174,48 +170,42 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
     linalgcu_matrix_copy(solver->projection, solver->residuum, LINALGCU_TRUE);
 
     // calc rsold
-    linalgcu_matrix_vector_dot_product(&solver->rsold, solver->residuum, solver->residuum,
-        handle);
+    linalgcu_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum);
 
     // iterate
     for (linalgcu_size_t i = 0; i < iterations; i++) {
+        /*if (solver->rsold / solver->size < 1E-8) {
+            break;
+        }*/
+
         // calc A * p
-        linalgcu_matrix_vector_dot_product(&temp_number, solver->projection, solver->ones,
-            handle);
+        linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection, solver->ones);
         linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
             solver->projection);
-        ert_conjugate_add_scalar(solver->temp_vector, temp_number);
+        ert_conjugate_add_scalar(solver->temp_vector, solver->temp_number);
 
         // calc p * A * p
-        linalgcu_matrix_vector_dot_product(&temp_number, solver->projection,
-            solver->temp_vector, handle);
-
-        // calc alpha
-        alpha = solver->rsold / temp_number;
-        printf("alpha: %f\n", alpha);
-
-        // update x
-        cublasSaxpy(handle, x->size_m, &alpha, 
-            solver->projection->device_data, 1, x->device_data, 1);
+        linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection,
+            solver->temp_vector);
 
         // update residuum
-        alpha = -alpha;
-        cublasSaxpy(handle, solver->residuum->size_m, &alpha, 
-            solver->temp_vector->device_data, 1, solver->residuum->device_data, 1);
+        ert_conjugate_udate_vector(solver->residuum, solver->residuum, -1.0f,
+            solver->temp_vector, solver->rsold, solver->temp_number);
+
+        // update x
+        ert_conjugate_udate_vector(x, x, 1.0f, solver->projection, solver->rsold,
+            solver->temp_number);
 
         // calc rsnew
-        linalgcu_matrix_vector_dot_product(&solver->rsnew, solver->residuum,
-            solver->residuum, handle);
-
-        // calc beta
-        beta = solver->rsnew / solver->rsold;
+        linalgcu_matrix_vector_dot_product(solver->rsnew, solver->residuum,
+            solver->residuum);
 
         // update projection
-        linalgcu_matrix_scalar_multiply(solver->projection, beta, handle);
-        linalgcu_matrix_add(solver->projection, solver->residuum, handle);
+        ert_conjugate_udate_vector(solver->projection, solver->residuum, 1.0f,
+            solver->projection, solver->rsnew, solver->rsold);
 
         // update rsold
-        linalgcu_matrix_data_t temp = solver->rsold;
+        linalgcu_matrix_t temp = solver->rsold;
         solver->rsold = solver->rsnew;
         solver->rsnew = temp;
     }

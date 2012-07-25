@@ -93,7 +93,7 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
         // set matrix elements
         for (linalgcu_size_t i = 0; i < 3; i++) {
             // ids
-            linalgcu_matrix_set_element(image->elements, id[i], k, i);
+            linalgcu_matrix_set_element(image->elements, id[i], i, k);
 
             // coordinates
             linalgcu_matrix_set_element(image->elements, x[i], 3 + 2 * i, k);

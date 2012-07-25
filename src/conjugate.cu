@@ -29,26 +29,54 @@
 
 // add scalar kernel
 __global__ void add_scalar_kernel(linalgcu_matrix_data_t* vector,
-    linalgcu_matrix_data_t scalar) {
+    linalgcu_matrix_data_t* scalar) {
     // get id
     linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
     // add data
-    vector[i] += scalar;
+    vector[i] += scalar[0];
 }
 
 // add scalar
 extern "C"
 linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector,
-    linalgcu_matrix_data_t scalar) {
+    linalgcu_matrix_t scalar) {
     // check input
-    if (vector == NULL) {
+    if ((vector == NULL) || (scalar == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // execute kernel
     add_scalar_kernel<<<vector->size_m / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE>>>(
-        vector->device_data, scalar);
+        vector->device_data, scalar->device_data);
+
+    return LINALGCU_SUCCESS;
+}
+
+// update vector
+__global__ void update_vector_kernel(linalgcu_matrix_data_t* result,
+    linalgcu_matrix_data_t* x1, linalgcu_matrix_data_t sign,
+    linalgcu_matrix_data_t* x2, linalgcu_matrix_data_t* r1, linalgcu_matrix_data_t* r2) {
+    // get id
+    linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // calc value
+    result[i] = x1[i] + sign * x2[i] * r1[0] / r2[0];
+}
+
+// update vector
+extern "C"
+linalgcu_error_t ert_conjugate_udate_vector(linalgcu_matrix_t result,
+    linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
+    linalgcu_matrix_t r1, linalgcu_matrix_t r2) {
+    // check input
+    if ((result == NULL) || (x1 == NULL) || (x2 == NULL) || (r1 == NULL) || (r2 == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // execute kernel
+    update_vector_kernel<<<result->size_m / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE>>>(
+        result->device_data, x1->device_data, sign, x2->device_data, r1->device_data, r2->device_data);
 
     return LINALGCU_SUCCESS;
 }

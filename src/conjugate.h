@@ -25,11 +25,12 @@ typedef struct {
     linalgcu_sparse_matrix_t system_matrix;
     linalgcu_matrix_t residuum;
     linalgcu_matrix_t projection;
-    linalgcu_matrix_data_t rsold;
-    linalgcu_matrix_data_t rsnew;
+    linalgcu_matrix_t rsold;
+    linalgcu_matrix_t rsnew;
     linalgcu_matrix_t ones;
     linalgcu_matrix_t temp_matrix;
     linalgcu_matrix_t temp_vector;
+    linalgcu_matrix_t temp_number;
 } ert_conjugate_solver_s;
 typedef ert_conjugate_solver_s* ert_conjugate_solver_t;
 
@@ -43,7 +44,13 @@ linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPoin
 
 // add scalar
 LINALGCU_EXTERN_C
-linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_data_t scalar);
+linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_t scalar);
+
+// update vector
+LINALGCU_EXTERN_C
+linalgcu_error_t ert_conjugate_udate_vector(linalgcu_matrix_t result,
+    linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
+    linalgcu_matrix_t r1, linalgcu_matrix_t r2);
 
 // solve conjugate
 linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,

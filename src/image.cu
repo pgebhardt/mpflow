@@ -123,7 +123,7 @@ linalgcu_error_t ert_image_calc_phi(ert_image_t image,
     }
 
     // execute kernel
-    calc_image_phi_kernel<<<image->elements->size_m / LINALGCU_BLOCK_SIZE,
+    calc_image_phi_kernel<<<image->elements->size_n / LINALGCU_BLOCK_SIZE,
         LINALGCU_BLOCK_SIZE>>>(image->image->device_data, image->elements->device_data,
         phi->device_data, image->image->size_m, image->image->size_n,
         image->mesh->radius);
@@ -192,7 +192,7 @@ linalgcu_error_t ert_image_calc_sigma(ert_image_t image,
     }
 
     // execute kernel
-    calc_image_sigma_kernel<<<image->elements->size_m / LINALGCU_BLOCK_SIZE,
+    calc_image_sigma_kernel<<<image->elements->size_n / LINALGCU_BLOCK_SIZE,
         LINALGCU_BLOCK_SIZE>>>(image->image->device_data, image->elements->device_data,
         sigma->device_data, image->image->size_m, image->image->size_n,
         image->mesh->radius);

@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
     // create mesh
     ert_mesh_t mesh;
-    error  = ert_mesh_create(&mesh, 0.045, 0.045 / 2.0);
+    error  = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -115,26 +115,35 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_create(&current, 36, 1);
 
     // set current
-    linalgcu_matrix_set_element(current, 1.0, 1, 0);
-    linalgcu_matrix_set_element(current, -1.0, 3, 0);
+    linalgcu_matrix_set_element(current, 0.02, 1, 0);
+    linalgcu_matrix_set_element(current, -0.02, 3, 0);
     linalgcu_matrix_copy_to_device(current, LINALGCU_TRUE);
 
     // calc f
     linalgcu_matrix_multiply(f, grid->exitation_matrix, current, handle);
     linalgcu_matrix_multiply(f, grid->exitation_matrix, current, handle);
 
-    // solve
-    error = ert_conjugate_solver_solve(solver, phi, f, 1000, handle);
+    // get start time
+    struct timeval tv;
     cudaStreamSynchronize(NULL);
+    gettimeofday(&tv, NULL);
+    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // solve
+    error = ert_conjugate_solver_solve(solver, phi, f, 100, handle);
+
+    // get end time
+    cudaStreamSynchronize(NULL);
+    gettimeofday(&tv, NULL);
+    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+
+    // print frames per second
+    printf("Forward: frames per second: %f\n", (10.0f / 18.0f) /  (end - start));
 
     if (error != LINALGCU_SUCCESS) {
         printf("Conjugate solving error!\n");
         return EXIT_FAILURE;
     }
-
-    linalgcu_matrix_copy_to_host(phi, LINALGCU_TRUE);
-    printf("phi:\n");
-    print_matrix(phi);
 
     // calc image
     char buffer[1024];
