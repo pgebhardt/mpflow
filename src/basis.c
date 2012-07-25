@@ -18,28 +18,23 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
-#include <linalgcl/linalgcl.h>
+#include <cuda/cuda_runtime.h>
+#include <cuda/cublas_v2.h>
+#include <linalgcu/linalgcu.h>
 #include "basis.h"
 
 // create basis
-linalgcl_error_t ert_basis_create(ert_basis_t* basisPointer,
-    linalgcl_matrix_data_t Ax, linalgcl_matrix_data_t Ay,
-    linalgcl_matrix_data_t Bx, linalgcl_matrix_data_t By,
-    linalgcl_matrix_data_t Cx, linalgcl_matrix_data_t Cy) {
+linalgcu_error_t ert_basis_create(ert_basis_t* basisPointer,
+    linalgcu_matrix_data_t Ax, linalgcu_matrix_data_t Ay,
+    linalgcu_matrix_data_t Bx, linalgcu_matrix_data_t By,
+    linalgcu_matrix_data_t Cx, linalgcu_matrix_data_t Cy) {
     // check input
     if (basisPointer == NULL) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
+    linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // init basis pointer
     *basisPointer = NULL;
@@ -49,7 +44,7 @@ linalgcl_error_t ert_basis_create(ert_basis_t* basisPointer,
 
     // check success
     if (basis == NULL) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // init struct
@@ -60,11 +55,11 @@ linalgcl_error_t ert_basis_create(ert_basis_t* basisPointer,
     basis->gradient[1] = 0.0;
 
     // calc coefficients (A * c = b)
-    linalgcl_matrix_data_t Ainv[3][3];
-    linalgcl_matrix_data_t B[3] = {1.0, 0.0, 0.0};
+    linalgcu_matrix_data_t Ainv[3][3];
+    linalgcu_matrix_data_t B[3] = {1.0, 0.0, 0.0};
 
     // invert matrix A directly
-    linalgcl_matrix_data_t a, b, c, d, e, f, g, h, i;
+    linalgcu_matrix_data_t a, b, c, d, e, f, g, h, i;
     a = 1.0;
     b = Ax;
     c = Ay;
@@ -74,7 +69,7 @@ linalgcl_error_t ert_basis_create(ert_basis_t* basisPointer,
     g = 1.0;
     h = Cx;
     i = Cy;
-    linalgcl_matrix_data_t det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
+    linalgcu_matrix_data_t det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
 
     Ainv[0][0] = (e * i - f * h) / det;
     Ainv[0][1] = (c * h - b * i) / det;
@@ -98,14 +93,14 @@ linalgcl_error_t ert_basis_create(ert_basis_t* basisPointer,
     // set basis pointer
     *basisPointer = basis;
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // release basis
-linalgcl_error_t ert_basis_release(ert_basis_t* basisPointer) {
+linalgcu_error_t ert_basis_release(ert_basis_t* basisPointer) {
     // check input
     if ((basisPointer == NULL) || (*basisPointer == NULL)) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // free struct
@@ -114,20 +109,20 @@ linalgcl_error_t ert_basis_release(ert_basis_t* basisPointer) {
     // set basis pointer to NULL
     *basisPointer = NULL;
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // evaluate basis function
-linalgcl_error_t ert_basis_function(ert_basis_t basis, linalgcl_matrix_data_t* resultPointer,
-    linalgcl_matrix_data_t x, linalgcl_matrix_data_t y) {
+linalgcu_error_t ert_basis_function(ert_basis_t basis, linalgcu_matrix_data_t* resultPointer,
+    linalgcu_matrix_data_t x, linalgcu_matrix_data_t y) {
     // check input
     if ((basis == NULL) || (resultPointer == NULL)) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // calc result
     *resultPointer = basis->coefficients[0] + basis->coefficients[1] * x +
         basis->coefficients[2] * y;
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
