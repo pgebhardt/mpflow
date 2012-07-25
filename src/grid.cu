@@ -27,175 +27,63 @@
 #include <linalgcu/linalgcu.h>
 #include "basis.h"
 #include "mesh.h"
-#include "image.h"
+#include "grid.h"
 
-// helper functions
-__device__ linalgcu_matrix_data_t test(
-    linalgcu_matrix_data_t ax, linalgcu_matrix_data_t ay,
-    linalgcu_matrix_data_t bx, linalgcu_matrix_data_t by,
-    linalgcu_matrix_data_t cx, linalgcu_matrix_data_t cy) {
-    return (ax - cx) * (by - cy) - (bx - cx) * (ay - cy);
-}
+// update_system_matrix_kernel
+__global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matrix_values,
+    linalgcu_column_id_t* system_matrix_column_ids,
+    linalgcu_matrix_data_t* gradient_matrix_transposed_values,
+    linalgcu_column_id_t* gradient_matrix_transposed_column_ids,
+    linalgcu_matrix_data_t* gradient_matrix_transposed,
+    linalgcu_matrix_data_t* sigma,
+    linalgcu_matrix_data_t* area,
+    linalgcu_size_t element_count) {
+    // get ids
+    linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcu_size_t j = system_matrix_column_ids[i * LINALGCU_BLOCK_SIZE +
+        (blockIdx.y * blockDim.y + threadIdx.y)];
 
-__device__ linalgcu_bool_t pointInTriangle(
-    linalgcu_matrix_data_t px, linalgcu_matrix_data_t py,
-    linalgcu_matrix_data_t ax, linalgcu_matrix_data_t ay,
-    linalgcu_matrix_data_t bx, linalgcu_matrix_data_t by,
-    linalgcu_matrix_data_t cx, linalgcu_matrix_data_t cy) {
-    linalgcu_bool_t b1, b2, b3;
+    // calc system matrix elements
+    linalgcu_matrix_data_t element = 0.0f;
+    linalgcu_column_id_t id = -1;
 
-    b1 = test(px, py, ax, ay, bx, by) <= 0.00000045f;
-    b2 = test(px, py, bx, by, cx, cy) <= 0.00000045f;
-    b3 = test(px, py, cx, cy, ax, ay) <= 0.00000045f;
+    for (linalgcu_size_t k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
+        // get id
+        id = gradient_matrix_transposed_column_ids[i * LINALGCU_BLOCK_SIZE + k];
 
-    return ((b1 == b2) && (b2 == b3));
-}
-
-// clac image phi kernel
-__global__ void calc_image_phi_kernel(linalgcu_matrix_data_t* image,
-    linalgcu_matrix_data_t* elements, linalgcu_matrix_data_t* phi,
-    linalgcu_size_t size_x, linalgcu_size_t size_y, linalgcu_matrix_data_t radius) {
-    // get id
-    linalgcu_size_t k = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // get element data
-    linalgcu_column_id_t id[3];
-    linalgcu_matrix_data_t xVertex[3], yVertex[3], basis[3][3];
-
-    for (int i = 0; i < 3; i++) {
-        // ids
-        id[i] = elements[k * 2 * LINALGCU_BLOCK_SIZE + i];
-
-        // coordinates
-        xVertex[i] = elements[k * 2 * LINALGCU_BLOCK_SIZE + 3 + 2 * i];
-        yVertex[i] = elements[k * 2 * LINALGCU_BLOCK_SIZE + 4 + 2 * i];
-
-        // basis coefficients
-        basis[i][0] = elements[k * 2 * LINALGCU_BLOCK_SIZE + 9 + 3 * i];
-        basis[i][1] = elements[k * 2 * LINALGCU_BLOCK_SIZE + 10 + 3 * i];
-        basis[i][2] = elements[k * 2 * LINALGCU_BLOCK_SIZE + 11 + 3 * i];
+        element += id != 1 ? gradient_matrix_transposed_values[i * LINALGCU_BLOCK_SIZE + k] *
+            sigma[id / 2] * area[id / 2] * gradient_matrix_transposed[j * element_count + id] :
+            0.0f;
     }
 
-    // step size
-    float dx = 2.0f * radius / ((float)size_x - 1.0f);
-    float dy = 2.0f * radius / ((float)size_y - 1.0f);
-
-    // start and stop indices
-    int iStart = (int)(min(min(xVertex[0], xVertex[1]),
-        xVertex[2]) / dx) + size_x / 2;
-    int jStart = (int)(min(min(yVertex[0], yVertex[1]),
-        yVertex[2]) / dy) + size_y / 2;
-    int iEnd = (int)(max(max(xVertex[0], xVertex[1]),
-        xVertex[2]) / dx) + size_x / 2;
-    int jEnd = (int)(max(max(yVertex[0], yVertex[1]),
-        yVertex[2]) / dy) + size_y / 2;
-
-    // calc triangle
-    float pixel = 0.0f;
-    float x, y;
-    for (int i = iStart; i <= iEnd; i++) {
-        for (int j = jStart; j <= jEnd; j++) {
-            // calc coordinate
-            x = (float)i * dx - radius;
-            y = (float)j * dy - radius;
-
-            // calc pixel
-            pixel  = phi[id[0]] * (basis[0][0] + basis[0][1] * x + basis[0][2] * y);
-            pixel += phi[id[1]] * (basis[1][0] + basis[1][1] * x + basis[1][2] * y);
-            pixel += phi[id[2]] * (basis[2][0] + basis[2][1] * x + basis[2][2] * y);
-
-            // set pixel
-            if (pointInTriangle(x, y, xVertex[0], yVertex[0], xVertex[1], yVertex[1],
-                    xVertex[2], yVertex[2])) {
-                image[i + j * size_x] = pixel;
-            }
-        }
-    }
+    // set element
+    system_matrix_values[i * LINALGCU_BLOCK_SIZE + (blockIdx.y * blockDim.y + threadIdx.y)] =
+        element;
 }
 
-// calc image phi
+// update system matrix
 extern "C"
-linalgcu_error_t ert_image_calc_phi(ert_image_t image,
-    linalgcu_matrix_t phi) {
+linalgcu_error_t ert_grid_update_system_matrix(ert_grid_t grid) {
     // check input
-    if ((image == NULL) || (phi == NULL)) {
+    if (grid == NULL) {
         return LINALGCU_ERROR;
     }
 
+    // dimension
+    dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
+    dim3 blocks(grid->system_matrix->size_m / LINALGCU_BLOCK_SIZE, 1);
+
     // execute kernel
-    calc_image_phi_kernel<<<image->elements->size_m / LINALGCU_BLOCK_SIZE,
-        LINALGCU_BLOCK_SIZE>>>(image->image->device_data, image->elements->device_data,
-        phi->device_data, image->image->size_m, image->image->size_n,
-        image->mesh->radius);
+    update_system_matrix_kernel<<<blocks, threads>>>(
+        grid->system_matrix->values,
+        grid->system_matrix->column_ids,
+        grid->gradient_matrix_transposed_sparse->values,
+        grid->gradient_matrix_transposed_sparse->column_ids,
+        grid->gradient_matrix_transposed->device_data,
+        grid->sigma->device_data,
+        grid->area->device_data,
+        grid->gradient_matrix_transposed->size_n);
 
     return LINALGCU_SUCCESS;
 }
 
-// clac image phi kernel
-__global__ void calc_image_sigma_kernel(linalgcu_matrix_data_t* image,
-    linalgcu_matrix_data_t* elements, linalgcu_matrix_data_t* sigma,
-    linalgcu_size_t size_x, linalgcu_size_t size_y, linalgcu_matrix_data_t radius) {
-    // get id
-    linalgcu_size_t k = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // get element data
-    linalgcu_matrix_data_t xVertex[3], yVertex[3];
-
-    for (int i = 0; i < 3; i++) {
-        // coordinates
-        xVertex[i] = elements[k * 2 * LINALGCU_BLOCK_SIZE + 3 + 2 * i];
-        yVertex[i] = elements[k * 2 * LINALGCU_BLOCK_SIZE + 4 + 2 * i];
-    }
-
-    // step size
-    float dx = 2.0f * radius / ((float)size_x - 1.0f);
-    float dy = 2.0f * radius / ((float)size_y - 1.0f);
-
-    // start and stop indices
-    int iStart = (int)(min(min(xVertex[0], xVertex[1]),
-        xVertex[2]) / dx) + size_x / 2;
-    int jStart = (int)(min(min(yVertex[0], yVertex[1]),
-        yVertex[2]) / dy) + size_y / 2;
-    int iEnd = (int)(max(max(xVertex[0], xVertex[1]),
-        xVertex[2]) / dx) + size_x / 2;
-    int jEnd = (int)(max(max(yVertex[0], yVertex[1]),
-        yVertex[2]) / dy) + size_y / 2;
-
-    // calc triangle
-    float pixel = 0.0f;
-    float x, y;
-    for (int i = iStart; i <= iEnd; i++) {
-        for (int j = jStart; j <= jEnd; j++) {
-            // calc coordinate
-            x = (float)i * dx - radius;
-            y = (float)j * dy - radius;
-
-            // calc pixel
-            pixel = sigma[k];
-
-            // set pixel
-            if (pointInTriangle(x, y, xVertex[0], yVertex[0], xVertex[1], yVertex[1],
-                    xVertex[2], yVertex[2])) {
-                image[i + j * size_x] = pixel;
-            }
-        }
-    }
-}
-
-// calc image phi
-extern "C"
-linalgcu_error_t ert_image_calc_sigma(ert_image_t image,
-    linalgcu_matrix_t sigma) {
-    // check input
-    if ((image == NULL) || (sigma == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // execute kernel
-    calc_image_sigma_kernel<<<image->elements->size_m / LINALGCU_BLOCK_SIZE,
-        LINALGCU_BLOCK_SIZE>>>(image->image->device_data, image->elements->device_data,
-        sigma->device_data, image->image->size_m, image->image->size_n,
-        image->mesh->radius);
-
-    return LINALGCU_SUCCESS;
-}

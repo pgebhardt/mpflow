@@ -19,55 +19,35 @@
 #ifndef ERT_CONJUGATE_H
 #define ERT_CONJUGATE_H
 
-// conjugate solver program struct
-typedef struct {
-    cl_program program;
-    cl_kernel kernel_add_scalar;
-    cl_kernel kernel_update_vector;
-} ert_conjugate_solver_program_s;
-typedef ert_conjugate_solver_program_s* ert_conjugate_solver_program_t;
-
 // conjugate solver struct
 typedef struct {
-    linalgcl_size_t size;
-    linalgcl_sparse_matrix_t system_matrix;
-    linalgcl_matrix_t residuum;
-    linalgcl_matrix_t projection;
-    linalgcl_matrix_t rsold;
-    linalgcl_matrix_t rsnew;
-    linalgcl_matrix_t ones;
-    linalgcl_matrix_t temp_matrix;
-    linalgcl_matrix_t temp_vector;
-    linalgcl_matrix_t temp_number;
-    ert_conjugate_solver_program_t program;
+    linalgcu_size_t size;
+    linalgcu_sparse_matrix_t system_matrix;
+    linalgcu_matrix_t residuum;
+    linalgcu_matrix_t projection;
+    linalgcu_matrix_data_t rsold;
+    linalgcu_matrix_data_t rsnew;
+    linalgcu_matrix_t ones;
+    linalgcu_matrix_t temp_matrix;
+    linalgcu_matrix_t temp_vector;
 } ert_conjugate_solver_s;
 typedef ert_conjugate_solver_s* ert_conjugate_solver_t;
 
-// create new conjugate program
-linalgcl_error_t ert_conjugate_solver_program_create(ert_conjugate_solver_program_t* programPointer,
-    cl_context context, cl_device_id device_id, const char* path);
-
-// release conjugate program
-linalgcl_error_t ert_conjugate_solver_program_release(ert_conjugate_solver_program_t* programPointer);
-
 // create solver
-linalgcl_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPointer,
-    linalgcl_sparse_matrix_t system_matrix, linalgcl_size_t size,
-    linalgcl_matrix_program_t matrix_program, cl_context context,
-    cl_device_id device_id, cl_command_queue queue);
+linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPointer,
+    linalgcu_sparse_matrix_t system_matrix, linalgcu_size_t size,
+    cublasHandle_t handle);
 
 // release solver
-linalgcl_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPointer);
+linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPointer);
 
-// update vector
-linalgcl_error_t ert_conjugate_update_vector(ert_conjugate_solver_t solver,
-    linalgcl_matrix_t result, linalgcl_matrix_t x1, linalgcl_matrix_data_t sign,
-    linalgcl_matrix_t x2, linalgcl_matrix_t r1, linalgcl_matrix_t r2, cl_command_queue queue);
+// add scalar
+LINALGCU_EXTERN_C
+linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_data_t scalar);
 
 // solve conjugate
-linalgcl_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
-    linalgcl_matrix_t x, linalgcl_matrix_t f,
-    linalgcl_size_t iterations, linalgcl_matrix_program_t matrix_program,
-    cl_command_queue queue);
+linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
+    linalgcu_matrix_t x, linalgcu_matrix_t f,
+    linalgcu_size_t iterations, cublasHandle_t handle);
 
 #endif

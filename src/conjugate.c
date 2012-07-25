@@ -19,30 +19,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
-#include <linalgcl/linalgcl.h>
+#include <cuda/cuda_runtime.h>
+#include <cuda/cublas_v2.h>
+#include <linalgcu/linalgcu.h>
 #include "basis.h"
 #include "mesh.h"
 #include "conjugate.h"
 
-static void print_matrix(linalgcl_matrix_t matrix) {
+static void print_matrix(linalgcu_matrix_t matrix) {
     if (matrix == NULL) {
         return;
     }
 
     // value memory
-    linalgcl_matrix_data_t value = 0.0;
+    linalgcu_matrix_data_t value = 0.0;
 
-    for (linalgcl_size_t i = 0; i < matrix->size_x; i++) {
-        for (linalgcl_size_t j = 0; j < matrix->size_y; j++) {
+    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
+        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
             // get value
-            linalgcl_matrix_get_element(matrix, &value, i, j);
+            linalgcu_matrix_get_element(matrix, &value, i, j);
 
             printf("%f, ", value);
         }
@@ -50,180 +45,17 @@ static void print_matrix(linalgcl_matrix_t matrix) {
     }
 }
 
-// create new conjugate program
-linalgcl_error_t ert_conjugate_solver_program_create(ert_conjugate_solver_program_t* programPointer,
-    cl_context context, cl_device_id device_id, const char* path) {
-    // check input
-    if ((programPointer == NULL) || (context == NULL) || (path == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-    linalgcl_error_t linalgcl_error = LINALGCL_SUCCESS;
-
-    // init program pointer
-    *programPointer = NULL;
-
-    // create program struct
-    ert_conjugate_solver_program_t program = malloc(sizeof(ert_conjugate_solver_program_s));
-
-    // check success
-    if (program == NULL) {
-        return LINALGCL_ERROR;
-    }
-
-    // init struct
-    program->program = NULL;
-    program->kernel_add_scalar = NULL;
-    program->kernel_update_vector = NULL;
-
-    // read program file
-    // open file
-    FILE* file = fopen(path, "r");
-
-    // check success
-    if (file == NULL) {
-        // cleanup
-        ert_conjugate_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // get file length
-    size_t length = 0;
-    fseek(file, 0, SEEK_END);
-    length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // allocate buffer
-    char* buffer = malloc(sizeof(char) * length);
-
-    // check success
-    if (buffer == NULL) {
-        // cleanup
-        fclose(file);
-        ert_conjugate_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // fread file
-    if (fread(buffer, sizeof(char), length, file) != length) {
-        // cleanup
-        free(buffer);
-        fclose(file);
-        ert_conjugate_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // close file
-    fclose(file);
-
-    // create program from source buffer
-    program->program = clCreateProgramWithSource(context, 1,
-        (const char**)&buffer, &length, &cl_error);
-    free(buffer);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // cleanup
-        ert_conjugate_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // build program
-    cl_error = clBuildProgram(program->program, 0, NULL, NULL, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // print build error log
-        char buffer[2048];
-        clGetProgramBuildInfo(program->program, device_id, CL_PROGRAM_BUILD_LOG,
-            sizeof(buffer), buffer, NULL);
-        printf("%s\n", buffer);
-
-        // cleanup
-        ert_conjugate_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // create kernel
-    program->kernel_add_scalar = clCreateKernel(program->program,
-        "add_scalar", &cl_error);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // cleanup
-        ert_conjugate_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    program->kernel_update_vector = clCreateKernel(program->program,
-        "update_vector", &cl_error);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // cleanup
-        ert_conjugate_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // set program pointer
-    *programPointer = program;
-
-    return LINALGCL_SUCCESS;
-}
-
-// release conjugate program
-linalgcl_error_t ert_conjugate_solver_program_release(ert_conjugate_solver_program_t* programPointer) {
-    // check input
-    if ((programPointer == NULL) || (*programPointer == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // get program
-    ert_conjugate_solver_program_t program = *programPointer;
-
-    if (program->program != NULL) {
-        clReleaseProgram(program->program);
-    }
-
-    if (program->kernel_add_scalar != NULL) {
-        clReleaseKernel(program->kernel_add_scalar);
-    }
-
-    if (program->kernel_update_vector != NULL) {
-        clReleaseKernel(program->kernel_update_vector);
-    }
-
-    // free struct
-    free(program);
-
-    // set program pointer to NULL
-    *programPointer = NULL;
-
-    return LINALGCL_SUCCESS;
-}
-
 // create conjugate solver
-linalgcl_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPointer,
-    linalgcl_sparse_matrix_t system_matrix, linalgcl_size_t size,
-    linalgcl_matrix_program_t matrix_program, cl_context context,
-    cl_device_id device_id, cl_command_queue queue) {
+linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPointer,
+    linalgcu_sparse_matrix_t system_matrix, linalgcu_size_t size,
+    cublasHandle_t handle) {
     // check input
-    if ((solverPointer == NULL) || (system_matrix == NULL) || (matrix_program == NULL) ||
-        (context == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
+    if ((solverPointer == NULL) || (system_matrix == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
     }
 
     // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
+    linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // init solver pointer
     *solverPointer = NULL;
@@ -233,7 +65,7 @@ linalgcl_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
 
     // check success
     if (solver == NULL) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // init struct
@@ -241,30 +73,24 @@ linalgcl_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     solver->system_matrix = NULL;
     solver->residuum = NULL;
     solver->projection = NULL;
-    solver->rsold = NULL;
-    solver->rsnew = NULL;
+    solver->rsold = 0.0f;
+    solver->rsnew = 0.0f;
     solver->ones = NULL;
     solver->temp_matrix = NULL;
     solver->temp_vector = NULL;
-    solver->temp_number = NULL;
-    solver->program = NULL;
 
     // set system_matrix
     solver->system_matrix = system_matrix;
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->residuum, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->projection, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->rsold, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->rsnew, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->ones, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->temp_matrix, context, solver->size,
-        solver->size);
-    error |= linalgcl_matrix_create(&solver->temp_vector, context, solver->size, 1);
-    error |= linalgcl_matrix_create(&solver->temp_number, context, solver->size, 1);
+    error  = linalgcu_matrix_create(&solver->residuum, solver->size, 1);
+    error |= linalgcu_matrix_create(&solver->projection, solver->size, 1);
+    error |= linalgcu_matrix_create(&solver->ones, solver->size, 1);
+    error |= linalgcu_matrix_create(&solver->temp_matrix, solver->size, solver->size);
+    error |= linalgcu_matrix_create(&solver->temp_vector, solver->size, 1);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (error != LINALGCU_SUCCESS) {
         // cleanup
         ert_conjugate_solver_release(&solver);
 
@@ -272,34 +98,19 @@ linalgcl_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     }
 
     // set ones
-    for (linalgcl_size_t i = 0; i < solver->size; i++) {
-        linalgcl_matrix_set_element(solver->ones, 1.0, i, 0);
+    for (linalgcu_size_t i = 0; i < solver->size; i++) {
+        linalgcu_matrix_set_element(solver->ones, 1.0, i, 0);
     }
 
     // copy data to device
-    error  = linalgcl_matrix_copy_to_device(solver->residuum, queue, CL_FALSE);
-    error |= linalgcl_matrix_copy_to_device(solver->projection, queue, CL_FALSE);
-    error |= linalgcl_matrix_copy_to_device(solver->rsold, queue, CL_FALSE);
-    error |= linalgcl_matrix_copy_to_device(solver->rsnew, queue, CL_FALSE);
-    error |= linalgcl_matrix_copy_to_device(solver->ones, queue, CL_FALSE);
-    error |= linalgcl_matrix_copy_to_device(solver->temp_matrix, queue, CL_TRUE);
-    error |= linalgcl_matrix_copy_to_device(solver->temp_vector, queue, CL_TRUE);
-    error |= linalgcl_matrix_copy_to_device(solver->temp_number, queue, CL_TRUE);
+    error  = linalgcu_matrix_copy_to_device(solver->residuum, LINALGCU_FALSE);
+    error |= linalgcu_matrix_copy_to_device(solver->projection, LINALGCU_FALSE);
+    error |= linalgcu_matrix_copy_to_device(solver->ones, LINALGCU_FALSE);
+    error |= linalgcu_matrix_copy_to_device(solver->temp_matrix, LINALGCU_TRUE);
+    error |= linalgcu_matrix_copy_to_device(solver->temp_vector, LINALGCU_TRUE);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        ert_conjugate_solver_release(&solver);
-
-        return error;
-    }
-
-    // create program
-    error = ert_conjugate_solver_program_create(&solver->program, context,
-        device_id, "src/conjugate.cl");
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (error != LINALGCU_SUCCESS) {
         // cleanup
         ert_conjugate_solver_release(&solver);
 
@@ -309,31 +120,25 @@ linalgcl_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     // set solver pointer
     *solverPointer = solver;
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // release solver
-linalgcl_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPointer) {
+linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // get solver
     ert_conjugate_solver_t solver = *solverPointer;
 
     // release matrices
-    linalgcl_matrix_release(&solver->residuum);
-    linalgcl_matrix_release(&solver->projection);
-    linalgcl_matrix_release(&solver->rsold);
-    linalgcl_matrix_release(&solver->rsnew);
-    linalgcl_matrix_release(&solver->ones);
-    linalgcl_matrix_release(&solver->temp_matrix);
-    linalgcl_matrix_release(&solver->temp_vector);
-    linalgcl_matrix_release(&solver->temp_number);
-
-    // release program
-    ert_conjugate_solver_program_release(&solver->program);
+    linalgcu_matrix_release(&solver->residuum);
+    linalgcu_matrix_release(&solver->projection);
+    linalgcu_matrix_release(&solver->ones);
+    linalgcu_matrix_release(&solver->temp_matrix);
+    linalgcu_matrix_release(&solver->temp_vector);
 
     // free struct
     free(solver);
@@ -341,154 +146,76 @@ linalgcl_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPoin
     // set solver pointer to NULL
     *solverPointer = NULL;
 
-    return LINALGCL_SUCCESS;
-}
-
-// add scalar
-linalgcl_error_t ert_conjugate_add_scalar(ert_conjugate_solver_t solver,
-    linalgcl_matrix_t vector, linalgcl_matrix_t scalar,
-    cl_command_queue queue) {
-    // check input
-    if ((solver == NULL) || (vector == NULL) || (scalar == NULL) ||
-        (queue == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-
-    // set kernel arguments
-    cl_error  = clSetKernelArg(solver->program->kernel_add_scalar,
-        0, sizeof(cl_mem), &vector->device_data);
-    cl_error |= clSetKernelArg(solver->program->kernel_add_scalar,
-        1, sizeof(cl_mem), &scalar->device_data);
-    cl_error |= clSetKernelArg(solver->program->kernel_add_scalar,
-        2, sizeof(linalgcl_size_t), &solver->size);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    // execute kernel_update_system_matrix
-    size_t global = vector->size_x;
-    size_t local = LINALGCL_BLOCK_SIZE;
-
-    cl_error = clEnqueueNDRangeKernel(queue, solver->program->kernel_add_scalar,
-        1, NULL, &global, &local, 0, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    return LINALGCL_SUCCESS;
-}
-
-// update vector
-linalgcl_error_t ert_conjugate_update_vector(ert_conjugate_solver_t solver,
-    linalgcl_matrix_t result, linalgcl_matrix_t x1, linalgcl_matrix_data_t sign,
-    linalgcl_matrix_t x2, linalgcl_matrix_t r1, linalgcl_matrix_t r2, cl_command_queue queue) {
-    // check input
-    if ((solver == NULL) || (result == NULL) || (x1 == NULL) || (x2 == NULL) ||
-        (r1 == NULL) || (r2 == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-
-    // set kernel arguments
-    cl_error  = clSetKernelArg(solver->program->kernel_update_vector,
-        0, sizeof(cl_mem), &result->device_data);
-    cl_error += clSetKernelArg(solver->program->kernel_update_vector,
-        1, sizeof(cl_mem), &x1->device_data);
-    cl_error += clSetKernelArg(solver->program->kernel_update_vector,
-        2, sizeof(linalgcl_matrix_data_t), &sign);
-    cl_error += clSetKernelArg(solver->program->kernel_update_vector,
-        3, sizeof(cl_mem), &x2->device_data);
-    cl_error += clSetKernelArg(solver->program->kernel_update_vector,
-        4, sizeof(cl_mem), &r1->device_data);
-    cl_error += clSetKernelArg(solver->program->kernel_update_vector,
-        5, sizeof(cl_mem), &r2->device_data);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    // execute kernel_update_system_matrix
-    size_t global = result->size_x;
-    size_t local = LINALGCL_BLOCK_SIZE;
-
-    cl_error = clEnqueueNDRangeKernel(queue, solver->program->kernel_update_vector,
-        1, NULL, &global, &local, 0, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // solve conjugate
-linalgcl_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
-    linalgcl_matrix_t x, linalgcl_matrix_t f, linalgcl_size_t iterations,
-    linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
+linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
+    linalgcu_matrix_t x, linalgcu_matrix_t f, linalgcu_size_t iterations,
+    cublasHandle_t handle) {
     // check input
-    if ((solver == NULL) || (x == NULL) || (f == NULL) || 
-        (matrix_program == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
+    if ((solver == NULL) || (x == NULL) || (f == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
     }
+    // temp
+    linalgcu_matrix_data_t temp_number = 0.0f;
+    linalgcu_matrix_data_t alpha = 0.0f;
+    linalgcu_matrix_data_t beta = 0.0f;
+
     // init matrices
     // calc residuum r = f - A * x
-    linalgcl_matrix_vector_dot_product(solver->temp_number, x, solver->ones, matrix_program, queue);
-    linalgcl_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x, matrix_program, queue);
-    ert_conjugate_add_scalar(solver, solver->residuum, solver->temp_number, queue);
-    linalgcl_matrix_scalar_multiply(solver->residuum, solver->residuum, -1.0, matrix_program, queue);
-    linalgcl_matrix_add(solver->residuum, solver->residuum, f, matrix_program, queue);
+    linalgcu_matrix_vector_dot_product(&temp_number, x, solver->ones, handle);
+    linalgcu_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x);
+    ert_conjugate_add_scalar(solver->residuum, temp_number);
+    linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle);
+    linalgcu_matrix_add(solver->residuum, f, handle);
 
     // p = r
-    linalgcl_matrix_copy(solver->projection, solver->residuum, queue, CL_FALSE);
+    linalgcu_matrix_copy(solver->projection, solver->residuum, LINALGCU_FALSE);
 
     // calc rsold
-    linalgcl_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, matrix_program, queue);
+    linalgcu_matrix_vector_dot_product(&solver->rsold, solver->residuum, solver->residuum, handle);
 
     // iterate
-    for (linalgcl_size_t i = 0; i < iterations; i++) {
+    for (linalgcu_size_t i = 0; i < iterations; i++) {
         // calc A * p
-        linalgcl_matrix_vector_dot_product(solver->temp_number, solver->projection, solver->ones,
-            matrix_program, queue);
-        linalgcl_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
-            solver->projection, matrix_program, queue);
-        ert_conjugate_add_scalar(solver, solver->temp_vector, solver->temp_number, queue);
+        linalgcu_matrix_vector_dot_product(&temp_number, solver->projection, solver->ones, handle);
+        linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
+            solver->projection);
+        ert_conjugate_add_scalar(solver->temp_vector, temp_number);
 
         // calc p * A * p
-        linalgcl_matrix_vector_dot_product(solver->temp_number, solver->projection,
-            solver->temp_vector, matrix_program, queue);
+        linalgcu_matrix_vector_dot_product(&temp_number, solver->projection,
+            solver->temp_vector, handle);
 
-        // update residuum
-        ert_conjugate_update_vector(solver, solver->residuum, solver->residuum, -1.0,
-            solver->temp_vector, solver->rsold, solver->temp_number, queue);
+        // calc alpha
+        alpha = solver->rsold / temp_number;
 
         // update x
-        ert_conjugate_update_vector(solver, x, x, 1.0, solver->projection, solver->rsold,
-            solver->temp_number, queue);
+        cublasSaxpy(handle, x->size_m, &alpha, 
+            solver->projection->device_data, 1, x->device_data, 1);
+
+        // update residuum
+        alpha = -alpha;
+        cublasSaxpy(handle, solver->residuum->size_m, &alpha, 
+            solver->temp_vector->device_data, 1, solver->residuum->device_data, 1);
 
         // calc rsnew
-        linalgcl_matrix_vector_dot_product(solver->rsnew, solver->residuum,
-            solver->residuum, matrix_program, queue);
+        linalgcu_matrix_vector_dot_product(&solver->rsnew, solver->residuum,
+            solver->residuum, handle);
+
+        // calc beta
+        beta = solver->rsnew / solver->rsold;
 
         // update projection
-        ert_conjugate_update_vector(solver, solver->projection, solver->residuum, 1.0,
-            solver->projection, solver->rsnew, solver->rsold, queue);
+        linalgcu_matrix_scalar_multiply(solver->projection, beta, handle);
+        linalgcu_matrix_add(solver->projection, solver->residuum, handle);
 
         // update rsold
-        linalgcl_matrix_t temp = solver->rsold;
+        linalgcu_matrix_data_t temp = solver->rsold;
         solver->rsold = solver->rsnew;
         solver->rsnew = temp;
     }
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
