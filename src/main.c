@@ -23,6 +23,8 @@
 #include <cuda/cublas_v2.h>
 #include <linalgcu/linalgcu.h>
 #include "mesh.h"
+#include "basis.h"
+#include "electrodes.h"
 
 void print_matrix(linalgcu_matrix_t matrix) {
     if (matrix == NULL) {
@@ -66,8 +68,18 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_FALSE);
     linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE);
 
+    // create electrodes
+    ert_electrodes_t electrodes;
+    error = ert_electrodes_create(&electrodes, 36, 0.005, mesh);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
     // cleanup
     ert_mesh_release(&mesh);
+    ert_electrodes_release(&electrodes);
     cublasDestroy(handle);
 
     return EXIT_SUCCESS;

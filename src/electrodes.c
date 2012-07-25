@@ -19,28 +19,23 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
-#include <linalgcl/linalgcl.h>
+#include <cuda/cuda_runtime.h>
+#include <cuda/cublas_v2.h>
+#include <linalgcu/linalgcu.h>
 #include "basis.h"
 #include "mesh.h"
 #include "electrodes.h"
 
 // create electrodes
-linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
-    linalgcl_size_t count, linalgcl_matrix_data_t size, ert_mesh_t mesh) {
+linalgcu_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
+    linalgcu_size_t count, linalgcu_matrix_data_t size, ert_mesh_t mesh) {
     // check input
     if ((electrodesPointer == NULL) || (count == 0) || (mesh == NULL)) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
+    linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // set electrodesPointer to NULL
     *electrodesPointer = NULL;
@@ -50,7 +45,7 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
 
     // check success
     if (electrodes == NULL) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // init struct
@@ -59,9 +54,9 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     electrodes->electrode_end = NULL;
 
     // create electrode vectors
-    electrodes->electrode_start = malloc(sizeof(linalgcl_matrix_data_t) *
+    electrodes->electrode_start = malloc(sizeof(linalgcu_matrix_data_t) *
         electrodes->count * 2);
-    electrodes->electrode_end = malloc(sizeof(linalgcl_matrix_data_t) *
+    electrodes->electrode_end = malloc(sizeof(linalgcu_matrix_data_t) *
         electrodes->count * 2);
 
     // check success
@@ -69,15 +64,15 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
         // cleanup
         ert_electrodes_release(&electrodes);
 
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // fill electrode vectors
-    linalgcl_matrix_data_t angle = 0.0f;
-    linalgcl_matrix_data_t delta_angle = M_PI / (linalgcl_matrix_data_t)electrodes->count;
-    for (linalgcl_size_t i = 0; i < electrodes->count; i++) {
+    linalgcu_matrix_data_t angle = 0.0f;
+    linalgcu_matrix_data_t delta_angle = M_PI / (linalgcu_matrix_data_t)electrodes->count;
+    for (linalgcu_size_t i = 0; i < electrodes->count; i++) {
         // calc start angle
-        angle = (linalgcl_matrix_data_t)i * 2.0f * delta_angle;
+        angle = (linalgcu_matrix_data_t)i * 2.0f * delta_angle;
 
         // calc start coordinates
         electrodes->electrode_start[i * 2 + 0] = mesh->radius * cos(angle);
@@ -94,14 +89,14 @@ linalgcl_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     // set electrodesPointer
     *electrodesPointer = electrodes;
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // release electrodes
-linalgcl_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer) {
+linalgcu_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer) {
     // check input
     if ((electrodesPointer == NULL) || (*electrodesPointer == NULL)) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // get electrodes
@@ -121,5 +116,5 @@ linalgcl_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer) {
     // set electrodesPointer to NULL
     *electrodesPointer = NULL;
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
