@@ -171,15 +171,17 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
     linalgcu_matrix_add(solver->residuum, f, handle);
 
     // p = r
-    linalgcu_matrix_copy(solver->projection, solver->residuum, LINALGCU_FALSE);
+    linalgcu_matrix_copy(solver->projection, solver->residuum, LINALGCU_TRUE);
 
     // calc rsold
-    linalgcu_matrix_vector_dot_product(&solver->rsold, solver->residuum, solver->residuum, handle);
+    linalgcu_matrix_vector_dot_product(&solver->rsold, solver->residuum, solver->residuum,
+        handle);
 
     // iterate
     for (linalgcu_size_t i = 0; i < iterations; i++) {
         // calc A * p
-        linalgcu_matrix_vector_dot_product(&temp_number, solver->projection, solver->ones, handle);
+        linalgcu_matrix_vector_dot_product(&temp_number, solver->projection, solver->ones,
+            handle);
         linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
             solver->projection);
         ert_conjugate_add_scalar(solver->temp_vector, temp_number);
@@ -190,6 +192,7 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
 
         // calc alpha
         alpha = solver->rsold / temp_number;
+        printf("alpha: %f\n", alpha);
 
         // update x
         cublasSaxpy(handle, x->size_m, &alpha, 

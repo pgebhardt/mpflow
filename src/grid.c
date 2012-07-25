@@ -402,7 +402,7 @@ linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     }
 
     // upload matrix
-    linalgcu_matrix_copy_to_device(grid->exitation_matrix, LINALGCU_FALSE);
+    linalgcu_matrix_copy_to_device(grid->exitation_matrix, LINALGCU_TRUE);
 
     return LINALGCU_SUCCESS;
 }

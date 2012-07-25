@@ -27,6 +27,7 @@
 #include <linalgcu/linalgcu.h>
 #include "basis.h"
 #include "mesh.h"
+#include "electrodes.h"
 #include "grid.h"
 
 // update_system_matrix_kernel

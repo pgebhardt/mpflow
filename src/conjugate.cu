@@ -39,9 +39,10 @@ __global__ void add_scalar_kernel(linalgcu_matrix_data_t* vector,
 
 // add scalar
 extern "C"
-linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_data_t scalar) {
+linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector,
+    linalgcu_matrix_data_t scalar) {
     // check input
-    if ((vector == NULL) || (scalar == NULL)) {
+    if (vector == NULL) {
         return LINALGCU_ERROR;
     }
 

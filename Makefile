@@ -30,15 +30,15 @@ SRC = src
 BUILD = build
 
 # Object files
-_OBJ = mesh.o basis.o electrodes.o grid.o
+_OBJ = mesh.o basis.o electrodes.o grid.o image.o conjugate.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
-_CUOBJ = grid.cu_o
+_CUOBJ = grid.cu_o image.cu_o conjugate.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = mesh.h basis.h electrodes.h grid.h
+_DEPS = mesh.h basis.h electrodes.h grid.h image.h conjugate.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file

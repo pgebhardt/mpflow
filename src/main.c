@@ -26,6 +26,8 @@
 #include "basis.h"
 #include "electrodes.h"
 #include "grid.h"
+#include "conjugate.h"
+#include "image.h"
 
 void print_matrix(linalgcu_matrix_t matrix) {
     if (matrix == NULL) {
@@ -58,7 +60,7 @@ int main(int argc, char* argv[]) {
 
     // create mesh
     ert_mesh_t mesh;
-    error  = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0);
+    error  = ert_mesh_create(&mesh, 0.045, 0.045 / 2.0);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -89,7 +91,66 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // create conjugate solver
+    ert_conjugate_solver_t solver = NULL;
+    error = ert_conjugate_solver_create(&solver, grid->system_matrix,
+        mesh->vertex_count, handle);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        printf("solver error!\n");
+        return EXIT_FAILURE;
+    }
+
+    // Create image
+    ert_image_t image;
+    ert_image_create(&image, 1000, 1000, mesh);
+    linalgcu_matrix_copy_to_device(image->elements, LINALGCU_FALSE);
+    linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE);
+
+    // create matrices
+    linalgcu_matrix_t f, phi, current;
+    linalgcu_matrix_create(&phi, mesh->vertex_count, 1);
+    linalgcu_matrix_create(&f, mesh->vertex_count, 1);
+    linalgcu_matrix_create(&current, 36, 1);
+
+    // set current
+    linalgcu_matrix_set_element(current, 1.0, 1, 0);
+    linalgcu_matrix_set_element(current, -1.0, 3, 0);
+    linalgcu_matrix_copy_to_device(current, LINALGCU_TRUE);
+
+    // calc f
+    linalgcu_matrix_multiply(f, grid->exitation_matrix, current, handle);
+    linalgcu_matrix_multiply(f, grid->exitation_matrix, current, handle);
+
+    // solve
+    error = ert_conjugate_solver_solve(solver, phi, f, 1000, handle);
+    cudaStreamSynchronize(NULL);
+
+    if (error != LINALGCU_SUCCESS) {
+        printf("Conjugate solving error!\n");
+        return EXIT_FAILURE;
+    }
+
+    linalgcu_matrix_copy_to_host(phi, LINALGCU_TRUE);
+    printf("phi:\n");
+    print_matrix(phi);
+
+    // calc image
+    char buffer[1024];
+    ert_image_calc_phi(image, phi);
+    cudaStreamSynchronize(NULL);
+    linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE);
+    linalgcu_matrix_save("output/image.txt", image->image);
+    sprintf(buffer, "python src/script.py %d", 0);
+    system(buffer);
+
     // cleanup
+    linalgcu_matrix_release(&current);
+    linalgcu_matrix_release(&f);
+    linalgcu_matrix_release(&phi);
+    ert_image_release(&image);
+    ert_conjugate_solver_release(&solver);
     ert_grid_release(&grid);
     ert_electrodes_release(&electrodes);
     cublasDestroy(handle);
