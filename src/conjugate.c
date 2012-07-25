@@ -434,9 +434,8 @@ linalgcl_error_t ert_conjugate_update_vector(ert_conjugate_solver_t solver,
 
 // solve conjugate
 linalgcl_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
-    linalgcl_matrix_t x, linalgcl_matrix_t f,
-    linalgcl_size_t iterations, linalgcl_matrix_program_t matrix_program,
-    cl_command_queue queue) {
+    linalgcl_matrix_t x, linalgcl_matrix_t f, linalgcl_size_t iterations,
+    linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
     // check input
     if ((solver == NULL) || (x == NULL) || (f == NULL) || 
         (matrix_program == NULL) || (queue == NULL)) {
@@ -486,7 +485,9 @@ linalgcl_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
             solver->projection, solver->rsnew, solver->rsold, queue);
 
         // update rsold
-        linalgcl_matrix_copy(solver->rsold, solver->rsnew, queue, CL_FALSE);
+        linalgcl_matrix_t temp = solver->rsold;
+        solver->rsold = solver->rsnew;
+        solver->rsnew = temp;
     }
 
     return LINALGCL_SUCCESS;
