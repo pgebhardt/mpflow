@@ -16,9 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Copmiler and flags
+# cuda paths
+CUDA_HOME = /usr/local/cuda
+
+# Copmiler
 CC = clang
-CFLAGS =
+NVCC = $(CUDA_HOME)/bin/nvcc
 
 LDFLAGS = -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lm
 
@@ -27,11 +30,15 @@ SRC = src
 BUILD = build
 
 # Object files
-_OBJ = mesh.o basis.o electrodes.o
+_OBJ = mesh.o basis.o electrodes.o grid.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
+# Cuda object files
+_CUOBJ = grid.cu_o
+CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
+
 # Dependencies
-_DEPS = mesh.h basis.h electrodes.h
+_DEPS = mesh.h basis.h electrodes.h grid.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file
@@ -39,16 +46,21 @@ BIN = ert
 FORWARD_SOLVER = forward_solver
 
 # Rule for library
-$(BIN): $(BUILD)/main.o $(OBJ) $(DEPS)
-	$(CC) $(CFLAGS) -o $(BIN) $(BUILD)/main.o $(OBJ) $(LDFLAGS)
+$(BIN): $(BUILD)/main.o $(OBJ) $(CUOBJ) $(DEPS)
+	$(CC) $(CFLAGS) -o $(BIN) $(BUILD)/main.o $(OBJ) $(CUOBJ) $(LDFLAGS)
 
-$(FORWARD_SOLVER): $(BUILD)/forward_solver.o $(OBJ) $(DEPS)
-	$(CC) $(CFLAGS) -o $(FORWARD_SOLVER) $(BUILD)/forward_solver.o $(OBJ) $(LDFLAGS)
+$(FORWARD_SOLVER): $(BUILD)/forward_solver.o $(OBJ) $(CUOBJ) $(DEPS)
+	$(CC) $(CFLAGS) -o $(FORWARD_SOLVER) $(BUILD)/forward_solver.o $(OBJ) $(CUOBJ) $(LDFLAGS)
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
 	mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+# Rule for cuda object files
+$(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
+	mkdir -p $(BUILD)
+	$(NVCC) $(CFLAGS) -c -o $@ $<
 
 # Cleanup
 clean:

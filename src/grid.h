@@ -19,53 +19,36 @@
 #ifndef ERT_GRID_H
 #define ERT_GRID_H
 
-// solver program struct
-typedef struct {
-    cl_program program;
-    cl_kernel kernel_update_system_matrix;
-} ert_grid_program_s;
-typedef ert_grid_program_s* ert_grid_program_t;
-
 // solver grid struct
 typedef struct {
     ert_mesh_t mesh;
-    linalgcl_sparse_matrix_t system_matrix;
-    linalgcl_matrix_t exitation_matrix;
-    linalgcl_sparse_matrix_t gradient_matrix_sparse;
-    linalgcl_sparse_matrix_t gradient_matrix_transposed_sparse;
-    linalgcl_matrix_t gradient_matrix_transposed;
-    linalgcl_matrix_t sigma;
-    linalgcl_matrix_t area;
-    ert_grid_program_t program;
+    linalgcu_sparse_matrix_t system_matrix;
+    linalgcu_matrix_t exitation_matrix;
+    linalgcu_sparse_matrix_t gradient_matrix_sparse;
+    linalgcu_sparse_matrix_t gradient_matrix_transposed_sparse;
+    linalgcu_matrix_t gradient_matrix_transposed;
+    linalgcu_matrix_t sigma;
+    linalgcu_matrix_t area;
 } ert_grid_s;
 typedef ert_grid_s* ert_grid_t;
 
-// create new grid program
-linalgcl_error_t ert_grid_program_create(ert_grid_program_t* programPointer,
-    cl_context context, cl_device_id device_id, const char* path);
-
-// release grid program
-linalgcl_error_t ert_grid_program_release(ert_grid_program_t* programPointer);
-
 // create grid
-linalgcl_error_t ert_grid_create(ert_grid_t* gridPointer,
-    linalgcl_matrix_program_t matrix_program, ert_mesh_t mesh,
-    cl_context context, cl_device_id device_id, cl_command_queue queue);
+linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
+    ert_mesh_t mesh, cublasHandle_t handle);
 
 // release grid
-linalgcl_error_t ert_grid_release(ert_grid_t* gridPointer);
+linalgcu_error_t ert_grid_release(ert_grid_t* gridPointer);
 
 // init system matrix
-linalgcl_error_t ert_grid_init_system_matrix(ert_grid_t grid,
-    linalgcl_matrix_program_t matrix_program, cl_context context,
-    cl_command_queue queue);
+linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
+    cublasHandle_t handle);
 
 // update system matrix
-linalgcl_error_t ert_grid_update_system_matrix(ert_grid_t grid,
-    cl_command_queue queue);
+LINALGCU_EXTERN_C
+linalgcu_error_t ert_grid_update_system_matrix(ert_grid_t grid);
 
 // init exitation matrix
-linalgcl_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
-    ert_electrodes_t electrodes, cl_context context, cl_command_queue queue);
+linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
+    ert_electrodes_t electrodes);
 
 #endif

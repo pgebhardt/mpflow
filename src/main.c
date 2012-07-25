@@ -25,6 +25,7 @@
 #include "mesh.h"
 #include "basis.h"
 #include "electrodes.h"
+#include "grid.h"
 
 void print_matrix(linalgcu_matrix_t matrix) {
     if (matrix == NULL) {
@@ -77,8 +78,19 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // create grid
+    ert_grid_t grid = NULL;
+    error  = ert_grid_create(&grid, mesh, handle);
+    error |= ert_grid_init_exitation_matrix(grid, electrodes);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        printf("Grid error!\n");
+        return EXIT_FAILURE;
+    }
+
     // cleanup
-    ert_mesh_release(&mesh);
+    ert_grid_release(&grid);
     ert_electrodes_release(&electrodes);
     cublasDestroy(handle);
 
