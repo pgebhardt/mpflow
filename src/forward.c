@@ -20,15 +20,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <sys/time.h>
-
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
-
-#include <linalgcl/linalgcl.h>
-#include <actor/actor.h>
+#include <cuda/cuda_runtime.h>
+#include <cuda/cublas_v2.h>
+#include <linalgcu/linalgcu.h>
 #include "basis.h"
 #include "mesh.h"
 #include "electrodes.h"
@@ -36,18 +30,18 @@
 #include "conjugate.h"
 #include "forward.h"
 
-static void print_matrix(linalgcl_matrix_t matrix) {
+static void print_matrix(linalgcu_matrix_t matrix) {
     if (matrix == NULL) {
         return;
     }
 
     // value memory
-    linalgcl_matrix_data_t value = 0.0;
+    linalgcu_matrix_data_t value = 0.0;
 
-    for (linalgcl_size_t i = 0; i < matrix->size_x; i++) {
-        for (linalgcl_size_t j = 0; j < matrix->size_y; j++) {
+    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
+        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
             // get value
-            linalgcl_matrix_get_element(matrix, &value, i, j);
+            linalgcu_matrix_get_element(matrix, &value, i, j);
 
             printf("%f, ", value);
         }
@@ -55,181 +49,18 @@ static void print_matrix(linalgcl_matrix_t matrix) {
     }
 }
 
-// create new forward_solver program
-linalgcl_error_t ert_forward_solver_program_create(ert_forward_solver_program_t* programPointer,
-    cl_context context, cl_device_id device_id, const char* path) {
-    // check input
-    if ((programPointer == NULL) || (context == NULL) || (path == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-    linalgcl_error_t linalgcl_error = LINALGCL_SUCCESS;
-
-    // init program pointer
-    *programPointer = NULL;
-
-    // create program struct
-    ert_forward_solver_program_t program = malloc(sizeof(ert_forward_solver_program_s));
-
-    // check success
-    if (program == NULL) {
-        return LINALGCL_ERROR;
-    }
-
-    // init struct
-    program->program = NULL;
-    program->kernel_copy_to_column = NULL;
-    program->kernel_copy_from_column = NULL;
-
-    // read program file
-    // open file
-    FILE* file = fopen(path, "r");
-
-    // check success
-    if (file == NULL) {
-        // cleanup
-        ert_forward_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // get file length
-    size_t length = 0;
-    fseek(file, 0, SEEK_END);
-    length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // allocate buffer
-    char* buffer = malloc(sizeof(char) * length);
-
-    // check success
-    if (buffer == NULL) {
-        // cleanup
-        fclose(file);
-        ert_forward_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // fread file
-    if (fread(buffer, sizeof(char), length, file) != length) {
-        // cleanup
-        free(buffer);
-        fclose(file);
-        ert_forward_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // close file
-    fclose(file);
-
-    // create program from source buffer
-    program->program = clCreateProgramWithSource(context, 1,
-        (const char**)&buffer, &length, &cl_error);
-    free(buffer);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // cleanup
-        ert_forward_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // build program
-    cl_error = clBuildProgram(program->program, 0, NULL, NULL, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // print build error log
-        char buffer[2048];
-        clGetProgramBuildInfo(program->program, device_id, CL_PROGRAM_BUILD_LOG,
-            sizeof(buffer), buffer, NULL);
-        printf("%s\n", buffer);
-
-        // cleanup
-        ert_forward_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // create kernel
-    program->kernel_copy_to_column = clCreateKernel(program->program,
-        "copy_to_column", &cl_error);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // cleanup
-        ert_forward_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    program->kernel_copy_from_column = clCreateKernel(program->program,
-        "copy_from_column", &cl_error);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        // cleanup
-        ert_forward_solver_program_release(&program);
-
-        return LINALGCL_ERROR;
-    }
-
-    // set program pointer
-    *programPointer = program;
-
-    return LINALGCL_SUCCESS;
-}
-
-// release forward_solver program
-linalgcl_error_t ert_forward_solver_program_release(ert_forward_solver_program_t* programPointer) {
-    // check input
-    if ((programPointer == NULL) || (*programPointer == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // get program
-    ert_forward_solver_program_t program = *programPointer;
-
-    if (program->program != NULL) {
-        clReleaseProgram(program->program);
-    }
-
-    if (program->kernel_copy_to_column != NULL) {
-        clReleaseKernel(program->kernel_copy_to_column);
-    }
-
-    if (program->kernel_copy_from_column != NULL) {
-        clReleaseKernel(program->kernel_copy_from_column);
-    }
-
-    // free struct
-    free(program);
-
-    // set program pointer to NULL
-    *programPointer = NULL;
-
-    return LINALGCL_SUCCESS;
-}
-
 // create forward_solver
-linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
-    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcl_size_t count,
-    linalgcl_matrix_t pattern, linalgcl_matrix_program_t matrix_program,
-    cl_context context, cl_device_id device, cl_command_queue queue) {
+linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
+    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcu_size_t count,
+    linalgcu_matrix_t pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
-        (pattern == NULL) || (matrix_program == NULL) || (context == NULL) ||
-        (device == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
+        (pattern == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
     }
 
     // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
+    linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // init solver pointer
     *solverPointer = NULL;
@@ -239,11 +70,10 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
 
     // check success
     if (solver == NULL) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // init struct
-    solver->program = NULL;
     solver->grid = NULL;
     solver->conjugate_solver = NULL;
     solver->electrodes = electrodes;
@@ -253,26 +83,12 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     solver->temp = NULL;
     solver->f = NULL;
 
-    // create program
-    error  = ert_forward_solver_program_create(&solver->program, context, device,
-        "src/forward.cl");
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        // cleanup
-        ert_forward_solver_release(&solver);
-
-        return error;
-    }
-
     // create grids
-    error  = ert_grid_create(&solver->grid, matrix_program, mesh, context,
-        device, queue);
-    error |= ert_grid_init_exitation_matrix(solver->grid, solver->electrodes, context,
-        queue);
+    error  = ert_grid_create(&solver->grid, mesh, handle, stream);
+    error |= ert_grid_init_exitation_matrix(solver->grid, solver->electrodes, stream);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (error != LINALGCU_SUCCESS) {
         // cleanup
         ert_forward_solver_release(&solver);
 
@@ -280,13 +96,12 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // create matrices
-    error  = linalgcl_matrix_create(&solver->phi, context,
-        mesh->vertex_count, solver->count);
-    error |= linalgcl_matrix_create(&solver->temp, context,
-        mesh->vertex_count, 1);
+    error  = linalgcu_matrix_create(&solver->phi, mesh->vertex_count,
+        solver->count, stream);
+    error |= linalgcu_matrix_create(&solver->temp, mesh->vertex_count, 1, stream);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (error != LINALGCU_SUCCESS) {
         // cleanup
         ert_forward_solver_release(&solver);
 
@@ -294,18 +109,18 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // copy matrices to device
-    linalgcl_matrix_copy_to_device(solver->phi, queue, CL_FALSE);
-    linalgcl_matrix_copy_to_device(solver->temp, queue, CL_TRUE);
+    linalgcu_matrix_copy_to_device(solver->phi, LINALGCU_FALSE, stream);
+    linalgcu_matrix_copy_to_device(solver->temp, LINALGCU_TRUE, stream);
 
     // create f matrix storage
-    solver->f = malloc(sizeof(linalgcl_matrix_t) * solver->count);
+    solver->f = malloc(sizeof(linalgcu_matrix_t) * solver->count);
 
     // check success
     if (solver->f == NULL) {
         // cleanup
         ert_forward_solver_release(&solver);
 
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // create conjugate solver
@@ -313,10 +128,10 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
 
     error  = ert_conjugate_solver_create(&solver->conjugate_solver,
         solver->grid->system_matrix, mesh->vertex_count,
-        matrix_program, context, device, queue);
+        handle, stream);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (error != LINALGCU_SUCCESS) {
         // cleanup
         ert_forward_solver_release(&solver);
 
@@ -324,10 +139,10 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // calc excitaion matrices
-    error = ert_forward_solver_calc_excitaion(solver, matrix_program, context, queue);
+    error = ert_forward_solver_calc_excitaion(solver, handle, stream);
 
     // check success
-    if (error != LINALGCL_SUCCESS) {
+    if (error != LINALGCU_SUCCESS) {
         // cleanup
         ert_forward_solver_release(&solver);
 
@@ -337,31 +152,30 @@ linalgcl_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     // set solver pointer
     *solverPointer = solver;
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // release solver
-linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer) {
+linalgcu_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
-        return LINALGCL_ERROR;
+        return LINALGCU_ERROR;
     }
 
     // get solver
     ert_forward_solver_t solver = *solverPointer;
 
     // cleanup
-    ert_forward_solver_program_release(&solver->program);
     ert_grid_release(&solver->grid);
     ert_conjugate_solver_release(&solver->conjugate_solver);
     ert_electrodes_release(&solver->electrodes);
-    linalgcl_matrix_release(&solver->pattern);
-    linalgcl_matrix_release(&solver->phi);
-    linalgcl_matrix_release(&solver->temp);
+    linalgcu_matrix_release(&solver->pattern);
+    linalgcu_matrix_release(&solver->phi);
+    linalgcu_matrix_release(&solver->temp);
 
     if (solver->f != NULL) {
-        for (linalgcl_size_t i = 0; i < solver->count; i++) {
-            linalgcl_matrix_release(&solver->f[i]);
+        for (linalgcu_size_t i = 0; i < solver->count; i++) {
+            linalgcu_matrix_release(&solver->f[i]);
         }
         free(solver->f);
     }
@@ -372,164 +186,64 @@ linalgcl_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
     // set solver pointer to NULL
     *solverPointer = NULL;
 
-    return LINALGCL_SUCCESS;
-}
-
-// copy to column
-linalgcl_error_t ert_forward_solver_copy_to_column(ert_forward_solver_program_t program,
-    linalgcl_matrix_t matrix, linalgcl_matrix_t vector, linalgcl_size_t column,
-    cl_command_queue queue) {
-    // check input
-    if ((program == NULL) || (matrix == NULL) || (vector == NULL) ||
-        (queue == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-
-    // set kernel arguments
-    cl_error  = clSetKernelArg(program->kernel_copy_to_column,
-        0, sizeof(cl_mem), &matrix->device_data);
-    cl_error |= clSetKernelArg(program->kernel_copy_to_column,
-        1, sizeof(cl_mem), &vector->device_data);
-    cl_error |= clSetKernelArg(program->kernel_copy_to_column,
-        2, sizeof(linalgcl_size_t), &column);
-    cl_error |= clSetKernelArg(program->kernel_copy_to_column,
-        3, sizeof(linalgcl_size_t), &matrix->size_y);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    // execute kernel_update_system_matrix
-    size_t global = vector->size_x;
-    size_t local = LINALGCL_BLOCK_SIZE;
-
-    cl_error = clEnqueueNDRangeKernel(queue, program->kernel_copy_to_column,
-        1, NULL, &global, &local, 0, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    return LINALGCL_SUCCESS;
-}
-
-// copy from column
-linalgcl_error_t ert_forward_solver_copy_from_column(ert_forward_solver_program_t program,
-    linalgcl_matrix_t matrix, linalgcl_matrix_t vector, linalgcl_size_t column,
-    cl_command_queue queue) {
-    // check input
-    if ((program == NULL) || (matrix == NULL) || (vector == NULL) ||
-        (queue == NULL)) {
-        return LINALGCL_ERROR;
-    }
-
-    // error
-    cl_int cl_error = CL_SUCCESS;
-
-    // set kernel arguments
-    cl_error  = clSetKernelArg(program->kernel_copy_from_column,
-        0, sizeof(cl_mem), &matrix->device_data);
-    cl_error |= clSetKernelArg(program->kernel_copy_from_column,
-        1, sizeof(cl_mem), &vector->device_data);
-    cl_error |= clSetKernelArg(program->kernel_copy_from_column,
-        2, sizeof(linalgcl_size_t), &column);
-    cl_error |= clSetKernelArg(program->kernel_copy_from_column,
-        3, sizeof(linalgcl_size_t), &matrix->size_y);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    // execute kernel_update_system_matrix
-    size_t global = vector->size_x;
-    size_t local = LINALGCL_BLOCK_SIZE;
-
-    cl_error = clEnqueueNDRangeKernel(queue, program->kernel_copy_from_column,
-        1, NULL, &global, &local, 0, NULL, NULL);
-
-    // check success
-    if (cl_error != CL_SUCCESS) {
-        return LINALGCL_ERROR;
-    }
-
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // calc excitaion
-linalgcl_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
-    linalgcl_matrix_program_t matrix_program, cl_context context, cl_command_queue queue) {
+linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solver == NULL) || (matrix_program == NULL) || (context == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
+    if ((solver == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
     }
 
-    // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
-
-    // create current matrix
-    linalgcl_matrix_t current;
-    error = linalgcl_matrix_create(&current, context, solver->electrodes->count, 1);
-
-    // check success
-    if (error != LINALGCL_SUCCESS) {
-        return error;
-    }
+    // dummy matrix struct
+    linalgcu_matrix_s dummy_matrix;
+    dummy_matrix.host_data = NULL;
+    dummy_matrix.device_data = NULL;
+    dummy_matrix.size_m = solver->pattern->size_m;
+    dummy_matrix.size_n = 1;
 
     // create drive pattern
-    for (linalgcl_size_t i = 0; i < solver->count; i++) {
+    for (linalgcu_size_t i = 0; i < solver->count; i++) {
         // create matrix
-        linalgcl_matrix_create(&solver->f[i], context, solver->grid->mesh->vertex_count, 1);
+        linalgcu_matrix_create(&solver->f[i], solver->grid->mesh->vertex_count, 1, stream);
 
         // get current pattern
-        ert_forward_solver_copy_from_column(solver->program, solver->pattern, current, i, queue);
+        dummy_matrix.device_data = &solver->pattern->device_data[i * solver->pattern->size_m];
 
         // calc f
-        linalgcl_matrix_multiply(solver->f[i], solver->grid->exitation_matrix,
-            current, matrix_program, queue);
+        linalgcu_matrix_multiply(solver->f[i], solver->grid->excitation_matrix,
+            &dummy_matrix, handle, stream);
     }
 
-    // cleanup
-    linalgcl_matrix_release(&current);
-
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
 
 // forward solving
-linalgcl_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
-    linalgcl_matrix_program_t matrix_program, cl_command_queue queue) {
+linalgcu_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solver == NULL) || (matrix_program == NULL) || (queue == NULL)) {
-        return LINALGCL_ERROR;
+    if ((solver == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
     }
 
-    // error
-    linalgcl_error_t error = LINALGCL_SUCCESS;
+    // dummy matrix struct
+    linalgcu_matrix_s dummy_matrix;
+    dummy_matrix.host_data = NULL;
+    dummy_matrix.device_data = NULL;
+    dummy_matrix.size_m = solver->phi->size_m;
+    dummy_matrix.size_n = 1;
 
     // solve pattern
-    for (linalgcl_size_t i = 0; i < solver->count; i++) {
+    for (linalgcu_size_t i = 0; i < solver->count; i++) {
         // copy current applied phi to vector
-        error = ert_forward_solver_copy_from_column(solver->program, solver->phi,
-            solver->temp, i, queue);
+        dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->size_m];
 
         // solve for phi
-        error |= ert_conjugate_solver_solve(solver->conjugate_solver,
-            solver->temp, solver->f[i], 10, matrix_program, queue);
-
-        // copy vector to applied phi
-        error |= ert_forward_solver_copy_to_column(solver->program, solver->phi,
-            solver->temp, i, queue);
-
-        // check success
-        if (error != LINALGCL_SUCCESS) {
-            return error;
-        }
+        ert_conjugate_solver_solve(solver->conjugate_solver,
+            &dummy_matrix, solver->f[i], 10, handle, stream);
     }
 
-    return LINALGCL_SUCCESS;
+    return LINALGCU_SUCCESS;
 }
