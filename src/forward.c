@@ -30,25 +30,6 @@
 #include "conjugate.h"
 #include "forward.h"
 
-static void print_matrix(linalgcu_matrix_t matrix) {
-    if (matrix == NULL) {
-        return;
-    }
-
-    // value memory
-    linalgcu_matrix_data_t value = 0.0;
-
-    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
-            // get value
-            linalgcu_matrix_get_element(matrix, &value, i, j);
-
-            printf("%f, ", value);
-        }
-        printf("\n");
-    }
-}
-
 // create forward_solver
 linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcu_size_t count,
