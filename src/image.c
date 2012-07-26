@@ -29,7 +29,7 @@
 
 // create image
 linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t size_x,
-    linalgcu_size_t size_y, ert_mesh_t mesh) {
+    linalgcu_size_t size_y, ert_mesh_t mesh, cudaStream_t stream) {
     // check input
     if ((imagePointer == NULL) || (mesh == NULL)) {
         return LINALGCU_ERROR;
@@ -55,8 +55,8 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
     image->mesh = mesh;
 
     // create matrices
-    error  = linalgcu_matrix_create(&image->elements, 18, mesh->element_count);
-    error += linalgcu_matrix_create(&image->image, size_x, size_y);
+    error  = linalgcu_matrix_create(&image->elements, 18, mesh->element_count, stream);
+    error += linalgcu_matrix_create(&image->image, size_x, size_y, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {

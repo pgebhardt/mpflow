@@ -22,6 +22,7 @@
 #include <cuda/cuda_runtime.h>
 #include <cuda/cublas_v2.h>
 #include <linalgcu/linalgcu.h>
+#include <actor/actor.h>
 #include "mesh.h"
 #include "basis.h"
 #include "electrodes.h"
@@ -55,12 +56,12 @@ int main(int argc, char* argv[]) {
     // create handle
     cublasHandle_t handle = NULL;
     if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
-        return EXIT_SUCCESS;
+        return EXIT_FAILURE;
     }
 
     // create mesh
     ert_mesh_t mesh;
-    error  = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0);
+    error  = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -68,8 +69,8 @@ int main(int argc, char* argv[]) {
     }
 
     // copy matrices to device
-    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_FALSE);
-    linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE);
+    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_FALSE, NULL);
+    linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE, NULL);
 
     // create electrodes
     ert_electrodes_t electrodes;
@@ -82,8 +83,8 @@ int main(int argc, char* argv[]) {
 
     // create grid
     ert_grid_t grid = NULL;
-    error  = ert_grid_create(&grid, mesh, handle);
-    error |= ert_grid_init_exitation_matrix(grid, electrodes);
+    error  = ert_grid_create(&grid, mesh, handle, NULL);
+    error |= ert_grid_init_exitation_matrix(grid, electrodes, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -93,8 +94,8 @@ int main(int argc, char* argv[]) {
 
     // create conjugate solver
     ert_conjugate_solver_t solver = NULL;
-    error = ert_conjugate_solver_create(&solver, grid->system_matrix,
-        mesh->vertex_count, handle);
+    error  = ert_conjugate_solver_create(&solver, grid->system_matrix,
+        mesh->vertex_count, handle, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -104,24 +105,25 @@ int main(int argc, char* argv[]) {
 
     // Create image
     ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh);
-    linalgcu_matrix_copy_to_device(image->elements, LINALGCU_FALSE);
-    linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE);
+    ert_image_create(&image, 1000, 1000, mesh, NULL);
+    linalgcu_matrix_copy_to_device(image->elements, LINALGCU_FALSE, NULL);
+    linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE, NULL);
 
     // create matrices
-    linalgcu_matrix_t f, phi, current;
-    linalgcu_matrix_create(&phi, mesh->vertex_count, 1);
-    linalgcu_matrix_create(&f, mesh->vertex_count, 1);
-    linalgcu_matrix_create(&current, 36, 1);
+    linalgcu_matrix_t phi = NULL;
+    linalgcu_matrix_create(&phi, mesh->vertex_count, 1, NULL);
 
     // set current
+    linalgcu_matrix_t current;
+    linalgcu_matrix_create(&current, 36, 1, NULL);
     linalgcu_matrix_set_element(current, 0.02, 1, 0);
     linalgcu_matrix_set_element(current, -0.02, 3, 0);
-    linalgcu_matrix_copy_to_device(current, LINALGCU_TRUE);
+    linalgcu_matrix_copy_to_device(current, LINALGCU_TRUE, NULL);
 
     // calc f
-    linalgcu_matrix_multiply(f, grid->exitation_matrix, current, handle);
-    linalgcu_matrix_multiply(f, grid->exitation_matrix, current, handle);
+    linalgcu_matrix_t f = NULL;
+    linalgcu_matrix_create(&f, mesh->vertex_count, 1, NULL);
+    linalgcu_matrix_multiply(f, grid->excitation_matrix, current, handle, NULL);
 
     // get start time
     struct timeval tv;
@@ -129,8 +131,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    // solve
-    error = ert_conjugate_solver_solve(solver, phi, f, 100, handle);
+    ert_conjugate_solver_solve(solver, phi, f, 1000, handle, NULL);
 
     // get end time
     cudaStreamSynchronize(NULL);
@@ -138,7 +139,7 @@ int main(int argc, char* argv[]) {
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     // print frames per second
-    printf("Forward: frames per second: %f\n", (10.0f / 18.0f) /  (end - start));
+    printf("Forward: frames per second: %f\n", end - start);
 
     if (error != LINALGCU_SUCCESS) {
         printf("Conjugate solving error!\n");
@@ -147,21 +148,21 @@ int main(int argc, char* argv[]) {
 
     // calc image
     char buffer[1024];
-    ert_image_calc_phi(image, phi);
+    ert_image_calc_phi(image, phi, NULL);
     cudaStreamSynchronize(NULL);
-    linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE);
+    linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/image.txt", image->image);
     sprintf(buffer, "python src/script.py %d", 0);
     system(buffer);
 
     // cleanup
-    linalgcu_matrix_release(&current);
-    linalgcu_matrix_release(&f);
     linalgcu_matrix_release(&phi);
+    linalgcu_matrix_release(&f);
+    linalgcu_matrix_release(&current);
     ert_image_release(&image);
+    ert_electrodes_release(&electrodes);
     ert_conjugate_solver_release(&solver);
     ert_grid_release(&grid);
-    ert_electrodes_release(&electrodes);
     cublasDestroy(handle);
 
     return EXIT_SUCCESS;

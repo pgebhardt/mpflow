@@ -116,7 +116,7 @@ __global__ void calc_image_phi_kernel(linalgcu_matrix_data_t* image,
 // calc image phi
 extern "C"
 linalgcu_error_t ert_image_calc_phi(ert_image_t image,
-    linalgcu_matrix_t phi) {
+    linalgcu_matrix_t phi, cudaStream_t stream) {
     // check input
     if ((image == NULL) || (phi == NULL)) {
         return LINALGCU_ERROR;
@@ -124,9 +124,9 @@ linalgcu_error_t ert_image_calc_phi(ert_image_t image,
 
     // execute kernel
     calc_image_phi_kernel<<<image->elements->size_n / LINALGCU_BLOCK_SIZE,
-        LINALGCU_BLOCK_SIZE>>>(image->image->device_data, image->elements->device_data,
-        phi->device_data, image->image->size_m, image->image->size_n,
-        image->mesh->radius);
+        LINALGCU_BLOCK_SIZE, 0, stream>>>(image->image->device_data,
+        image->elements->device_data, phi->device_data, image->image->size_m,
+        image->image->size_n, image->mesh->radius);
 
     return LINALGCU_SUCCESS;
 }
@@ -185,7 +185,7 @@ __global__ void calc_image_sigma_kernel(linalgcu_matrix_data_t* image,
 // calc image phi
 extern "C"
 linalgcu_error_t ert_image_calc_sigma(ert_image_t image,
-    linalgcu_matrix_t sigma) {
+    linalgcu_matrix_t sigma, cudaStream_t stream) {
     // check input
     if ((image == NULL) || (sigma == NULL)) {
         return LINALGCU_ERROR;
@@ -193,9 +193,9 @@ linalgcu_error_t ert_image_calc_sigma(ert_image_t image,
 
     // execute kernel
     calc_image_sigma_kernel<<<image->elements->size_n / LINALGCU_BLOCK_SIZE,
-        LINALGCU_BLOCK_SIZE>>>(image->image->device_data, image->elements->device_data,
-        sigma->device_data, image->image->size_m, image->image->size_n,
-        image->mesh->radius);
+        LINALGCU_BLOCK_SIZE, 0, stream>>>(image->image->device_data,
+        image->elements->device_data, sigma->device_data, image->image->size_m,
+        image->image->size_n, image->mesh->radius);
 
     return LINALGCU_SUCCESS;
 }

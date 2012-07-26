@@ -37,24 +37,25 @@ typedef ert_conjugate_solver_s* ert_conjugate_solver_t;
 // create solver
 linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPointer,
     linalgcu_sparse_matrix_t system_matrix, linalgcu_size_t size,
-    cublasHandle_t handle);
+    cublasHandle_t handle, cudaStream_t stream);
 
 // release solver
 linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPointer);
 
 // add scalar
 LINALGCU_EXTERN_C
-linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_t scalar);
+linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_t scalar,
+    cudaStream_t stream);
 
 // update vector
 LINALGCU_EXTERN_C
 linalgcu_error_t ert_conjugate_udate_vector(linalgcu_matrix_t result,
     linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
-    linalgcu_matrix_t r1, linalgcu_matrix_t r2);
+    linalgcu_matrix_t r1, linalgcu_matrix_t r2, cudaStream_t stream);
 
 // solve conjugate
 linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
     linalgcu_matrix_t x, linalgcu_matrix_t f,
-    linalgcu_size_t iterations, cublasHandle_t handle);
+    linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

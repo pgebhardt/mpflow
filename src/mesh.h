@@ -34,7 +34,8 @@ typedef ert_mesh_s* ert_mesh_t;
 
 // create new mesh
 linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
-    linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance);
+    linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
+    cudaStream_t stream);
 
 // cleanup mesh
 linalgcu_error_t ert_mesh_release(ert_mesh_t* meshPointer);

@@ -61,7 +61,8 @@ int compare_boundary(const void* a, const void* b) {
 }
 
 linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
-    linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance) {
+    linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
+    cudaStream_t stream) {
     // check input
     if ((meshPointer == NULL) || (radius <= 0.0)) {
         return LINALGCU_ERROR;
@@ -94,7 +95,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     // create vertex memory
     error = linalgcu_matrix_create(&mesh->vertices,
         2 * (linalgcu_size_t)(mesh->radius * mesh->radius /
-        (0.25 * mesh->distance * mesh->distance)), 2);
+        (0.25 * mesh->distance * mesh->distance)), 2, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -109,7 +110,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     linalgcu_matrix_data_t r = sqrt(3.0 * mesh->distance * mesh->distance / 4.0);
     error = linalgcu_matrix_create(&vertices,
         (linalgcu_size_t)(3.0 * mesh->radius / mesh->distance + 1),
-        (linalgcu_size_t)(3.0 * mesh->radius / mesh->distance + 1));
+        (linalgcu_size_t)(3.0 * mesh->radius / mesh->distance + 1), stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -163,7 +164,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
     // create boundary matrix
     error = linalgcu_matrix_create(&mesh->boundary,
-        (linalgcu_size_t)(3.0 * M_PI * mesh->radius / mesh->distance), 1);
+        (linalgcu_size_t)(3.0 * M_PI * mesh->radius / mesh->distance), 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -207,7 +208,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
     // create elements
     error = linalgcu_matrix_create(&mesh->elements,
-        mesh->vertex_count * 6, 3);
+        mesh->vertex_count * 6, 3, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {

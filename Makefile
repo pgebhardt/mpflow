@@ -22,8 +22,9 @@ CUDA_HOME = /usr/local/cuda
 # Copmiler
 CC = clang
 NVCC = $(CUDA_HOME)/bin/nvcc
+CFLAGS = -fblocks
 
-LDFLAGS = -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lm
+LDFLAGS = -lBlocksRuntime -ldispatch -L/usr/local/lib -llinalgcu -lactor -L/usr/local/cuda/lib64 -lcudart -lcublas -lm
 
 # Directories
 SRC = src
@@ -60,7 +61,7 @@ $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
 # Rule for cuda object files
 $(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
 	mkdir -p $(BUILD)
-	$(NVCC) $(CFLAGS) -c -o $@ $<
+	$(NVCC) -c -o $@ $<
 
 # Cleanup
 clean:

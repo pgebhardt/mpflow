@@ -29,17 +29,19 @@ typedef ert_image_s* ert_image_t;
 
 // create image
 linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t size_x,
-    linalgcu_size_t size_y, ert_mesh_t mesh);
+    linalgcu_size_t size_y, ert_mesh_t mesh, cudaStream_t stream);
 
 // release image
 linalgcu_error_t ert_image_release(ert_image_t* imagePointer);
 
 // calc image
 LINALGCU_EXTERN_C
-linalgcu_error_t ert_image_calc_phi(ert_image_t image, linalgcu_matrix_t phi);
+linalgcu_error_t ert_image_calc_phi(ert_image_t image, linalgcu_matrix_t phi,
+    cudaStream_t stream);
 
 // calc image
 LINALGCU_EXTERN_C
-linalgcu_error_t ert_image_calc_sigma(ert_image_t image, linalgcu_matrix_t sigma);
+linalgcu_error_t ert_image_calc_sigma(ert_image_t image, linalgcu_matrix_t sigma,
+    cudaStream_t stream);
 
 #endif

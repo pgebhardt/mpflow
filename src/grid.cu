@@ -64,7 +64,7 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matri
 
 // update system matrix
 extern "C"
-linalgcu_error_t ert_grid_update_system_matrix(ert_grid_t grid) {
+linalgcu_error_t ert_grid_update_system_matrix(ert_grid_t grid, cudaStream_t stream) {
     // check input
     if (grid == NULL) {
         return LINALGCU_ERROR;
@@ -75,7 +75,7 @@ linalgcu_error_t ert_grid_update_system_matrix(ert_grid_t grid) {
     dim3 blocks(grid->system_matrix->size_m / LINALGCU_BLOCK_SIZE, 1);
 
     // execute kernel
-    update_system_matrix_kernel<<<blocks, threads>>>(
+    update_system_matrix_kernel<<<blocks, threads, 0, stream>>>(
         grid->system_matrix->values,
         grid->system_matrix->column_ids,
         grid->gradient_matrix_transposed_sparse->values,

@@ -30,7 +30,7 @@
 
 // create solver grid
 linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
-    ert_mesh_t mesh, cublasHandle_t handle) {
+    ert_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((gridPointer == NULL) || (mesh == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -53,7 +53,7 @@ linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
     // init struct
     grid->mesh = mesh;
     grid->system_matrix = NULL;
-    grid->exitation_matrix = NULL;
+    grid->excitation_matrix = NULL;
     grid->gradient_matrix_sparse = NULL;
     grid->gradient_matrix_transposed_sparse = NULL;
     grid->gradient_matrix_transposed = NULL;
@@ -62,9 +62,9 @@ linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
 
     // create matrices
     error  = linalgcu_matrix_create(&grid->gradient_matrix_transposed,
-        grid->mesh->vertex_count, 2 * grid->mesh->element_count);
-    error |= linalgcu_matrix_create(&grid->sigma, grid->mesh->element_count, 1);
-    error |= linalgcu_matrix_create(&grid->area, grid->mesh->element_count, 1);
+        grid->mesh->vertex_count, 2 * grid->mesh->element_count, stream);
+    error |= linalgcu_matrix_create(&grid->sigma, grid->mesh->element_count, 1, stream);
+    error |= linalgcu_matrix_create(&grid->area, grid->mesh->element_count, 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -77,12 +77,12 @@ linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
     }
 
     // copy data to device
-    linalgcu_matrix_copy_to_device(grid->gradient_matrix_transposed, LINALGCU_FALSE);
-    linalgcu_matrix_copy_to_device(grid->sigma, LINALGCU_FALSE);
-    linalgcu_matrix_copy_to_device(grid->area, LINALGCU_FALSE);
+    linalgcu_matrix_copy_to_device(grid->gradient_matrix_transposed, LINALGCU_FALSE, stream);
+    linalgcu_matrix_copy_to_device(grid->sigma, LINALGCU_FALSE, stream);
+    linalgcu_matrix_copy_to_device(grid->area, LINALGCU_FALSE, stream);
 
     // init system matrix
-    error = ert_grid_init_system_matrix(grid, handle);
+    error = ert_grid_init_system_matrix(grid, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -111,6 +111,7 @@ linalgcu_error_t ert_grid_release(ert_grid_t* gridPointer) {
     // cleanup
     ert_mesh_release(&grid->mesh);
     linalgcu_sparse_matrix_release(&grid->system_matrix);
+    linalgcu_matrix_release(&grid->excitation_matrix);
     linalgcu_matrix_release(&grid->gradient_matrix_transposed);
     linalgcu_sparse_matrix_release(&grid->gradient_matrix_sparse);
     linalgcu_sparse_matrix_release(&grid->gradient_matrix_transposed_sparse);
@@ -128,7 +129,7 @@ linalgcu_error_t ert_grid_release(ert_grid_t* gridPointer) {
 
 // init system matrix
 linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
-    cublasHandle_t handle) {
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -141,11 +142,11 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     // create matrices
     linalgcu_matrix_t system_matrix, gradient_matrix, sigma_matrix;
     error = linalgcu_matrix_create(&system_matrix,
-        grid->mesh->vertex_count, grid->mesh->vertex_count);
+        grid->mesh->vertex_count, grid->mesh->vertex_count, stream);
     error += linalgcu_matrix_create(&gradient_matrix,
-        2 * grid->mesh->element_count, grid->mesh->vertex_count);
+        2 * grid->mesh->element_count, grid->mesh->vertex_count, stream);
     error += linalgcu_matrix_unity(&sigma_matrix,
-        2 * grid->mesh->element_count);
+        2 * grid->mesh->element_count, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -209,11 +210,11 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     }
 
     // copy matrices to device
-    error  = linalgcu_matrix_copy_to_device(gradient_matrix, LINALGCU_TRUE);
-    error |= linalgcu_matrix_copy_to_device(grid->gradient_matrix_transposed, LINALGCU_TRUE);
-    error |= linalgcu_matrix_copy_to_device(sigma_matrix, LINALGCU_TRUE);
-    error |= linalgcu_matrix_copy_to_device(grid->sigma, LINALGCU_TRUE);
-    error |= linalgcu_matrix_copy_to_device(grid->area, LINALGCU_TRUE);
+    error  = linalgcu_matrix_copy_to_device(gradient_matrix, LINALGCU_TRUE, stream);
+    error |= linalgcu_matrix_copy_to_device(grid->gradient_matrix_transposed, LINALGCU_TRUE, stream);
+    error |= linalgcu_matrix_copy_to_device(sigma_matrix, LINALGCU_TRUE, stream);
+    error |= linalgcu_matrix_copy_to_device(grid->sigma, LINALGCU_TRUE, stream);
+    error |= linalgcu_matrix_copy_to_device(grid->area, LINALGCU_TRUE, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -228,16 +229,16 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     // calc system matrix
     linalgcu_matrix_t temp = NULL;
     error = linalgcu_matrix_create(&temp, grid->mesh->vertex_count,
-        2 * grid->mesh->element_count);
+        2 * grid->mesh->element_count, stream);
 
     // one prerun cublas to get ready
     linalgcu_matrix_multiply(temp, grid->gradient_matrix_transposed,
-        sigma_matrix, handle);
+        sigma_matrix, handle, stream);
 
     error |= linalgcu_matrix_multiply(temp, grid->gradient_matrix_transposed,
-        sigma_matrix, handle);
-    error |= linalgcu_matrix_multiply(system_matrix, temp, gradient_matrix, handle);
-    cudaStreamSynchronize(NULL);
+        sigma_matrix, handle, stream);
+    error |= linalgcu_matrix_multiply(system_matrix, temp, gradient_matrix, handle, stream);
+    cudaStreamSynchronize(stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -248,11 +249,11 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     }
 
     // create sparse matrices
-    error = linalgcu_sparse_matrix_create(&grid->system_matrix, system_matrix);
+    error = linalgcu_sparse_matrix_create(&grid->system_matrix, system_matrix, stream);
     error |= linalgcu_sparse_matrix_create(&grid->gradient_matrix_transposed_sparse,
-        grid->gradient_matrix_transposed);
+        grid->gradient_matrix_transposed, stream);
     error |= linalgcu_sparse_matrix_create(&grid->gradient_matrix_sparse,
-        gradient_matrix);
+        gradient_matrix, stream);
 
     // cleanup
     linalgcu_matrix_release(&sigma_matrix);
@@ -351,7 +352,7 @@ linalgcu_matrix_data_t ert_grid_integrate_basis(linalgcu_matrix_data_t* node,
 
 // init exitation matrix
 linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
-    ert_electrodes_t electrodes) {
+    ert_electrodes_t electrodes, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (electrodes == NULL)) {
         return LINALGCU_ERROR;
@@ -361,8 +362,8 @@ linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // create exitation_matrix
-    error = linalgcu_matrix_create(&grid->exitation_matrix,
-        grid->mesh->vertex_count, electrodes->count);
+    error = linalgcu_matrix_create(&grid->excitation_matrix,
+        grid->mesh->vertex_count, electrodes->count, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -394,7 +395,7 @@ linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
             linalgcu_matrix_get_element(grid->mesh->vertices, &right[1], (linalgcu_size_t)id[2], 1);
 
             // calc element
-            linalgcu_matrix_set_element(grid->exitation_matrix,
+            linalgcu_matrix_set_element(grid->excitation_matrix,
                 ert_grid_integrate_basis(node, left, right,
                     &electrodes->electrode_start[j * 2], &electrodes->electrode_end[j * 2]) / element_area,
                     (linalgcu_size_t)id[1], j);
@@ -402,7 +403,7 @@ linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     }
 
     // upload matrix
-    linalgcu_matrix_copy_to_device(grid->exitation_matrix, LINALGCU_TRUE);
+    linalgcu_matrix_copy_to_device(grid->excitation_matrix, LINALGCU_TRUE, stream);
 
     return LINALGCU_SUCCESS;
 }
