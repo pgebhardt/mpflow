@@ -297,7 +297,7 @@ linalgcu_matrix_data_t ert_grid_integrate_basis(linalgcu_matrix_data_t* node,
 
     // calc angle of node
     linalgcu_matrix_data_t angle = ert_grid_angle(node[0], node[1]);
-    linalgcu_matrix_data_t radius = start[0] * start[0] + start[1] * start[1];
+    linalgcu_matrix_data_t radius = sqrt(start[0] * start[0] + start[1] * start[1]);
 
     // calc s parameter
     linalgcu_matrix_data_t sleft = radius * (ert_grid_angle(left[0], left[1]) - angle);
@@ -371,7 +371,8 @@ linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     }
 
     // calc electrode area
-    linalgcu_matrix_data_t element_area = electrodes->size * electrodes->size;
+    // linalgcu_matrix_data_t element_area = M_PI * electrodes->size * electrodes->size / 4.0f;
+    linalgcu_matrix_data_t element_area = electrodes->size;
 
     // fill exitation_matrix matrix
     linalgcu_matrix_data_t id[3];
