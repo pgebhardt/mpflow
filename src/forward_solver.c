@@ -18,37 +18,15 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/time.h>
 #include <cuda/cuda_runtime.h>
 #include <cuda/cublas_v2.h>
 #include <linalgcu/linalgcu.h>
-#include <actor/actor.h>
 #include "mesh.h"
 #include "basis.h"
-#include "image.h"
 #include "electrodes.h"
 #include "grid.h"
+#include "conjugate.h"
 #include "forward.h"
-#include "solver.h"
-
-static void print_matrix(linalgcu_matrix_t matrix) {
-    if (matrix == NULL) {
-        return;
-    }
-
-    // value memory
-    linalgcu_matrix_data_t value = 0.0;
-
-    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
-            // get value
-            linalgcu_matrix_get_element(matrix, &value, i, j);
-
-            printf("%f, ", value);
-        }
-        printf("\n");
-    }
-}
 
 int main(int argc, char* argv[]) {
     // error
@@ -66,86 +44,105 @@ int main(int argc, char* argv[]) {
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        printf("Mesh erzeugen ging nicht!\n");
         return EXIT_FAILURE;
     }
 
     // copy matrices to device
-    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_FALSE, NULL);
     linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE, NULL);
 
     // create electrodes
     ert_electrodes_t electrodes;
-    error = ert_electrodes_create(&electrodes, 36, 0.005, mesh);
+    error  = ert_electrodes_create(&electrodes, 36, 0.005f, mesh);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         return EXIT_FAILURE;
     }
 
+    // load pattern
+    linalgcu_matrix_t drive_pattern, measurment_pattern;
+    linalgcu_matrix_load(&drive_pattern, "input/drive_pattern.txt", NULL);
+    linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
+    linalgcu_matrix_copy_to_device(drive_pattern, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_copy_to_device(measurment_pattern, LINALGCU_TRUE, NULL);
+
     // create solver
-    ert_solver_t solver;
-    error = ert_solver_create(&solver, mesh, electrodes, 9, 18,
-        program, context, device_id, queue);
+    ert_forward_solver_t solver;
+    error = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
+        measurment_pattern, handle, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        printf("Kann keinen Solver erstellen!\n");
+        printf("Solver erstellen ging nicht!\n");
         return EXIT_FAILURE;
     }
 
     // set sigma
-    linalgcu_matrix_data_t id;
-    linalgcu_matrix_data_t x, y;
+    linalgcu_matrix_data_t id, x, y;
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcu_matrix_set_element(solver->sigma, 1.0f, i, 0);
+        linalgcu_matrix_set_element(solver->grid->sigma, 50E-3, i, 0);
     }
 
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
-        // check element
+        // get element
         linalgcu_matrix_get_element(mesh->elements, &id, i, 0);
         linalgcu_matrix_get_element(mesh->vertices, &x, (linalgcu_size_t)id, 0);
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
-        if ((x - 0.005) * (x - 0.005) + (y - 0.005) * (y - 0.005) > 0.02 * 0.02) {
+        // check element
+        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.02 * 0.02) {
             continue;
         }
 
+        // get element
         linalgcu_matrix_get_element(mesh->elements, &id, i, 1);
         linalgcu_matrix_get_element(mesh->vertices, &x, (linalgcu_size_t)id, 0);
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
-        if ((x - 0.005) * (x - 0.005) + (y - 0.005) * (y - 0.005) > 0.02 * 0.02) {
+        // check element
+        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.02 * 0.02) {
             continue;
         }
 
+        // get element
         linalgcu_matrix_get_element(mesh->elements, &id, i, 2);
         linalgcu_matrix_get_element(mesh->vertices, &x, (linalgcu_size_t)id, 0);
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
-        if ((x - 0.005) * (x - 0.005) + (y - 0.005) * (y - 0.005) > 0.02 * 0.02) {
+        // check element
+        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.02 * 0.02) {
             continue;
         }
 
-        linalgcu_matrix_set_element(solver->sigma, 0.1f, i, 0);
+        // set sigma
+        linalgcu_matrix_set_element(solver->grid->sigma, 1E-3, i, 0);
     }
-    linalgcu_matrix_copy_to_device(solver->sigma, queue, LINALGCU_TRUE);
-    ert_grid_update_system_matrix(solver->grid, queue);
+    linalgcu_matrix_copy_to_device(solver->grid->sigma, LINALGCU_TRUE, NULL);
+    ert_grid_update_system_matrix(solver->grid, NULL);
 
     // solve
-    ert_solver_forward(NULL, solver, program, context, queue);
+    for (linalgcu_size_t i = 0; i < 100; i++) {
+        ert_forward_solver_solve(solver, handle, NULL);
+    }
 
-    // voltage
-    linalgcu_matrix_copy_to_host(solver->calculated_voltage, queue, LINALGCU_TRUE);
-    linalgcu_matrix_save("input/measured_voltage.txt", solver->calculated_voltage);
-
-    // save sigma
-    linalgcu_matrix_copy_to_host(solver->sigma, queue, LINALGCU_TRUE);
-    linalgcu_matrix_save("input/sigma.txt", solver->sigma);
+    // calc voltage
+    linalgcu_matrix_t voltage;
+    linalgcu_matrix_create(&voltage, measurment_pattern->size_n,
+        drive_pattern->size_n, NULL);
+    linalgcu_matrix_multiply(voltage, solver->voltage_calculation, solver->phi, handle, NULL);
+    cudaStreamSynchronize(NULL);
+    linalgcu_matrix_copy_to_host(voltage, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_save("input/measured_voltage.txt", voltage);
+    linalgcu_matrix_release(&voltage);
 
     // cleanup
-    ert_solver_release(&solver);
+    ert_forward_solver_release(&solver);
+    linalgcu_matrix_release(&drive_pattern);
+    linalgcu_matrix_release(&measurment_pattern);
     cublasDestroy(handle);
+
+    printf("Forward solving done!\n");
 
     return EXIT_SUCCESS;
 };
