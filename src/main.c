@@ -68,10 +68,6 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // copy matrices to device
-    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_FALSE, NULL);
-    linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE, NULL);
-
     // create electrodes
     fastect_electrodes_t electrodes;
     error  = fastect_electrodes_create(&electrodes, 36, 0.005f, mesh);
@@ -85,8 +81,6 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_t drive_pattern, measurment_pattern;
     linalgcu_matrix_load(&drive_pattern, "input/drive_pattern.txt", NULL);
     linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
-    linalgcu_matrix_copy_to_device(drive_pattern, LINALGCU_TRUE, NULL);
-    linalgcu_matrix_copy_to_device(measurment_pattern, LINALGCU_TRUE, NULL);
 
     // create solver
     fastect_forward_solver_t solver;
@@ -150,16 +144,6 @@ int main(int argc, char* argv[]) {
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
     }
-
-    // calc voltage
-    linalgcu_matrix_t voltage;
-    linalgcu_matrix_create(&voltage, measurment_pattern->size_n,
-        drive_pattern->size_n, NULL);
-    linalgcu_matrix_multiply(voltage, solver->voltage_calculation, solver->phi, handle, NULL);
-    cudaStreamSynchronize(NULL);
-    linalgcu_matrix_copy_to_host(voltage, LINALGCU_TRUE, NULL);
-    linalgcu_matrix_save("output/voltage.txt", voltage);
-    linalgcu_matrix_release(&voltage);
 
     // cleanup
     fastect_forward_solver_release(&solver);

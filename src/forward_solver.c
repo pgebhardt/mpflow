@@ -28,60 +28,11 @@
 #include "conjugate.h"
 #include "forward.h"
 
-int main(int argc, char* argv[]) {
-    // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
-
-    // create cublas handle
-    cublasHandle_t handle = NULL;
-    if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // create mesh
-    fastect_mesh_t mesh;
-    error = fastect_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // copy matrices to device
-    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_FALSE, NULL);
-    linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE, NULL);
-
-    // create electrodes
-    fastect_electrodes_t electrodes;
-    error  = fastect_electrodes_create(&electrodes, 36, 0.005f, mesh);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // load pattern
-    linalgcu_matrix_t drive_pattern, measurment_pattern;
-    linalgcu_matrix_load(&drive_pattern, "input/drive_pattern.txt", NULL);
-    linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
-    linalgcu_matrix_copy_to_device(drive_pattern, LINALGCU_TRUE, NULL);
-    linalgcu_matrix_copy_to_device(measurment_pattern, LINALGCU_TRUE, NULL);
-
-    // create solver
-    fastect_forward_solver_t solver;
-    error = fastect_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
-        measurment_pattern, handle, NULL);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        printf("Solver erstellen ging nicht!\n");
-        return EXIT_FAILURE;
-    }
-
+linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStream_t stream) {
     // set sigma
     linalgcu_matrix_data_t id, x, y;
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcu_matrix_set_element(solver->grid->sigma, 50E-3, i, 0);
+        linalgcu_matrix_set_element(sigma, 50E-3, i, 0);
     }
 
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
@@ -116,9 +67,62 @@ int main(int argc, char* argv[]) {
         }
 
         // set sigma
-        linalgcu_matrix_set_element(solver->grid->sigma, 1E-3, i, 0);
+        linalgcu_matrix_set_element(sigma, 1E-3, i, 0);
     }
-    linalgcu_matrix_copy_to_device(solver->grid->sigma, LINALGCU_TRUE, NULL);
+
+    linalgcu_matrix_copy_to_device(sigma, LINALGCU_TRUE, stream);
+
+    return LINALGCU_SUCCESS;
+}
+
+int main(int argc, char* argv[]) {
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
+    // create cublas handle
+    cublasHandle_t handle = NULL;
+    if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    // create mesh
+    fastect_mesh_t mesh;
+    error = fastect_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    // create electrodes
+    fastect_electrodes_t electrodes;
+    error  = fastect_electrodes_create(&electrodes, 36, 0.005f, mesh);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    // load pattern
+    linalgcu_matrix_t drive_pattern, measurment_pattern;
+    linalgcu_matrix_load(&drive_pattern, "input/drive_pattern.txt", NULL);
+    linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
+
+    // create solver
+    fastect_forward_solver_t solver;
+    error = fastect_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
+        measurment_pattern, handle, NULL);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        printf("Solver erstellen ging nicht!\n");
+        return EXIT_FAILURE;
+    }
+
+    // set sigma
+    set_sigma(solver->grid->sigma, mesh, NULL);
+
+    // update system_matrix
     fastect_grid_update_system_matrix(solver->grid, NULL);
 
     // solve
@@ -135,6 +139,9 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_host(voltage, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("input/measured_voltage.txt", voltage);
     linalgcu_matrix_release(&voltage);
+
+    // save sigma
+    linalgcu_matrix_save("input/sigma.txt", solver->grid->sigma);
 
     // cleanup
     fastect_forward_solver_release(&solver);
