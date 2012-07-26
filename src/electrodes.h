@@ -24,6 +24,7 @@ typedef struct {
     linalgcu_size_t count;
     linalgcu_matrix_data_t* electrode_start;
     linalgcu_matrix_data_t* electrode_end;
+    linalgcu_matrix_data_t size;
 } ert_electrodes_s;
 typedef ert_electrodes_s* ert_electrodes_t;
 

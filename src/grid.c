@@ -371,9 +371,7 @@ linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
     }
 
     // calc electrode area
-    linalgcu_matrix_data_t element_area = 2.0 * M_PI * grid->mesh->radius /
-        (linalgcu_matrix_data_t)(electrodes->count * 2);
-    element_area *= element_area;
+    linalgcu_matrix_data_t element_area = electrodes->size * electrodes->size;
 
     // fill exitation_matrix matrix
     linalgcu_matrix_data_t id[3];

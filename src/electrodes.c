@@ -52,6 +52,7 @@ linalgcu_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     electrodes->count = count;
     electrodes->electrode_start = NULL;
     electrodes->electrode_end = NULL;
+    electrodes->size = size;
 
     // create electrode vectors
     electrodes->electrode_start = malloc(sizeof(linalgcu_matrix_data_t) *
