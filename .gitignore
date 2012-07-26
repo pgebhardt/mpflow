@@ -5,3 +5,4 @@ forward_solver
 build
 output
 input/measured_voltage.txt
+fastECT

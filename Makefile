@@ -1,4 +1,4 @@
-# ert
+# fastECT
 #
 # Copyright (C) 2012  Patrik Gebhardt
 # Contact: patrik.gebhardt@rub.de
@@ -22,9 +22,10 @@ CUDA_HOME = /usr/local/cuda
 # Copmiler
 CC = clang
 NVCC = $(CUDA_HOME)/bin/nvcc
-CFLAGS = -fblocks
+CFLAGS =
+NVCFLAGS =
 
-LDFLAGS = -lBlocksRuntime -ldispatch -L/usr/local/lib -llinalgcu -lactor -L/usr/local/cuda/lib64 -lcudart -lcublas -lm
+LDFLAGS = -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lm
 
 # Directories
 SRC = src
@@ -43,7 +44,7 @@ _DEPS = mesh.h basis.h electrodes.h grid.h image.h conjugate.h forward.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file
-BIN = ert
+BIN = fastECT
 FORWARD_SOLVER = forward_solver
 
 # Rule for library
@@ -61,7 +62,7 @@ $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
 # Rule for cuda object files
 $(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
 	mkdir -p $(BUILD)
-	$(NVCC) -c -o $@ $<
+	$(NVCC) $(NVCFLAGS) -c -o $@ $<
 
 # Cleanup
 clean:

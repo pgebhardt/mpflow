@@ -1,4 +1,4 @@
-// ert
+// factECT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de

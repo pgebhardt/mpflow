@@ -1,4 +1,4 @@
-// ert
+// fastECT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
