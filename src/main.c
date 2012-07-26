@@ -30,6 +30,25 @@
 #include "conjugate.h"
 #include "forward.h"
 
+static void print_matrix(linalgcu_matrix_t matrix) {
+    if (matrix == NULL) {
+        return;
+    }
+
+    // value memory
+    linalgcu_matrix_data_t value = 0.0;
+
+    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
+        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
+            // get value
+            linalgcu_matrix_get_element(matrix, &value, i, j);
+
+            printf("%f, ", value);
+        }
+        printf("\n");
+    }
+}
+
 int main(int argc, char* argv[]) {
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
@@ -55,7 +74,7 @@ int main(int argc, char* argv[]) {
 
     // create electrodes
     ert_electrodes_t electrodes;
-    error  = ert_electrodes_create(&electrodes, 36, 0.005, mesh);
+    error  = ert_electrodes_create(&electrodes, 36, 0.005f, mesh);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -79,6 +98,13 @@ int main(int argc, char* argv[]) {
         printf("Solver erstellen ging nicht!\n");
         return EXIT_FAILURE;
     }
+
+    // set sigma
+    for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
+        linalgcu_matrix_set_element(solver->grid->sigma, 50E-3, i, 0);
+    }
+    linalgcu_matrix_copy_to_device(solver->grid->sigma, LINALGCU_TRUE, NULL);
+    ert_grid_update_system_matrix(solver->grid, NULL);
 
     // Create image
     ert_image_t image;
@@ -110,8 +136,8 @@ int main(int argc, char* argv[]) {
     dummy_matrix.size_m = solver->phi->size_m;
     dummy_matrix.size_n = 1;
 
-    /*// calc images
-    char buffer[1024];
+    // calc images
+    /*char buffer[1024];
     for (linalgcu_size_t i = 0; i < solver->count; i++) {
         // copy current phi to vector
         dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->size_m];
@@ -130,7 +156,6 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_create(&voltage, measurment_pattern->size_n,
         drive_pattern->size_n, NULL);
     linalgcu_matrix_multiply(voltage, solver->voltage_calculation, solver->phi, handle, NULL);
-    linalgcu_matrix_scalar_multiply(voltage, 0.005f, handle, NULL);
     cudaStreamSynchronize(NULL);
     linalgcu_matrix_copy_to_host(voltage, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/voltage.txt", voltage);
