@@ -52,10 +52,11 @@ static void print_matrix(linalgcu_matrix_t matrix) {
 // create forward_solver
 linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcu_size_t count,
-    linalgcu_matrix_t pattern, cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t drive_pattern, linalgcu_matrix_t measurment_pattern,
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
-        (pattern == NULL) || (handle == NULL)) {
+        (drive_pattern == NULL) || (measurment_pattern == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -78,10 +79,9 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     solver->conjugate_solver = NULL;
     solver->electrodes = electrodes;
     solver->count = count;
-    solver->pattern = pattern;
     solver->phi = NULL;
-    solver->temp = NULL;
     solver->f = NULL;
+    solver->voltage_calculation = NULL;
 
     // create grids
     error  = ert_grid_create(&solver->grid, mesh, handle, stream);
@@ -98,7 +98,8 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     // create matrices
     error  = linalgcu_matrix_create(&solver->phi, mesh->vertex_count,
         solver->count, stream);
-    error |= linalgcu_matrix_create(&solver->temp, mesh->vertex_count, 1, stream);
+    error |= linalgcu_matrix_create(&solver->voltage_calculation,
+        measurment_pattern->size_n, mesh->vertex_count, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -107,10 +108,6 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
 
         return error;
     }
-
-    // copy matrices to device
-    linalgcu_matrix_copy_to_device(solver->phi, LINALGCU_FALSE, stream);
-    linalgcu_matrix_copy_to_device(solver->temp, LINALGCU_TRUE, stream);
 
     // create f matrix storage
     solver->f = malloc(sizeof(linalgcu_matrix_t) * solver->count);
@@ -124,9 +121,7 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // create conjugate solver
-    solver->conjugate_solver = malloc(sizeof(ert_conjugate_solver_s) * 2);
-
-    error  = ert_conjugate_solver_create(&solver->conjugate_solver,
+    error = ert_conjugate_solver_create(&solver->conjugate_solver,
         solver->grid->system_matrix, mesh->vertex_count,
         handle, stream);
 
@@ -139,7 +134,7 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     }
 
     // calc excitaion matrices
-    error = ert_forward_solver_calc_excitaion(solver, handle, stream);
+    error = ert_forward_solver_calc_excitaion(solver, drive_pattern, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -147,6 +142,20 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
         ert_forward_solver_release(&solver);
 
         return error;
+    }
+
+    // calc voltage calculation matrix
+    linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurment_pattern->size_n,
+        solver->grid->excitation_matrix->size_m, measurment_pattern->size_m, &alpha,
+        measurment_pattern->device_data, measurment_pattern->size_m,
+        solver->grid->excitation_matrix->device_data, solver->grid->excitation_matrix->size_m,
+        &beta, solver->voltage_calculation->device_data, solver->voltage_calculation->size_m) !=
+        CUBLAS_STATUS_SUCCESS) {
+        // cleanup
+        ert_forward_solver_release(&solver);
+
+        return LINALGCU_ERROR;
     }
 
     // set solver pointer
@@ -169,9 +178,8 @@ linalgcu_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
     ert_grid_release(&solver->grid);
     ert_conjugate_solver_release(&solver->conjugate_solver);
     ert_electrodes_release(&solver->electrodes);
-    linalgcu_matrix_release(&solver->pattern);
     linalgcu_matrix_release(&solver->phi);
-    linalgcu_matrix_release(&solver->temp);
+    linalgcu_matrix_release(&solver->voltage_calculation);
 
     if (solver->f != NULL) {
         for (linalgcu_size_t i = 0; i < solver->count; i++) {
@@ -191,7 +199,7 @@ linalgcu_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
 
 // calc excitaion
 linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
-    cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t drive_pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -201,7 +209,7 @@ linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.host_data = NULL;
     dummy_matrix.device_data = NULL;
-    dummy_matrix.size_m = solver->pattern->size_m;
+    dummy_matrix.size_m = drive_pattern->size_m;
     dummy_matrix.size_n = 1;
 
     // create drive pattern
@@ -210,7 +218,7 @@ linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
         linalgcu_matrix_create(&solver->f[i], solver->grid->mesh->vertex_count, 1, stream);
 
         // get current pattern
-        dummy_matrix.device_data = &solver->pattern->device_data[i * solver->pattern->size_m];
+        dummy_matrix.device_data = &drive_pattern->device_data[i * drive_pattern->size_m];
 
         // calc f
         linalgcu_matrix_multiply(solver->f[i], solver->grid->excitation_matrix,

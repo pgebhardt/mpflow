@@ -62,15 +62,17 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    // load drive pattern
-    linalgcu_matrix_t drive_pattern;
+    // load pattern
+    linalgcu_matrix_t drive_pattern, measurment_pattern;
     linalgcu_matrix_load(&drive_pattern, "input/drive_pattern.txt", NULL);
+    linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
     linalgcu_matrix_copy_to_device(drive_pattern, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_copy_to_device(measurment_pattern, LINALGCU_TRUE, NULL);
 
     // create solver
     ert_forward_solver_t solver;
     error = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
-        handle, NULL);
+        measurment_pattern, handle, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -108,7 +110,7 @@ int main(int argc, char* argv[]) {
     dummy_matrix.size_m = solver->phi->size_m;
     dummy_matrix.size_n = 1;
 
-    // calc images
+    /*// calc images
     char buffer[1024];
     for (linalgcu_size_t i = 0; i < solver->count; i++) {
         // copy current phi to vector
@@ -121,11 +123,24 @@ int main(int argc, char* argv[]) {
         linalgcu_matrix_save("output/image.txt", image->image);
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
-    }
+    }*/
+
+    // calc voltage
+    linalgcu_matrix_t voltage;
+    linalgcu_matrix_create(&voltage, measurment_pattern->size_n,
+        drive_pattern->size_n, NULL);
+    linalgcu_matrix_multiply(voltage, solver->voltage_calculation, solver->phi, handle, NULL);
+    linalgcu_matrix_scalar_multiply(voltage, 0.005f, handle, NULL);
+    cudaStreamSynchronize(NULL);
+    linalgcu_matrix_copy_to_host(voltage, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_save("output/voltage.txt", voltage);
+    linalgcu_matrix_release(&voltage);
 
     // cleanup
     ert_forward_solver_release(&solver);
     ert_image_release(&image);
+    linalgcu_matrix_release(&drive_pattern);
+    linalgcu_matrix_release(&measurment_pattern);
     cublasDestroy(handle);
 
     return EXIT_SUCCESS;

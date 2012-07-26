@@ -25,24 +25,24 @@ typedef struct {
     ert_conjugate_solver_t conjugate_solver;
     ert_electrodes_t electrodes;
     linalgcu_size_t count;
-    linalgcu_matrix_t pattern;
     linalgcu_matrix_t phi;
-    linalgcu_matrix_t temp;
     linalgcu_matrix_t* f;
+    linalgcu_matrix_t voltage_calculation;
 } ert_forward_solver_s;
 typedef ert_forward_solver_s* ert_forward_solver_t;
 
 // create forward_solver
 linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcu_size_t count,
-    linalgcu_matrix_t pattern, cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_matrix_t drive_pattern, linalgcu_matrix_t measurment_pattern,
+    cublasHandle_t handle, cudaStream_t stream);
 
 // release forward_solver
 linalgcu_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer);
 
 // calc excitaion
 linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t _solver,
-    cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_matrix_t drive_patternm, cublasHandle_t handle, cudaStream_t stream);
 
 // forward solving
 linalgcu_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
