@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ERT_MESH_H
-#define ERT_MESH_H
+#ifndef FASTECT_MESH_H
+#define FASTECT_MESH_H
 
 // mesh struct
 typedef struct {
@@ -29,15 +29,15 @@ typedef struct {
     linalgcu_matrix_t vertices;
     linalgcu_matrix_t elements;
     linalgcu_matrix_t boundary;
-} ert_mesh_s;
-typedef ert_mesh_s* ert_mesh_t;
+} fastect_mesh_s;
+typedef fastect_mesh_s* fastect_mesh_t;
 
 // create new mesh
-linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
+linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
     cudaStream_t stream);
 
 // cleanup mesh
-linalgcu_error_t ert_mesh_release(ert_mesh_t* meshPointer);
+linalgcu_error_t fastect_mesh_release(fastect_mesh_t* meshPointer);
 
 #endif

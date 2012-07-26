@@ -65,7 +65,7 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matri
 
 // update system matrix
 extern "C"
-linalgcu_error_t ert_grid_update_system_matrix(ert_grid_t grid, cudaStream_t stream) {
+linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid, cudaStream_t stream) {
     // check input
     if (grid == NULL) {
         return LINALGCU_ERROR;

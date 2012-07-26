@@ -60,8 +60,8 @@ int main(int argc, char* argv[]) {
     }
 
     // create mesh
-    ert_mesh_t mesh;
-    error = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
+    fastect_mesh_t mesh;
+    error = fastect_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -73,8 +73,8 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE, NULL);
 
     // create electrodes
-    ert_electrodes_t electrodes;
-    error  = ert_electrodes_create(&electrodes, 36, 0.005f, mesh);
+    fastect_electrodes_t electrodes;
+    error  = fastect_electrodes_create(&electrodes, 36, 0.005f, mesh);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -89,8 +89,8 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_device(measurment_pattern, LINALGCU_TRUE, NULL);
 
     // create solver
-    ert_forward_solver_t solver;
-    error = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
+    fastect_forward_solver_t solver;
+    error = fastect_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
         measurment_pattern, handle, NULL);
 
     // check success
@@ -104,11 +104,11 @@ int main(int argc, char* argv[]) {
         linalgcu_matrix_set_element(solver->grid->sigma, 50E-3, i, 0);
     }
     linalgcu_matrix_copy_to_device(solver->grid->sigma, LINALGCU_TRUE, NULL);
-    ert_grid_update_system_matrix(solver->grid, NULL);
+    fastect_grid_update_system_matrix(solver->grid, NULL);
 
     // Create image
-    ert_image_t image;
-    ert_image_create(&image, 1000, 1000, mesh, NULL);
+    fastect_image_t image;
+    fastect_image_create(&image, 1000, 1000, mesh, NULL);
     linalgcu_matrix_copy_to_device(image->elements, LINALGCU_FALSE, NULL);
     linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE, NULL);
 
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     for (linalgcu_size_t i = 0; i < 100; i++) {
-        ert_forward_solver_solve(solver, handle, NULL);
+        fastect_forward_solver_solve(solver, handle, NULL);
     }
 
     // get end time
@@ -137,19 +137,19 @@ int main(int argc, char* argv[]) {
     dummy_matrix.size_n = 1;
 
     // calc images
-    /*char buffer[1024];
+    char buffer[1024];
     for (linalgcu_size_t i = 0; i < solver->count; i++) {
         // copy current phi to vector
         dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->size_m];
 
         // calc image
-        ert_image_calc_phi(image, &dummy_matrix, NULL);
+        fastect_image_calc_phi(image, &dummy_matrix, NULL);
         cudaStreamSynchronize(NULL);
         linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
         linalgcu_matrix_save("output/image.txt", image->image);
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
-    }*/
+    }
 
     // calc voltage
     linalgcu_matrix_t voltage;
@@ -162,8 +162,8 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_release(&voltage);
 
     // cleanup
-    ert_forward_solver_release(&solver);
-    ert_image_release(&image);
+    fastect_forward_solver_release(&solver);
+    fastect_image_release(&image);
     linalgcu_matrix_release(&drive_pattern);
     linalgcu_matrix_release(&measurment_pattern);
     cublasDestroy(handle);

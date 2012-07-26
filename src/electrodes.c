@@ -27,8 +27,8 @@
 #include "electrodes.h"
 
 // create electrodes
-linalgcu_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
-    linalgcu_size_t count, linalgcu_matrix_data_t size, ert_mesh_t mesh) {
+linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
+    linalgcu_size_t count, linalgcu_matrix_data_t size, fastect_mesh_t mesh) {
     // check input
     if ((electrodesPointer == NULL) || (count == 0) || (mesh == NULL)) {
         return LINALGCU_ERROR;
@@ -41,7 +41,7 @@ linalgcu_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     *electrodesPointer = NULL;
 
     // create struct
-    ert_electrodes_t electrodes = malloc(sizeof(ert_electrodes_s));
+    fastect_electrodes_t electrodes = malloc(sizeof(fastect_electrodes_s));
 
     // check success
     if (electrodes == NULL) {
@@ -63,7 +63,7 @@ linalgcu_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
     // check success
     if ((electrodes->electrode_start == NULL) || (electrodes->electrode_end == NULL)) {
         // cleanup
-        ert_electrodes_release(&electrodes);
+        fastect_electrodes_release(&electrodes);
 
         return LINALGCU_ERROR;
     }
@@ -94,14 +94,14 @@ linalgcu_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
 }
 
 // release electrodes
-linalgcu_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer) {
+linalgcu_error_t fastect_electrodes_release(fastect_electrodes_t* electrodesPointer) {
     // check input
     if ((electrodesPointer == NULL) || (*electrodesPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get electrodes
-    ert_electrodes_t electrodes = *electrodesPointer;
+    fastect_electrodes_t electrodes = *electrodesPointer;
 
     // free electrode vectors
     if (electrodes->electrode_start != NULL) {

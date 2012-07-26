@@ -1,4 +1,4 @@
-// factECT
+// fastECT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
@@ -26,27 +26,8 @@
 #include "mesh.h"
 #include "conjugate.h"
 
-static void print_matrix(linalgcu_matrix_t matrix) {
-    if (matrix == NULL) {
-        return;
-    }
-
-    // value memory
-    linalgcu_matrix_data_t value = 0.0;
-
-    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
-            // get value
-            linalgcu_matrix_get_element(matrix, &value, i, j);
-
-            printf("%f, ", value);
-        }
-        printf("\n");
-    }
-}
-
 // create conjugate solver
-linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPointer,
+linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* solverPointer,
     linalgcu_sparse_matrix_t system_matrix, linalgcu_size_t size,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
@@ -61,7 +42,7 @@ linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     *solverPointer = NULL;
 
     // create solver struct
-    ert_conjugate_solver_t solver = malloc(sizeof(ert_conjugate_solver_s));
+    fastect_conjugate_solver_t solver = malloc(sizeof(fastect_conjugate_solver_s));
 
     // check success
     if (solver == NULL) {
@@ -95,7 +76,7 @@ linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_conjugate_solver_release(&solver);
+        fastect_conjugate_solver_release(&solver);
 
         return error;
     }
@@ -109,7 +90,7 @@ linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_conjugate_solver_release(&solver);
+        fastect_conjugate_solver_release(&solver);
 
         return error;
     }
@@ -121,14 +102,14 @@ linalgcu_error_t ert_conjugate_solver_create(ert_conjugate_solver_t* solverPoint
 }
 
 // release solver
-linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPointer) {
+linalgcu_error_t fastect_conjugate_solver_release(fastect_conjugate_solver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    ert_conjugate_solver_t solver = *solverPointer;
+    fastect_conjugate_solver_t solver = *solverPointer;
 
     // release matrices
     linalgcu_matrix_release(&solver->residuum);
@@ -150,7 +131,7 @@ linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPoin
 }
 
 // solve conjugate
-linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
+linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solver,
     linalgcu_matrix_t x, linalgcu_matrix_t f, linalgcu_size_t iterations,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
@@ -162,7 +143,7 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
     // calc residuum r = f - A * x
     linalgcu_matrix_vector_dot_product(solver->temp_number, x, solver->ones, stream);
     linalgcu_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x, stream);
-    ert_conjugate_add_scalar(solver->residuum, solver->temp_number, solver->size, stream);
+    fastect_conjugate_add_scalar(solver->residuum, solver->temp_number, solver->size, stream);
     linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle, stream);
     linalgcu_matrix_add(solver->residuum, f, handle, stream);
 
@@ -178,18 +159,18 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
         linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection, solver->ones, stream);
         linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
             solver->projection, stream);
-        ert_conjugate_add_scalar(solver->temp_vector, solver->temp_number, solver->size, stream);
+        fastect_conjugate_add_scalar(solver->temp_vector, solver->temp_number, solver->size, stream);
 
         // calc p * A * p
         linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection,
             solver->temp_vector, stream);
 
         // update residuum
-        ert_conjugate_udate_vector(solver->residuum, solver->residuum, -1.0f,
+        fastect_conjugate_udate_vector(solver->residuum, solver->residuum, -1.0f,
             solver->temp_vector, solver->rsold, solver->temp_number, stream);
 
         // update x
-        ert_conjugate_udate_vector(x, x, 1.0f, solver->projection, solver->rsold,
+        fastect_conjugate_udate_vector(x, x, 1.0f, solver->projection, solver->rsold,
             solver->temp_number, stream);
 
         // calc rsnew
@@ -197,7 +178,7 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
             solver->residuum, stream);
 
         // update projection
-        ert_conjugate_udate_vector(solver->projection, solver->residuum, 1.0f,
+        fastect_conjugate_udate_vector(solver->projection, solver->residuum, 1.0f,
             solver->projection, solver->rsnew, solver->rsold, stream);
 
         // update rsold

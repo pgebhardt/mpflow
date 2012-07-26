@@ -31,8 +31,8 @@
 #include "forward.h"
 
 // create forward_solver
-linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
-    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcu_size_t count,
+linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverPointer,
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t count,
     linalgcu_matrix_t drive_pattern, linalgcu_matrix_t measurment_pattern,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
@@ -48,7 +48,7 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     *solverPointer = NULL;
 
     // create struct
-    ert_forward_solver_t solver = malloc(sizeof(ert_forward_solver_s));
+    fastect_forward_solver_t solver = malloc(sizeof(fastect_forward_solver_s));
 
     // check success
     if (solver == NULL) {
@@ -65,13 +65,13 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     solver->voltage_calculation = NULL;
 
     // create grids
-    error  = ert_grid_create(&solver->grid, mesh, handle, stream);
-    error |= ert_grid_init_exitation_matrix(solver->grid, solver->electrodes, stream);
+    error  = fastect_grid_create(&solver->grid, mesh, handle, stream);
+    error |= fastect_grid_init_exitation_matrix(solver->grid, solver->electrodes, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        fastect_forward_solver_release(&solver);
 
         return error;
     }
@@ -85,7 +85,7 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        fastect_forward_solver_release(&solver);
 
         return error;
     }
@@ -96,31 +96,31 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
     // check success
     if (solver->f == NULL) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        fastect_forward_solver_release(&solver);
 
         return LINALGCU_ERROR;
     }
 
     // create conjugate solver
-    error = ert_conjugate_solver_create(&solver->conjugate_solver,
+    error = fastect_conjugate_solver_create(&solver->conjugate_solver,
         solver->grid->system_matrix, mesh->vertex_count,
         handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        fastect_forward_solver_release(&solver);
 
         return error;
     }
 
     // calc excitaion matrices
-    error = ert_forward_solver_calc_excitaion(solver, drive_pattern, handle, stream);
+    error = fastect_forward_solver_calc_excitaion(solver, drive_pattern, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        fastect_forward_solver_release(&solver);
 
         return error;
     }
@@ -134,7 +134,7 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
         &beta, solver->voltage_calculation->device_data, solver->voltage_calculation->size_m) !=
         CUBLAS_STATUS_SUCCESS) {
         // cleanup
-        ert_forward_solver_release(&solver);
+        fastect_forward_solver_release(&solver);
 
         return LINALGCU_ERROR;
     }
@@ -146,19 +146,19 @@ linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
 }
 
 // release solver
-linalgcu_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer) {
+linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    ert_forward_solver_t solver = *solverPointer;
+    fastect_forward_solver_t solver = *solverPointer;
 
     // cleanup
-    ert_grid_release(&solver->grid);
-    ert_conjugate_solver_release(&solver->conjugate_solver);
-    ert_electrodes_release(&solver->electrodes);
+    fastect_grid_release(&solver->grid);
+    fastect_conjugate_solver_release(&solver->conjugate_solver);
+    fastect_electrodes_release(&solver->electrodes);
     linalgcu_matrix_release(&solver->phi);
     linalgcu_matrix_release(&solver->voltage_calculation);
 
@@ -179,7 +179,7 @@ linalgcu_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer)
 }
 
 // calc excitaion
-linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
+linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t solver,
     linalgcu_matrix_t drive_pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (handle == NULL)) {
@@ -210,7 +210,7 @@ linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t solver,
 }
 
 // forward solving
-linalgcu_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
+linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (handle == NULL)) {
@@ -230,7 +230,7 @@ linalgcu_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
         dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->size_m];
 
         // solve for phi
-        ert_conjugate_solver_solve(solver->conjugate_solver,
+        fastect_conjugate_solver_solve(solver->conjugate_solver,
             &dummy_matrix, solver->f[i], 10, handle, stream);
     }
 

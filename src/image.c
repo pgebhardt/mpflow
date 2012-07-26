@@ -28,8 +28,8 @@
 #include "image.h"
 
 // create image
-linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t size_x,
-    linalgcu_size_t size_y, ert_mesh_t mesh, cudaStream_t stream) {
+linalgcu_error_t fastect_image_create(fastect_image_t* imagePointer, linalgcu_size_t size_x,
+    linalgcu_size_t size_y, fastect_mesh_t mesh, cudaStream_t stream) {
     // check input
     if ((imagePointer == NULL) || (mesh == NULL)) {
         return LINALGCU_ERROR;
@@ -42,7 +42,7 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
     *imagePointer = NULL;
 
     // create image struct
-    ert_image_t image = malloc(sizeof(ert_image_s));
+    fastect_image_t image = malloc(sizeof(fastect_image_s));
 
     // check success
     if (image == NULL) {
@@ -61,7 +61,7 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_image_release(&image);
+        fastect_image_release(&image);
 
         return error;
     }
@@ -75,7 +75,7 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
 
     // fill elements matrix
     linalgcu_matrix_data_t x[3], y[3], id[3];
-    ert_basis_t basis[3];
+    fastect_basis_t basis[3];
 
     for (linalgcu_size_t k = 0; k < mesh->element_count;k++) {
         // get vertices for element
@@ -86,9 +86,9 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
         }
 
         // calc corresponding basis functions
-        ert_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        ert_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        ert_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+        fastect_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        fastect_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        fastect_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
 
         // set matrix elements
         for (linalgcu_size_t i = 0; i < 3; i++) {
@@ -109,9 +109,9 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
         }
 
         // cleanup
-        ert_basis_release(&basis[0]);
-        ert_basis_release(&basis[1]);
-        ert_basis_release(&basis[2]);
+        fastect_basis_release(&basis[0]);
+        fastect_basis_release(&basis[1]);
+        fastect_basis_release(&basis[2]);
     }
 
     // set image pointer
@@ -121,14 +121,14 @@ linalgcu_error_t ert_image_create(ert_image_t* imagePointer, linalgcu_size_t siz
 }
 
 // release image
-linalgcu_error_t ert_image_release(ert_image_t* imagePointer) {
+linalgcu_error_t fastect_image_release(fastect_image_t* imagePointer) {
     // check input
     if ((imagePointer == NULL) || (*imagePointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get image
-    ert_image_t image = *imagePointer;
+    fastect_image_t image = *imagePointer;
 
     // cleanup
     linalgcu_matrix_release(&image->elements);

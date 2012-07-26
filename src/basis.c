@@ -24,7 +24,7 @@
 #include "basis.h"
 
 // create basis
-linalgcu_error_t ert_basis_create(ert_basis_t* basisPointer,
+linalgcu_error_t fastect_basis_create(fastect_basis_t* basisPointer,
     linalgcu_matrix_data_t Ax, linalgcu_matrix_data_t Ay,
     linalgcu_matrix_data_t Bx, linalgcu_matrix_data_t By,
     linalgcu_matrix_data_t Cx, linalgcu_matrix_data_t Cy) {
@@ -40,7 +40,7 @@ linalgcu_error_t ert_basis_create(ert_basis_t* basisPointer,
     *basisPointer = NULL;
 
     // create basis struct
-    ert_basis_t basis = malloc(sizeof(ert_basis_s));
+    fastect_basis_t basis = malloc(sizeof(fastect_basis_s));
 
     // check success
     if (basis == NULL) {
@@ -58,7 +58,7 @@ linalgcu_error_t ert_basis_create(ert_basis_t* basisPointer,
     linalgcu_matrix_data_t Ainv[3][3];
     linalgcu_matrix_data_t B[3] = {1.0, 0.0, 0.0};
 
-    // invert matrix A directly
+    // invfastect matrix A directly
     linalgcu_matrix_data_t a, b, c, d, e, f, g, h, i;
     a = 1.0;
     b = Ax;
@@ -97,7 +97,7 @@ linalgcu_error_t ert_basis_create(ert_basis_t* basisPointer,
 }
 
 // release basis
-linalgcu_error_t ert_basis_release(ert_basis_t* basisPointer) {
+linalgcu_error_t fastect_basis_release(fastect_basis_t* basisPointer) {
     // check input
     if ((basisPointer == NULL) || (*basisPointer == NULL)) {
         return LINALGCU_ERROR;
@@ -113,7 +113,7 @@ linalgcu_error_t ert_basis_release(ert_basis_t* basisPointer) {
 }
 
 // evaluate basis function
-linalgcu_error_t ert_basis_function(ert_basis_t basis, linalgcu_matrix_data_t* resultPointer,
+linalgcu_error_t fastect_basis_function(fastect_basis_t basis, linalgcu_matrix_data_t* resultPointer,
     linalgcu_matrix_data_t x, linalgcu_matrix_data_t y) {
     // check input
     if ((basis == NULL) || (resultPointer == NULL)) {

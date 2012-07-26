@@ -39,8 +39,8 @@ int main(int argc, char* argv[]) {
     }
 
     // create mesh
-    ert_mesh_t mesh;
-    error = ert_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
+    fastect_mesh_t mesh;
+    error = fastect_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -52,8 +52,8 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE, NULL);
 
     // create electrodes
-    ert_electrodes_t electrodes;
-    error  = ert_electrodes_create(&electrodes, 36, 0.005f, mesh);
+    fastect_electrodes_t electrodes;
+    error  = fastect_electrodes_create(&electrodes, 36, 0.005f, mesh);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -68,8 +68,8 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_device(measurment_pattern, LINALGCU_TRUE, NULL);
 
     // create solver
-    ert_forward_solver_t solver;
-    error = ert_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
+    fastect_forward_solver_t solver;
+    error = fastect_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
         measurment_pattern, handle, NULL);
 
     // check success
@@ -119,11 +119,11 @@ int main(int argc, char* argv[]) {
         linalgcu_matrix_set_element(solver->grid->sigma, 1E-3, i, 0);
     }
     linalgcu_matrix_copy_to_device(solver->grid->sigma, LINALGCU_TRUE, NULL);
-    ert_grid_update_system_matrix(solver->grid, NULL);
+    fastect_grid_update_system_matrix(solver->grid, NULL);
 
     // solve
     for (linalgcu_size_t i = 0; i < 100; i++) {
-        ert_forward_solver_solve(solver, handle, NULL);
+        fastect_forward_solver_solve(solver, handle, NULL);
     }
 
     // calc voltage
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_release(&voltage);
 
     // cleanup
-    ert_forward_solver_release(&solver);
+    fastect_forward_solver_release(&solver);
     linalgcu_matrix_release(&drive_pattern);
     linalgcu_matrix_release(&measurment_pattern);
     cublasDestroy(handle);

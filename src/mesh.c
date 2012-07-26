@@ -24,7 +24,7 @@
 #include <linalgcu/linalgcu.h>
 #include "mesh.h"
 
-linalgcu_matrix_data_t ert_mesh_angle(linalgcu_matrix_data_t x,
+linalgcu_matrix_data_t fastect_mesh_angle(linalgcu_matrix_data_t x,
     linalgcu_matrix_data_t y) {
     if (x > 0.0f) {
         return atan(y / x);
@@ -60,7 +60,7 @@ int compare_boundary(const void* a, const void* b) {
     }
 }
 
-linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
+linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
     cudaStream_t stream) {
     // check input
@@ -75,7 +75,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     *meshPointer = NULL;
 
     // create mesg struct
-    ert_mesh_t mesh = malloc(sizeof(ert_mesh_s));
+    fastect_mesh_t mesh = malloc(sizeof(fastect_mesh_s));
 
     // check success
     if (mesh == NULL) {
@@ -100,7 +100,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_mesh_release(&mesh);
+        fastect_mesh_release(&mesh);
 
         return error;
     }
@@ -115,7 +115,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_mesh_release(&mesh);
+        fastect_mesh_release(&mesh);
 
         return error;
     }
@@ -170,7 +170,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     if (error != LINALGCU_SUCCESS) {
         // cleanup
         linalgcu_matrix_release(&vertices);
-        ert_mesh_release(&mesh);
+        fastect_mesh_release(&mesh);
 
         return error;
     }
@@ -187,7 +187,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
 
         // calc radius and angle
         radius = sqrt(x * x + y * y);
-        angle = ert_mesh_angle(x, y);
+        angle = fastect_mesh_angle(x, y);
         angle += angle < 0.0f ? 2.0 * M_PI : 0.0f;
 
         // check radius and angle
@@ -214,7 +214,7 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     if (error != LINALGCU_SUCCESS) {
         // cleanup
         linalgcu_matrix_release(&vertices);
-        ert_mesh_release(&mesh);
+        fastect_mesh_release(&mesh);
 
         return error;
     }
@@ -414,14 +414,14 @@ linalgcu_error_t ert_mesh_create(ert_mesh_t* meshPointer,
     return LINALGCU_SUCCESS;
 }
 
-linalgcu_error_t ert_mesh_release(ert_mesh_t* meshPointer) {
+linalgcu_error_t fastect_mesh_release(fastect_mesh_t* meshPointer) {
     // check input
     if ((meshPointer == NULL) || (*meshPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get mesh
-    ert_mesh_t mesh = *meshPointer;
+    fastect_mesh_t mesh = *meshPointer;
 
     // cleanup vertices
     linalgcu_matrix_release(&mesh->vertices);

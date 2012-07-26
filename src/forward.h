@@ -16,36 +16,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ERT_FORWARD_SOLVER_H
-#define ERT_FORWARD_SOLVER_H
+#ifndef FASTECT_FORWARD_SOLVER_H
+#define FASTECT_FORWARD_SOLVER_H
 
 // solver struct
 typedef struct {
-    ert_grid_t grid;
-    ert_conjugate_solver_t conjugate_solver;
-    ert_electrodes_t electrodes;
+    fastect_grid_t grid;
+    fastect_conjugate_solver_t conjugate_solver;
+    fastect_electrodes_t electrodes;
     linalgcu_size_t count;
     linalgcu_matrix_t phi;
     linalgcu_matrix_t* f;
     linalgcu_matrix_t voltage_calculation;
-} ert_forward_solver_s;
-typedef ert_forward_solver_s* ert_forward_solver_t;
+} fastect_forward_solver_s;
+typedef fastect_forward_solver_s* fastect_forward_solver_t;
 
 // create forward_solver
-linalgcu_error_t ert_forward_solver_create(ert_forward_solver_t* solverPointer,
-    ert_mesh_t mesh, ert_electrodes_t electrodes, linalgcu_size_t count,
+linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverPointer,
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t count,
     linalgcu_matrix_t drive_pattern, linalgcu_matrix_t measurment_pattern,
     cublasHandle_t handle, cudaStream_t stream);
 
 // release forward_solver
-linalgcu_error_t ert_forward_solver_release(ert_forward_solver_t* solverPointer);
+linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solverPointer);
 
 // calc excitaion
-linalgcu_error_t ert_forward_solver_calc_excitaion(ert_forward_solver_t _solver,
+linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t _solver,
     linalgcu_matrix_t drive_patternm, cublasHandle_t handle, cudaStream_t stream);
 
 // forward solving
-linalgcu_error_t ert_forward_solver_solve(ert_forward_solver_t solver,
+linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     cublasHandle_t handle, cudaStream_t stream);
 
 #endif

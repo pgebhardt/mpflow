@@ -16,12 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ERT_GRID_H
-#define ERT_GRID_H
+#ifndef FASTECT_GRID_H
+#define FASTECT_GRID_H
 
 // solver grid struct
 typedef struct {
-    ert_mesh_t mesh;
+    fastect_mesh_t mesh;
     linalgcu_sparse_matrix_t system_matrix;
     linalgcu_matrix_t excitation_matrix;
     linalgcu_sparse_matrix_t gradient_matrix_sparse;
@@ -29,27 +29,27 @@ typedef struct {
     linalgcu_matrix_t gradient_matrix_transposed;
     linalgcu_matrix_t sigma;
     linalgcu_matrix_t area;
-} ert_grid_s;
-typedef ert_grid_s* ert_grid_t;
+} fastect_grid_s;
+typedef fastect_grid_s* fastect_grid_t;
 
 // create grid
-linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
-    ert_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream);
+linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
+    fastect_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream);
 
 // release grid
-linalgcu_error_t ert_grid_release(ert_grid_t* gridPointer);
+linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer);
 
 // init system matrix
-linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
+linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid,
     cublasHandle_t handle, cudaStream_t stream);
 
 // update system matrix
 LINALGCU_EXTERN_C
-linalgcu_error_t ert_grid_update_system_matrix(ert_grid_t grid,
+linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
     cudaStream_t stream);
 
 // init exitation matrix
-linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
-    ert_electrodes_t electrodes, cudaStream_t stream);
+linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
+    fastect_electrodes_t electrodes, cudaStream_t stream);
 
 #endif

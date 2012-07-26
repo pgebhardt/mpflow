@@ -115,7 +115,7 @@ __global__ void calc_image_phi_kernel(linalgcu_matrix_data_t* image,
 
 // calc image phi
 extern "C"
-linalgcu_error_t ert_image_calc_phi(ert_image_t image,
+linalgcu_error_t fastect_image_calc_phi(fastect_image_t image,
     linalgcu_matrix_t phi, cudaStream_t stream) {
     // check input
     if ((image == NULL) || (phi == NULL)) {
@@ -184,7 +184,7 @@ __global__ void calc_image_sigma_kernel(linalgcu_matrix_data_t* image,
 
 // calc image phi
 extern "C"
-linalgcu_error_t ert_image_calc_sigma(ert_image_t image,
+linalgcu_error_t fastect_image_calc_sigma(fastect_image_t image,
     linalgcu_matrix_t sigma, cudaStream_t stream) {
     // check input
     if ((image == NULL) || (sigma == NULL)) {

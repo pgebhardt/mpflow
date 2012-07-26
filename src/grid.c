@@ -29,8 +29,8 @@
 #include "grid.h"
 
 // create solver grid
-linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
-    ert_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream) {
+linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
+    fastect_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((gridPointer == NULL) || (mesh == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -43,7 +43,7 @@ linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
     *gridPointer = NULL;
 
     // create grid struct
-    ert_grid_t grid = malloc(sizeof(ert_grid_s));
+    fastect_grid_t grid = malloc(sizeof(fastect_grid_s));
 
     // check success
     if (grid == NULL) {
@@ -82,12 +82,12 @@ linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
     linalgcu_matrix_copy_to_device(grid->area, LINALGCU_FALSE, stream);
 
     // init system matrix
-    error = ert_grid_init_system_matrix(grid, handle, stream);
+    error = fastect_grid_init_system_matrix(grid, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        ert_grid_release(&grid);
+        fastect_grid_release(&grid);
 
         return error;
     }
@@ -99,17 +99,17 @@ linalgcu_error_t ert_grid_create(ert_grid_t* gridPointer,
 }
 
 // release solver grid
-linalgcu_error_t ert_grid_release(ert_grid_t* gridPointer) {
+linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
     // check input
     if ((gridPointer == NULL) || (*gridPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get grid
-    ert_grid_t grid = *gridPointer;
+    fastect_grid_t grid = *gridPointer;
 
     // cleanup
-    ert_mesh_release(&grid->mesh);
+    fastect_mesh_release(&grid->mesh);
     linalgcu_sparse_matrix_release(&grid->system_matrix);
     linalgcu_matrix_release(&grid->excitation_matrix);
     linalgcu_matrix_release(&grid->gradient_matrix_transposed);
@@ -128,7 +128,7 @@ linalgcu_error_t ert_grid_release(ert_grid_t* gridPointer) {
 }
 
 // init system matrix
-linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
+linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (handle == NULL)) {
@@ -156,7 +156,7 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     // calc gradient matrix
     linalgcu_matrix_data_t x[3], y[3];
     linalgcu_matrix_data_t id[3];
-    ert_basis_t basis[3];
+    fastect_basis_t basis[3];
 
     // init matrices
     for (linalgcu_size_t i = 0; i < gradient_matrix->size_m; i++) {
@@ -177,9 +177,9 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
         }
 
         // calc corresponding basis functions
-        ert_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        ert_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        ert_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+        fastect_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        fastect_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        fastect_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
 
         // calc matrix elements
         for (linalgcu_size_t i = 0; i < 3; i++) {
@@ -204,9 +204,9 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
             2 * k + 1, 2 * k + 1);
 
         // cleanup
-        ert_basis_release(&basis[0]);
-        ert_basis_release(&basis[1]);
-        ert_basis_release(&basis[2]);
+        fastect_basis_release(&basis[0]);
+        fastect_basis_release(&basis[1]);
+        fastect_basis_release(&basis[2]);
     }
 
     // copy matrices to device
@@ -268,7 +268,7 @@ linalgcu_error_t ert_grid_init_system_matrix(ert_grid_t grid,
     return LINALGCU_SUCCESS;
 }
 
-linalgcu_matrix_data_t ert_grid_angle(linalgcu_matrix_data_t x, linalgcu_matrix_data_t y) {
+linalgcu_matrix_data_t fastect_grid_angle(linalgcu_matrix_data_t x, linalgcu_matrix_data_t y) {
     if (x > 0.0f) {
         return atan(y / x);
     }
@@ -289,21 +289,21 @@ linalgcu_matrix_data_t ert_grid_angle(linalgcu_matrix_data_t x, linalgcu_matrix_
     }
 }
 
-linalgcu_matrix_data_t ert_grid_integrate_basis(linalgcu_matrix_data_t* node,
+linalgcu_matrix_data_t fastect_grid_integrate_basis(linalgcu_matrix_data_t* node,
     linalgcu_matrix_data_t* left, linalgcu_matrix_data_t* right,
     linalgcu_matrix_data_t* start, linalgcu_matrix_data_t* end) {
     // integral
     linalgcu_matrix_data_t integral = 0.0f;
 
     // calc angle of node
-    linalgcu_matrix_data_t angle = ert_grid_angle(node[0], node[1]);
+    linalgcu_matrix_data_t angle = fastect_grid_angle(node[0], node[1]);
     linalgcu_matrix_data_t radius = sqrt(start[0] * start[0] + start[1] * start[1]);
 
     // calc s parameter
-    linalgcu_matrix_data_t sleft = radius * (ert_grid_angle(left[0], left[1]) - angle);
-    linalgcu_matrix_data_t sright = radius * (ert_grid_angle(right[0], right[1]) - angle);
-    linalgcu_matrix_data_t sstart = radius * (ert_grid_angle(start[0], start[1]) - angle);
-    linalgcu_matrix_data_t send = radius * (ert_grid_angle(end[0], end[1]) - angle);
+    linalgcu_matrix_data_t sleft = radius * (fastect_grid_angle(left[0], left[1]) - angle);
+    linalgcu_matrix_data_t sright = radius * (fastect_grid_angle(right[0], right[1]) - angle);
+    linalgcu_matrix_data_t sstart = radius * (fastect_grid_angle(start[0], start[1]) - angle);
+    linalgcu_matrix_data_t send = radius * (fastect_grid_angle(end[0], end[1]) - angle);
 
     // correct s parameter
     sleft -= (sleft > sright) && (sleft > 0.0f) ? radius * 2.0f * M_PI : 0.0f;
@@ -351,8 +351,8 @@ linalgcu_matrix_data_t ert_grid_integrate_basis(linalgcu_matrix_data_t* node,
 }
 
 // init exitation matrix
-linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
-    ert_electrodes_t electrodes, cudaStream_t stream) {
+linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
+    fastect_electrodes_t electrodes, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (electrodes == NULL)) {
         return LINALGCU_ERROR;
@@ -395,7 +395,7 @@ linalgcu_error_t ert_grid_init_exitation_matrix(ert_grid_t grid,
 
             // calc element
             linalgcu_matrix_set_element(grid->excitation_matrix,
-                ert_grid_integrate_basis(node, left, right,
+                fastect_grid_integrate_basis(node, left, right,
                     &electrodes->electrode_start[j * 2], &electrodes->electrode_end[j * 2]) / element_area,
                     (linalgcu_size_t)id[1], j);
         }

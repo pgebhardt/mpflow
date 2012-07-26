@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ERT_ELECTRODES_H
-#define ERT_ELECTRODES_H
+#ifndef FASTECT_ELECTRODES_H
+#define FASTECT_ELECTRODES_H
 
 // electrodes struct
 typedef struct {
@@ -25,14 +25,14 @@ typedef struct {
     linalgcu_matrix_data_t* electrode_start;
     linalgcu_matrix_data_t* electrode_end;
     linalgcu_matrix_data_t size;
-} ert_electrodes_s;
-typedef ert_electrodes_s* ert_electrodes_t;
+} fastect_electrodes_s;
+typedef fastect_electrodes_s* fastect_electrodes_t;
 
 // create electrodes
-linalgcu_error_t ert_electrodes_create(ert_electrodes_t* electrodesPointer,
-    linalgcu_size_t count, linalgcu_matrix_data_t size, ert_mesh_t mesh);
+linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
+    linalgcu_size_t count, linalgcu_matrix_data_t size, fastect_mesh_t mesh);
 
 // release electrodes
-linalgcu_error_t ert_electrodes_release(ert_electrodes_t* electrodesPointer);
+linalgcu_error_t fastect_electrodes_release(fastect_electrodes_t* electrodesPointer);
 
 #endif

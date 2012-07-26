@@ -39,7 +39,7 @@ __global__ void add_scalar_kernel(linalgcu_matrix_data_t* vector,
 
 // add scalar
 extern "C"
-linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector,
+linalgcu_error_t fastect_conjugate_add_scalar(linalgcu_matrix_t vector,
     linalgcu_matrix_t scalar, linalgcu_size_t size, cudaStream_t stream) {
     // check input
     if ((vector == NULL) || (scalar == NULL)) {
@@ -66,7 +66,7 @@ __global__ void update_vector_kernel(linalgcu_matrix_data_t* result,
 
 // update vector
 extern "C"
-linalgcu_error_t ert_conjugate_udate_vector(linalgcu_matrix_t result,
+linalgcu_error_t fastect_conjugate_udate_vector(linalgcu_matrix_t result,
     linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
     linalgcu_matrix_t r1, linalgcu_matrix_t r2, cudaStream_t stream) {
     // check input
