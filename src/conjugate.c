@@ -162,7 +162,7 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
     // calc residuum r = f - A * x
     linalgcu_matrix_vector_dot_product(solver->temp_number, x, solver->ones, stream);
     linalgcu_sparse_matrix_vector_multiply(solver->residuum, solver->system_matrix, x, stream);
-    ert_conjugate_add_scalar(solver->residuum, solver->temp_number, stream);
+    ert_conjugate_add_scalar(solver->residuum, solver->temp_number, solver->size, stream);
     linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle, stream);
     linalgcu_matrix_add(solver->residuum, f, handle, stream);
 
@@ -178,7 +178,7 @@ linalgcu_error_t ert_conjugate_solver_solve(ert_conjugate_solver_t solver,
         linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection, solver->ones, stream);
         linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, solver->system_matrix,
             solver->projection, stream);
-        ert_conjugate_add_scalar(solver->temp_vector, solver->temp_number, stream);
+        ert_conjugate_add_scalar(solver->temp_vector, solver->temp_number, solver->size, stream);
 
         // calc p * A * p
         linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection,

@@ -45,7 +45,7 @@ linalgcu_error_t ert_conjugate_solver_release(ert_conjugate_solver_t* solverPoin
 // add scalar
 LINALGCU_EXTERN_C
 linalgcu_error_t ert_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_t scalar,
-    cudaStream_t stream);
+    linalgcu_size_t size, cudaStream_t stream);
 
 // update vector
 LINALGCU_EXTERN_C
