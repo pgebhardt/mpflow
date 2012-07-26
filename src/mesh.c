@@ -408,6 +408,10 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     // cleanup
     linalgcu_matrix_release(&vertices);
 
+    // copy matrices to device
+    linalgcu_matrix_copy_to_device(mesh->vertices, LINALGCU_TRUE, stream);
+    linalgcu_matrix_copy_to_device(mesh->elements, LINALGCU_TRUE, stream);
+
     // set mesh pointer
     *meshPointer = mesh;
 
