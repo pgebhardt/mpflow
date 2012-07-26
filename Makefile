@@ -45,7 +45,7 @@ DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file
 BIN = fastECT
-FORWARD_SOLVER = forward_solver
+FORWARD_SOLVER = fastECT_forward
 
 # Rule for library
 $(BIN): $(BUILD)/main.o $(OBJ) $(CUOBJ) $(DEPS)

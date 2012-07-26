@@ -1,8 +1,8 @@
 *.swp
 *.o
-ert
-forward_solver
+fastECT
+fastECT_forward
 build
 output
 input/measured_voltage.txt
-fastECT
+input/sigma.txt
