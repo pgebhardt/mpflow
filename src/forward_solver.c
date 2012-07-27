@@ -27,6 +27,7 @@
 #include "grid.h"
 #include "conjugate.h"
 #include "forward.h"
+#include "solver.h"
 
 linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStream_t stream) {
     // set sigma
@@ -109,9 +110,9 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
 
     // create solver
-    fastect_forward_solver_t solver;
-    error = fastect_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
-        measurment_pattern, handle, NULL);
+    fastect_solver_t solver;
+    error = fastect_solver_create(&solver, mesh, electrodes, 18, 9,
+        drive_pattern, measurment_pattern, handle, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -120,31 +121,32 @@ int main(int argc, char* argv[]) {
     }
 
     // set sigma
-    set_sigma(solver->grid->sigma, mesh, NULL);
+    set_sigma(solver->applied_solver->grid->sigma, mesh, NULL);
 
     // update system_matrix
-    fastect_grid_update_system_matrix(solver->grid, NULL);
+    fastect_grid_update_system_matrix(solver->applied_solver->grid, NULL);
 
     // solve
     for (linalgcu_size_t i = 0; i < 100; i++) {
-        fastect_forward_solver_solve(solver, handle, NULL);
+        fastect_forward_solver_solve(solver->applied_solver, handle, NULL);
     }
 
     // calc voltage
     linalgcu_matrix_t voltage;
     linalgcu_matrix_create(&voltage, measurment_pattern->size_n,
         drive_pattern->size_n, NULL);
-    linalgcu_matrix_multiply(voltage, solver->voltage_calculation, solver->phi, handle, NULL);
+    linalgcu_matrix_multiply(voltage, solver->voltage_calculation,
+        solver->applied_solver->phi, handle, NULL);
     cudaStreamSynchronize(NULL);
     linalgcu_matrix_copy_to_host(voltage, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("input/measured_voltage.txt", voltage);
     linalgcu_matrix_release(&voltage);
 
     // save sigma
-    linalgcu_matrix_save("input/sigma.txt", solver->grid->sigma);
+    linalgcu_matrix_save("input/sigma.txt", solver->applied_solver->grid->sigma);
 
     // cleanup
-    fastect_forward_solver_release(&solver);
+    fastect_solver_release(&solver);
     linalgcu_matrix_release(&drive_pattern);
     linalgcu_matrix_release(&measurment_pattern);
     cublasDestroy(handle);
