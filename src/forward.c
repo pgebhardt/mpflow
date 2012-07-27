@@ -88,8 +88,7 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
 
     // create conjugate solver
     error = fastect_conjugate_solver_create(&solver->conjugate_solver,
-        solver->grid->system_matrix, mesh->vertex_count,
-        handle, stream);
+        mesh->vertex_count, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -200,8 +199,9 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
         dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->size_m];
 
         // solve for phi
-        fastect_conjugate_solver_solve(solver->conjugate_solver,
-            &dummy_matrix, solver->f[i], 10, handle, stream);
+        fastect_conjugate_solver_solve_sparse(solver->conjugate_solver,
+            solver->grid->system_matrix, &dummy_matrix, solver->f[i],
+            10, handle, stream);
     }
 
     return LINALGCU_SUCCESS;
