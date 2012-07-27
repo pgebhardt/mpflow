@@ -23,13 +23,12 @@
 typedef struct {
     fastect_forward_solver_t applied_solver;
     fastect_forward_solver_t lead_solver;
-    fastect_conjugate_solver_t inverse_solver;
+    fastect_inverse_solver_t inverse_solver;
     fastect_mesh_t mesh;
     fastect_electrodes_t electrodes;
     linalgcu_matrix_t jacobian;
     linalgcu_matrix_t voltage_calculation;
     linalgcu_matrix_t calculated_voltage;
-    linalgcu_matrix_t measured_voltage;
 } fastect_solver_s;
 typedef fastect_solver_s* fastect_solver_t;
 

@@ -29,6 +29,7 @@
 #include "grid.h"
 #include "conjugate.h"
 #include "forward.h"
+#include "inverse.h"
 #include "solver.h"
 
 #endif

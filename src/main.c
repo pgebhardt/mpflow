@@ -110,15 +110,12 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    for (linalgcu_size_t i = 0; i < 10; i++) {
+    for (linalgcu_size_t i = 0; i < 50; i++) {
         // forward
         fastect_solver_forward_solve(solver, handle, NULL);
 
         // inverse
         fastect_solver_inverse_solve(solver, handle, NULL);
-
-        fastect_grid_update_system_matrix(solver->applied_solver->grid, NULL);
-        fastect_grid_update_system_matrix(solver->lead_solver->grid, NULL);
     }
 
     // get end time
@@ -126,7 +123,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    printf("Time per frame: %f\n", end - start);
+    printf("Time per frame: %f\n", (end - start) / 50.0);
 
     // dummy_matrix
     linalgcu_matrix_s dummy_matrix;
@@ -157,10 +154,6 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/image.txt", image->image);
     system("python src/script.py 100");
-
-    // save jacobian
-    linalgcu_matrix_copy_to_host(solver->jacobian, LINALGCU_TRUE, NULL);
-    linalgcu_matrix_save("output/jacobian.txt", solver->jacobian);
 
     // cleanup
     fastect_solver_release(&solver);
