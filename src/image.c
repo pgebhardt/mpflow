@@ -17,15 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <sys/time.h>
-#include <cuda/cuda_runtime.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "basis.h"
-#include "mesh.h"
-#include "image.h"
+#include "fastect.h"
 
 // create image
 linalgcu_error_t fastect_image_create(fastect_image_t* imagePointer, linalgcu_size_t size_x,

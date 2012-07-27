@@ -40,7 +40,7 @@ _CUOBJ = grid.cu_o image.cu_o conjugate.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = mesh.h basis.h electrodes.h grid.h image.h conjugate.h forward.h solver.h
+_DEPS = fastect.h mesh.h basis.h electrodes.h grid.h image.h conjugate.h forward.h solver.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
 # Output file

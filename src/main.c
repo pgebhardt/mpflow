@@ -19,17 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include <cuda/cuda_runtime.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "mesh.h"
-#include "basis.h"
-#include "image.h"
-#include "electrodes.h"
-#include "grid.h"
-#include "conjugate.h"
-#include "forward.h"
-#include "solver.h"
+#include "fastect.h"
 
 static void print_matrix(linalgcu_matrix_t matrix) {
     if (matrix == NULL) {

@@ -17,12 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
-#include <cuda/cuda_runtime.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "mesh.h"
+#include "fastect.h"
 
 linalgcu_matrix_data_t fastect_mesh_angle(linalgcu_matrix_data_t x,
     linalgcu_matrix_data_t y) {

@@ -17,19 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <sys/time.h>
-#include <cuda/cuda_runtime.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "basis.h"
-#include "mesh.h"
-#include "electrodes.h"
-#include "grid.h"
-#include "conjugate.h"
-#include "forward.h"
-#include "solver.h"
+#include "fastect.h"
 
 // create solver
 linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,

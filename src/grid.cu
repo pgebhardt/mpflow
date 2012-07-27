@@ -20,15 +20,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <cuda/cuda.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "basis.h"
-#include "mesh.h"
-#include "electrodes.h"
-#include "grid.h"
+#include "fastect.h"
 
 // update_system_matrix_kernel
 __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matrix_values,

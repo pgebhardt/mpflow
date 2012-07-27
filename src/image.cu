@@ -20,14 +20,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <cuda/cuda.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "basis.h"
-#include "mesh.h"
-#include "image.h"
+#include "fastect.h"
 
 // helper functions
 __device__ linalgcu_matrix_data_t test(

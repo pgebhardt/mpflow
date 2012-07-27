@@ -20,12 +20,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <cuda/cuda.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "conjugate.h"
+#include "fastect.h"
 
 // add scalar kernel
 __global__ void add_scalar_kernel(linalgcu_matrix_data_t* vector,

@@ -17,14 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
-#include <cuda/cuda_runtime.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "basis.h"
-#include "mesh.h"
-#include "electrodes.h"
+#include "fastect.h"
 
 // create electrodes
 linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
