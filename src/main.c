@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    for (linalgcu_size_t i = 0; i < 50; i++) {
+    for (linalgcu_size_t i = 0; i < 100; i++) {
         // forward
         fastect_solver_forward_solve(solver, handle, NULL);
 
@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    printf("Time per frame: %f\n", (end - start) / 50.0);
+    printf("Time per frame: %f\n", (end - start) / 100.0);
 
     // dummy_matrix
     linalgcu_matrix_s dummy_matrix;
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
     dummy_matrix.size_n = 1;
 
     // calc images
-    /*char buffer[1024];
+    char buffer[1024];
     for (linalgcu_size_t i = 0; i < solver->applied_solver->count; i++) {
         // copy current phi to vector
         dummy_matrix.device_data =
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
         linalgcu_matrix_save("output/image.txt", image->image);
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
-    }*/
+    }
 
     // calc sigma image
     fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);

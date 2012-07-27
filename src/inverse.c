@@ -160,7 +160,7 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
 
     // solve system
     fastect_conjugate_solver_solve(solver->conjugate_solver,
-        solver->A, solver->dSigma, solver->f, 50, handle, stream);
+        solver->A, solver->dSigma, solver->f, 75, handle, stream);
 
     return LINALGCU_SUCCESS;
 }
