@@ -18,16 +18,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <cuda/cuda_runtime.h>
-#include <cuda/cublas_v2.h>
-#include <linalgcu/linalgcu.h>
-#include "mesh.h"
-#include "basis.h"
-#include "electrodes.h"
-#include "grid.h"
-#include "conjugate.h"
-#include "forward.h"
-#include "solver.h"
+#include "fastect.h"
 
 linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStream_t stream) {
     // set sigma
