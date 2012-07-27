@@ -27,8 +27,6 @@ typedef struct {
     linalgcu_matrix_t projection;
     linalgcu_matrix_t rsold;
     linalgcu_matrix_t rsnew;
-    linalgcu_matrix_t ones;
-    linalgcu_matrix_t temp_matrix;
     linalgcu_matrix_t temp_vector;
     linalgcu_matrix_t temp_number;
 } fastect_conjugate_solver_s;
