@@ -119,19 +119,13 @@ int main(int argc, char* argv[]) {
 
     // solve
     for (linalgcu_size_t i = 0; i < 100; i++) {
-        fastect_forward_solver_solve(solver->applied_solver, handle, NULL);
+        fastect_solver_forward_solve(solver, handle, NULL);
     }
 
-    // calc voltage
-    linalgcu_matrix_t voltage;
-    linalgcu_matrix_create(&voltage, measurment_pattern->size_n,
-        drive_pattern->size_n, NULL);
-    linalgcu_matrix_multiply(voltage, solver->voltage_calculation,
-        solver->applied_solver->phi, handle, NULL);
-    cudaStreamSynchronize(NULL);
-    linalgcu_matrix_copy_to_host(voltage, LINALGCU_TRUE, NULL);
-    linalgcu_matrix_save("input/measured_voltage.txt", voltage);
-    linalgcu_matrix_release(&voltage);
+    // save voltage
+    cudaDeviceSynchronize();
+    linalgcu_matrix_copy_to_host(solver->calculated_voltage, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_save("input/measured_voltage.txt", solver->calculated_voltage);
 
     // save sigma
     linalgcu_matrix_save("input/sigma.txt", solver->applied_solver->grid->sigma);

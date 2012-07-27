@@ -51,6 +51,8 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     solver->electrodes = electrodes;
     solver->jacobian = NULL;
     solver->voltage_calculation = NULL;
+    solver->calculated_voltage = NULL;
+    solver->measured_voltage = NULL;
 
     // create solver
     error  = fastect_forward_solver_create(&solver->applied_solver, solver->mesh,
@@ -72,6 +74,11 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
         mesh->element_count, stream);
     error |= linalgcu_matrix_create(&solver->voltage_calculation,
         measurment_pattern->size_n, solver->mesh->vertex_count, stream);
+    error |= linalgcu_matrix_create(&solver->calculated_voltage,
+        measurment_pattern->size_n, drive_pattern->size_n, stream);
+    // TODO: measured_voltage should be set by ethernet
+    error |= linalgcu_matrix_load(&solver->measured_voltage,
+        "input/measured_voltage.txt", stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -120,6 +127,8 @@ linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer) {
     fastect_electrodes_release(&solver->electrodes);
     linalgcu_matrix_release(&solver->jacobian);
     linalgcu_matrix_release(&solver->voltage_calculation);
+    linalgcu_matrix_release(&solver->calculated_voltage);
+    linalgcu_matrix_release(&solver->measured_voltage);
 
     // free struct
     free(solver);
@@ -146,6 +155,10 @@ linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
 
     // solve measurment pattern
     error |= fastect_forward_solver_solve(solver->lead_solver, handle, stream);
+
+    // calc voltage
+    error |= linalgcu_matrix_multiply(solver->calculated_voltage,
+        solver->voltage_calculation, solver->applied_solver->phi, handle, stream);
 
     // calc jacobian
     error |= fastect_solver_calc_jacobian(solver, stream);
