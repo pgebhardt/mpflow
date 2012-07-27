@@ -147,6 +147,9 @@ linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
     // solve measurment pattern
     error |= fastect_forward_solver_solve(solver->lead_solver, handle, stream);
 
+    // calc jacobian
+    error |= fastect_solver_calc_jacobian(solver, stream);
+
     // check error
     if (error != LINALGCU_SUCCESS) {
         return error;

@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    for (linalgcu_size_t i = 0; i < 100; i++) {
+    for (linalgcu_size_t i = 0; i < 10; i++) {
         fastect_solver_forward_solve(solver, handle, NULL);
     }
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    printf("Frames per second: %f\n", 100.0 / (end - start));
+    printf("Time per frame: %f\n", (end - start) / 10.0);
 
     // dummy_matrix
     linalgcu_matrix_s dummy_matrix;
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
     dummy_matrix.size_m = solver->applied_solver->phi->size_m;
     dummy_matrix.size_n = 1;
 
-    // calc images
+    /*// calc images
     char buffer[1024];
     for (linalgcu_size_t i = 0; i < solver->applied_solver->count; i++) {
         // copy current phi to vector
@@ -138,7 +138,11 @@ int main(int argc, char* argv[]) {
         linalgcu_matrix_save("output/image.txt", image->image);
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
-    }
+    }*/
+
+    // save jacobian
+    linalgcu_matrix_copy_to_host(solver->jacobian, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_save("output/jacobian.txt", solver->jacobian);
 
     // cleanup
     fastect_solver_release(&solver);

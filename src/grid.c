@@ -18,8 +18,27 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
 #include "fastect.h"
 
+static void print_matrix(linalgcu_matrix_t matrix) {
+    if (matrix == NULL) {
+        return;
+    }
+
+    // value memory
+    linalgcu_matrix_data_t value = 0.0;
+
+    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
+        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
+            // get value
+            linalgcu_matrix_get_element(matrix, &value, i, j);
+
+            printf("%f, ", value);
+        }
+        printf("\n");
+    }
+}
 // create solver grid
 linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     fastect_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream) {
@@ -66,11 +85,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
         linalgcu_matrix_set_element(grid->sigma, 1.0, i, 0);
     }
-
-    // copy data to device
-    linalgcu_matrix_copy_to_device(grid->gradient_matrix_transposed, LINALGCU_FALSE, stream);
-    linalgcu_matrix_copy_to_device(grid->sigma, LINALGCU_FALSE, stream);
-    linalgcu_matrix_copy_to_device(grid->area, LINALGCU_FALSE, stream);
+    linalgcu_matrix_copy_to_device(grid->sigma, LINALGCU_TRUE, stream);
 
     // init system matrix
     error = fastect_grid_init_system_matrix(grid, mesh, handle, stream);
@@ -230,6 +245,7 @@ linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid,
         sigma_matrix, handle, stream);
     error |= linalgcu_matrix_multiply(system_matrix, temp, gradient_matrix, handle, stream);
     cudaStreamSynchronize(stream);
+    linalgcu_matrix_release(&temp);
 
     // check success
     if (error != LINALGCU_SUCCESS) {

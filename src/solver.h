@@ -39,6 +39,11 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 // release solver
 linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer);
 
+// calc jacobian
+LINALGCU_EXTERN_C
+linalgcu_error_t fastect_solver_calc_jacobian(fastect_solver_t solver,
+    cudaStream_t stream);
+
 // forward solving
 linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
     cublasHandle_t handle, cudaStream_t stream);
