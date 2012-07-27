@@ -100,22 +100,33 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_device(image->elements, LINALGCU_FALSE, NULL);
     linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE, NULL);
 
+    for (linalgcu_size_t i = 0; i < 100; i++) {
+        fastect_solver_forward_solve(solver, handle, NULL);
+    }
+
     // get start time
     struct timeval tv;
-    cudaStreamSynchronize(NULL);
+    cudaDeviceSynchronize();
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     for (linalgcu_size_t i = 0; i < 10; i++) {
+        // forward
         fastect_solver_forward_solve(solver, handle, NULL);
+
+        // inverse
+        fastect_solver_inverse_solve(solver, handle, NULL);
+
+        fastect_grid_update_system_matrix(solver->applied_solver->grid, NULL);
+        fastect_grid_update_system_matrix(solver->lead_solver->grid, NULL);
     }
 
     // get end time
-    cudaStreamSynchronize(NULL);
+    cudaDeviceSynchronize();
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    printf("Time per frame: %f\n", (end - start) / 10.0);
+    printf("Time per frame: %f\n", end - start);
 
     // dummy_matrix
     linalgcu_matrix_s dummy_matrix;
@@ -124,8 +135,8 @@ int main(int argc, char* argv[]) {
     dummy_matrix.size_m = solver->applied_solver->phi->size_m;
     dummy_matrix.size_n = 1;
 
-    /*// calc images
-    char buffer[1024];
+    // calc images
+    /*char buffer[1024];
     for (linalgcu_size_t i = 0; i < solver->applied_solver->count; i++) {
         // copy current phi to vector
         dummy_matrix.device_data =
@@ -133,12 +144,19 @@ int main(int argc, char* argv[]) {
 
         // calc image
         fastect_image_calc_phi(image, &dummy_matrix, NULL);
-        cudaStreamSynchronize(NULL);
+        cudaDeviceSynchronize();
         linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
         linalgcu_matrix_save("output/image.txt", image->image);
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
     }*/
+
+    // calc sigma image
+    fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);
+    cudaDeviceSynchronize();
+    linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_save("output/image.txt", image->image);
+    system("python src/script.py 100");
 
     // save jacobian
     linalgcu_matrix_copy_to_host(solver->jacobian, LINALGCU_TRUE, NULL);

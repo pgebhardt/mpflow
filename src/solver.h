@@ -23,6 +23,7 @@
 typedef struct {
     fastect_forward_solver_t applied_solver;
     fastect_forward_solver_t lead_solver;
+    fastect_conjugate_solver_t inverse_solver;
     fastect_mesh_t mesh;
     fastect_electrodes_t electrodes;
     linalgcu_matrix_t jacobian;
@@ -48,6 +49,10 @@ linalgcu_error_t fastect_solver_calc_jacobian(fastect_solver_t solver,
 
 // forward solving
 linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
+    cublasHandle_t handle, cudaStream_t stream);
+
+// inverse solving
+linalgcu_error_t fastect_solver_inverse_solve(fastect_solver_t solver,
     cublasHandle_t handle, cudaStream_t stream);
 
 #endif

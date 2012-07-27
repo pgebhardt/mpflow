@@ -34,7 +34,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.02 * 0.02) {
+        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.01 * 0.01) {
             continue;
         }
 
@@ -44,7 +44,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.02 * 0.02) {
+        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.01 * 0.01) {
             continue;
         }
 
@@ -54,7 +54,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.02 * 0.02) {
+        if ((x - 0.005f) * (x - 0.005f) + (y - 0.005f) * (y - 0.005f) > 0.01 * 0.01) {
             continue;
         }
 
@@ -130,8 +130,22 @@ int main(int argc, char* argv[]) {
     // save sigma
     linalgcu_matrix_save("input/sigma.txt", solver->applied_solver->grid->sigma);
 
+    // Create image
+    fastect_image_t image;
+    fastect_image_create(&image, 1000, 1000, mesh, NULL);
+    linalgcu_matrix_copy_to_device(image->elements, LINALGCU_FALSE, NULL);
+    linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE, NULL);
+
+    // calc sigma image
+    fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);
+    cudaDeviceSynchronize();
+    linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_save("output/image.txt", image->image);
+    system("python src/script.py 101");
+
     // cleanup
     fastect_solver_release(&solver);
+    fastect_image_release(&image);
     linalgcu_matrix_release(&drive_pattern);
     linalgcu_matrix_release(&measurment_pattern);
     cublasDestroy(handle);
