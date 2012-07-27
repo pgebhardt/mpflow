@@ -33,11 +33,10 @@
 // create forward_solver
 linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverPointer,
     fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t count,
-    linalgcu_matrix_t drive_pattern, linalgcu_matrix_t measurment_pattern,
-    cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t drive_pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
-        (drive_pattern == NULL) || (measurment_pattern == NULL) || (handle == NULL)) {
+        (drive_pattern == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -58,15 +57,13 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     // init struct
     solver->grid = NULL;
     solver->conjugate_solver = NULL;
-    solver->electrodes = electrodes;
     solver->count = count;
     solver->phi = NULL;
     solver->f = NULL;
-    solver->voltage_calculation = NULL;
 
     // create grids
     error  = fastect_grid_create(&solver->grid, mesh, handle, stream);
-    error |= fastect_grid_init_exitation_matrix(solver->grid, solver->electrodes, stream);
+    error |= fastect_grid_init_exitation_matrix(solver->grid, mesh, electrodes, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -77,10 +74,8 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     }
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->phi, mesh->vertex_count,
+    error = linalgcu_matrix_create(&solver->phi, mesh->vertex_count,
         solver->count, stream);
-    error |= linalgcu_matrix_create(&solver->voltage_calculation,
-        measurment_pattern->size_n, mesh->vertex_count, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -115,7 +110,7 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     }
 
     // calc excitaion matrices
-    error = fastect_forward_solver_calc_excitaion(solver, drive_pattern, handle, stream);
+    error = fastect_forward_solver_calc_excitaion(solver, mesh, drive_pattern, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -123,20 +118,6 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
         fastect_forward_solver_release(&solver);
 
         return error;
-    }
-
-    // calc voltage calculation matrix
-    linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurment_pattern->size_n,
-        solver->grid->excitation_matrix->size_m, measurment_pattern->size_m, &alpha,
-        measurment_pattern->device_data, measurment_pattern->size_m,
-        solver->grid->excitation_matrix->device_data, solver->grid->excitation_matrix->size_m,
-        &beta, solver->voltage_calculation->device_data, solver->voltage_calculation->size_m) !=
-        CUBLAS_STATUS_SUCCESS) {
-        // cleanup
-        fastect_forward_solver_release(&solver);
-
-        return LINALGCU_ERROR;
     }
 
     // set solver pointer
@@ -158,9 +139,7 @@ linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solver
     // cleanup
     fastect_grid_release(&solver->grid);
     fastect_conjugate_solver_release(&solver->conjugate_solver);
-    fastect_electrodes_release(&solver->electrodes);
     linalgcu_matrix_release(&solver->phi);
-    linalgcu_matrix_release(&solver->voltage_calculation);
 
     if (solver->f != NULL) {
         for (linalgcu_size_t i = 0; i < solver->count; i++) {
@@ -180,9 +159,10 @@ linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solver
 
 // calc excitaion
 linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t solver,
-    linalgcu_matrix_t drive_pattern, cublasHandle_t handle, cudaStream_t stream) {
+    fastect_mesh_t mesh, linalgcu_matrix_t drive_pattern, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
-    if ((solver == NULL) || (handle == NULL)) {
+    if ((solver == NULL) || (mesh == NULL) || (drive_pattern == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -196,7 +176,7 @@ linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t 
     // create drive pattern
     for (linalgcu_size_t i = 0; i < solver->count; i++) {
         // create matrix
-        linalgcu_matrix_create(&solver->f[i], solver->grid->mesh->vertex_count, 1, stream);
+        linalgcu_matrix_create(&solver->f[i], mesh->vertex_count, 1, stream);
 
         // get current pattern
         dummy_matrix.device_data = &drive_pattern->device_data[i * drive_pattern->size_m];
