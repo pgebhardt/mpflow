@@ -29,6 +29,7 @@
 #include "grid.h"
 #include "conjugate.h"
 #include "forward.h"
+#include "solver.h"
 
 static void print_matrix(linalgcu_matrix_t matrix) {
     if (matrix == NULL) {
@@ -83,9 +84,9 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
 
     // create solver
-    fastect_forward_solver_t solver;
-    error = fastect_forward_solver_create(&solver, mesh, electrodes, 18, drive_pattern,
-        measurment_pattern, handle, NULL);
+    fastect_solver_t solver;
+    error = fastect_solver_create(&solver, mesh, electrodes, 18, 9,
+        drive_pattern, measurment_pattern, handle, NULL);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -95,10 +96,13 @@ int main(int argc, char* argv[]) {
 
     // set sigma
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcu_matrix_set_element(solver->grid->sigma, 50E-3, i, 0);
+        linalgcu_matrix_set_element(solver->applied_solver->grid->sigma, 50E-3, i, 0);
+        linalgcu_matrix_set_element(solver->lead_solver->grid->sigma, 50E-3, i, 0);
     }
-    linalgcu_matrix_copy_to_device(solver->grid->sigma, LINALGCU_TRUE, NULL);
-    fastect_grid_update_system_matrix(solver->grid, NULL);
+    linalgcu_matrix_copy_to_device(solver->applied_solver->grid->sigma, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_copy_to_device(solver->lead_solver->grid->sigma, LINALGCU_TRUE, NULL);
+    fastect_grid_update_system_matrix(solver->applied_solver->grid, NULL);
+    fastect_grid_update_system_matrix(solver->lead_solver->grid, NULL);
 
     // Create image
     fastect_image_t image;
@@ -113,7 +117,7 @@ int main(int argc, char* argv[]) {
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
     for (linalgcu_size_t i = 0; i < 100; i++) {
-        fastect_forward_solver_solve(solver, handle, NULL);
+        fastect_solver_forward_solve(solver, handle, NULL);
     }
 
     // get end time
@@ -127,14 +131,15 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.host_data = NULL;
     dummy_matrix.device_data = NULL;
-    dummy_matrix.size_m = solver->phi->size_m;
+    dummy_matrix.size_m = solver->applied_solver->phi->size_m;
     dummy_matrix.size_n = 1;
 
     // calc images
     char buffer[1024];
-    for (linalgcu_size_t i = 0; i < solver->count; i++) {
+    for (linalgcu_size_t i = 0; i < solver->applied_solver->count; i++) {
         // copy current phi to vector
-        dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->size_m];
+        dummy_matrix.device_data =
+            &solver->applied_solver->phi->device_data[i * solver->applied_solver->phi->size_m];
 
         // calc image
         fastect_image_calc_phi(image, &dummy_matrix, NULL);
@@ -146,7 +151,7 @@ int main(int argc, char* argv[]) {
     }
 
     // cleanup
-    fastect_forward_solver_release(&solver);
+    fastect_solver_release(&solver);
     fastect_image_release(&image);
     linalgcu_matrix_release(&drive_pattern);
     linalgcu_matrix_release(&measurment_pattern);
