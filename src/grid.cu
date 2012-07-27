@@ -52,7 +52,8 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matri
         // get id
         id = gradient_matrix_transposed_column_ids[i * LINALGCU_BLOCK_SIZE + k];
 
-        element += id != -1 && j != -1 ? gradient_matrix_transposed_values[i * LINALGCU_BLOCK_SIZE + k] *
+        element += id != -1 && j != -1 ?
+            gradient_matrix_transposed_values[i * LINALGCU_BLOCK_SIZE + k] *
             sigma[id / 2] * area[id / 2] *
             gradient_matrix_transposed[j + id * gradient_matrix_transposed_size_m] :
             0.0f;

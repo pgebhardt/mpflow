@@ -21,7 +21,6 @@
 
 // solver grid struct
 typedef struct {
-    fastect_mesh_t mesh;
     linalgcu_sparse_matrix_t system_matrix;
     linalgcu_matrix_t excitation_matrix;
     linalgcu_sparse_matrix_t gradient_matrix_sparse;
@@ -41,7 +40,7 @@ linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer);
 
 // init system matrix
 linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid,
-    cublasHandle_t handle, cudaStream_t stream);
+    fastect_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream);
 
 // update system matrix
 LINALGCU_EXTERN_C
@@ -50,6 +49,6 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
 
 // init exitation matrix
 linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
-    fastect_electrodes_t electrodes, cudaStream_t stream);
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, cudaStream_t stream);
 
 #endif
