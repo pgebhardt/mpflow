@@ -126,6 +126,10 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
         return LINALGCU_ERROR;
     }
 
+    // set dSigma to 0.0f
+    cudaMemset(solver->dSigma, 0, sizeof(linalgcu_matrix_data_t) * solver->dSigma->size_m * solver->dSigma->size_n);
+    cudaMemset(solver->dU, 0, sizeof(linalgcu_matrix_data_t) * solver->dU->size_m * solver->dU->size_n);
+
     // calc dU
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.size_m = solver->dU->size_m;
