@@ -28,6 +28,7 @@ typedef struct {
     linalgcu_matrix_t f;
     linalgcu_matrix_t A;
     linalgcu_matrix_t regularization;
+    linalgcu_matrix_data_t lambda;
 } fastect_inverse_solver_s;
 typedef fastect_inverse_solver_s* fastect_inverse_solver_t;
 
@@ -41,7 +42,7 @@ linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solver
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
-    cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_matrix_data_t lambda, cublasHandle_t handle, cudaStream_t stream);
 
 // linear inverse solving
 linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t solver,
