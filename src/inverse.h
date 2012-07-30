@@ -27,7 +27,7 @@ typedef struct {
     linalgcu_matrix_t dSigma;
     linalgcu_matrix_t f;
     linalgcu_matrix_t A;
-    linalgcu_matrix_t temp;
+    linalgcu_matrix_t regularization;
 } fastect_inverse_solver_s;
 typedef fastect_inverse_solver_s* fastect_inverse_solver_t;
 

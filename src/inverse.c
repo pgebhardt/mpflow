@@ -49,7 +49,7 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
     solver->dSigma = NULL;
     solver->f = NULL;
     solver->A = NULL;
-    solver->temp = NULL;
+    solver->regularization = NULL;
 
     // create matrices
     error |= linalgcu_matrix_create(&solver->dU, solver->jacobian->size_m, 1, stream);
@@ -57,8 +57,8 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
     error |= linalgcu_matrix_create(&solver->f, solver->jacobian->size_n, 1, stream);
     error |= linalgcu_matrix_create(&solver->A, solver->jacobian->size_n,
         solver->jacobian->size_n, stream);
-    error |= linalgcu_matrix_create(&solver->temp, solver->jacobian->size_n,
-        solver->jacobian->size_n, stream);
+    error |= linalgcu_matrix_unity(&solver->regularization, solver->jacobian->size_n,
+        stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -102,7 +102,7 @@ linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solver
     linalgcu_matrix_release(&solver->dSigma);
     linalgcu_matrix_release(&solver->f);
     linalgcu_matrix_release(&solver->A);
-    linalgcu_matrix_release(&solver->temp);
+    linalgcu_matrix_release(&solver->regularization);
 
     // free struct
     free(solver);
@@ -152,14 +152,15 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
         solver->jacobian->size_m, solver->jacobian->device_data, solver->jacobian->size_m,
         &beta, solver->A->device_data, solver->A->size_m);
 
+    // calc regularization
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->A->size_n, solver->A->size_m,
         solver->A->size_n, &alpha, solver->A->device_data, solver->A->size_m,
         solver->A->device_data, solver->A->size_m,
-        &beta, solver->temp->device_data, solver->temp->size_m);
+        &beta, solver->regularization->device_data, solver->regularization->size_m);
 
     alpha = 5.0;
     cublasSaxpy(handle, solver->A->size_m * solver->A->size_n, &alpha,
-        solver->temp->device_data, 1, solver->A->device_data, 1);
+        solver->regularization->device_data, 1, solver->A->device_data, 1);
 
     // solve system
     fastect_conjugate_solver_solve(solver->conjugate_solver,
