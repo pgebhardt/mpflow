@@ -121,7 +121,8 @@ linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solve
     linalgcu_matrix_copy(solver->projection, solver->residuum, LINALGCU_TRUE, stream);
 
     // calc rsold
-    linalgcu_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, stream);
+    linalgcu_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum,
+        stream);
 
     // iterate
     for (linalgcu_size_t i = 0; i < iterations; i++) {
@@ -181,7 +182,8 @@ linalgcu_error_t fastect_conjugate_solver_solve_sparse(fastect_conjugate_solver_
     linalgcu_matrix_copy(solver->projection, solver->residuum, LINALGCU_TRUE, stream);
 
     // calc rsold
-    linalgcu_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum, stream);
+    linalgcu_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum,
+        stream);
 
     // iterate
     for (linalgcu_size_t i = 0; i < iterations; i++) {

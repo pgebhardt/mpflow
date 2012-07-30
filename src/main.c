@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    for (linalgcu_size_t i = 0; i < 1; i++) {
+    for (linalgcu_size_t i = 0; i < 5; i++) {
         fastect_solver_solve(solver, 4, handle, NULL);
     }
 
@@ -119,9 +119,9 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    printf("Time per frame: %f\n", (end - start) / 5.0);
+    printf("Frames per second: %f\n", 25.0 / (end - start));
 
-    // dummy_matrix
+    /*// dummy_matrix
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.host_data = NULL;
     dummy_matrix.device_data = NULL;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
     dummy_matrix.size_n = 1;
 
     // calc images
-    /*char buffer[1024];
+    char buffer[1024];
     for (linalgcu_size_t i = 0; i < solver->applied_solver->count; i++) {
         // copy current phi to vector
         dummy_matrix.device_data =

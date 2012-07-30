@@ -204,7 +204,7 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, linalgcu_size_t l
         handle, stream);
 
     // forward
-    fastect_solver_forward_solve(solver, handle, NULL);
+    fastect_solver_forward_solve(solver, handle, stream);
 
     return LINALGCU_SUCCESS;
 }
