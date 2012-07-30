@@ -94,15 +94,20 @@ int main(int argc, char* argv[]) {
     fastect_grid_update_system_matrix(solver->applied_solver->grid, NULL);
     fastect_grid_update_system_matrix(solver->lead_solver->grid, NULL);
 
+    // load measured_voltage
+    linalgcu_matrix_t measured_voltage;
+    linalgcu_matrix_load(&measured_voltage, "input/measured_voltage.txt", NULL);
+    linalgcu_matrix_copy(solver->measured_voltage, measured_voltage, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_release(&measured_voltage);
+
     // Create image
     fastect_image_t image;
     fastect_image_create(&image, 1000, 1000, mesh, NULL);
-    linalgcu_matrix_copy_to_device(image->elements, LINALGCU_FALSE, NULL);
-    linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE, NULL);
 
+    /*// pre solve for accurate jacobian
     for (linalgcu_size_t i = 0; i < 100; i++) {
         fastect_solver_forward_solve(solver, handle, NULL);
-    }
+    }*/
 
     // get start time
     struct timeval tv;
@@ -110,16 +115,22 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    for (linalgcu_size_t i = 0; i < 5; i++) {
-        fastect_solver_solve(solver, 4, handle, NULL);
-    }
+    fastect_solver_forward_solve(solver, handle, NULL);
 
     // get end time
+    gettimeofday(&tv, NULL);
+    double end1 = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
     cudaDeviceSynchronize();
     gettimeofday(&tv, NULL);
-    double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
+    double end2 = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    printf("Frames per second: %f\n", 25.0 / (end - start));
+    printf("Time before sync: %f\n", end1 - start);
+    printf("Time after sync: %f\n", end2 - start);
+    // printf("Frames per second: %f\n", 5.0 / (end2 - start));
+
+    /*for (linalgcu_size_t i = 0; i < 1; i++) {
+        fastect_solver_solve(solver, 4, handle, NULL);
+    }*/
 
     /*// dummy_matrix
     linalgcu_matrix_s dummy_matrix;
@@ -142,14 +153,14 @@ int main(int argc, char* argv[]) {
         linalgcu_matrix_save("output/image.txt", image->image);
         sprintf(buffer, "python src/script.py %d", i);
         system(buffer);
-    }*/
+    }
 
     // calc sigma image
     fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);
     cudaDeviceSynchronize();
     linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/image.txt", image->image);
-    system("python src/script.py 100");
+    system("python src/script.py 100");*/
 
     // cleanup
     fastect_solver_release(&solver);

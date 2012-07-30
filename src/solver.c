@@ -63,9 +63,8 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
         measurment_pattern->size_n, solver->mesh->vertex_count, stream);
     error |= linalgcu_matrix_create(&solver->calculated_voltage,
         measurment_pattern->size_n, drive_pattern->size_n, stream);
-    // TODO: measured_voltage should be set by ethernet
-    error |= linalgcu_matrix_load(&solver->measured_voltage,
-        "input/measured_voltage.txt", stream);
+    error |= linalgcu_matrix_create(&solver->measured_voltage,
+        measurment_count, drive_count, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
