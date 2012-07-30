@@ -106,6 +106,10 @@ linalgcu_error_t fastect_image_create(fastect_image_t* imagePointer, linalgcu_si
         fastect_basis_release(&basis[2]);
     }
 
+    // copy matrices to device
+    linalgcu_matrix_copy_to_device(image->elements, LINALGCU_TRUE, stream);
+    linalgcu_matrix_copy_to_device(image->image, LINALGCU_TRUE, stream);
+
     // set image pointer
     *imagePointer = image;
 
