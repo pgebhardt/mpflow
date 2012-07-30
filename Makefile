@@ -25,7 +25,7 @@ NVCC = $(CUDA_HOME)/bin/nvcc
 CFLAGS =
 NVCFLAGS =
 
-LDFLAGS = -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lm
+LDFLAGS = -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lconfig -lm
 
 # Directories
 SRC = src

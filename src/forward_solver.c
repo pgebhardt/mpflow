@@ -31,10 +31,6 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
     // set sigma
     linalgcu_matrix_data_t id, x, y;
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcu_matrix_set_element(sigma, 50E-3, i, 0);
-    }
-
-    for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
         // get element
         linalgcu_matrix_get_element(mesh->elements, &id, i, 0);
         linalgcu_matrix_get_element(mesh->vertices, &x, (linalgcu_size_t)id, 0);
@@ -90,46 +86,10 @@ int main(int argc, char* argv[]) {
     // comment
     printf("Cublas handle loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
-    // create mesh
-    fastect_mesh_t mesh;
-    error = fastect_mesh_create(&mesh, 0.045, 0.045 / 16.0, NULL);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // comment
-    printf("Mesh generated with r = %f, d = %f ... (%f ms)\n", mesh->radius, mesh->distance,
-        (get_time() - start) * 1E3);
-
-    // create electrodes
-    fastect_electrodes_t electrodes;
-    error  = fastect_electrodes_create(&electrodes, 36, 0.005f, mesh);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return EXIT_FAILURE;
-    }
-
-    // comment
-    printf("%d electrodes of width = %f generated... (%f ms)\n", electrodes->count,
-        electrodes->size, (get_time() - start) * 1E3);
-
-    // load pattern
-    linalgcu_matrix_t drive_pattern, measurment_pattern;
-    linalgcu_matrix_load(&drive_pattern, "input/drive_pattern.txt", NULL);
-    linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
-
-    // comment
-    printf("Measurment and drive pattern loaded... (%f ms)\n", (get_time() - start) * 1E3);
-
-    // create solver
+    // create solvert from config file
     fastect_solver_t solver;
-    error = fastect_solver_create(&solver, mesh, electrodes, 18, 9,
-        drive_pattern, measurment_pattern, handle, NULL);
+    error = fastect_solver_from_config(&solver, "input/config.cfg", handle, NULL);
 
-    // check success
     if (error != LINALGCU_SUCCESS) {
         return EXIT_FAILURE;
     }
@@ -139,7 +99,7 @@ int main(int argc, char* argv[]) {
 
     // Create image
     fastect_image_t image;
-    error = fastect_image_create(&image, 1000, 1000, mesh, NULL);
+    error = fastect_image_create(&image, 1000, 1000, solver->mesh, NULL);
 
     if (error != LINALGCU_SUCCESS) {
         return EXIT_FAILURE;
@@ -149,7 +109,7 @@ int main(int argc, char* argv[]) {
     printf("Image module loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
     // set sigma
-    set_sigma(solver->applied_solver->grid->sigma, mesh, NULL);
+    set_sigma(solver->applied_solver->grid->sigma, solver->mesh, NULL);
     linalgcu_matrix_copy_to_device(solver->applied_solver->grid->sigma, LINALGCU_TRUE, NULL);
     fastect_grid_update_system_matrix(solver->applied_solver->grid, NULL);
 
@@ -171,6 +131,7 @@ int main(int argc, char* argv[]) {
     linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/image.txt", image->image);
     system("python src/script.py original");
+    system("rm -rf output/image.txt");
 
     // comment
     printf("Image created... (%f ms)\n", (get_time() - start) * 1E3);
@@ -178,8 +139,6 @@ int main(int argc, char* argv[]) {
     // cleanup
     fastect_solver_release(&solver);
     fastect_image_release(&image);
-    linalgcu_matrix_release(&drive_pattern);
-    linalgcu_matrix_release(&measurment_pattern);
     cublasDestroy(handle);
 
     return EXIT_SUCCESS;
