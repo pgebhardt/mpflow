@@ -110,12 +110,8 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    for (linalgcu_size_t i = 0; i < 10; i++) {
-        // inverse
-        fastect_solver_inverse_solve(solver, handle, NULL);
-
-        // forward
-        fastect_solver_forward_solve(solver, handle, NULL);
+    for (linalgcu_size_t i = 0; i < 1; i++) {
+        fastect_solver_solve(solver, 4, handle, NULL);
     }
 
     // get end time
@@ -123,7 +119,7 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv, NULL);
     double end = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    printf("Time per frame: %f\n", (end - start) / 10.0);
+    printf("Time per frame: %f\n", (end - start) / 5.0);
 
     // dummy_matrix
     linalgcu_matrix_s dummy_matrix;
