@@ -189,9 +189,10 @@ linalgcu_error_t fastect_conjugate_solver_solve_sparse(fastect_conjugate_solver_
     for (linalgcu_size_t i = 0; i < iterations; i++) {
         // calc A * p
         linalgcu_matrix_reduce(solver->temp_number, solver->projection, stream);
-        linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, A, solver->projection, stream);
-        fastect_conjugate_add_scalar(solver->temp_vector, solver->temp_number, solver->size,
+        linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, A, solver->projection,
             stream);
+        fastect_conjugate_add_scalar(solver->temp_vector, solver->temp_number,
+            solver->size, stream);
 
         // calc p * A * p
         linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection,
