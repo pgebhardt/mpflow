@@ -39,6 +39,10 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     linalgcu_size_t measurment_count, linalgcu_matrix_t drive_pattern,
     linalgcu_matrix_t measurment_pattern, cublasHandle_t handle, cudaStream_t stream);
 
+// create solver from config file
+linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
+    const char* path, cublasHandle_t handle, cudaStream_t stream);
+
 // release solver
 linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer);
 
