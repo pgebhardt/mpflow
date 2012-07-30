@@ -21,34 +21,27 @@
 #include <sys/time.h>
 #include "fastect.h"
 
-static void print_matrix(linalgcu_matrix_t matrix) {
-    if (matrix == NULL) {
-        return;
-    }
-
-    // value memory
-    linalgcu_matrix_data_t value = 0.0;
-
-    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
-            // get value
-            linalgcu_matrix_get_element(matrix, &value, i, j);
-
-            printf("%f, ", value);
-        }
-        printf("\n");
-    }
+double get_time() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 }
 
 int main(int argc, char* argv[]) {
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
+    // timeing
+    double start = get_time();
+
     // create cublas handle
     cublasHandle_t handle = NULL;
     if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
         return EXIT_FAILURE;
     }
+
+    // comment
+    printf("Cublas handle loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
     // create mesh
     fastect_mesh_t mesh;
@@ -59,6 +52,10 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // comment
+    printf("Mesh generated with r = %f, d = %f ... (%f ms)\n", mesh->radius, mesh->distance,
+        (get_time() - start) * 1E3);
+
     // create electrodes
     fastect_electrodes_t electrodes;
     error  = fastect_electrodes_create(&electrodes, 36, 0.005f, mesh);
@@ -68,10 +65,17 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // comment
+    printf("%d electrodes of width = %f generated... (%f ms)\n", electrodes->count,
+        electrodes->size, (get_time() - start) * 1E3);
+
     // load pattern
     linalgcu_matrix_t drive_pattern, measurment_pattern;
     linalgcu_matrix_load(&drive_pattern, "input/drive_pattern.txt", NULL);
     linalgcu_matrix_load(&measurment_pattern, "input/measurment_pattern.txt", NULL);
+
+    // comment
+    printf("Measurment and drive pattern loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
     // create solver
     fastect_solver_t solver;
@@ -80,9 +84,22 @@ int main(int argc, char* argv[]) {
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        printf("Solver erstellen ging nicht!\n");
         return EXIT_FAILURE;
     }
+
+    // comment
+    printf("Solver created... (%f ms)\n", (get_time() - start) * 1E3);
+
+    // Create image
+    fastect_image_t image;
+    error = fastect_image_create(&image, 1000, 1000, mesh, NULL);
+
+    if (error != LINALGCU_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+
+    // comment
+    printf("Image module loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
     // set sigma
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
@@ -94,73 +111,45 @@ int main(int argc, char* argv[]) {
     fastect_grid_update_system_matrix(solver->applied_solver->grid, NULL);
     fastect_grid_update_system_matrix(solver->lead_solver->grid, NULL);
 
+    // comment
+    printf("Set initial sigma = %f ... (%f ms)\n", 50E-3, (get_time() - start) * 1E3);
+
     // load measured_voltage
     linalgcu_matrix_t measured_voltage;
     linalgcu_matrix_load(&measured_voltage, "input/measured_voltage.txt", NULL);
     linalgcu_matrix_copy(solver->measured_voltage, measured_voltage, LINALGCU_TRUE, NULL);
     linalgcu_matrix_release(&measured_voltage);
 
-    // Create image
-    fastect_image_t image;
-    fastect_image_create(&image, 1000, 1000, mesh, NULL);
+    // comment
+    printf("Measured voltage loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
-    /*// pre solve for accurate jacobian
+    // pre solve for accurate jacobian
     for (linalgcu_size_t i = 0; i < 100; i++) {
         fastect_solver_forward_solve(solver, handle, NULL);
-    }*/
-
-    // get start time
-    struct timeval tv;
+    }
     cudaDeviceSynchronize();
-    gettimeofday(&tv, NULL);
-    double start = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
 
-    fastect_solver_forward_solve(solver, handle, NULL);
+    // comment
+    printf("Pre solving done... (%f ms)\n", (get_time() - start) * 1E3);
 
-    // get end time
-    gettimeofday(&tv, NULL);
-    double end1 = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-    cudaDeviceSynchronize();
-    gettimeofday(&tv, NULL);
-    double end2 = (double)tv.tv_sec + (double)tv.tv_usec / 1E6;
-
-    printf("Time before sync: %f\n", end1 - start);
-    printf("Time after sync: %f\n", end2 - start);
-    // printf("Frames per second: %f\n", 5.0 / (end2 - start));
-
-    /*for (linalgcu_size_t i = 0; i < 1; i++) {
+    // solve
+    for (linalgcu_size_t i = 0; i < 10; i++) {
         fastect_solver_solve(solver, 4, handle, NULL);
-    }*/
-
-    /*// dummy_matrix
-    linalgcu_matrix_s dummy_matrix;
-    dummy_matrix.host_data = NULL;
-    dummy_matrix.device_data = NULL;
-    dummy_matrix.size_m = solver->applied_solver->phi->size_m;
-    dummy_matrix.size_n = 1;
-
-    // calc images
-    char buffer[1024];
-    for (linalgcu_size_t i = 0; i < solver->applied_solver->count; i++) {
-        // copy current phi to vector
-        dummy_matrix.device_data =
-            &solver->applied_solver->phi->device_data[i * solver->applied_solver->phi->size_m];
-
-        // calc image
-        fastect_image_calc_phi(image, &dummy_matrix, NULL);
-        cudaDeviceSynchronize();
-        linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
-        linalgcu_matrix_save("output/image.txt", image->image);
-        sprintf(buffer, "python src/script.py %d", i);
-        system(buffer);
     }
 
-    // calc sigma image
+    // comment
+    printf("Solving of 50 frames done... (%f ms)\n", (get_time() - start) * 1E3);
+
+    // calc image
+    cudaDeviceSynchronize();
     fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);
     cudaDeviceSynchronize();
     linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/image.txt", image->image);
-    system("python src/script.py 100");*/
+    system("python src/script.py reconstructed");
+
+    // comment
+    printf("Image created... (%f ms)\n", (get_time() - start) * 1E3);
 
     // cleanup
     fastect_solver_release(&solver);
