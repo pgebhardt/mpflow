@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     }
 
     // comment
-    printf("Cublas handle loaded... (%f ms)\n", (get_time() - start) * 1E3);
+    printf("Cuda initialized... (%f ms)\n", (get_time() - start) * 1E3);
 
     // load config file
     config_t config;
