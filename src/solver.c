@@ -288,14 +288,12 @@ linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
     // error
     linalgcu_error_t error = LINALGCU_ERROR;
 
-    // update system matrices
-    error  = fastect_grid_update_system_matrix(solver->applied_solver->grid, stream);
-    error |= fastect_grid_update_system_matrix(solver->lead_solver->grid, stream);
-
     // solve drive pattern
+    error  = fastect_grid_update_system_matrix(solver->applied_solver->grid, stream);
     error |= fastect_forward_solver_solve(solver->applied_solver, handle, stream);
 
     // solve measurment pattern
+    error |= fastect_grid_update_system_matrix(solver->lead_solver->grid, stream);
     error |= fastect_forward_solver_solve(solver->lead_solver, handle, stream);
 
     // calc voltage

@@ -101,7 +101,7 @@ linalgcu_error_t fastect_solver_calc_jacobian(fastect_solver_t solver,
     dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
 
     // calc jacobian
-    calc_jacobian_kernel<<<blocks, threads>>>(
+    calc_jacobian_kernel<<<blocks, threads, 0, stream>>>(
         solver->jacobian->device_data,
         solver->applied_solver->phi->device_data,
         solver->lead_solver->phi->device_data,
