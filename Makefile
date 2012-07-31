@@ -64,8 +64,8 @@ $(LIB): $(OBJ) $(CUOBJ) $(DEPS)
 # Rule for examples
 examples: $(LIB) $(EXAMPLEOBJ)
 	mkdir -p $(BIN)/output
-	cp -r input $(BIN)/
-	cp -r $(SRC)/script.py $(BIN)/
+	cp -r $(EXAMPLES)/input $(BIN)/
+	cp -r $(EXAMPLES)/script.py $(BIN)/
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)

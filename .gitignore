@@ -3,7 +3,6 @@
 fastECT
 fastECT_forward
 build
-output
-input/measured_voltage.txt
-input/sigma.txt
+examples/input/measured_voltage.txt
+examples/input/sigma.txt
 bin
