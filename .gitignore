@@ -1,8 +1,3 @@
 *.swp
-*.o
-fastECT
-fastECT_forward
 build
-examples/input/measured_voltage.txt
-examples/input/sigma.txt
 bin
