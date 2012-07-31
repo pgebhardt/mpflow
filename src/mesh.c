@@ -17,8 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <math.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 linalgcu_matrix_data_t fastect_mesh_angle(linalgcu_matrix_data_t x,
     linalgcu_matrix_data_t y) {

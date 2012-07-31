@@ -29,13 +29,14 @@ LDFLAGS = -Lbuild -lfastect -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 
 
 # Directories
 SRC = src
+INCLUDES = include
 BUILD = build
 EXAMPLES = examples
 BIN = bin
 
 # Install directories
-INCLUDES = /usr/local/include/fastect
-LIBS = /usr/local/lib
+INSTALL_INCLUDES = /usr/local/include/fastect
+INSTALL_LIB = /usr/local/lib
 
 # Object files
 _OBJ = mesh.o basis.o electrodes.o grid.o image.o conjugate.o forward.o inverse.o solver.o
@@ -47,7 +48,7 @@ CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
 _DEPS = fastect.h mesh.h basis.h electrodes.h grid.h image.h conjugate.h forward.h inverse.h solver.h
-DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
+DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Examples
 EXAMPLEOBJ = $(patsubst $(EXAMPLES)/%.c, %, $(wildcard $(EXAMPLES)/*.c))
@@ -84,9 +85,9 @@ $(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
 
 # Install
 install:
-	mkdir -p $(INCLUDES)
-	install -m 0644 $(SRC)/*.h $(INCLUDES)
-	install -m 0644 $(BUILD)/$(LIB) $(LIBS)
+	mkdir -p $(INSTALL_INCLUDES)
+	install -m 0644 $(INCLUDES)/*.h $(INSTALL_INCLUDES)
+	install -m 0644 $(BUILD)/$(LIB) $(INSTALL_LIB)
 
 # Uninstall
 uninstall:

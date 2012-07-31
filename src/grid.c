@@ -17,28 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <math.h>
-#include <stdio.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
-static void print_matrix(linalgcu_matrix_t matrix) {
-    if (matrix == NULL) {
-        return;
-    }
-
-    // value memory
-    linalgcu_matrix_data_t value = 0.0;
-
-    for (linalgcu_size_t i = 0; i < matrix->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < matrix->size_n; j++) {
-            // get value
-            linalgcu_matrix_get_element(matrix, &value, i, j);
-
-            printf("%f, ", value);
-        }
-        printf("\n");
-    }
-}
 // create solver grid
 linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     fastect_mesh_t mesh, cublasHandle_t handle, cudaStream_t stream) {

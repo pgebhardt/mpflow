@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // create basis
 linalgcu_error_t fastect_basis_create(fastect_basis_t* basisPointer,

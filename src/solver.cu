@@ -20,7 +20,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // calc jacobian kernel
 __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,

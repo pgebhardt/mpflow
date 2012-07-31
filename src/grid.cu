@@ -20,7 +20,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // update_system_matrix_kernel
 __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matrix_values,

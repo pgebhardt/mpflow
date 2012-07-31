@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // create solver
 linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,

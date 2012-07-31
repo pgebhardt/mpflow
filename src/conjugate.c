@@ -17,8 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <math.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // create conjugate solver
 linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* solverPointer,

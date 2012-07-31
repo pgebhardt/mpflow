@@ -17,8 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <math.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // create electrodes
 linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,

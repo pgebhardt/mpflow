@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include "../src/fastect.h"
+#include "../include/fastect.h"
 
 double get_time() {
     struct timeval tv;

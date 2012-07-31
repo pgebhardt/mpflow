@@ -20,7 +20,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // helper functions
 __device__ linalgcu_matrix_data_t test(

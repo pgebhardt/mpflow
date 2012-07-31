@@ -20,7 +20,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include "fastect.h"
+#include "../include/fastect.h"
 
 // add scalar kernel
 __global__ void add_scalar_kernel(linalgcu_matrix_data_t* vector,
