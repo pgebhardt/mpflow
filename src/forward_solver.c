@@ -37,7 +37,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.0f) * (x - 0.0f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
@@ -47,7 +47,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.0f) * (x - 0.0f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
@@ -57,7 +57,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.0f) * (x - 0.0f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
