@@ -305,12 +305,7 @@ linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
     // calc jacobian
     error |= fastect_solver_calc_jacobian(solver, stream);
 
-    // check error
-    if (error != LINALGCU_SUCCESS) {
-        return error;
-    }
-
-    return LINALGCU_SUCCESS;
+    return error;
 }
 
 // solving
@@ -321,24 +316,27 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, linalgcu_size_t l
         return LINALGCU_ERROR;
     }
 
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
     // non-linear inverse
-    fastect_inverse_solver_solve(solver->inverse_solver, solver->calculated_voltage,
+    error = fastect_inverse_solver_solve(solver->inverse_solver, solver->calculated_voltage,
         solver->measured_voltage, handle, stream);
 
     // linear inverse
     for (linalgcu_size_t i = 0; i < linear_frames; i++) {
-        fastect_inverse_solver_solve_linear(solver->inverse_solver, solver->calculated_voltage,
+        error |= fastect_inverse_solver_solve_linear(solver->inverse_solver, solver->calculated_voltage,
             solver->measured_voltage, handle, stream);
     }
 
     // add to sigma
-    linalgcu_matrix_add(solver->applied_solver->grid->sigma, solver->inverse_solver->dSigma,
+    error |= linalgcu_matrix_add(solver->applied_solver->grid->sigma, solver->inverse_solver->dSigma,
         handle, stream);
-    linalgcu_matrix_add(solver->lead_solver->grid->sigma, solver->inverse_solver->dSigma,
+    error |= linalgcu_matrix_add(solver->lead_solver->grid->sigma, solver->inverse_solver->dSigma,
         handle, stream);
 
     // forward
-    fastect_solver_forward_solve(solver, handle, stream);
+    error |= fastect_solver_forward_solve(solver, handle, stream);
 
-    return LINALGCU_SUCCESS;
+    return error;
 }

@@ -180,9 +180,11 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 
     // calc f
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
-    cublasSgemv(handle, CUBLAS_OP_T, solver->jacobian->size_m, solver->jacobian->size_n,
+    if (cublasSgemv(handle, CUBLAS_OP_T, solver->jacobian->size_m, solver->jacobian->size_n,
         &alpha, solver->jacobian->device_data, solver->jacobian->size_m,
-        solver->dU->device_data, 1, &beta, solver->f->device_data, 1);
+        solver->dU->device_data, 1, &beta, solver->f->device_data, 1) != CUBLAS_STATUS_SUCCESS) {
+        return LINALGCU_ERROR;
+    }
 
     return LINALGCU_SUCCESS;
 }
@@ -197,22 +199,25 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
         return LINALGCU_ERROR;
     }
 
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
     // reset dU, dSigma
     cudaMemset(solver->dSigma, 0,
         sizeof(linalgcu_matrix_data_t) * solver->dSigma->size_m * solver->dSigma->size_n);
 
     // calc excitation
-    fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,
+    error  = fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,
         handle, stream);
 
     // calc system matrix
-    fastect_inverse_solver_calc_system_matrix(solver, handle, stream);
+    error |= fastect_inverse_solver_calc_system_matrix(solver, handle, stream);
 
     // solve system
-    fastect_conjugate_solver_solve(solver->conjugate_solver,
+    error |= fastect_conjugate_solver_solve(solver->conjugate_solver,
         solver->A, solver->dSigma, solver->f, 75, handle, stream);
 
-    return LINALGCU_SUCCESS;
+    return error;
 }
 
 // linear inverse solving
@@ -225,13 +230,16 @@ linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t so
         return LINALGCU_ERROR;
     }
 
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
     // calc excitation
-    fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,
+    error  = fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,
         handle, stream);
 
     // solve system
-    fastect_conjugate_solver_solve(solver->conjugate_solver,
+    error |= fastect_conjugate_solver_solve(solver->conjugate_solver,
         solver->A, solver->dSigma, solver->f, 75, handle, stream);
 
-    return LINALGCU_SUCCESS;
+    return error;
 }
