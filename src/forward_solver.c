@@ -37,7 +37,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.0f) * (x - 0.0f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
@@ -47,7 +47,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.0f) * (x - 0.0f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
@@ -57,7 +57,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.0f) * (x - 0.0f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
@@ -86,9 +86,17 @@ int main(int argc, char* argv[]) {
     // comment
     printf("Cublas handle loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
+    // load config file
+    config_t config;
+    config_init(&config);
+
+    if (!config_read_file(&config, "input/config.cfg")) {
+        return EXIT_FAILURE;
+    }
+
     // create solvert from config file
     fastect_solver_t solver;
-    error = fastect_solver_from_config(&solver, "input/config.cfg", handle, NULL);
+    error = fastect_solver_from_config(&solver, &config, handle, NULL);
 
     if (error != LINALGCU_SUCCESS) {
         return EXIT_FAILURE;
@@ -136,10 +144,18 @@ int main(int argc, char* argv[]) {
     // comment
     printf("Image created... (%f ms)\n", (get_time() - start) * 1E3);
 
+    // save voltage
+    linalgcu_matrix_copy_to_host(solver->calculated_voltage, LINALGCU_TRUE, NULL);
+    linalgcu_matrix_save("input/measured_voltage.txt", solver->calculated_voltage);
+
+    // comment
+    printf("Voltage saved... (%f ms)\n", (get_time() - start) * 1E3);
+
     // cleanup
     fastect_solver_release(&solver);
     fastect_image_release(&image);
     cublasDestroy(handle);
+    config_destroy(&config);
 
     return EXIT_SUCCESS;
 };
