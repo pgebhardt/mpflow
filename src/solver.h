@@ -30,6 +30,7 @@ typedef struct {
     linalgcu_matrix_t voltage_calculation;
     linalgcu_matrix_t calculated_voltage;
     linalgcu_matrix_t measured_voltage;
+    linalgcu_matrix_t sigma_ref;
 } fastect_solver_s;
 typedef fastect_solver_s* fastect_solver_t;
 
@@ -37,7 +38,8 @@ typedef fastect_solver_s* fastect_solver_t;
 linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t drive_count,
     linalgcu_size_t measurment_count, linalgcu_matrix_t drive_pattern,
-    linalgcu_matrix_t measurment_pattern, cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_matrix_t measurment_pattern, linalgcu_matrix_data_t sigma_ref,
+    cublasHandle_t handle, cudaStream_t stream);
 
 // create solver from config
 linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,

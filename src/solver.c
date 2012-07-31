@@ -23,7 +23,8 @@
 linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t drive_count,
     linalgcu_size_t measurment_count, linalgcu_matrix_t drive_pattern,
-    linalgcu_matrix_t measurment_pattern, cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t measurment_pattern, linalgcu_matrix_data_t sigma_ref,
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
         (drive_pattern == NULL) || (measurment_pattern == NULL) || (handle == NULL)) {
@@ -54,6 +55,7 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     solver->voltage_calculation = NULL;
     solver->calculated_voltage = NULL;
     solver->measured_voltage = NULL;
+    solver->sigma_ref = NULL;
 
     // create matrices
     error  = linalgcu_matrix_create(&solver->jacobian,
@@ -65,6 +67,8 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
         measurment_pattern->size_n, drive_pattern->size_n, stream);
     error |= linalgcu_matrix_create(&solver->measured_voltage,
         measurment_count, drive_count, stream);
+    error |= linalgcu_matrix_create(&solver->sigma_ref,
+        solver->mesh->element_count, 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -105,6 +109,22 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 
         return LINALGCU_ERROR;
     }
+
+    // init sigma to sigma ref
+    for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
+        linalgcu_matrix_set_element(solver->applied_solver->grid->sigma, sigma_ref, i, 0);
+        linalgcu_matrix_set_element(solver->lead_solver->grid->sigma, sigma_ref, i, 0);
+        linalgcu_matrix_set_element(solver->sigma_ref, sigma_ref, i, 0);
+    }
+
+    // copy sigma to device
+    linalgcu_matrix_copy_to_device(solver->applied_solver->grid->sigma, LINALGCU_TRUE, stream);
+    linalgcu_matrix_copy_to_device(solver->lead_solver->grid->sigma, LINALGCU_TRUE, stream);
+    linalgcu_matrix_copy_to_device(solver->sigma_ref, LINALGCU_TRUE, stream);
+
+    // update forward system matrices
+    fastect_grid_update_system_matrix(solver->applied_solver->grid, stream);
+    fastect_grid_update_system_matrix(solver->lead_solver->grid, stream);
 
     // set solver pointer
     *solverPointer = solver;
@@ -175,12 +195,12 @@ linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
     int measurment_count, drive_count;
     const char* measurment_pattern_path;
     const char* drive_pattern_path;
-    double initial_sigma = 0.0;
+    double sigma_ref = 0.0;
     if (!(config_setting_lookup_int(setting, "measurment_count", &measurment_count) &&
         config_setting_lookup_int(setting, "drive_count", &drive_count) &&
         config_setting_lookup_string(setting, "measurment_pattern", &measurment_pattern_path) &&
         config_setting_lookup_string(setting, "drive_pattern", &drive_pattern_path) &&
-        config_setting_lookup_float(setting, "initial_sigma", &initial_sigma))) {
+        config_setting_lookup_float(setting, "sigma_ref", &sigma_ref))) {
         // cleanup
         fastect_electrodes_release(&electrodes);
         fastect_mesh_release(&mesh);
@@ -205,7 +225,7 @@ linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
     // create solver
     fastect_solver_t solver;
     error = fastect_solver_create(&solver, mesh, electrodes, drive_count, measurment_count,
-        drive_pattern, measurment_pattern, handle, stream);
+        drive_pattern, measurment_pattern, sigma_ref, handle, stream);
 
     // cleanup
     linalgcu_matrix_release(&drive_pattern);
@@ -219,16 +239,6 @@ linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
 
         return error;
     }
-
-    // set initial sigma
-    for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcu_matrix_set_element(solver->applied_solver->grid->sigma, initial_sigma, i, 0);
-        linalgcu_matrix_set_element(solver->lead_solver->grid->sigma, initial_sigma, i, 0);
-    }
-    linalgcu_matrix_copy_to_device(solver->applied_solver->grid->sigma, LINALGCU_TRUE, stream);
-    linalgcu_matrix_copy_to_device(solver->lead_solver->grid->sigma, LINALGCU_TRUE, stream);
-    fastect_grid_update_system_matrix(solver->applied_solver->grid, stream);
-    fastect_grid_update_system_matrix(solver->lead_solver->grid, stream);
 
     // set solver pointer
     *solverPointer = solver;
@@ -256,6 +266,7 @@ linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer) {
     linalgcu_matrix_release(&solver->voltage_calculation);
     linalgcu_matrix_release(&solver->calculated_voltage);
     linalgcu_matrix_release(&solver->measured_voltage);
+    linalgcu_matrix_release(&solver->sigma_ref);
 
     // free struct
     free(solver);
