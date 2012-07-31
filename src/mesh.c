@@ -414,6 +414,42 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     return LINALGCU_SUCCESS;
 }
 
+// create new mesh from config
+linalgcu_error_t fastect_mesh_create_from_config(fastect_mesh_t* meshPointer,
+    config_setting_t* settings, cudaStream_t stream) {
+    // check input
+    if ((meshPointer == NULL) || (settings == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
+    // reset mesh pointer
+    *meshPointer = NULL;
+
+    // lookup settings
+    double mesh_radius, mesh_distance;
+    if (!(config_setting_lookup_float(settings, "radius", &mesh_radius) &&
+        config_setting_lookup_float(settings, "distance", &mesh_distance))) {
+        return LINALGCU_ERROR;
+    }
+
+    // create mesh
+    fastect_mesh_t mesh = NULL;
+    error = fastect_mesh_create(&mesh, mesh_radius, mesh_distance, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return error;
+    }
+
+    // set mesh pointer
+    *meshPointer = mesh;
+
+    return LINALGCU_SUCCESS;
+}
+
 linalgcu_error_t fastect_mesh_release(fastect_mesh_t* meshPointer) {
     // check input
     if ((meshPointer == NULL) || (*meshPointer == NULL)) {

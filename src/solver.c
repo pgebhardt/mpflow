@@ -17,7 +17,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
-#include <libconfig.h>
 #include "fastect.h"
 
 // create solver
@@ -81,7 +80,7 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     error |= fastect_forward_solver_create(&solver->lead_solver, solver->mesh,
         solver->electrodes, measurment_count, measurment_pattern, handle, stream);
     error |= fastect_inverse_solver_create(&solver->inverse_solver,
-        solver->jacobian, handle, stream);
+        solver->jacobian, 5.0f, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -115,70 +114,60 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 
 // create solver from config file
 linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
-    const char* path, cublasHandle_t handle, cudaStream_t stream) {
+    config_t* config, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solverPointer == NULL) || (path == NULL) || (handle == NULL)) {
+    if ((solverPointer == NULL) || (config == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // create config
-    config_t config;
-    config_setting_t* setting;
-    config_init(&config);
-
-    // load config from file
-    if (!config_read_file(&config, path)) {
-        // cleanup
-        config_destroy(&config);
-
-        return LINALGCU_ERROR;
-    }
+    // setting
+    config_setting_t* setting = NULL;
 
     // read mesh config
-    setting = config_lookup(&config, "mesh");
+    setting = config_lookup(config, "mesh");
     if (setting == NULL) {
-        // cleanup
-        config_destroy(&config);
-
         return LINALGCU_ERROR;
     }
 
-    double mesh_radius, mesh_distance;
-    if (!(config_setting_lookup_float(setting, "radius", &mesh_radius) &&
-        config_setting_lookup_float(setting, "distance", &mesh_distance))) {
-        // cleanup
-        config_destroy(&config);
+    // create mesh
+    fastect_mesh_t mesh = NULL;
+    error = fastect_mesh_create_from_config(&mesh, setting, stream);
 
+    // check success
+    if (error != LINALGCU_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
     // read electrodes config
-    setting = config_lookup(&config, "electrodes");
+    setting = config_lookup(config, "electrodes");
     if (setting == NULL) {
         // cleanup
-        config_destroy(&config);
+        fastect_mesh_release(&mesh);
 
         return LINALGCU_ERROR;
     }
 
-    int electrodes_count;
-    double electrodes_size;
-    if (!(config_setting_lookup_int(setting, "count", &electrodes_count) &&
-        config_setting_lookup_float(setting, "size", &electrodes_size))) {
+    // create electrodes
+    fastect_electrodes_t electrodes = NULL;
+    error = fastect_electrodes_create_from_config(&electrodes, setting, mesh);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
         // cleanup
-        config_destroy(&config);
+        fastect_mesh_release(&mesh);
 
         return LINALGCU_ERROR;
     }
 
     // read solver config
-    setting = config_lookup(&config, "solver");
+    setting = config_lookup(config, "solver");
     if (setting == NULL) {
         // cleanup
-        config_destroy(&config);
+        fastect_electrodes_release(&electrodes);
+        fastect_mesh_release(&mesh);
 
         return LINALGCU_ERROR;
     }
@@ -193,7 +182,8 @@ linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
         config_setting_lookup_string(setting, "drive_pattern", &drive_pattern_path) &&
         config_setting_lookup_float(setting, "initial_sigma", &initial_sigma))) {
         // cleanup
-        config_destroy(&config);
+        fastect_electrodes_release(&electrodes);
+        fastect_mesh_release(&mesh);
 
         return LINALGCU_ERROR;
     }
@@ -203,37 +193,11 @@ linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
     error  = linalgcu_matrix_load(&drive_pattern, drive_pattern_path, stream);
     error |= linalgcu_matrix_load(&measurment_pattern, measurment_pattern_path, stream);
 
-    // cleanup config
-    config_destroy(&config);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return error;
-    }
-
-    // create mesh
-    fastect_mesh_t mesh;
-    error = fastect_mesh_create(&mesh, mesh_radius, mesh_distance, stream);
-
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        linalgcu_matrix_release(&drive_pattern);
-        linalgcu_matrix_release(&measurment_pattern);
-
-        return error;
-    }
-
-    // create electrodes
-    fastect_electrodes_t electrodes;
-    error = fastect_electrodes_create(&electrodes, electrodes_count, electrodes_size, mesh);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
+        fastect_electrodes_release(&electrodes);
         fastect_mesh_release(&mesh);
-        linalgcu_matrix_release(&drive_pattern);
-        linalgcu_matrix_release(&measurment_pattern);
 
         return error;
     }
@@ -348,7 +312,7 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, linalgcu_size_t l
 
     // non-linear inverse
     fastect_inverse_solver_solve(solver->inverse_solver, solver->calculated_voltage,
-        solver->measured_voltage, 5.0f, handle, stream);
+        solver->measured_voltage, handle, stream);
 
     // linear inverse
     for (linalgcu_size_t i = 0; i < linear_frames; i++) {

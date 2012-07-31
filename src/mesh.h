@@ -37,6 +37,10 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
     cudaStream_t stream);
 
+// create new mesh from config
+linalgcu_error_t fastect_mesh_create_from_config(fastect_mesh_t* meshPointer,
+    config_setting_t* settings, cudaStream_t stream);
+
 // cleanup mesh
 linalgcu_error_t fastect_mesh_release(fastect_mesh_t* meshPointer);
 
