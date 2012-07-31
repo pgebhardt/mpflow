@@ -22,7 +22,8 @@
 
 // create inverse_solver
 linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverPointer,
-    linalgcu_matrix_t jacobian, cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t lambda,
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (jacobian == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -50,6 +51,7 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
     solver->f = NULL;
     solver->A = NULL;
     solver->regularization = NULL;
+    solver->lambda = lambda;
 
     // create matrices
     error |= linalgcu_matrix_create(&solver->dU, solver->jacobian->size_m, 1, stream);
@@ -116,7 +118,7 @@ linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solver
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
-    linalgcu_matrix_data_t lambda, cublasHandle_t handle, cudaStream_t stream) {
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (calculated_voltage == NULL) || 
         (measured_voltage == NULL) || (handle == NULL)) {
@@ -158,7 +160,7 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
         solver->A->device_data, solver->A->size_m,
         &beta, solver->regularization->device_data, solver->regularization->size_m);
 
-    cublasSaxpy(handle, solver->A->size_m * solver->A->size_n, &lambda,
+    cublasSaxpy(handle, solver->A->size_m * solver->A->size_n, &solver->lambda,
         solver->regularization->device_data, 1, solver->A->device_data, 1);
 
     // solve system

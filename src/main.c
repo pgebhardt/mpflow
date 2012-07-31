@@ -43,9 +43,17 @@ int main(int argc, char* argv[]) {
     // comment
     printf("Cublas handle loaded... (%f ms)\n", (get_time() - start) * 1E3);
 
+    // load config file
+    config_t config;
+    config_init(&config);
+
+    if (!config_read_file(&config, "input/config.cfg")) {
+        return EXIT_FAILURE;
+    }
+
     // create solvert from config file
     fastect_solver_t solver;
-    error = fastect_solver_from_config(&solver, "input/config.cfg", handle, NULL);
+    error = fastect_solver_from_config(&solver, &config, handle, NULL);
 
     if (error != LINALGCU_SUCCESS) {
         return EXIT_FAILURE;
@@ -107,6 +115,7 @@ int main(int argc, char* argv[]) {
     fastect_solver_release(&solver);
     fastect_image_release(&image);
     cublasDestroy(handle);
+    config_destroy(&config);
 
     return EXIT_SUCCESS;
 };

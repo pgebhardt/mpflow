@@ -34,7 +34,8 @@ typedef fastect_inverse_solver_s* fastect_inverse_solver_t;
 
 // create inverse_solver
 linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverPointer,
-    linalgcu_matrix_t jacobian, cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t lambda,
+    cublasHandle_t handle, cudaStream_t stream);
 
 // release inverse_solver
 linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solverPointer);
@@ -42,7 +43,7 @@ linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solver
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
-    linalgcu_matrix_data_t lambda, cublasHandle_t handle, cudaStream_t stream);
+    cublasHandle_t handle, cudaStream_t stream);
 
 // linear inverse solving
 linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t solver,
