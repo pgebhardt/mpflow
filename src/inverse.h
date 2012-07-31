@@ -40,6 +40,15 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
 // release inverse_solver
 linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solverPointer);
 
+// calc system matrix
+linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solver_t solver,
+    cublasHandle_t handle, cudaStream_t stream);
+
+// calc excitation
+linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t solver,
+    linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
+    cublasHandle_t handle, cudaStream_t stream);
+
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
