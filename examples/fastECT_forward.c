@@ -37,7 +37,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.03f) * (x - 0.03f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
@@ -47,7 +47,7 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.03f) * (x - 0.03f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
@@ -57,7 +57,42 @@ linalgcu_error_t set_sigma(linalgcu_matrix_t sigma, fastect_mesh_t mesh, cudaStr
         linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
 
         // check element
-        if ((x - 0.02f) * (x - 0.02f) + y * y > 0.01 * 0.01) {
+        if ((x - 0.03f) * (x - 0.03f) + y * y > 0.01 * 0.01) {
+            continue;
+        }
+
+        // set sigma
+        linalgcu_matrix_set_element(sigma, 1E-6, i, 0);
+    }
+
+    for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
+        // get element
+        linalgcu_matrix_get_element(mesh->elements, &id, i, 0);
+        linalgcu_matrix_get_element(mesh->vertices, &x, (linalgcu_size_t)id, 0);
+        linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
+
+        // check element
+        if ((x + 0.03f) * (x + 0.03f) + y * y > 0.01 * 0.01) {
+            continue;
+        }
+
+        // get element
+        linalgcu_matrix_get_element(mesh->elements, &id, i, 1);
+        linalgcu_matrix_get_element(mesh->vertices, &x, (linalgcu_size_t)id, 0);
+        linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
+
+        // check element
+        if ((x + 0.03f) * (x + 0.03f) + y * y > 0.01 * 0.01) {
+            continue;
+        }
+
+        // get element
+        linalgcu_matrix_get_element(mesh->elements, &id, i, 2);
+        linalgcu_matrix_get_element(mesh->vertices, &x, (linalgcu_size_t)id, 0);
+        linalgcu_matrix_get_element(mesh->vertices, &y, (linalgcu_size_t)id, 1);
+
+        // check element
+        if ((x + 0.03f) * (x + 0.03f) + y * y > 0.01 * 0.01) {
             continue;
         }
 
