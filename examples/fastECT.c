@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include "fastect.h"
+#include "../src/fastect.h"
 
 double get_time() {
     struct timeval tv;
@@ -95,17 +95,17 @@ int main(int argc, char* argv[]) {
     for (linalgcu_size_t i = 0; i < 10; i++) {
         fastect_solver_solve(solver, 4, handle, NULL);
     }
+    cudaDeviceSynchronize();
 
     // comment
     printf("Solving of 50 frames done... (%f ms)\n", (get_time() - start) * 1E3);
 
     // calc image
-    cudaDeviceSynchronize();
     fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);
     cudaDeviceSynchronize();
     linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/image.txt", image->image);
-    system("python src/script.py reconstructed");
+    system("python script.py reconstructed");
     system("rm -rf output/image.txt");
 
     // comment

@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
-#include "fastect.h"
+#include "../src/fastect.h"
 
 double get_time() {
     struct timeval tv;
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
     cudaDeviceSynchronize();
     linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
     linalgcu_matrix_save("output/image.txt", image->image);
-    system("python src/script.py original");
+    system("python script.py original");
     system("rm -rf output/image.txt");
 
     // comment

@@ -6,3 +6,4 @@ build
 output
 input/measured_voltage.txt
 input/sigma.txt
+bin

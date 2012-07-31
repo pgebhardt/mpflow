@@ -25,11 +25,17 @@ NVCC = $(CUDA_HOME)/bin/nvcc
 CFLAGS =
 NVCFLAGS =
 
-LDFLAGS = -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lconfig -lm
+LDFLAGS = -Lbuild -lfastect -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lconfig -lm
 
 # Directories
 SRC = src
 BUILD = build
+EXAMPLES = examples
+BIN = bin
+
+# Install directories
+INCLUDES = /usr/local/include/fastect
+LIBS = /usr/local/lib
 
 # Object files
 _OBJ = mesh.o basis.o electrodes.o grid.o image.o conjugate.o forward.o inverse.o solver.o
@@ -43,16 +49,23 @@ CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 _DEPS = fastect.h mesh.h basis.h electrodes.h grid.h image.h conjugate.h forward.h inverse.h solver.h
 DEPS = $(patsubst %, $(SRC)/%, $(_DEPS))
 
-# Output file
-BIN = fastECT
-FORWARD_SOLVER = fastECT_forward
+# Examples
+EXAMPLEOBJ = $(patsubst $(EXAMPLES)/%.c, %, $(wildcard $(EXAMPLES)/*.c))
+
+# Library
+LIB = libfastect.a
 
 # Rule for library
-$(BIN): $(BUILD)/main.o $(OBJ) $(CUOBJ) $(DEPS)
-	$(CC) $(CFLAGS) -o $(BIN) $(BUILD)/main.o $(OBJ) $(CUOBJ) $(LDFLAGS)
+$(LIB): $(OBJ) $(CUOBJ) $(DEPS)
+	mkdir -p $(BUILD)
+	ar rc $(BUILD)/$(LIB) $(OBJ) $(CUOBJ)
+	ranlib $(BUILD)/$(LIB)
 
-$(FORWARD_SOLVER): $(BUILD)/forward_solver.o $(OBJ) $(CUOBJ) $(DEPS)
-	$(CC) $(CFLAGS) -o $(FORWARD_SOLVER) $(BUILD)/forward_solver.o $(OBJ) $(CUOBJ) $(LDFLAGS)
+# Rule for examples
+examples: $(LIB) $(EXAMPLEOBJ)
+	mkdir -p $(BIN)/output
+	cp -r input $(BIN)/
+	cp -r $(SRC)/script.py $(BIN)/
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
@@ -64,9 +77,26 @@ $(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
 	mkdir -p $(BUILD)
 	$(NVCC) $(NVCFLAGS) -c -o $@ $<
 
+# Rule for example executables
+%: $(EXAMPLES)/%.c
+	mkdir -p $(BIN)
+	$(CC) $(CFLAGS) -o $(BIN)/$@ $< $(LDFLAGS)
+
+# Install
+install:
+	mkdir -p $(INCLUDES)
+	install -m 0644 $(SRC)/*.h $(INCLUDES)
+	install -m 0644 $(BUILD)/$(LIB) $(LIBS)
+
+# Uninstall
+uninstall:
+	rm -rf $(INCLUDES)
+	rm -rf $(LIBS)/$(LIB)
+
 # Cleanup
 clean:
 	rm -rf $(BUILD)
+	rm -rf $(BIN)
 
 # Flags
-.PHONY: clean
+.PHONY: clean install
