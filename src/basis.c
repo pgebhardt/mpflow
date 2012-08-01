@@ -41,7 +41,7 @@ linalgcu_error_t fastect_basis_create(fastect_basis_t* basisPointer,
     linalgcu_matrix_data_t Ainv[3][3];
     linalgcu_matrix_data_t B[3] = {1.0, 0.0, 0.0};
 
-    // invfastect matrix A directly
+    // invert matrix A directly
     linalgcu_matrix_data_t a, b, c, d, e, f, g, h, i;
     a = 1.0;
     b = Ax;

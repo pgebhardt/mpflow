@@ -77,7 +77,7 @@ __global__ void gemv_kernel(linalgcu_matrix_data_t* A, linalgcu_matrix_data_t* x
 
     // compute partial dot product
     linalgcu_matrix_data_t sum = 0.0f;
-    for (linalgcu_size_t k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
+    for (int k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
         sum += A[(blockIdx.x * blockDim.x + threadIdx.x) + (col0 + k) * size_m] * work[k];
     }
 
@@ -92,7 +92,7 @@ __global__ void reduce_row_kernel(linalgcu_matrix_data_t* vector, linalgcu_size_
 
     // sum row
     linalgcu_matrix_data_t sum = 0.0f;
-    for (linalgcu_size_t i = 0; i < size_m / LINALGCU_BLOCK_SIZE; i++) {
+    for (int i = 0; i < size_m / LINALGCU_BLOCK_SIZE; i++) {
         sum += vector[column + i * size_m];
     }
 

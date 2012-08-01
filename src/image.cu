@@ -142,7 +142,6 @@ __global__ void calc_image_sigma_kernel(linalgcu_matrix_data_t* image,
         yVertex[2]) / dy) + size_y / 2;
 
     // calc triangle
-    float pixel = 0.0f;
     float x, y;
     for (int i = iStart; i <= iEnd; i++) {
         for (int j = jStart; j <= jEnd; j++) {
@@ -150,13 +149,10 @@ __global__ void calc_image_sigma_kernel(linalgcu_matrix_data_t* image,
             x = (float)i * dx - radius;
             y = (float)j * dy - radius;
 
-            // calc pixel
-            pixel = sigma[k];
-
             // set pixel
             if (pointInTriangle(x, y, xVertex[0], yVertex[0], xVertex[1], yVertex[1],
                     xVertex[2], yVertex[2])) {
-                image[i + j * size_x] = pixel;
+                image[i + j * size_x] = sigma[k];
             }
         }
     }

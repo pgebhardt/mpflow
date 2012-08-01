@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
     // comment
     printf("Solving of 50 frames done... (%f ms)\n", (get_time() - start) * 1E3);
 
-    // calc image
+    /*// calc image
     fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);
     cudaDeviceSynchronize();
     linalgcu_matrix_copy_to_host(image->image, LINALGCU_TRUE, NULL);
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     system("rm -rf output/image.txt");
 
     // comment
-    printf("Image created... (%f ms)\n", (get_time() - start) * 1E3);
+    printf("Image created... (%f ms)\n", (get_time() - start) * 1E3);*/
 
     // cleanup
     fastect_solver_release(&solver);
