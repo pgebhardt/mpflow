@@ -159,7 +159,7 @@ linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
 
     // create electrodes
     fastect_electrodes_t electrodes = NULL;
-    error = fastect_electrodes_create_from_config(&electrodes, setting, mesh);
+    error = fastect_electrodes_create_from_config(&electrodes, setting, mesh->radius);
 
     // check success
     if (error != LINALGCU_SUCCESS) {

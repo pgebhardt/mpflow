@@ -8,9 +8,9 @@
 
 // create electrodes
 linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
-    linalgcu_size_t count, linalgcu_matrix_data_t size, fastect_mesh_t mesh) {
+    linalgcu_size_t count, linalgcu_matrix_data_t size, linalgcu_matrix_data_t radius) {
     // check input
-    if ((electrodesPointer == NULL) || (count == 0) || (mesh == NULL)) {
+    if ((electrodesPointer == NULL) || (count == 0) || (radius <= 0.0f)) {
         return LINALGCU_ERROR;
     }
 
@@ -56,15 +56,15 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
         angle = (linalgcu_matrix_data_t)i * 2.0f * delta_angle;
 
         // calc start coordinates
-        electrodes->electrode_start[i * 2 + 0] = mesh->radius * cos(angle);
-        electrodes->electrode_start[i * 2 + 1] = mesh->radius * sin(angle);
+        electrodes->electrode_start[i * 2 + 0] = radius * cos(angle);
+        electrodes->electrode_start[i * 2 + 1] = radius * sin(angle);
 
         // calc end angle
-        angle += size / mesh->radius;
+        angle += size / radius;
 
         // calc end coordinates
-        electrodes->electrode_end[i * 2 + 0] = mesh->radius * cos(angle);
-        electrodes->electrode_end[i * 2 + 1] = mesh->radius * sin(angle);
+        electrodes->electrode_end[i * 2 + 0] = radius * cos(angle);
+        electrodes->electrode_end[i * 2 + 1] = radius * sin(angle);
     }
 
     // set electrodesPointer
@@ -75,9 +75,9 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
 
 // create new electrodes from config
 linalgcu_error_t fastect_electrodes_create_from_config(fastect_electrodes_t* electrodesPointer,
-    config_setting_t* settings, fastect_mesh_t mesh) {
+    config_setting_t* settings, linalgcu_matrix_data_t radius) {
     // check input
-    if ((electrodesPointer == NULL) || (settings == NULL) || (mesh == NULL)) {
+    if ((electrodesPointer == NULL) || (settings == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -97,7 +97,7 @@ linalgcu_error_t fastect_electrodes_create_from_config(fastect_electrodes_t* ele
 
     // create electrodes
     fastect_electrodes_t electrodes = NULL;
-    error = fastect_electrodes_create(&electrodes, electrodes_count, electrodes_size, mesh);
+    error = fastect_electrodes_create(&electrodes, electrodes_count, electrodes_size, radius);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
