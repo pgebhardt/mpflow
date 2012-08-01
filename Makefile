@@ -6,14 +6,6 @@
 # cuda paths
 CUDA_HOME = /usr/local/cuda
 
-# Copmiler
-CC = clang
-NVCC = $(CUDA_HOME)/bin/nvcc
-CFLAGS =
-NVCFLAGS =
-
-LDFLAGS = -Lbuild -lfastect -L/usr/local/lib -llinalgcu -L/usr/local/cuda/lib64 -lcudart -lcublas -lconfig -lm
-
 # Directories
 SRC = src
 INCLUDES = include
@@ -24,6 +16,13 @@ BIN = bin
 # Install directories
 INSTALL_INCLUDES = /usr/local/include/fastect
 INSTALL_LIB = /usr/local/lib
+
+# Copmiler
+CC = clang
+NVCC = $(CUDA_HOME)/bin/nvcc
+CFLAGS =
+NVCFLAGS =
+LDFLAGS = -L$(BUILD) -lfastect -L$(INSTALL_LIB) -llinalgcu -L$(CUDA_HOME)/lib64 -lcudart -lcublas -lconfig -lm
 
 # Object files
 _OBJ = mesh.o basis.o electrodes.o grid.o image.o conjugate.o forward.o inverse.o solver.o
