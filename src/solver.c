@@ -306,12 +306,12 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, linalgcu_size_t l
 
     // non-linear inverse
     error = fastect_inverse_solver_solve(solver->inverse_solver, solver->calculated_voltage,
-        solver->measured_voltage, handle, stream);
+        solver->measured_voltage, solver->applied_solver->grid->sigma, solver->sigma_ref, handle, stream);
 
     // linear inverse
     for (linalgcu_size_t i = 0; i < linear_frames; i++) {
         error |= fastect_inverse_solver_solve_linear(solver->inverse_solver, solver->calculated_voltage,
-            solver->measured_voltage, handle, stream);
+            solver->measured_voltage, solver->applied_solver->grid->sigma, solver->sigma_ref, handle, stream);
     }
 
     // add to sigma
