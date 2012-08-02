@@ -76,7 +76,8 @@ int main(int argc, char* argv[]) {
     cudaDeviceSynchronize();
 
     // comment
-    printf("Pre solving done... (%f ms)\n", (get_time() - start) * 1E3);
+    double frame_start = get_time();
+    printf("Pre solving done... (%f ms)\n", (frame_start - start) * 1E3);
 
     // solve
     for (linalgcu_size_t i = 0; i < 10; i++) {
@@ -85,7 +86,9 @@ int main(int argc, char* argv[]) {
     cudaDeviceSynchronize();
 
     // comment
-    printf("Solving of 50 frames done... (%f ms)\n", (get_time() - start) * 1E3);
+    double frame_end = get_time();
+    printf("Solving of 50 frames done... (%f ms)\n", (frame_end - start) * 1E3);
+    printf("%f frames per second...\n", 50.0f / (frame_end - frame_start));
 
     // calc image
     fastect_image_calc_sigma(image, solver->applied_solver->grid->sigma, NULL);
