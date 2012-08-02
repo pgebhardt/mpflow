@@ -10,7 +10,8 @@
 linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
     linalgcu_size_t count, linalgcu_matrix_data_t size, linalgcu_matrix_data_t radius) {
     // check input
-    if ((electrodesPointer == NULL) || (count == 0) || (radius <= 0.0f)) {
+    if ((electrodesPointer == NULL) || (count == 0) || (radius <= 0.0f) ||
+        (size <= 0.0f)) {
         return LINALGCU_ERROR;
     }
 

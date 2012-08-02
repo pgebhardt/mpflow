@@ -19,7 +19,7 @@ typedef fastect_forward_solver_s* fastect_forward_solver_t;
 // create forward_solver
 linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverPointer,
     fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t count,
-    linalgcu_matrix_t drive_pattern, cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_matrix_t pattern, cublasHandle_t handle, cudaStream_t stream);
 
 // release forward_solver
 linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solverPointer);

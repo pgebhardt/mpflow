@@ -129,15 +129,6 @@ linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid,
     linalgcu_matrix_data_t x[3], y[3];
     linalgcu_matrix_data_t id[3];
     fastect_basis_t basis[3];
-
-    // init matrices
-    for (linalgcu_size_t i = 0; i < gradient_matrix->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < gradient_matrix->size_n; j++) {
-            linalgcu_matrix_set_element(gradient_matrix, 0.0, i, j);
-            linalgcu_matrix_set_element(grid->gradient_matrix_transposed, 0.0, j, i);
-        }
-    }
-
     linalgcu_matrix_data_t area;
 
     for (linalgcu_size_t k = 0; k < mesh->element_count; k++) {
@@ -355,9 +346,11 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
     for (int i = 0; i < mesh->boundary_count; i++) {
         for (int j = 0; j < electrodes->count; j++) {
             // get boundary node id
-            linalgcu_matrix_get_element(mesh->boundary, &id[0], i - 1 < 0 ? mesh->boundary_count - 1 : i - 1, 0);
+            linalgcu_matrix_get_element(mesh->boundary, &id[0],
+                i - 1 < 0 ? mesh->boundary_count - 1 : i - 1, 0);
             linalgcu_matrix_get_element(mesh->boundary, &id[1], i, 0);
-            linalgcu_matrix_get_element(mesh->boundary, &id[2], (i + 1) % mesh->boundary_count, 0);
+            linalgcu_matrix_get_element(mesh->boundary, &id[2],
+                (i + 1) % mesh->boundary_count, 0);
 
             // get coordinates
             linalgcu_matrix_get_element(mesh->vertices, &left[0], (linalgcu_size_t)id[0], 0);
@@ -370,7 +363,8 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
             // calc element
             linalgcu_matrix_set_element(grid->excitation_matrix,
                 fastect_grid_integrate_basis(node, left, right,
-                    &electrodes->electrode_start[j * 2], &electrodes->electrode_end[j * 2]) / element_area,
+                    &electrodes->electrode_start[j * 2],
+                    &electrodes->electrode_end[j * 2]) / element_area,
                     (linalgcu_size_t)id[1], j);
         }
     }
