@@ -34,14 +34,16 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
     solver->jacobian = jacobian;
     solver->dU = NULL;
     solver->dSigma = NULL;
+    solver->zeros = NULL;
     solver->f = NULL;
     solver->A = NULL;
     solver->regularization = NULL;
     solver->lambda = lambda;
 
     // create matrices
-    error |= linalgcu_matrix_create(&solver->dU, solver->jacobian->size_m, 1, stream);
+    error  = linalgcu_matrix_create(&solver->dU, solver->jacobian->size_m, 1, stream);
     error |= linalgcu_matrix_create(&solver->dSigma, solver->jacobian->size_n, 1, stream);
+    error |= linalgcu_matrix_create(&solver->zeros, solver->jacobian->size_n, 1, stream);
     error |= linalgcu_matrix_create(&solver->f, solver->jacobian->size_n, 1, stream);
     error |= linalgcu_matrix_create(&solver->A, solver->jacobian->size_n,
         solver->jacobian->size_n, stream);
@@ -88,6 +90,7 @@ linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solver
     fastect_conjugate_solver_release(&solver->conjugate_solver);
     linalgcu_matrix_release(&solver->dU);
     linalgcu_matrix_release(&solver->dSigma);
+    linalgcu_matrix_release(&solver->zeros);
     linalgcu_matrix_release(&solver->f);
     linalgcu_matrix_release(&solver->A);
     linalgcu_matrix_release(&solver->regularization);
@@ -150,18 +153,17 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
         return LINALGCU_ERROR;
     }
 
-    // reset dU
-    cudaMemset(solver->dU, 0,
-        sizeof(linalgcu_matrix_data_t) * solver->dU->size_m * solver->dU->size_n);
-
-    // calc dU
+    // dummy matrix to turn matrix to column vector
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.size_m = solver->dU->size_m;
     dummy_matrix.size_n = solver->dU->size_n;
     dummy_matrix.host_data = NULL;
+
+    // calc dU = mv - cv
     dummy_matrix.device_data = calculated_voltage->device_data;
-    linalgcu_matrix_add(solver->dU, &dummy_matrix, handle, stream);
+    linalgcu_matrix_copy(solver->dU, &dummy_matrix, LINALGCU_FALSE, stream);
     linalgcu_matrix_scalar_multiply(solver->dU, -1.0f, handle, stream);
+
     dummy_matrix.device_data = measured_voltage->device_data;
     linalgcu_matrix_add(solver->dU, &dummy_matrix, handle, stream);
 
@@ -190,9 +192,8 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // reset dU, dSigma
-    cudaMemset(solver->dSigma, 0,
-        sizeof(linalgcu_matrix_data_t) * solver->dSigma->size_m * solver->dSigma->size_n);
+    // reset dSigma
+    linalgcu_matrix_copy(solver->dSigma, solver->zeros, LINALGCU_FALSE, stream);
 
     // calc excitation
     error  = fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,

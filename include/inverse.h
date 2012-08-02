@@ -12,6 +12,7 @@ typedef struct {
     linalgcu_matrix_t jacobian;
     linalgcu_matrix_t dU;
     linalgcu_matrix_t dSigma;
+    linalgcu_matrix_t zeros;
     linalgcu_matrix_t f;
     linalgcu_matrix_t A;
     linalgcu_matrix_t regularization;
