@@ -55,8 +55,8 @@ __global__ void sparse_update_vector_kernel(linalgcu_matrix_data_t* result,
     linalgcu_size_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
-    result[row + column * rows] = x1[row + column * rows] + sign * x2[row + column * rows] *
-        r1[column * rows] / r2[column * rows];
+    result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] + sign * x2[row + column * rows] *
+        r1[column * rows] / r2[column * rows] : 0.0f;
 }
 
 // update vector
