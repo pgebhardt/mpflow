@@ -29,7 +29,7 @@ linalgcu_error_t fastect_conjugate_add_scalar(linalgcu_matrix_t vector,
     }
 
     // execute kernel
-    add_scalar_kernel<<<vector->size_m / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
+    add_scalar_kernel<<<vector->rows / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
         0, stream>>>(vector->device_data, scalar->device_data, size);
 
     return LINALGCU_SUCCESS;
@@ -57,7 +57,7 @@ linalgcu_error_t fastect_conjugate_udate_vector(linalgcu_matrix_t result,
     }
 
     // execute kernel
-    update_vector_kernel<<<result->size_m / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
+    update_vector_kernel<<<result->rows / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
         0, stream>>>(result->device_data, x1->device_data, sign, x2->device_data,
         r1->device_data, r2->device_data);
 
@@ -66,7 +66,7 @@ linalgcu_error_t fastect_conjugate_udate_vector(linalgcu_matrix_t result,
 
 // gemv kernel
 __global__ void gemv_kernel(linalgcu_matrix_data_t* A, linalgcu_matrix_data_t* x,
-    linalgcu_matrix_data_t* y, linalgcu_size_t size_m) {
+    linalgcu_matrix_data_t* y, linalgcu_size_t rows) {
     // column
     linalgcu_size_t col0 = blockIdx.y * LINALGCU_BLOCK_SIZE;
 
@@ -78,22 +78,22 @@ __global__ void gemv_kernel(linalgcu_matrix_data_t* A, linalgcu_matrix_data_t* x
     // compute partial dot product
     linalgcu_matrix_data_t sum = 0.0f;
     for (int k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
-        sum += A[(blockIdx.x * blockDim.x + threadIdx.x) + (col0 + k) * size_m] * work[k];
+        sum += A[(blockIdx.x * blockDim.x + threadIdx.x) + (col0 + k) * rows] * work[k];
     }
 
     // store to y
-    y[(blockIdx.x * blockDim.x + threadIdx.x) + blockIdx.y * size_m] = sum;
+    y[(blockIdx.x * blockDim.x + threadIdx.x) + blockIdx.y * rows] = sum;
 }
 
 // row reduce kernel
-__global__ void reduce_row_kernel(linalgcu_matrix_data_t* vector, linalgcu_size_t size_m) {
+__global__ void reduce_row_kernel(linalgcu_matrix_data_t* vector, linalgcu_size_t rows) {
     // get id
     linalgcu_size_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
     // sum row
     linalgcu_matrix_data_t sum = 0.0f;
-    for (int i = 0; i < size_m / LINALGCU_BLOCK_SIZE; i++) {
-        sum += vector[column + i * size_m];
+    for (int i = 0; i < rows / LINALGCU_BLOCK_SIZE; i++) {
+        sum += vector[column + i * rows];
     }
 
     // set sum
@@ -110,16 +110,16 @@ linalgcu_error_t fastect_conjugate_gemv(linalgcu_matrix_t A, linalgcu_matrix_t x
     }
 
     // dimension
-    dim3 blocks(A->size_m / LINALGCU_BLOCK_SIZE, A->size_n / LINALGCU_BLOCK_SIZE);
+    dim3 blocks(A->rows / LINALGCU_BLOCK_SIZE, A->columns / LINALGCU_BLOCK_SIZE);
     dim3 threads(LINALGCU_BLOCK_SIZE, 1);
 
     // call gemv kernel
     gemv_kernel<<<blocks, threads, 0, stream>>>(A->device_data, x->device_data,
-        y->device_data, A->size_m);
+        y->device_data, A->rows);
 
     // call reduce kernel
-    reduce_row_kernel<<<A->size_n / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE, 0, stream>>>(
-        y->device_data, y->size_m);
+    reduce_row_kernel<<<A->columns / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE, 0, stream>>>(
+        y->device_data, y->rows);
 
     return LINALGCU_SUCCESS;
 }

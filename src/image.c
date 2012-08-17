@@ -46,9 +46,9 @@ linalgcu_error_t fastect_image_create(fastect_image_t* imagePointer, linalgcu_si
     }
 
     // fill elements
-    for (linalgcu_size_t i = 0; i < image->image->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < image->image->size_n; j++) {
-            image->image->host_data[i + j * image->image->size_m] = NAN;
+    for (linalgcu_size_t i = 0; i < image->image->rows; i++) {
+        for (linalgcu_size_t j = 0; j < image->image->columns; j++) {
+            image->image->host_data[i + j * image->image->rows] = NAN;
         }
     }
 

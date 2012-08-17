@@ -103,10 +103,10 @@ linalgcu_error_t fastect_image_calc_phi(fastect_image_t image,
     }
 
     // execute kernel
-    calc_image_phi_kernel<<<image->elements->size_n / LINALGCU_BLOCK_SIZE,
+    calc_image_phi_kernel<<<image->elements->columns / LINALGCU_BLOCK_SIZE,
         LINALGCU_BLOCK_SIZE, 0, stream>>>(image->image->device_data,
-        image->elements->device_data, phi->device_data, image->image->size_m,
-        image->image->size_n, image->mesh->radius);
+        image->elements->device_data, phi->device_data, image->image->rows,
+        image->image->columns, image->mesh->radius);
 
     return LINALGCU_SUCCESS;
 }
@@ -168,10 +168,10 @@ linalgcu_error_t fastect_image_calc_sigma(fastect_image_t image,
     }
 
     // execute kernel
-    calc_image_sigma_kernel<<<image->elements->size_n / LINALGCU_BLOCK_SIZE,
+    calc_image_sigma_kernel<<<image->elements->columns / LINALGCU_BLOCK_SIZE,
         LINALGCU_BLOCK_SIZE, 0, stream>>>(image->image->device_data,
-        image->elements->device_data, sigma->device_data, image->image->size_m,
-        image->image->size_n, image->mesh->radius);
+        image->elements->device_data, sigma->device_data, image->image->rows,
+        image->image->columns, image->mesh->radius);
 
     return LINALGCU_SUCCESS;
 }

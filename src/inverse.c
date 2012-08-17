@@ -41,13 +41,13 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
     solver->lambda = lambda;
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->dU, solver->jacobian->size_m, 1, stream);
-    error |= linalgcu_matrix_create(&solver->dSigma, solver->jacobian->size_n, 1, stream);
-    error |= linalgcu_matrix_create(&solver->zeros, solver->jacobian->size_n, 1, stream);
-    error |= linalgcu_matrix_create(&solver->f, solver->jacobian->size_n, 1, stream);
-    error |= linalgcu_matrix_create(&solver->A, solver->jacobian->size_n,
-        solver->jacobian->size_n, stream);
-    error |= linalgcu_matrix_unity(&solver->regularization, solver->jacobian->size_n,
+    error  = linalgcu_matrix_create(&solver->dU, solver->jacobian->rows, 1, stream);
+    error |= linalgcu_matrix_create(&solver->dSigma, solver->jacobian->columns, 1, stream);
+    error |= linalgcu_matrix_create(&solver->zeros, solver->jacobian->columns, 1, stream);
+    error |= linalgcu_matrix_create(&solver->f, solver->jacobian->columns, 1, stream);
+    error |= linalgcu_matrix_create(&solver->A, solver->jacobian->columns,
+        solver->jacobian->columns, stream);
+    error |= linalgcu_matrix_unity(&solver->regularization, solver->jacobian->columns,
         stream);
 
     // check success
@@ -60,7 +60,7 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
 
     // create conjugate solver
     error = fastect_conjugate_solver_create(&solver->conjugate_solver,
-        solver->jacobian->size_n, handle, stream);
+        solver->jacobian->columns, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -116,24 +116,24 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, solver->A->size_m, solver->A->size_n,
-        solver->jacobian->size_m, &alpha, solver->jacobian->device_data,
-        solver->jacobian->size_m, solver->jacobian->device_data, solver->jacobian->size_m,
-        &beta, solver->A->device_data, solver->A->size_m) != CUBLAS_STATUS_SUCCESS) {
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, solver->A->rows, solver->A->columns,
+        solver->jacobian->rows, &alpha, solver->jacobian->device_data,
+        solver->jacobian->rows, solver->jacobian->device_data, solver->jacobian->rows,
+        &beta, solver->A->device_data, solver->A->rows) != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
     // calc regularization
-    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->A->size_n, solver->A->size_m,
-        solver->A->size_n, &alpha, solver->A->device_data, solver->A->size_m,
-        solver->A->device_data, solver->A->size_m,
-        &beta, solver->regularization->device_data, solver->regularization->size_m)
+    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->A->columns, solver->A->rows,
+        solver->A->columns, &alpha, solver->A->device_data, solver->A->rows,
+        solver->A->device_data, solver->A->rows,
+        &beta, solver->regularization->device_data, solver->regularization->rows)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
     // calc A
-    if (cublasSaxpy(handle, solver->A->size_m * solver->A->size_n, &solver->lambda,
+    if (cublasSaxpy(handle, solver->A->rows * solver->A->columns, &solver->lambda,
         solver->regularization->device_data, 1, solver->A->device_data, 1)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
@@ -155,8 +155,8 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 
     // dummy matrix to turn matrix to column vector
     linalgcu_matrix_s dummy_matrix;
-    dummy_matrix.size_m = solver->dU->size_m;
-    dummy_matrix.size_n = solver->dU->size_n;
+    dummy_matrix.rows = solver->dU->rows;
+    dummy_matrix.columns = solver->dU->columns;
     dummy_matrix.host_data = NULL;
 
     // calc dU = mv - cv
@@ -169,8 +169,8 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 
     // calc f
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
-    if (cublasSgemv(handle, CUBLAS_OP_T, solver->jacobian->size_m, solver->jacobian->size_n,
-        &alpha, solver->jacobian->device_data, solver->jacobian->size_m,
+    if (cublasSgemv(handle, CUBLAS_OP_T, solver->jacobian->rows, solver->jacobian->columns,
+        &alpha, solver->jacobian->device_data, solver->jacobian->rows,
         solver->dU->device_data, 1, &beta, solver->f->device_data, 1) != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }

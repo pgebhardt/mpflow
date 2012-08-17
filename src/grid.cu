@@ -17,7 +17,7 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matri
     linalgcu_matrix_data_t* gradient_matrix_transposed,
     linalgcu_matrix_data_t* sigma,
     linalgcu_matrix_data_t* area,
-    linalgcu_size_t gradient_matrix_transposed_size_m) {
+    linalgcu_size_t gradient_matrix_transposed_rows) {
     // get ids
     linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
     linalgcu_column_id_t j = system_matrix_column_ids[i * LINALGCU_BLOCK_SIZE +
@@ -34,7 +34,7 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matri
         element += id != -1 && j != -1 ?
             gradient_matrix_transposed_values[i * LINALGCU_BLOCK_SIZE + k] *
             sigma[id / 2] * area[id / 2] *
-            gradient_matrix_transposed[j + id * gradient_matrix_transposed_size_m] :
+            gradient_matrix_transposed[j + id * gradient_matrix_transposed_rows] :
             0.0f;
     }
 
@@ -53,7 +53,7 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid, cudaStre
 
     // dimension
     dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
-    dim3 blocks(grid->system_matrix->size_m / LINALGCU_BLOCK_SIZE, 1);
+    dim3 blocks(grid->system_matrix->rows / LINALGCU_BLOCK_SIZE, 1);
 
     // execute kernel
     update_system_matrix_kernel<<<blocks, threads, 0, stream>>>(
@@ -64,7 +64,7 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid, cudaStre
         grid->gradient_matrix_transposed->device_data,
         grid->sigma->device_data,
         grid->area->device_data,
-        grid->gradient_matrix_transposed->size_m);
+        grid->gradient_matrix_transposed->rows);
 
     return LINALGCU_SUCCESS;
 }

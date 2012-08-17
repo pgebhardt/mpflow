@@ -147,8 +147,8 @@ linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t 
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.host_data = NULL;
     dummy_matrix.device_data = NULL;
-    dummy_matrix.size_m = pattern->size_m;
-    dummy_matrix.size_n = 1;
+    dummy_matrix.rows = pattern->rows;
+    dummy_matrix.columns = 1;
 
     // create drive pattern
     for (linalgcu_size_t i = 0; i < solver->count; i++) {
@@ -156,7 +156,7 @@ linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t 
         linalgcu_matrix_create(&solver->f[i], mesh->vertex_count, 1, stream);
 
         // get current pattern
-        dummy_matrix.device_data = &pattern->device_data[i * pattern->size_m];
+        dummy_matrix.device_data = &pattern->device_data[i * pattern->rows];
 
         // calc f
         linalgcu_matrix_multiply(solver->f[i], solver->grid->excitation_matrix,
@@ -181,13 +181,13 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.host_data = NULL;
     dummy_matrix.device_data = NULL;
-    dummy_matrix.size_m = solver->phi->size_m;
-    dummy_matrix.size_n = 1;
+    dummy_matrix.rows = solver->phi->rows;
+    dummy_matrix.columns = 1;
 
     // solve pattern
     for (linalgcu_size_t i = 0; i < solver->count; i++) {
         // copy current applied phi to vector
-        dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->size_m];
+        dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->rows];
 
         // solve for phi
         error |= fastect_conjugate_solver_solve_sparse(solver->conjugate_solver,

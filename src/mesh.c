@@ -105,8 +105,8 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     // create vertices
     linalgcu_matrix_data_t x, y;
 
-    for (linalgcu_size_t i = 0; i < vertices->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < vertices->size_n; j++) {
+    for (linalgcu_size_t i = 0; i < vertices->rows; i++) {
+        for (linalgcu_size_t j = 0; j < vertices->columns; j++) {
             // calc x and y
             x = 1.25 * mesh->radius - mesh->distance * (linalgcu_matrix_data_t)i +
                 (linalgcu_matrix_data_t)(j % 2) * 0.5 * mesh->distance;
@@ -158,7 +158,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     }
 
     // get boundary vertices
-    linalgcu_matrix_data_t boundary[mesh->boundary->size_m * 2];
+    linalgcu_matrix_data_t boundary[mesh->boundary->rows * 2];
     linalgcu_matrix_data_t id;
     linalgcu_matrix_data_t angle;
 
@@ -204,8 +204,8 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     linalgcu_matrix_data_t neighbours[6];
     linalgcu_matrix_data_t node;
 
-    for (linalgcu_size_t i = 0; i < vertices->size_m; i++) {
-        for (linalgcu_size_t j = 0; j < vertices->size_n; j++) {
+    for (linalgcu_size_t i = 0; i < vertices->rows; i++) {
+        for (linalgcu_size_t j = 0; j < vertices->columns; j++) {
             // get node
             linalgcu_matrix_get_element(vertices, &node, i, j);
 
@@ -233,7 +233,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 }
 
                 // right
-                if (i < vertices->size_m - 1) {
+                if (i < vertices->rows - 1) {
                     linalgcu_matrix_get_element(vertices, &neighbours[2], i + 1, j);
                 }
                 else {
@@ -241,7 +241,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 }
 
                 // bottom right
-                if (j < vertices-> size_n - 1) {
+                if (j < vertices-> columns - 1) {
                     linalgcu_matrix_get_element(vertices, &neighbours[3], i, j + 1);
                 }
                 else {
@@ -249,7 +249,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 }
 
                 // bottom left
-                if ((i > 0) && (j < vertices->size_n - 1)) {
+                if ((i > 0) && (j < vertices->columns - 1)) {
                     linalgcu_matrix_get_element(vertices, &neighbours[4], i - 1, j + 1);
                 }
                 else {
@@ -274,7 +274,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 }
 
                 // top right
-                if ((i < vertices->size_m - 1) && (j > 0)) {
+                if ((i < vertices->rows - 1) && (j > 0)) {
                     linalgcu_matrix_get_element(vertices, &neighbours[1], i + 1, j - 1);
                 }
                 else {
@@ -282,7 +282,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 }
 
                 // right
-                if (i < vertices->size_m - 1) {
+                if (i < vertices->rows - 1) {
                     linalgcu_matrix_get_element(vertices, &neighbours[2], i + 1, j);
                 }
                 else {
@@ -290,7 +290,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 }
 
                 // bottom right
-                if ((i < vertices->size_m - 1) && (j < vertices->size_n - 1)) {
+                if ((i < vertices->rows - 1) && (j < vertices->columns - 1)) {
                     linalgcu_matrix_get_element(vertices, &neighbours[3], i + 1, j + 1);
                 }
                 else {
@@ -298,7 +298,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 }
 
                 // bottom left
-                if (j < vertices->size_n - 1) {
+                if (j < vertices->columns - 1) {
                     linalgcu_matrix_get_element(vertices, &neighbours[4], i, j + 1);
                 }
                 else {

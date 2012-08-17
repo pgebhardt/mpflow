@@ -43,7 +43,7 @@ linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* sol
     error |= linalgcu_matrix_create(&solver->rsold, solver->size, 1, stream);
     error |= linalgcu_matrix_create(&solver->rsnew, solver->size, 1, stream);
     error |= linalgcu_matrix_create(&solver->temp_vector, solver->size,
-        solver->residuum->size_m / LINALGCU_BLOCK_SIZE, stream);
+        solver->residuum->rows / LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&solver->temp_number, solver->size, 1, stream);
 
     // check success
@@ -103,7 +103,7 @@ linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solve
     linalgcu_matrix_t temp = NULL;
 
     // calc residuum r = f - A * x
-    error  = linalgcu_matrix_reduce(solver->temp_number, x, stream);
+    error  = linalgcu_matrix_sum(solver->temp_number, x, stream);
     error |= linalgcu_matrix_multiply(solver->residuum, A, x, handle, stream);
     error |= fastect_conjugate_add_scalar(solver->residuum, solver->temp_number, solver->size, stream);
     error |= linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle, stream);
@@ -124,7 +124,7 @@ linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solve
     // iterate
     for (linalgcu_size_t i = 0; i < iterations; i++) {
         // calc A * p
-        error  = linalgcu_matrix_reduce(solver->temp_number, solver->projection, stream);
+        error  = linalgcu_matrix_sum(solver->temp_number, solver->projection, stream);
         error |= fastect_conjugate_gemv(A, solver->projection, solver->temp_vector, stream);
         error |= fastect_conjugate_add_scalar(solver->temp_vector, solver->temp_number, solver->size,
             stream);
@@ -179,7 +179,7 @@ linalgcu_error_t fastect_conjugate_solver_solve_sparse(fastect_conjugate_solver_
     linalgcu_matrix_t temp = NULL;
 
     // calc residuum r = f - A * x
-    error  = linalgcu_matrix_reduce(solver->temp_number, x, stream);
+    error  = linalgcu_matrix_sum(solver->temp_number, x, stream);
     error |= linalgcu_sparse_matrix_vector_multiply(solver->residuum, A, x, stream);
     error |= fastect_conjugate_add_scalar(solver->residuum, solver->temp_number, solver->size, stream);
     error |= linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle, stream);
@@ -200,7 +200,7 @@ linalgcu_error_t fastect_conjugate_solver_solve_sparse(fastect_conjugate_solver_
     // iterate
     for (linalgcu_size_t i = 0; i < iterations; i++) {
         // calc A * p
-        error |= linalgcu_matrix_reduce(solver->temp_number, solver->projection, stream);
+        error |= linalgcu_matrix_sum(solver->temp_number, solver->projection, stream);
         error |= linalgcu_sparse_matrix_vector_multiply(solver->temp_vector, A, solver->projection,
             stream);
         error |= fastect_conjugate_add_scalar(solver->temp_vector, solver->temp_number,

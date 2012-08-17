@@ -15,8 +15,8 @@ __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
     linalgcu_matrix_data_t* lead_phi,
     linalgcu_matrix_data_t* gradient_matrix_values,
     linalgcu_column_id_t* gradient_matrix_column_ids,
-    linalgcu_matrix_data_t* area, linalgcu_size_t jacobian_size_m,
-    linalgcu_size_t phi_size_m, linalgcu_size_t measurment_count,
+    linalgcu_matrix_data_t* area, linalgcu_size_t jacobian_rows,
+    linalgcu_size_t phi_rows, linalgcu_size_t measurment_count,
     linalgcu_size_t element_count) {
     // get id
     linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -46,9 +46,9 @@ __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
 
         // x gradient
         grad_applied_phi.x += gradient_matrix_values[2 * j * LINALGCU_BLOCK_SIZE + k] *
-            applied_phi[idx + drive_id * phi_size_m];
+            applied_phi[idx + drive_id * phi_rows];
         grad_lead_phi.x += gradient_matrix_values[2 * j * LINALGCU_BLOCK_SIZE + k] *
-            lead_phi[idx + measurment_id * phi_size_m];
+            lead_phi[idx + measurment_id * phi_rows];
     }
 
     // calc y components
@@ -61,9 +61,9 @@ __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
 
         // y gradient
         grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k] *
-            applied_phi[idy + drive_id * phi_size_m];
+            applied_phi[idy + drive_id * phi_rows];
         grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k] *
-            lead_phi[idy + measurment_id * phi_size_m];
+            lead_phi[idy + measurment_id * phi_rows];
     }
 
     // calc matrix element
@@ -71,7 +71,7 @@ __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
         grad_applied_phi.y * grad_lead_phi.y);
 
     // set matrix element
-    jacobian[i + j * jacobian_size_m] = element;
+    jacobian[i + j * jacobian_rows] = element;
 }
 
 // calc jacobian
@@ -83,8 +83,8 @@ linalgcu_error_t fastect_solver_calc_jacobian(fastect_solver_t solver,
     }
 
     // dimension
-    dim3 blocks(solver->jacobian->size_m / LINALGCU_BLOCK_SIZE,
-        solver->jacobian->size_n / LINALGCU_BLOCK_SIZE);
+    dim3 blocks(solver->jacobian->rows / LINALGCU_BLOCK_SIZE,
+        solver->jacobian->columns / LINALGCU_BLOCK_SIZE);
     dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
 
     // calc jacobian
@@ -95,8 +95,8 @@ linalgcu_error_t fastect_solver_calc_jacobian(fastect_solver_t solver,
         solver->applied_solver->grid->gradient_matrix_sparse->values,
         solver->applied_solver->grid->gradient_matrix_sparse->column_ids,
         solver->applied_solver->grid->area->device_data,
-        solver->jacobian->size_m, solver->applied_solver->phi->size_m,
-        solver->lead_solver->phi->size_n, solver->mesh->element_count);
+        solver->jacobian->rows, solver->applied_solver->phi->rows,
+        solver->lead_solver->phi->columns, solver->mesh->element_count);
 
     return LINALGCU_SUCCESS;
 }

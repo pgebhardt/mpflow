@@ -46,12 +46,12 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 
     // create matrices
     error  = linalgcu_matrix_create(&solver->jacobian,
-        measurment_pattern->size_n * drive_pattern->size_n,
+        measurment_pattern->columns * drive_pattern->columns,
         mesh->element_count, stream);
     error |= linalgcu_matrix_create(&solver->voltage_calculation,
-        measurment_pattern->size_n, solver->mesh->vertex_count, stream);
+        measurment_pattern->columns, solver->mesh->vertex_count, stream);
     error |= linalgcu_matrix_create(&solver->calculated_voltage,
-        measurment_pattern->size_n, drive_pattern->size_n, stream);
+        measurment_pattern->columns, drive_pattern->columns, stream);
     error |= linalgcu_matrix_create(&solver->measured_voltage,
         measurment_count, drive_count, stream);
     error |= linalgcu_matrix_create(&solver->sigma_ref,
@@ -83,13 +83,13 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 
     // calc voltage calculation matrix
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurment_pattern->size_n,
-        solver->applied_solver->grid->excitation_matrix->size_m,
-        measurment_pattern->size_m, &alpha, measurment_pattern->device_data,
-        measurment_pattern->size_m,
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurment_pattern->columns,
+        solver->applied_solver->grid->excitation_matrix->rows,
+        measurment_pattern->rows, &alpha, measurment_pattern->device_data,
+        measurment_pattern->rows,
         solver->applied_solver->grid->excitation_matrix->device_data,
-        solver->applied_solver->grid->excitation_matrix->size_m,
-        &beta, solver->voltage_calculation->device_data, solver->voltage_calculation->size_m)
+        solver->applied_solver->grid->excitation_matrix->rows,
+        &beta, solver->voltage_calculation->device_data, solver->voltage_calculation->rows)
         != CUBLAS_STATUS_SUCCESS) {
         // cleanup
         fastect_solver_release(&solver);
