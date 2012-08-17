@@ -52,7 +52,9 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     }
 
     // create matrices
-    error = linalgcu_matrix_create(&solver->phi, mesh->vertex_count,
+    error  = linalgcu_matrix_create(&solver->phi, mesh->vertex_count,
+        solver->count, stream);
+    error |= linalgcu_matrix_create(&solver->f, mesh->vertex_count,
         solver->count, stream);
 
     // check success
@@ -63,20 +65,9 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
         return error;
     }
 
-    // create f matrix storage
-    solver->f = malloc(sizeof(linalgcu_matrix_t) * solver->count);
-
-    // check success
-    if (solver->f == NULL) {
-        // cleanup
-        fastect_forward_solver_release(&solver);
-
-        return LINALGCU_ERROR;
-    }
-
     // create conjugate solver
-    error = fastect_conjugate_solver_create(&solver->conjugate_solver,
-        mesh->vertex_count, handle, stream);
+    error = fastect_conjugate_sparse_solver_create(&solver->conjugate_solver,
+        mesh->vertex_count, solver->count, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -87,7 +78,10 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     }
 
     // calc excitaion matrices
-    error = fastect_forward_solver_calc_excitaion(solver, mesh, pattern, handle, stream);
+    // Run multiply once more to avoid cublas error
+    linalgcu_matrix_multiply(solver->f, solver->grid->excitation_matrix, pattern, handle, stream);
+
+    error = linalgcu_matrix_multiply(solver->f, solver->grid->excitation_matrix, pattern, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -115,53 +109,15 @@ linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solver
 
     // cleanup
     fastect_grid_release(&solver->grid);
-    fastect_conjugate_solver_release(&solver->conjugate_solver);
+    fastect_conjugate_sparse_solver_release(&solver->conjugate_solver);
     linalgcu_matrix_release(&solver->phi);
-
-    if (solver->f != NULL) {
-        for (linalgcu_size_t i = 0; i < solver->count; i++) {
-            linalgcu_matrix_release(&solver->f[i]);
-        }
-        free(solver->f);
-    }
+    linalgcu_matrix_release(&solver->f);
 
     // free struct
     free(solver);
 
     // set solver pointer to NULL
     *solverPointer = NULL;
-
-    return LINALGCU_SUCCESS;
-}
-
-// calc excitaion
-linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t solver,
-    fastect_mesh_t mesh, linalgcu_matrix_t pattern, cublasHandle_t handle,
-    cudaStream_t stream) {
-    // check input
-    if ((solver == NULL) || (mesh == NULL) || (pattern == NULL) || (handle == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // dummy matrix struct
-    linalgcu_matrix_s dummy_matrix;
-    dummy_matrix.host_data = NULL;
-    dummy_matrix.device_data = NULL;
-    dummy_matrix.rows = pattern->rows;
-    dummy_matrix.columns = 1;
-
-    // create drive pattern
-    for (linalgcu_size_t i = 0; i < solver->count; i++) {
-        // create matrix
-        linalgcu_matrix_create(&solver->f[i], mesh->vertex_count, 1, stream);
-
-        // get current pattern
-        dummy_matrix.device_data = &pattern->device_data[i * pattern->rows];
-
-        // calc f
-        linalgcu_matrix_multiply(solver->f[i], solver->grid->excitation_matrix,
-            &dummy_matrix, handle, stream);
-    }
 
     return LINALGCU_SUCCESS;
 }
@@ -177,23 +133,10 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // dummy matrix struct
-    linalgcu_matrix_s dummy_matrix;
-    dummy_matrix.host_data = NULL;
-    dummy_matrix.device_data = NULL;
-    dummy_matrix.rows = solver->phi->rows;
-    dummy_matrix.columns = 1;
-
-    // solve pattern
-    for (linalgcu_size_t i = 0; i < solver->count; i++) {
-        // copy current applied phi to vector
-        dummy_matrix.device_data = &solver->phi->device_data[i * solver->phi->rows];
-
-        // solve for phi
-        error |= fastect_conjugate_solver_solve_sparse(solver->conjugate_solver,
-            solver->grid->system_matrix, &dummy_matrix, solver->f[i],
-            10, handle, stream);
-    }
+    // solve for phi
+    error = fastect_conjugate_sparse_solver_solve(solver->conjugate_solver,
+        solver->grid->system_matrix, solver->phi, solver->f,
+        10, handle, stream);
 
     return error;
 }

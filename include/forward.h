@@ -9,10 +9,10 @@
 // solver struct
 typedef struct {
     fastect_grid_t grid;
-    fastect_conjugate_solver_t conjugate_solver;
+    fastect_conjugate_sparse_solver_t conjugate_solver;
     linalgcu_size_t count;
     linalgcu_matrix_t phi;
-    linalgcu_matrix_t* f;
+    linalgcu_matrix_t f;
 } fastect_forward_solver_s;
 typedef fastect_forward_solver_s* fastect_forward_solver_t;
 
@@ -23,11 +23,6 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
 
 // release forward_solver
 linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solverPointer);
-
-// calc excitaion
-linalgcu_error_t fastect_forward_solver_calc_excitaion(fastect_forward_solver_t _solver,
-    fastect_mesh_t mesh, linalgcu_matrix_t drive_pattern, cublasHandle_t handle,
-    cudaStream_t stream);
 
 // forward solving
 linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,

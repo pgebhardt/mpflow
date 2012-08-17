@@ -8,7 +8,7 @@
 
 // conjugate solver struct
 typedef struct {
-    linalgcu_size_t size;
+    linalgcu_size_t rows;
     linalgcu_matrix_t residuum;
     linalgcu_matrix_t projection;
     linalgcu_matrix_t rsold;
@@ -20,15 +20,10 @@ typedef fastect_conjugate_solver_s* fastect_conjugate_solver_t;
 
 // create solver
 linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* solverPointer,
-    linalgcu_size_t size, cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_size_t rows, cublasHandle_t handle, cudaStream_t stream);
 
 // release solver
 linalgcu_error_t fastect_conjugate_solver_release(fastect_conjugate_solver_t* solverPointer);
-
-// add scalar
-LINALGCU_EXTERN_C
-linalgcu_error_t fastect_conjugate_add_scalar(linalgcu_matrix_t vector, linalgcu_matrix_t scalar,
-    linalgcu_size_t size, cudaStream_t stream);
 
 // update vector
 LINALGCU_EXTERN_C
@@ -44,10 +39,6 @@ linalgcu_error_t fastect_conjugate_gemv(linalgcu_matrix_t A, linalgcu_matrix_t x
 // solve conjugate
 linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solver,
     linalgcu_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
-    linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
-
-linalgcu_error_t fastect_conjugate_solver_solve_sparse(fastect_conjugate_solver_t solver,
-    linalgcu_sparse_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
     linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

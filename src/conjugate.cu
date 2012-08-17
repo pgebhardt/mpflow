@@ -9,32 +9,6 @@
 #include <stdlib.h>
 #include "../include/fastect.h"
 
-// add scalar kernel
-__global__ void add_scalar_kernel(linalgcu_matrix_data_t* vector,
-    linalgcu_matrix_data_t* scalar, linalgcu_size_t size) {
-    // get id
-    linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // add data
-    vector[i] += i < size ? scalar[0] : 0.0f;
-}
-
-// add scalar
-extern "C"
-linalgcu_error_t fastect_conjugate_add_scalar(linalgcu_matrix_t vector,
-    linalgcu_matrix_t scalar, linalgcu_size_t size, cudaStream_t stream) {
-    // check input
-    if ((vector == NULL) || (scalar == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // execute kernel
-    add_scalar_kernel<<<vector->rows / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
-        0, stream>>>(vector->device_data, scalar->device_data, size);
-
-    return LINALGCU_SUCCESS;
-}
-
 // update vector
 __global__ void update_vector_kernel(linalgcu_matrix_data_t* result,
     linalgcu_matrix_data_t* x1, linalgcu_matrix_data_t sign,

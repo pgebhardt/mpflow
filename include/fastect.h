@@ -16,6 +16,7 @@
 #include "electrodes.h"
 #include "grid.h"
 #include "conjugate.h"
+#include "conjugate_sparse.h"
 #include "forward.h"
 #include "inverse.h"
 #include "solver.h"

@@ -25,15 +25,15 @@ NVCFLAGS = -m64
 LDFLAGS = -L$(BUILD) -lfastect -L$(INSTALL_LIB) -llinalgcu -L$(CUDA_HOME)/lib64 -lcudart -lcublas -lconfig -lm
 
 # Object files
-_OBJ = mesh.o basis.o electrodes.o grid.o image.o conjugate.o forward.o inverse.o solver.o
+_OBJ = mesh.o basis.o electrodes.o grid.o image.o conjugate.o conjugate_sparse.o forward.o inverse.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
-_CUOBJ = grid.cu_o image.cu_o conjugate.cu_o solver.cu_o
+_CUOBJ = grid.cu_o image.cu_o conjugate.cu_o conjugate_sparse.cu_o solver.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fastect.h mesh.h basis.h electrodes.h grid.h image.h conjugate.h forward.h inverse.h solver.h
+_DEPS = fastect.h mesh.h basis.h electrodes.h grid.h image.h conjugate.h conjugate_sparse.h forward.h inverse.h solver.h
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Examples

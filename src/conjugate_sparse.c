@@ -7,8 +7,8 @@
 #include "../include/fastect.h"
 
 // create conjugate solver
-linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* solverPointer,
-    linalgcu_size_t rows, cublasHandle_t handle, cudaStream_t stream) {
+linalgcu_error_t fastect_conjugate_sparse_solver_create(fastect_conjugate_sparse_solver_t* solverPointer,
+    linalgcu_size_t rows, linalgcu_size_t columns, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (rows <= 1) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -21,7 +21,7 @@ linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* sol
     *solverPointer = NULL;
 
     // create solver struct
-    fastect_conjugate_solver_t solver = malloc(sizeof(fastect_conjugate_solver_s));
+    fastect_conjugate_sparse_solver_t solver = malloc(sizeof(fastect_conjugate_sparse_solver_s));
 
     // check success
     if (solver == NULL) {
@@ -30,6 +30,7 @@ linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* sol
 
     // init struct
     solver->rows = rows;
+    solver->columns = columns;
     solver->residuum = NULL;
     solver->projection = NULL;
     solver->rsold = NULL;
@@ -38,18 +39,17 @@ linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* sol
     solver->temp_number = NULL;
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->residuum, solver->rows, 1, stream);
-    error |= linalgcu_matrix_create(&solver->projection, solver->rows, 1, stream);
-    error |= linalgcu_matrix_create(&solver->rsold, solver->rows, 1, stream);
-    error |= linalgcu_matrix_create(&solver->rsnew, solver->rows, 1, stream);
-    // TODO: columns of temp vector min: solver->rows / LINALGCU_BLOCK_SIZE for non sparse version
-    error |= linalgcu_matrix_create(&solver->temp_vector, solver->rows, 1, stream);
-    error |= linalgcu_matrix_create(&solver->temp_number, solver->rows, 1, stream);
+    error  = linalgcu_matrix_create(&solver->residuum, solver->rows, solver->columns, stream);
+    error |= linalgcu_matrix_create(&solver->projection, solver->rows, solver->columns, stream);
+    error |= linalgcu_matrix_create(&solver->rsold, solver->rows, solver->columns, stream);
+    error |= linalgcu_matrix_create(&solver->rsnew, solver->rows, solver->columns, stream);
+    error |= linalgcu_matrix_create(&solver->temp_vector, solver->rows, solver->columns, stream);
+    error |= linalgcu_matrix_create(&solver->temp_number, solver->rows, solver->columns, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_conjugate_solver_release(&solver);
+        fastect_conjugate_sparse_solver_release(&solver);
 
         return error;
     }
@@ -61,14 +61,14 @@ linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* sol
 }
 
 // release solver
-linalgcu_error_t fastect_conjugate_solver_release(fastect_conjugate_solver_t* solverPointer) {
+linalgcu_error_t fastect_conjugate_sparse_solver_release(fastect_conjugate_sparse_solver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fastect_conjugate_solver_t solver = *solverPointer;
+    fastect_conjugate_sparse_solver_t solver = *solverPointer;
 
     // release matrices
     linalgcu_matrix_release(&solver->residuum);
@@ -87,9 +87,9 @@ linalgcu_error_t fastect_conjugate_solver_release(fastect_conjugate_solver_t* so
     return LINALGCU_SUCCESS;
 }
 
-// solve conjugate
-linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solver,
-    linalgcu_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
+// solve conjugate_sparse sparse
+linalgcu_error_t fastect_conjugate_sparse_solver_solve(fastect_conjugate_sparse_solver_t solver,
+    linalgcu_sparse_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
     linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (A == NULL) || (x == NULL) || (f == NULL) || (handle == NULL)) {
@@ -103,7 +103,10 @@ linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solve
     linalgcu_matrix_t temp = NULL;
 
     // calc residuum r = f - A * x
-    error  = linalgcu_matrix_multiply(solver->residuum, A, x, handle, stream);
+    error  = linalgcu_matrix_sum(solver->temp_number, x, stream);
+    error |= linalgcu_sparse_matrix_multiply(solver->residuum, A, x, stream);
+    error |= fastect_conjugate_sparse_add_scalar(solver->residuum, solver->temp_number, solver->rows,
+        solver->columns, stream);
     error |= linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle, stream);
     error |= linalgcu_matrix_add(solver->residuum, f, handle, stream);
 
@@ -122,18 +125,22 @@ linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solve
     // iterate
     for (linalgcu_size_t i = 0; i < iterations; i++) {
         // calc A * p
-        error  = fastect_conjugate_gemv(A, solver->projection, solver->temp_vector, stream);
+        error |= linalgcu_matrix_sum(solver->temp_number, solver->projection, stream);
+        error |= linalgcu_sparse_matrix_multiply(solver->temp_vector, A, solver->projection,
+            stream);
+        error |= fastect_conjugate_sparse_add_scalar(solver->temp_vector, solver->temp_number,
+            solver->rows, solver->columns, stream);
 
         // calc p * A * p
         error |= linalgcu_matrix_vector_dot_product(solver->temp_number, solver->projection,
             solver->temp_vector, stream);
 
         // update residuum
-        error |= fastect_conjugate_udate_vector(solver->residuum, solver->residuum, -1.0f,
+        error |= fastect_conjugate_sparse_udate_vector(solver->residuum, solver->residuum, -1.0f,
             solver->temp_vector, solver->rsold, solver->temp_number, stream);
 
         // update x
-        error |= fastect_conjugate_udate_vector(x, x, 1.0f, solver->projection, solver->rsold,
+        error |= fastect_conjugate_sparse_udate_vector(x, x, 1.0f, solver->projection, solver->rsold,
             solver->temp_number, stream);
 
         // calc rsnew
@@ -141,7 +148,7 @@ linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solve
             solver->residuum, stream);
 
         // update projection
-        error |= fastect_conjugate_udate_vector(solver->projection, solver->residuum, 1.0f,
+        error |= fastect_conjugate_sparse_udate_vector(solver->projection, solver->residuum, 1.0f,
             solver->projection, solver->rsnew, solver->rsold, stream);
 
         // swap rsold and rsnew

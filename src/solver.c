@@ -220,10 +220,6 @@ linalgcu_error_t fastect_solver_from_config(fastect_solver_t* solverPointer,
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fastect_electrodes_release(&electrodes);
-        fastect_mesh_release(&mesh);
-
         return error;
     }
 
