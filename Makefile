@@ -36,9 +36,6 @@ CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 _DEPS = fastect.h mesh.h basis.h electrodes.h grid.h image.h conjugate.h conjugate_sparse.h forward.h inverse.h solver.h
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
-# Examples
-EXAMPLEOBJ = $(patsubst $(EXAMPLES)/%.c, %, $(wildcard $(EXAMPLES)/*.c))
-
 # Library
 LIB = libfastect.a
 
@@ -47,12 +44,6 @@ $(LIB): $(OBJ) $(CUOBJ) $(DEPS)
 	mkdir -p $(BUILD)
 	ar rc $(BUILD)/$(LIB) $(OBJ) $(CUOBJ)
 	ranlib $(BUILD)/$(LIB)
-
-# Rule for examples
-examples: $(LIB) $(EXAMPLEOBJ)
-	mkdir -p $(BIN)/output
-	cp -r $(EXAMPLES)/input $(BIN)/
-	cp -r $(EXAMPLES)/script.py $(BIN)/
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
@@ -63,11 +54,6 @@ $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
 $(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
 	mkdir -p $(BUILD)
 	$(NVCC) $(NVCFLAGS) -c -o $@ $<
-
-# Rule for example executables
-%: $(EXAMPLES)/%.c
-	mkdir -p $(BIN)
-	$(CC) $(CFLAGS) -o $(BIN)/$@ $< $(LDFLAGS)
 
 # Install
 install:

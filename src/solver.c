@@ -71,7 +71,7 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     error |= fastect_forward_solver_create(&solver->lead_solver, solver->mesh,
         solver->electrodes, measurment_count, measurment_pattern, handle, stream);
     error |= fastect_inverse_solver_create(&solver->inverse_solver,
-        solver->jacobian, 5.0f, handle, stream);
+        solver->jacobian, 2.0f, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
