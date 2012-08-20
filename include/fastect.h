@@ -12,7 +12,6 @@
 #include <libconfig.h>
 #include "mesh.h"
 #include "basis.h"
-#include "image.h"
 #include "electrodes.h"
 #include "grid.h"
 #include "conjugate.h"
