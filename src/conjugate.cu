@@ -17,7 +17,7 @@ __global__ void update_vector_kernel(linalgcu_matrix_data_t* result,
     linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
     // calc value
-    result[i] = x1[i] + sign * x2[i] * r1[0] / r2[0];
+    result[i] = r2[0] != 0.0f ? x1[i] + sign * x2[i] * r1[0] / r2[0] : 0.0f;
 }
 
 // update vector
