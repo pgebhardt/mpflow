@@ -123,14 +123,15 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
         return LINALGCU_ERROR;
     }
 
-    // calc regularization
+    // regularization: L = Jt * J
+    /*// calc regularization
     if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->A->columns, solver->A->rows,
         solver->A->columns, &alpha, solver->A->device_data, solver->A->rows,
         solver->A->device_data, solver->A->rows,
         &beta, solver->regularization->device_data, solver->regularization->rows)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
-    }
+    }*/
 
     // calc A
     if (cublasSaxpy(handle, solver->A->rows * solver->A->columns, &solver->lambda,
@@ -145,11 +146,10 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
 // calc excitation
 linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t solver,
     linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
-    linalgcu_matrix_t sigma_n, linalgcu_matrix_t sigma_ref,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (calculated_voltage == NULL) || (measured_voltage == NULL) ||
-        (sigma_n == NULL) || (sigma_ref == NULL) || (handle == NULL)) {
+        (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -181,23 +181,19 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
-    linalgcu_matrix_t sigma_n, linalgcu_matrix_t sigma_ref,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (calculated_voltage == NULL) || (measured_voltage == NULL) ||
-        (sigma_n == NULL) || (sigma_ref == NULL) || (handle == NULL)) {
+        (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // reset dSigma
-    linalgcu_matrix_copy(solver->dSigma, solver->zeros, LINALGCU_FALSE, stream);
-
     // calc excitation
     error  = fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,
-        sigma_n, sigma_ref, handle, stream);
+        handle, stream);
 
     // calc system matrix
     error |= fastect_inverse_solver_calc_system_matrix(solver, handle, stream);
@@ -212,11 +208,10 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
 // linear inverse solving
 linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t solver,
     linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
-    linalgcu_matrix_t sigma_n, linalgcu_matrix_t sigma_ref,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (calculated_voltage == NULL) || (measured_voltage == NULL) ||
-        (sigma_n == NULL) || (sigma_ref == NULL) || (handle == NULL)) {
+        (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -225,11 +220,11 @@ linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t so
 
     // calc excitation
     error  = fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,
-        sigma_n, sigma_ref, handle, stream);
+        handle, stream);
 
     // solve system
     error |= fastect_conjugate_solver_solve(solver->conjugate_solver,
-        solver->A, solver->dSigma, solver->f, 75, handle, stream);
+        solver->A, solver->dSigma, solver->f, 100, handle, stream);
 
     return error;
 }
