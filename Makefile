@@ -10,8 +10,6 @@ CUDA_HOME = /usr/local/cuda
 SRC = src
 INCLUDES = include
 BUILD = build
-EXAMPLES = examples
-BIN = bin
 
 # Install directories
 INSTALL_INCLUDES = /usr/local/include/fastect
@@ -63,13 +61,12 @@ install:
 
 # Uninstall
 uninstall:
-	rm -rf $(INCLUDES)
-	rm -rf $(LIBS)/$(LIB)
+	rm -rf $(INSTALL_INCLUDES)
+	rm -rf $(INSTALL_LIB)/$(LIB)
 
 # Cleanup
 clean:
 	rm -rf $(BUILD)
-	rm -rf $(BIN)
 
 # Flags
 .PHONY: clean install
