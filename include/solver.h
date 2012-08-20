@@ -44,7 +44,7 @@ linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
     cublasHandle_t handle, cudaStream_t stream);
 
 // solving
-linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, linalgcu_size_t linear_frames,
-    cublasHandle_t handle, cudaStream_t stream);
+linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cublasHandle_t handle,
+    cudaStream_t stream);
 
 #endif

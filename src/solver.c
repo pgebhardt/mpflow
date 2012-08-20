@@ -284,8 +284,8 @@ linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
 }
 
 // solving
-linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, linalgcu_size_t linear_frames,
-    cublasHandle_t handle, cudaStream_t stream) {
+linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -297,15 +297,9 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, linalgcu_size_t l
     // reset dSigma
     linalgcu_matrix_copy(solver->inverse_solver->dSigma, solver->inverse_solver->zeros, LINALGCU_FALSE, stream);
 
-    // non-linear inverse
+    // inverse
     error = fastect_inverse_solver_solve(solver->inverse_solver, solver->calculated_voltage,
         solver->measured_voltage, handle, stream);
-
-    // linear inverse
-    for (linalgcu_size_t i = 0; i < linear_frames; i++) {
-        error |= fastect_inverse_solver_solve_linear(solver->inverse_solver, solver->calculated_voltage,
-            solver->measured_voltage, handle, stream);
-    }
 
     // add to sigma
     error |= linalgcu_matrix_add(solver->applied_solver->grid->sigma, solver->inverse_solver->dSigma,
