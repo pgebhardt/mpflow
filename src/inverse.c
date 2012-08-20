@@ -123,6 +123,16 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
         return LINALGCU_ERROR;
     }
 
+    // regularization: L = Jt * J
+    // calc regularization
+    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->A->columns, solver->A->rows,
+        solver->A->columns, &alpha, solver->A->device_data, solver->A->rows,
+        solver->A->device_data, solver->A->rows,
+        &beta, solver->regularization->device_data, solver->regularization->rows)
+        != CUBLAS_STATUS_SUCCESS) {
+        return LINALGCU_ERROR;
+    }
+
     // calc A
     if (cublasSaxpy(handle, solver->A->rows * solver->A->columns, &solver->lambda,
         solver->regularization->device_data, 1, solver->A->device_data, 1)
