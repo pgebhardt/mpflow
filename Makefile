@@ -20,7 +20,6 @@ CC = clang
 NVCC = $(CUDA_HOME)/bin/nvcc
 CFLAGS =
 NVCFLAGS = -m64
-LDFLAGS = -L$(BUILD) -lfastect -L$(INSTALL_LIB) -llinalgcu -L$(CUDA_HOME)/lib64 -lcudart -lcublas -lconfig -lm
 
 # Object files
 _OBJ = mesh.o basis.o electrodes.o grid.o conjugate.o conjugate_sparse.o forward.o inverse.o solver.o

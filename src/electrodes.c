@@ -74,43 +74,6 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
     return LINALGCU_SUCCESS;
 }
 
-// create new electrodes from config
-linalgcu_error_t fastect_electrodes_create_from_config(fastect_electrodes_t* electrodesPointer,
-    config_setting_t* settings, linalgcu_matrix_data_t radius) {
-    // check input
-    if ((electrodesPointer == NULL) || (settings == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
-
-    // reset electrodes pointer
-    *electrodesPointer = NULL;
-
-    // lookup settings
-    int electrodes_count;
-    double electrodes_size;
-    if (!(config_setting_lookup_int(settings, "count", &electrodes_count) &&
-        config_setting_lookup_float(settings, "size", &electrodes_size))) {
-        return LINALGCU_ERROR;
-    }
-
-    // create electrodes
-    fastect_electrodes_t electrodes = NULL;
-    error = fastect_electrodes_create(&electrodes, electrodes_count, electrodes_size, radius);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return error;
-    }
-
-    // set electrodes pointer
-    *electrodesPointer = electrodes;
-
-    return LINALGCU_SUCCESS;
-}
-
 // release electrodes
 linalgcu_error_t fastect_electrodes_release(fastect_electrodes_t* electrodesPointer) {
     // check input
