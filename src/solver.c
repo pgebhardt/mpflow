@@ -294,12 +294,15 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cublasHandle_t ha
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // reset dSigma
-    linalgcu_matrix_copy(solver->inverse_solver->dSigma, solver->inverse_solver->zeros, LINALGCU_FALSE, stream);
+    // calc excitation
+    error  = fastect_inverse_solver_calc_excitation(solver->inverse_solver, solver->calculated_voltage,
+        solver->measured_voltage, handle, stream);
+
+    // calc system matrix
+    error |= fastect_inverse_solver_calc_system_matrix(solver->inverse_solver, handle, stream);
 
     // inverse
-    error |= fastect_inverse_solver_solve(solver->inverse_solver, solver->calculated_voltage,
-        solver->measured_voltage, handle, stream);
+    error |= fastect_inverse_solver_solve(solver->inverse_solver, handle, stream);
 
     // add to sigma
     error |= linalgcu_matrix_add(solver->applied_solver->grid->sigma, solver->inverse_solver->dSigma,

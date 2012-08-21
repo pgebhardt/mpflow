@@ -180,23 +180,17 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
-    linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solver == NULL) || (calculated_voltage == NULL) || (measured_voltage == NULL) ||
-        (handle == NULL)) {
+    if ((solver == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // calc excitation
-    error  = fastect_inverse_solver_calc_excitation(solver, calculated_voltage, measured_voltage,
-        handle, stream);
-
-    // calc system matrix
-    error |= fastect_inverse_solver_calc_system_matrix(solver, handle, stream);
+    // reset dSigma
+    error  = linalgcu_matrix_copy(solver->dSigma, solver->zeros, LINALGCU_FALSE, stream);
 
     // solve system
     error |= fastect_conjugate_solver_solve(solver->conjugate_solver,
