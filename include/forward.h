@@ -34,7 +34,7 @@ linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t s
 
 // forward solving
 linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
-    linalgcu_matrix_t sigma, linalgcu_matrix_t jacobian, cublasHandle_t handle,
-    cudaStream_t stream);
+    linalgcu_matrix_t sigma, linalgcu_matrix_t jacobian, linalgcu_size_t steps,
+    cublasHandle_t handle, cudaStream_t stream);
 
 #endif

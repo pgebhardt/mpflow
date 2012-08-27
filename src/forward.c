@@ -138,8 +138,8 @@ linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solver
 
 // forward solving
 linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
-    linalgcu_matrix_t sigma, linalgcu_matrix_t jacobian, cublasHandle_t handle,
-    cudaStream_t stream) {
+    linalgcu_matrix_t sigma, linalgcu_matrix_t jacobian, linalgcu_size_t steps,
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (sigma == NULL) || (jacobian == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -154,12 +154,12 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     // solve for drive phi
     error |= fastect_conjugate_sparse_solver_solve(solver->drive_solver,
         solver->grid->system_matrix, solver->drive_phi, solver->drive_f,
-        10, handle, stream);
+        steps, handle, stream);
 
     // solve for measurment phi
     error |= fastect_conjugate_sparse_solver_solve(solver->measurment_solver,
         solver->grid->system_matrix, solver->measurment_phi, solver->measurment_f,
-        10, handle, stream);
+        steps, handle, stream);
 
     // calc jacobian
     error |= fastect_forward_solver_calc_jacobian(solver, jacobian, stream);
