@@ -10,7 +10,7 @@
 linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t drive_count,
     linalgcu_size_t measurment_count, linalgcu_matrix_t drive_pattern,
-    linalgcu_matrix_t measurment_pattern, linalgcu_matrix_data_t sigma_ref,
+    linalgcu_matrix_t measurment_pattern, linalgcu_matrix_data_t sigma_0,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
@@ -33,22 +33,20 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     }
 
     // init struct
-    solver->applied_solver = NULL;
-    solver->lead_solver = NULL;
+    solver->forward_solver = NULL;
     solver->inverse_solver = NULL;
-    solver->mesh = mesh;
-    solver->electrodes = electrodes;
     solver->jacobian = NULL;
     solver->voltage_calculation = NULL;
     solver->calculated_voltage = NULL;
     solver->measured_voltage = NULL;
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->jacobian,
+    error  = linalgcu_matrix_create(&solver->sigma, mesh->element_count, 1, stream);
+    error |= linalgcu_matrix_create(&solver->jacobian,
         measurment_pattern->columns * drive_pattern->columns,
         mesh->element_count, stream);
     error |= linalgcu_matrix_create(&solver->voltage_calculation,
-        measurment_pattern->columns, solver->mesh->vertex_count, stream);
+        measurment_pattern->columns, mesh->vertex_count, stream);
     error |= linalgcu_matrix_create(&solver->calculated_voltage,
         measurment_pattern->columns, drive_pattern->columns, stream);
     error |= linalgcu_matrix_create(&solver->measured_voltage,
@@ -63,12 +61,10 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     }
 
     // create solver
-    error  = fastect_forward_solver_create(&solver->applied_solver, solver->mesh,
-        solver->electrodes, drive_count, drive_pattern, handle, stream);
-    error |= fastect_forward_solver_create(&solver->lead_solver, solver->mesh,
-        solver->electrodes, measurment_count, measurment_pattern, handle, stream);
-    error |= fastect_inverse_solver_create(&solver->inverse_solver,
-        solver->jacobian, 2.0f, handle, stream);
+    error  = fastect_forward_solver_create(&solver->forward_solver, mesh, electrodes,
+        drive_count, measurment_count, drive_pattern, measurment_pattern, handle, stream);
+    error |= fastect_inverse_solver_create(&solver->inverse_solver, solver->jacobian,
+        handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -81,11 +77,11 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     // calc voltage calculation matrix
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurment_pattern->columns,
-        solver->applied_solver->grid->excitation_matrix->rows,
+        solver->forward_solver->grid->excitation_matrix->rows,
         measurment_pattern->rows, &alpha, measurment_pattern->device_data,
         measurment_pattern->rows,
-        solver->applied_solver->grid->excitation_matrix->device_data,
-        solver->applied_solver->grid->excitation_matrix->rows,
+        solver->forward_solver->grid->excitation_matrix->device_data,
+        solver->forward_solver->grid->excitation_matrix->rows,
         &beta, solver->voltage_calculation->device_data, solver->voltage_calculation->rows)
         != CUBLAS_STATUS_SUCCESS) {
         // cleanup
@@ -94,19 +90,16 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
         return LINALGCU_ERROR;
     }
 
-    // init sigma to sigma ref
+    // init sigma to sigma_0
     for (linalgcu_size_t i = 0; i < mesh->element_count; i++) {
-        linalgcu_matrix_set_element(solver->applied_solver->grid->sigma, sigma_ref, i, 0);
-        linalgcu_matrix_set_element(solver->lead_solver->grid->sigma, sigma_ref, i, 0);
+        linalgcu_matrix_set_element(solver->sigma, sigma_0, i, 0);
     }
 
     // copy sigma to device
-    linalgcu_matrix_copy_to_device(solver->applied_solver->grid->sigma, LINALGCU_TRUE, stream);
-    linalgcu_matrix_copy_to_device(solver->lead_solver->grid->sigma, LINALGCU_TRUE, stream);
+    linalgcu_matrix_copy_to_device(solver->sigma, LINALGCU_TRUE, stream);
 
     // update forward system matrices
-    fastect_grid_update_system_matrix(solver->applied_solver->grid, stream);
-    fastect_grid_update_system_matrix(solver->lead_solver->grid, stream);
+    fastect_grid_update_system_matrix(solver->forward_solver->grid, solver->sigma, stream);
 
     // set solver pointer
     *solverPointer = solver;
@@ -125,11 +118,9 @@ linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer) {
     fastect_solver_t solver = *solverPointer;
 
     // cleanup
-    fastect_forward_solver_release(&solver->applied_solver);
-    fastect_forward_solver_release(&solver->lead_solver);
+    fastect_forward_solver_release(&solver->forward_solver);
     fastect_inverse_solver_release(&solver->inverse_solver);
-    fastect_mesh_release(&solver->mesh);
-    fastect_electrodes_release(&solver->electrodes);
+    linalgcu_matrix_release(&solver->sigma);
     linalgcu_matrix_release(&solver->jacobian);
     linalgcu_matrix_release(&solver->voltage_calculation);
     linalgcu_matrix_release(&solver->calculated_voltage);
@@ -144,35 +135,6 @@ linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer) {
     return LINALGCU_SUCCESS;
 }
 
-// forward solving
-linalgcu_error_t fastect_solver_forward_solve(fastect_solver_t solver,
-    cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if ((solver == NULL) || (handle == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // error
-    linalgcu_error_t error = LINALGCU_ERROR;
-
-    // solve drive pattern
-    error  = fastect_grid_update_system_matrix(solver->applied_solver->grid, stream);
-    error |= fastect_forward_solver_solve(solver->applied_solver, handle, stream);
-
-    // solve measurment pattern
-    error |= fastect_grid_update_system_matrix(solver->lead_solver->grid, stream);
-    error |= fastect_forward_solver_solve(solver->lead_solver, handle, stream);
-
-    // calc voltage
-    error |= linalgcu_matrix_multiply(solver->calculated_voltage,
-        solver->voltage_calculation, solver->applied_solver->phi, handle, stream);
-
-    // calc jacobian
-    error |= fastect_solver_calc_jacobian(solver, stream);
-
-    return error;
-}
-
 // solving
 linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cublasHandle_t handle,
     cudaStream_t stream) {
@@ -184,24 +146,17 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cublasHandle_t ha
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // calc excitation
-    error  = fastect_inverse_solver_calc_excitation(solver->inverse_solver, solver->calculated_voltage,
-        solver->measured_voltage, handle, stream);
+    // forward
+    error  = fastect_forward_solver_solve(solver->forward_solver, solver->sigma,
+        solver->jacobian, handle, stream);
 
-    // calc system matrix
-    error |= fastect_inverse_solver_calc_system_matrix(solver->inverse_solver, handle, stream);
+    // calc voltage
+    error |= linalgcu_matrix_multiply(solver->calculated_voltage, solver->voltage_calculation,
+        solver->forward_solver->drive_phi, handle, stream);
 
     // inverse
-    error |= fastect_inverse_solver_solve(solver->inverse_solver, handle, stream);
-
-    // add to sigma
-    error |= linalgcu_matrix_add(solver->applied_solver->grid->sigma, solver->inverse_solver->dSigma,
-        handle, stream);
-    error |= linalgcu_matrix_add(solver->lead_solver->grid->sigma, solver->inverse_solver->dSigma,
-        handle, stream);
-
-    // forward
-    error |= fastect_solver_forward_solve(solver, handle, stream);
+    error |= fastect_inverse_solver_solve(solver->inverse_solver, solver->jacobian,
+        solver->calculated_voltage, solver->measured_voltage, solver->sigma, handle, stream);
 
     return error;
 }

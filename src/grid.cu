@@ -45,9 +45,10 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* system_matri
 
 // update system matrix
 extern "C"
-linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid, cudaStream_t stream) {
+linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
+    linalgcu_matrix_t sigma, cudaStream_t stream) {
     // check input
-    if (grid == NULL) {
+    if ((grid == NULL) || (sigma == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -62,7 +63,7 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid, cudaStre
         grid->gradient_matrix_transposed_sparse->values,
         grid->gradient_matrix_transposed_sparse->column_ids,
         grid->gradient_matrix_transposed->device_data,
-        grid->sigma->device_data,
+        sigma->device_data,
         grid->area->device_data,
         grid->gradient_matrix_transposed->rows);
 

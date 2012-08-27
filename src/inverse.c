@@ -8,8 +8,7 @@
 
 // create inverse_solver
 linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverPointer,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t lambda,
-    cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t jacobian, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (jacobian == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -31,24 +30,20 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
 
     // init struct
     solver->conjugate_solver = NULL;
-    solver->jacobian = jacobian;
     solver->dU = NULL;
     solver->dSigma = NULL;
     solver->zeros = NULL;
     solver->f = NULL;
     solver->A = NULL;
     solver->regularization = NULL;
-    solver->lambda = lambda;
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->dU, solver->jacobian->rows, 1, stream);
-    error |= linalgcu_matrix_create(&solver->dSigma, solver->jacobian->columns, 1, stream);
-    error |= linalgcu_matrix_create(&solver->zeros, solver->jacobian->columns, 1, stream);
-    error |= linalgcu_matrix_create(&solver->f, solver->jacobian->columns, 1, stream);
-    error |= linalgcu_matrix_create(&solver->A, solver->jacobian->columns,
-        solver->jacobian->columns, stream);
-    error |= linalgcu_matrix_unity(&solver->regularization, solver->jacobian->columns,
-        stream);
+    error  = linalgcu_matrix_create(&solver->dU, jacobian->rows, 1, stream);
+    error |= linalgcu_matrix_create(&solver->dSigma, jacobian->columns, 1, stream);
+    error |= linalgcu_matrix_create(&solver->zeros, jacobian->columns, 1, stream);
+    error |= linalgcu_matrix_create(&solver->f, jacobian->columns, 1, stream);
+    error |= linalgcu_matrix_create(&solver->A, jacobian->columns, jacobian->columns, stream);
+    error |= linalgcu_matrix_unity(&solver->regularization, jacobian->columns, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -60,7 +55,7 @@ linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverP
 
     // create conjugate solver
     error = fastect_conjugate_solver_create(&solver->conjugate_solver,
-        solver->jacobian->columns, handle, stream);
+        jacobian->columns, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -106,9 +101,10 @@ linalgcu_error_t fastect_inverse_solver_release(fastect_inverse_solver_t* solver
 
 // calc system matrix
 linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solver_t solver,
-    cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t lambda, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
-    if ((solver == NULL) || (handle == NULL)) {
+    if ((solver == NULL) || (jacobian == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -117,9 +113,9 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
 
     // calc Jt * J
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, solver->A->rows, solver->A->columns,
-        solver->jacobian->rows, &alpha, solver->jacobian->device_data,
-        solver->jacobian->rows, solver->jacobian->device_data, solver->jacobian->rows,
-        &beta, solver->A->device_data, solver->A->rows) != CUBLAS_STATUS_SUCCESS) {
+        jacobian->rows, &alpha, jacobian->device_data, jacobian->rows, jacobian->device_data,
+        jacobian->rows, &beta, solver->A->device_data, solver->A->rows)
+        != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
@@ -134,7 +130,7 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
     }
 
     // calc A
-    if (cublasSaxpy(handle, solver->A->rows * solver->A->columns, &solver->lambda,
+    if (cublasSaxpy(handle, solver->A->rows * solver->A->columns, &lambda,
         solver->regularization->device_data, 1, solver->A->device_data, 1)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
@@ -145,11 +141,11 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
 
 // calc excitation
 linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t solver,
-    linalgcu_matrix_t calculated_voltage, linalgcu_matrix_t measured_voltage,
-    cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
+    linalgcu_matrix_t measured_voltage, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solver == NULL) || (calculated_voltage == NULL) || (measured_voltage == NULL) ||
-        (handle == NULL)) {
+    if ((solver == NULL) || (jacobian == NULL) || (calculated_voltage == NULL) ||
+        (measured_voltage == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -169,9 +165,9 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 
     // calc f
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
-    if (cublasSgemv(handle, CUBLAS_OP_T, solver->jacobian->rows, solver->jacobian->columns,
-        &alpha, solver->jacobian->device_data, solver->jacobian->rows,
-        solver->dU->device_data, 1, &beta, solver->f->device_data, 1) != CUBLAS_STATUS_SUCCESS) {
+    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
+        jacobian->device_data, jacobian->rows, solver->dU->device_data, 1, &beta,
+        solver->f->device_data, 1) != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
@@ -180,9 +176,12 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
-    cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
+    linalgcu_matrix_t measured_voltage, linalgcu_matrix_t sigma, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
-    if ((solver == NULL) || (handle == NULL)) {
+    if ((solver == NULL) || (jacobian == NULL) || (calculated_voltage == NULL) ||
+        (measured_voltage == NULL) || (sigma == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -192,9 +191,19 @@ linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     // reset dSigma
     error  = linalgcu_matrix_copy(solver->dSigma, solver->zeros, LINALGCU_FALSE, stream);
 
+    // calc excitation
+    error |= fastect_inverse_solver_calc_excitation(solver, jacobian, calculated_voltage,
+        measured_voltage, handle, stream);
+
+    // calc system matrix
+    error |= fastect_inverse_solver_calc_system_matrix(solver, jacobian, 2.0f, handle, stream);
+
     // solve system
     error |= fastect_conjugate_solver_solve(solver->conjugate_solver,
         solver->A, solver->dSigma, solver->f, 75, handle, stream);
+
+    // add to sigma
+    error |= linalgcu_matrix_add(sigma, solver->dSigma, handle, stream);
 
     return error;
 }

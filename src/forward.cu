@@ -76,27 +76,26 @@ __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
 
 // calc jacobian
 extern "C"
-linalgcu_error_t fastect_solver_calc_jacobian(fastect_solver_t solver,
-    cudaStream_t stream) {
-    if (solver == NULL) {
+linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t solver,
+    linalgcu_matrix_t jacobian, cudaStream_t stream) {
+    if ((solver == NULL) || (jacobian == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // dimension
-    dim3 blocks(solver->jacobian->rows / LINALGCU_BLOCK_SIZE,
-        solver->jacobian->columns / LINALGCU_BLOCK_SIZE);
+    dim3 blocks(jacobian->rows / LINALGCU_BLOCK_SIZE, jacobian->columns / LINALGCU_BLOCK_SIZE);
     dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
 
     // calc jacobian
     calc_jacobian_kernel<<<blocks, threads, 0, stream>>>(
-        solver->jacobian->device_data,
-        solver->applied_solver->phi->device_data,
-        solver->lead_solver->phi->device_data,
-        solver->applied_solver->grid->gradient_matrix_sparse->values,
-        solver->applied_solver->grid->gradient_matrix_sparse->column_ids,
-        solver->applied_solver->grid->area->device_data,
-        solver->jacobian->rows, solver->applied_solver->phi->rows,
-        solver->lead_solver->phi->columns, solver->mesh->element_count);
+        jacobian->device_data,
+        solver->drive_phi->device_data,
+        solver->measurment_phi->device_data,
+        solver->grid->gradient_matrix_sparse->values,
+        solver->grid->gradient_matrix_sparse->column_ids,
+        solver->grid->area->device_data,
+        jacobian->rows, solver->drive_phi->rows,
+        solver->measurment_phi->columns, solver->grid->mesh->element_count);
 
     return LINALGCU_SUCCESS;
 }
