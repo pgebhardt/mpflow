@@ -11,8 +11,8 @@ typedef struct {
     fastect_forward_solver_t forward_solver;
     fastect_inverse_solver_t inverse_solver;
     linalgcu_matrix_t sigma;
+    linalgcu_matrix_t sigma_ref;
     linalgcu_matrix_t jacobian;
-    linalgcu_matrix_t voltage_calculation;
     linalgcu_matrix_t calculated_voltage;
     linalgcu_matrix_t measured_voltage;
     cublasHandle_t cublas_handle;
@@ -38,6 +38,9 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 
 // release solver
 linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer);
+
+// pre solve for accurate initial jacobian
+linalgcu_error_t fastect_solver_pre_solve(fastect_solver_t solver, cudaStream_t stream);
 
 // solving
 linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cudaStream_t stream);
