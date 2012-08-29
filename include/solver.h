@@ -15,6 +15,7 @@ typedef struct {
     linalgcu_matrix_t jacobian;
     linalgcu_matrix_t calculated_voltage;
     linalgcu_matrix_t measured_voltage;
+    linalgcu_bool_t linear_mode;
     cublasHandle_t cublas_handle;
 } fastect_solver_s;
 typedef fastect_solver_s* fastect_solver_t;
@@ -29,6 +30,7 @@ typedef struct {
     fastect_electrodes_t electrodes;
     linalgcu_matrix_data_t regularization_factor;
     linalgcu_matrix_data_t sigma_0;
+    linalgcu_bool_t linear_mode;
 } fastect_solver_config_s;
 typedef fastect_solver_config_s* fastect_solver_config_t;
 

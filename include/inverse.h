@@ -37,9 +37,15 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
     linalgcu_matrix_t measured_voltage, cublasHandle_t handle, cudaStream_t stream);
 
 // inverse solving
-linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
+linalgcu_error_t fastect_inverse_solver_solve_non_linear(fastect_inverse_solver_t solver,
     linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
-    linalgcu_matrix_t measured_voltage, linalgcu_matrix_t sigma, linalgcu_matrix_t sigma_ref,
+    linalgcu_matrix_t measured_voltage, linalgcu_matrix_t sigma,
     linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
+
+// inverse solving
+linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t solver,
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
+    linalgcu_matrix_t measured_voltage, linalgcu_size_t steps, cublasHandle_t handle,
+    cudaStream_t stream);
 
 #endif

@@ -43,6 +43,7 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     solver->calculated_voltage = NULL;
     solver->measured_voltage = NULL;
     solver->cublas_handle = NULL;
+    solver->linear_mode = config->linear_mode;
 
     // create cublas handle
     if (cublasCreate(&solver->cublas_handle) != CUBLAS_STATUS_SUCCESS) {
@@ -144,9 +145,13 @@ linalgcu_error_t fastect_solver_pre_solve(fastect_solver_t solver, cudaStream_t 
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // only forward solving a few steps
+    // forward solving a few steps
     error = fastect_forward_solver_solve(solver->forward_solver, solver->sigma, solver->jacobian,
         solver->calculated_voltage, 1000, solver->cublas_handle, stream);
+
+    // calc system matrix
+    error |= fastect_inverse_solver_calc_system_matrix(solver->inverse_solver, solver->jacobian,
+        solver->cublas_handle, stream);
 
     return error;
 }
@@ -161,14 +166,22 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cudaStream_t stre
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // forward
-    error  = fastect_forward_solver_solve(solver->forward_solver, solver->sigma,
-        solver->jacobian, solver->calculated_voltage, 10, solver->cublas_handle, stream);
+    if (solver->linear_mode == LINALGCU_TRUE) {
+        // inverse
+        error |= fastect_inverse_solver_solve_linear(solver->inverse_solver,
+            solver->jacobian, solver->calculated_voltage, solver->measured_voltage,
+            75, solver->cublas_handle, stream);
+    }
+    else {
+        // forward
+        error  = fastect_forward_solver_solve(solver->forward_solver, solver->sigma,
+            solver->jacobian, solver->calculated_voltage, 10, solver->cublas_handle, stream);
 
-    // inverse
-    error |= fastect_inverse_solver_solve(solver->inverse_solver, solver->jacobian,
-        solver->calculated_voltage, solver->measured_voltage, solver->sigma, solver->sigma_ref,
-        75, solver->cublas_handle, stream);
+        // inverse
+        error |= fastect_inverse_solver_solve_non_linear(solver->inverse_solver,
+            solver->jacobian, solver->calculated_voltage, solver->measured_voltage,
+            solver->sigma, 75, solver->cublas_handle, stream);
+    }
 
     return error;
 }
