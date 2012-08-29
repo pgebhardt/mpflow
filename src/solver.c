@@ -170,7 +170,7 @@ linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cudaStream_t stre
         // inverse
         error |= fastect_inverse_solver_solve_linear(solver->inverse_solver,
             solver->jacobian, solver->calculated_voltage, solver->measured_voltage,
-            75, solver->cublas_handle, stream);
+            90, solver->cublas_handle, stream);
     }
     else {
         // forward
