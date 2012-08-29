@@ -3,9 +3,6 @@
 # Copyright (C) 2012  Patrik Gebhardt
 # Contact: patrik.gebhardt@rub.de
 
-# cuda paths
-CUDA_HOME = /usr/local/cuda
-
 # Directories
 SRC = src
 INCLUDES = include
@@ -17,7 +14,7 @@ INSTALL_LIB = /usr/local/lib
 
 # Copmiler
 CC = clang
-NVCC = $(CUDA_HOME)/bin/nvcc
+NVCC = nvcc
 CFLAGS =
 NVCFLAGS = -m64
 
