@@ -10,7 +10,6 @@
 typedef struct {
     fastect_conjugate_solver_t conjugate_solver;
     linalgcu_matrix_t dU;
-    linalgcu_matrix_t dSigma;
     linalgcu_matrix_t zeros;
     linalgcu_matrix_t f;
     linalgcu_matrix_t A;
@@ -45,7 +44,7 @@ linalgcu_error_t fastect_inverse_solver_solve_non_linear(fastect_inverse_solver_
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t solver,
     linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
-    linalgcu_matrix_t measured_voltage, linalgcu_size_t steps, cublasHandle_t handle,
-    cudaStream_t stream);
+    linalgcu_matrix_t measured_voltage, linalgcu_matrix_t sigma,
+    linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

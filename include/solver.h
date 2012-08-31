@@ -10,7 +10,7 @@
 typedef struct {
     fastect_forward_solver_t forward_solver;
     fastect_inverse_solver_t inverse_solver;
-    linalgcu_matrix_t sigma;
+    linalgcu_matrix_t dSigma;
     linalgcu_matrix_t sigma_ref;
     linalgcu_matrix_t jacobian;
     linalgcu_matrix_t calculated_voltage;
