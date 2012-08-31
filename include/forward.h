@@ -6,6 +6,11 @@
 #ifndef FASTECT_FORWARD_SOLVER_H
 #define FASTECT_FORWARD_SOLVER_H
 
+// c++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // solver struct
 typedef struct {
     fastect_grid_t grid;
@@ -37,5 +42,9 @@ linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t s
 linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     linalgcu_matrix_t sigma, linalgcu_matrix_t jacobian, linalgcu_matrix_t voltage,
     linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

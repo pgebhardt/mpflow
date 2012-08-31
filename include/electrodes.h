@@ -6,6 +6,11 @@
 #ifndef FASTECT_ELECTRODES_H
 #define FASTECT_ELECTRODES_H
 
+// c++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // electrodes struct
 typedef struct {
     linalgcu_size_t count;
@@ -21,5 +26,9 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
 
 // release electrodes
 linalgcu_error_t fastect_electrodes_release(fastect_electrodes_t* electrodesPointer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

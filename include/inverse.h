@@ -6,6 +6,11 @@
 #ifndef FASTECT_INVERSE_SOLVER_H
 #define FASTECT_INVERSE_SOLVER_H
 
+// c++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // solver struct
 typedef struct {
     fastect_conjugate_solver_t conjugate_solver;
@@ -46,5 +51,9 @@ linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t so
     linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
     linalgcu_matrix_t measured_voltage, linalgcu_matrix_t sigma,
     linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

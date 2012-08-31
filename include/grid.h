@@ -6,6 +6,11 @@
 #ifndef FASTECT_GRID_H
 #define FASTECT_GRID_H
 
+// c++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // solver grid struct
 typedef struct {
     fastect_mesh_t mesh;
@@ -38,5 +43,9 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
 
 // init exitation matrix
 linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStream_t stream);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

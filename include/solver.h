@@ -6,6 +6,11 @@
 #ifndef FASTECT_SOLVER_H
 #define FASTECT_SOLVER_H
 
+// c++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // solver struct
 typedef struct {
     fastect_forward_solver_t forward_solver;
@@ -46,5 +51,9 @@ linalgcu_error_t fastect_solver_pre_solve(fastect_solver_t solver, cudaStream_t 
 
 // solving
 linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cudaStream_t stream);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

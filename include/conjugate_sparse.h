@@ -6,6 +6,11 @@
 #ifndef FASTECT_CONJUGATE_SPARSE_H
 #define FASTECT_CONJUGATE_SPARSE_H
 
+// c++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // conjugate solver struct
 typedef struct {
     linalgcu_size_t rows;
@@ -41,5 +46,9 @@ linalgcu_error_t fastect_conjugate_sparse_udate_vector(linalgcu_matrix_t result,
 linalgcu_error_t fastect_conjugate_sparse_solver_solve(fastect_conjugate_sparse_solver_t solver,
     linalgcu_sparse_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
     linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
