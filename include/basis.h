@@ -6,11 +6,6 @@
 #ifndef FASTECT_BASIS_H
 #define FASTECT_BASIS_H
 
-// c++ compatibility
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // basis struct
 typedef struct {
     linalgcu_matrix_data_t coefficients[3];
@@ -30,9 +25,5 @@ linalgcu_error_t fastect_basis_release(fastect_basis_t* basisPointer);
 // evaluate basis function
 linalgcu_error_t fastect_basis_function(fastect_basis_t basis,
     linalgcu_matrix_data_t* resultPointer, linalgcu_matrix_data_t x, linalgcu_matrix_data_t y);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

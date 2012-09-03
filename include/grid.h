@@ -6,20 +6,15 @@
 #ifndef FASTECT_GRID_H
 #define FASTECT_GRID_H
 
-// c++ compatibility
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // solver grid struct
 typedef struct {
     fastect_mesh_t mesh;
     fastect_electrodes_t electrodes;
-    linalgcu_sparse_matrix_t system_matrix;
-    linalgcu_matrix_t excitation_matrix;
-    linalgcu_sparse_matrix_t gradient_matrix_sparse;
-    linalgcu_sparse_matrix_t gradient_matrix_transposed_sparse;
-    linalgcu_matrix_t gradient_matrix_transposed;
+    linalgcu_sparse_matrix_t systemMatrix;
+    linalgcu_matrix_t excitationMatrix;
+    linalgcu_sparse_matrix_t gradientMatrixSparse;
+    linalgcu_sparse_matrix_t gradientMatrixTransposedSparse;
+    linalgcu_matrix_t gradientMatrixTransposed;
     linalgcu_matrix_t area;
 } fastect_grid_s;
 typedef fastect_grid_s* fastect_grid_t;
@@ -43,9 +38,5 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
 
 // init exitation matrix
 linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStream_t stream);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -89,13 +89,13 @@ linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t s
     // calc jacobian
     calc_jacobian_kernel<<<blocks, threads, 0, stream>>>(
         jacobian->device_data,
-        solver->drive_phi->device_data,
-        solver->measurment_phi->device_data,
-        solver->grid->gradient_matrix_sparse->values,
-        solver->grid->gradient_matrix_sparse->column_ids,
+        solver->drivePhi->device_data,
+        solver->measurmentPhi->device_data,
+        solver->grid->gradientMatrixSparse->values,
+        solver->grid->gradientMatrixSparse->column_ids,
         solver->grid->area->device_data,
-        jacobian->rows, solver->drive_phi->rows,
-        solver->measurment_phi->columns, solver->grid->mesh->element_count);
+        jacobian->rows, solver->drivePhi->rows,
+        solver->measurmentPhi->columns, solver->grid->mesh->elementCount);
 
     return LINALGCU_SUCCESS;
 }

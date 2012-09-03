@@ -6,18 +6,13 @@
 #ifndef FASTECT_MESH_H
 #define FASTECT_MESH_H
 
-// c++ compatibility
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // mesh struct
 typedef struct {
     linalgcu_matrix_data_t radius;
     linalgcu_matrix_data_t distance;
-    linalgcu_size_t vertex_count;
-    linalgcu_size_t element_count;
-    linalgcu_size_t boundary_count;
+    linalgcu_size_t vertexCount;
+    linalgcu_size_t elementCount;
+    linalgcu_size_t boundaryCount;
     linalgcu_matrix_t vertices;
     linalgcu_matrix_t elements;
     linalgcu_matrix_t boundary;
@@ -31,9 +26,5 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
 
 // cleanup mesh
 linalgcu_error_t fastect_mesh_release(fastect_mesh_t* meshPointer);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

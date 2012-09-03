@@ -22,7 +22,7 @@ __global__ void update_vector_kernel(linalgcu_matrix_data_t* result,
 
 // update vector
 extern "C"
-linalgcu_error_t fastect_conjugate_udate_vector(linalgcu_matrix_t result,
+linalgcu_error_t fastect_conjugate_update_vector(linalgcu_matrix_t result,
     linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
     linalgcu_matrix_t r1, linalgcu_matrix_t r2, cudaStream_t stream) {
     // check input

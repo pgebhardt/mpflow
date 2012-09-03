@@ -6,11 +6,6 @@
 #ifndef FASTECT_CONJUGATE_H
 #define FASTECT_CONJUGATE_H
 
-// c++ compatibility
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // conjugate solver struct
 typedef struct {
     linalgcu_size_t rows;
@@ -18,8 +13,8 @@ typedef struct {
     linalgcu_matrix_t projection;
     linalgcu_matrix_t rsold;
     linalgcu_matrix_t rsnew;
-    linalgcu_matrix_t temp_vector;
-    linalgcu_matrix_t temp_number;
+    linalgcu_matrix_t tempVector;
+    linalgcu_matrix_t tempNumber;
 } fastect_conjugate_solver_s;
 typedef fastect_conjugate_solver_s* fastect_conjugate_solver_t;
 
@@ -32,7 +27,7 @@ linalgcu_error_t fastect_conjugate_solver_release(fastect_conjugate_solver_t* so
 
 // update vector
 LINALGCU_EXTERN_C
-linalgcu_error_t fastect_conjugate_udate_vector(linalgcu_matrix_t result,
+linalgcu_error_t fastect_conjugate_update_vector(linalgcu_matrix_t result,
     linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
     linalgcu_matrix_t r1, linalgcu_matrix_t r2, cudaStream_t stream);
 
@@ -45,9 +40,5 @@ linalgcu_error_t fastect_conjugate_gemv(linalgcu_matrix_t A, linalgcu_matrix_t x
 linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solver,
     linalgcu_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
     linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

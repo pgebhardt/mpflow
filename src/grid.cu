@@ -54,18 +54,18 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
 
     // dimension
     dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
-    dim3 blocks(grid->system_matrix->rows / LINALGCU_BLOCK_SIZE, 1);
+    dim3 blocks(grid->systemMatrix->rows / LINALGCU_BLOCK_SIZE, 1);
 
     // execute kernel
     update_system_matrix_kernel<<<blocks, threads, 0, stream>>>(
-        grid->system_matrix->values,
-        grid->system_matrix->column_ids,
-        grid->gradient_matrix_transposed_sparse->values,
-        grid->gradient_matrix_transposed_sparse->column_ids,
-        grid->gradient_matrix_transposed->device_data,
+        grid->systemMatrix->values,
+        grid->systemMatrix->column_ids,
+        grid->gradientMatrixTransposedSparse->values,
+        grid->gradientMatrixTransposedSparse->column_ids,
+        grid->gradientMatrixTransposed->device_data,
         sigma->device_data,
         grid->area->device_data,
-        grid->gradient_matrix_transposed->rows);
+        grid->gradientMatrixTransposed->rows);
 
     return LINALGCU_SUCCESS;
 }

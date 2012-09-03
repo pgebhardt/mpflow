@@ -8,12 +8,12 @@
 
 // create forward_solver
 linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t drive_count,
-    linalgcu_size_t measurment_count, linalgcu_matrix_t drive_pattern,
-    linalgcu_matrix_t measurment_pattern, cublasHandle_t handle, cudaStream_t stream) {
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t driveCount,
+    linalgcu_size_t measurmentCount, linalgcu_matrix_t drivePattern,
+    linalgcu_matrix_t measurmentPattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || 
-        (drive_pattern == NULL) || (measurment_pattern == NULL) || (handle == NULL)) {
+    if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
+        (drivePattern == NULL) || (measurmentPattern == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -33,13 +33,13 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
 
     // init struct
     solver->grid = NULL;
-    solver->drive_solver = NULL;
-    solver->measurment_solver = NULL;
-    solver->drive_phi = NULL;
-    solver->measurment_phi = NULL;
-    solver->drive_f = NULL;
-    solver->measurment_f = NULL;
-    solver->voltage_calculation = NULL;
+    solver->driveSolver = NULL;
+    solver->measurmentSolver = NULL;
+    solver->drivePhi = NULL;
+    solver->measurmentPhi = NULL;
+    solver->driveF = NULL;
+    solver->measurmentF = NULL;
+    solver->voltageCalculation = NULL;
 
     // create grid
     error = fastect_grid_create(&solver->grid, mesh, electrodes, handle, stream);
@@ -53,10 +53,10 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     }
 
     // create conjugate solver
-    error  = fastect_conjugate_sparse_solver_create(&solver->drive_solver,
-        mesh->vertex_count, drive_count, handle, stream);
-    error |= fastect_conjugate_sparse_solver_create(&solver->measurment_solver,
-        mesh->vertex_count, measurment_count, handle, stream);
+    error  = fastect_conjugate_sparse_solver_create(&solver->driveSolver,
+        mesh->vertexCount, driveCount, handle, stream);
+    error |= fastect_conjugate_sparse_solver_create(&solver->measurmentSolver,
+        mesh->vertexCount, measurmentCount, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -67,16 +67,16 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     }
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->drive_phi, mesh->vertex_count,
-        drive_count, stream);
-    error |= linalgcu_matrix_create(&solver->measurment_phi, mesh->vertex_count,
-        measurment_count, stream);
-    error |= linalgcu_matrix_create(&solver->drive_f, mesh->vertex_count,
-        drive_count, stream);
-    error |= linalgcu_matrix_create(&solver->measurment_f, mesh->vertex_count,
-        measurment_count, stream);
-    error |= linalgcu_matrix_create(&solver->voltage_calculation,
-        measurment_pattern->columns, mesh->vertex_count, stream);
+    error  = linalgcu_matrix_create(&solver->drivePhi, mesh->vertexCount,
+        driveCount, stream);
+    error |= linalgcu_matrix_create(&solver->measurmentPhi, mesh->vertexCount,
+        measurmentCount, stream);
+    error |= linalgcu_matrix_create(&solver->driveF, mesh->vertexCount,
+        driveCount, stream);
+    error |= linalgcu_matrix_create(&solver->measurmentF, mesh->vertexCount,
+        measurmentCount, stream);
+    error |= linalgcu_matrix_create(&solver->voltageCalculation,
+        measurmentPattern->columns, mesh->vertexCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -88,14 +88,14 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
 
     // calc excitaion matrices
     // Run multiply once more to avoid cublas error
-    linalgcu_matrix_multiply(solver->drive_f, solver->grid->excitation_matrix, drive_pattern,
+    linalgcu_matrix_multiply(solver->driveF, solver->grid->excitationMatrix, drivePattern,
         handle, stream);
-    error  = linalgcu_matrix_multiply(solver->drive_f, solver->grid->excitation_matrix,
-        drive_pattern, handle, stream);
-    linalgcu_matrix_multiply(solver->measurment_f, solver->grid->excitation_matrix,
-        measurment_pattern, handle, stream);
-    error |= linalgcu_matrix_multiply(solver->measurment_f, solver->grid->excitation_matrix,
-        measurment_pattern, handle, stream);
+    error  = linalgcu_matrix_multiply(solver->driveF, solver->grid->excitationMatrix,
+        drivePattern, handle, stream);
+    linalgcu_matrix_multiply(solver->measurmentF, solver->grid->excitationMatrix,
+        measurmentPattern, handle, stream);
+    error |= linalgcu_matrix_multiply(solver->measurmentF, solver->grid->excitationMatrix,
+        measurmentPattern, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -107,11 +107,11 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
 
     // calc voltage calculation matrix
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurment_pattern->columns,
-        solver->grid->excitation_matrix->rows, measurment_pattern->rows, &alpha,
-        measurment_pattern->device_data, measurment_pattern->rows,
-        solver->grid->excitation_matrix->device_data, solver->grid->excitation_matrix->rows,
-        &beta, solver->voltage_calculation->device_data, solver->voltage_calculation->rows)
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns,
+        solver->grid->excitationMatrix->rows, measurmentPattern->rows, &alpha,
+        measurmentPattern->device_data, measurmentPattern->rows,
+        solver->grid->excitationMatrix->device_data, solver->grid->excitationMatrix->rows,
+        &beta, solver->voltageCalculation->device_data, solver->voltageCalculation->rows)
         != CUBLAS_STATUS_SUCCESS) {
         // cleanup
         fastect_forward_solver_release(&solver);
@@ -137,12 +137,12 @@ linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solver
 
     // cleanup
     fastect_grid_release(&solver->grid);
-    fastect_conjugate_sparse_solver_release(&solver->drive_solver);
-    fastect_conjugate_sparse_solver_release(&solver->measurment_solver);
-    linalgcu_matrix_release(&solver->drive_phi);
-    linalgcu_matrix_release(&solver->measurment_phi);
-    linalgcu_matrix_release(&solver->drive_f);
-    linalgcu_matrix_release(&solver->measurment_f);
+    fastect_conjugate_sparse_solver_release(&solver->driveSolver);
+    fastect_conjugate_sparse_solver_release(&solver->measurmentSolver);
+    linalgcu_matrix_release(&solver->drivePhi);
+    linalgcu_matrix_release(&solver->measurmentPhi);
+    linalgcu_matrix_release(&solver->driveF);
+    linalgcu_matrix_release(&solver->measurmentF);
 
     // free struct
     free(solver);
@@ -170,21 +170,21 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     error  = fastect_grid_update_system_matrix(solver->grid, sigma, stream);
 
     // solve for drive phi
-    error |= fastect_conjugate_sparse_solver_solve(solver->drive_solver,
-        solver->grid->system_matrix, solver->drive_phi, solver->drive_f,
+    error |= fastect_conjugate_sparse_solver_solve(solver->driveSolver,
+        solver->grid->systemMatrix, solver->drivePhi, solver->driveF,
         steps, handle, stream);
 
     // solve for measurment phi
-    error |= fastect_conjugate_sparse_solver_solve(solver->measurment_solver,
-        solver->grid->system_matrix, solver->measurment_phi, solver->measurment_f,
+    error |= fastect_conjugate_sparse_solver_solve(solver->measurmentSolver,
+        solver->grid->systemMatrix, solver->measurmentPhi, solver->measurmentF,
         steps, handle, stream);
 
     // calc jacobian
     error |= fastect_forward_solver_calc_jacobian(solver, jacobian, stream);
 
     // calc voltage
-    error |= linalgcu_matrix_multiply(voltage, solver->voltage_calculation,
-        solver->drive_phi, handle, stream);
+    error |= linalgcu_matrix_multiply(voltage, solver->voltageCalculation,
+        solver->drivePhi, handle, stream);
 
     return error;
 }

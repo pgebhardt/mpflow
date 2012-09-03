@@ -67,9 +67,9 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     // init struct
     mesh->radius = radius;
     mesh->distance = distance;
-    mesh->vertex_count = 0;
-    mesh->element_count = 0;
-    mesh->boundary_count = 0;
+    mesh->vertexCount = 0;
+    mesh->elementCount = 0;
+    mesh->boundaryCount = 0;
     mesh->vertices = NULL;
     mesh->elements = NULL;
     mesh->boundary = NULL;
@@ -115,13 +115,13 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
             // check point
             if (sqrt(x * x + y * y) < mesh->radius - 0.25f * mesh->distance) {
                 // set vertex
-                linalgcu_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
-                linalgcu_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);
+                linalgcu_matrix_set_element(mesh->vertices, x, mesh->vertexCount, 0);
+                linalgcu_matrix_set_element(mesh->vertices, y, mesh->vertexCount, 1);
 
                 // save vertex id in vertex matrix
-                linalgcu_matrix_set_element(vertices, (linalgcu_size_t)mesh->vertex_count, i, j);
+                linalgcu_matrix_set_element(vertices, (linalgcu_size_t)mesh->vertexCount, i, j);
 
-                mesh->vertex_count++;
+                mesh->vertexCount++;
             }
             else if (sqrt(x * x + y * y) < mesh->radius + 0.5f * mesh->distance) {
                 // calc new x and y
@@ -129,13 +129,13 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 y = y / sqrt(x * x + y * y) * mesh->radius;
 
                 // set vertex
-                linalgcu_matrix_set_element(mesh->vertices, x, mesh->vertex_count, 0);
-                linalgcu_matrix_set_element(mesh->vertices, y, mesh->vertex_count, 1);
+                linalgcu_matrix_set_element(mesh->vertices, x, mesh->vertexCount, 0);
+                linalgcu_matrix_set_element(mesh->vertices, y, mesh->vertexCount, 1);
 
                 // save vertex id in vertex matrix
-                linalgcu_matrix_set_element(vertices, (linalgcu_size_t)mesh->vertex_count, i, j);
+                linalgcu_matrix_set_element(vertices, (linalgcu_size_t)mesh->vertexCount, i, j);
 
-                mesh->vertex_count++;
+                mesh->vertexCount++;
             }
             else {
                 // invalidate vertex
@@ -162,7 +162,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     linalgcu_matrix_data_t id;
     linalgcu_matrix_data_t angle;
 
-    for (linalgcu_size_t i = 0; i < mesh->vertex_count; i++) {
+    for (linalgcu_size_t i = 0; i < mesh->vertexCount; i++) {
         // get vertex
         linalgcu_matrix_get_element(mesh->vertices, &x, i, 0);
         linalgcu_matrix_get_element(mesh->vertices, &y, i, 1);
@@ -174,23 +174,23 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
 
         // check radius and angle
         if (radius >= mesh->radius - mesh->distance / 4.0f) {
-            boundary[mesh->boundary_count * 2 + 0] = (linalgcu_matrix_data_t)i;
-            boundary[mesh->boundary_count * 2 + 1] = angle;
-            mesh->boundary_count++;
+            boundary[mesh->boundaryCount * 2 + 0] = (linalgcu_matrix_data_t)i;
+            boundary[mesh->boundaryCount * 2 + 1] = angle;
+            mesh->boundaryCount++;
         }
     }
 
     // sort boundary
-    qsort(boundary, mesh->boundary_count, 2 * sizeof(linalgcu_matrix_data_t), compare_boundary);
+    qsort(boundary, mesh->boundaryCount, 2 * sizeof(linalgcu_matrix_data_t), compare_boundary);
 
     // write boundary ids to matrix
-    for (linalgcu_size_t i = 0; i < mesh->boundary_count; i++) {
+    for (linalgcu_size_t i = 0; i < mesh->boundaryCount; i++) {
         linalgcu_matrix_set_element(mesh->boundary, boundary[i * 2], i, 0);
     }
 
     // create elements
     error = linalgcu_matrix_create(&mesh->elements,
-        mesh->vertex_count * 6, 3, stream);
+        mesh->vertexCount * 6, 3, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -317,72 +317,72 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
             // create elements bottom right
             if (!isnan(neighbours[3])) {
                 if (!isnan(neighbours[2])) {
-                    linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                    linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
                     linalgcu_matrix_set_element(mesh->elements, neighbours[3],
-                        mesh->element_count, 1);
+                        mesh->elementCount, 1);
                     linalgcu_matrix_set_element(mesh->elements, neighbours[2],
-                        mesh->element_count, 2);
+                        mesh->elementCount, 2);
 
-                    mesh->element_count++;
+                    mesh->elementCount++;
                 }
 
                 if (!isnan(neighbours[4])) {
-                    linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
+                    linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
                     linalgcu_matrix_set_element(mesh->elements, neighbours[4],
-                        mesh->element_count, 1);
+                        mesh->elementCount, 1);
                     linalgcu_matrix_set_element(mesh->elements, neighbours[3],
-                        mesh->element_count, 2);
+                        mesh->elementCount, 2);
 
-                    mesh->element_count++;
+                    mesh->elementCount++;
                 }
             }
 
             // create elements bottom left
             if ((isnan(neighbours[5])) && (!isnan(neighbours[4])) && (!isnan(neighbours[0]))) {
-                linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[0], mesh->element_count, 1);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[4], mesh->element_count, 2);
-                mesh->element_count++;
+                linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[0], mesh->elementCount, 1);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[4], mesh->elementCount, 2);
+                mesh->elementCount++;
             }
 
             // create elements bottom left
             if ((isnan(neighbours[2])) && (!isnan(neighbours[1])) && (!isnan(neighbours[3]))) {
-                linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[3], mesh->element_count, 1);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[1], mesh->element_count, 2);
-                mesh->element_count++;
+                linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[3], mesh->elementCount, 1);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[1], mesh->elementCount, 2);
+                mesh->elementCount++;
             }
 
             // create elements bottom left
             if ((isnan(neighbours[0])) && (!isnan(neighbours[1])) && (!isnan(neighbours[5]))) {
-                linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[1], mesh->element_count, 1);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[5], mesh->element_count, 2);
-                mesh->element_count++;
+                linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[1], mesh->elementCount, 1);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[5], mesh->elementCount, 2);
+                mesh->elementCount++;
             }
 
             // create elements bottom left
             if ((isnan(neighbours[1])) && (!isnan(neighbours[2])) && (!isnan(neighbours[0]))) {
-                linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[2], mesh->element_count, 1);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[0], mesh->element_count, 2);
-                mesh->element_count++;
+                linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[2], mesh->elementCount, 1);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[0], mesh->elementCount, 2);
+                mesh->elementCount++;
             }
 
             // create elements bottom left
             if ((isnan(neighbours[4])) && (!isnan(neighbours[5])) && (!isnan(neighbours[3]))) {
-                linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[5], mesh->element_count, 1);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[3], mesh->element_count, 2);
-                mesh->element_count++;
+                linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[5], mesh->elementCount, 1);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[3], mesh->elementCount, 2);
+                mesh->elementCount++;
             }
 
             // create elements bottom left
             if ((isnan(neighbours[3])) && (!isnan(neighbours[4])) && (!isnan(neighbours[2]))) {
-                linalgcu_matrix_set_element(mesh->elements, node, mesh->element_count, 0);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[4], mesh->element_count, 1);
-                linalgcu_matrix_set_element(mesh->elements, neighbours[2], mesh->element_count, 2);
-                mesh->element_count++;
+                linalgcu_matrix_set_element(mesh->elements, node, mesh->elementCount, 0);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[4], mesh->elementCount, 1);
+                linalgcu_matrix_set_element(mesh->elements, neighbours[2], mesh->elementCount, 2);
+                mesh->elementCount++;
             }
         }
     }

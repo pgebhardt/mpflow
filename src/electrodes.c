@@ -31,18 +31,18 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
 
     // init struct
     electrodes->count = count;
-    electrodes->electrode_start = NULL;
-    electrodes->electrode_end = NULL;
+    electrodes->electrodesStart = NULL;
+    electrodes->electrodesEnd = NULL;
     electrodes->size = size;
 
     // create electrode vectors
-    electrodes->electrode_start = malloc(sizeof(linalgcu_matrix_data_t) *
+    electrodes->electrodesStart = malloc(sizeof(linalgcu_matrix_data_t) *
         electrodes->count * 2);
-    electrodes->electrode_end = malloc(sizeof(linalgcu_matrix_data_t) *
+    electrodes->electrodesEnd = malloc(sizeof(linalgcu_matrix_data_t) *
         electrodes->count * 2);
 
     // check success
-    if ((electrodes->electrode_start == NULL) || (electrodes->electrode_end == NULL)) {
+    if ((electrodes->electrodesStart == NULL) || (electrodes->electrodesEnd == NULL)) {
         // cleanup
         fastect_electrodes_release(&electrodes);
 
@@ -57,15 +57,15 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
         angle = (linalgcu_matrix_data_t)i * 2.0f * delta_angle;
 
         // calc start coordinates
-        electrodes->electrode_start[i * 2 + 0] = radius * cos(angle);
-        electrodes->electrode_start[i * 2 + 1] = radius * sin(angle);
+        electrodes->electrodesStart[i * 2 + 0] = radius * cos(angle);
+        electrodes->electrodesStart[i * 2 + 1] = radius * sin(angle);
 
         // calc end angle
         angle += size / radius;
 
         // calc end coordinates
-        electrodes->electrode_end[i * 2 + 0] = radius * cos(angle);
-        electrodes->electrode_end[i * 2 + 1] = radius * sin(angle);
+        electrodes->electrodesEnd[i * 2 + 0] = radius * cos(angle);
+        electrodes->electrodesEnd[i * 2 + 1] = radius * sin(angle);
     }
 
     // set electrodesPointer
@@ -85,11 +85,11 @@ linalgcu_error_t fastect_electrodes_release(fastect_electrodes_t* electrodesPoin
     fastect_electrodes_t electrodes = *electrodesPointer;
 
     // free electrode vectors
-    if (electrodes->electrode_start != NULL) {
-        free(electrodes->electrode_start);
+    if (electrodes->electrodesStart != NULL) {
+        free(electrodes->electrodesStart);
     }
-    if (electrodes->electrode_end != NULL) {
-        free(electrodes->electrode_end);
+    if (electrodes->electrodesEnd != NULL) {
+        free(electrodes->electrodesEnd);
     }
 
     // free struct

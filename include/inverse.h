@@ -6,11 +6,6 @@
 #ifndef FASTECT_INVERSE_SOLVER_H
 #define FASTECT_INVERSE_SOLVER_H
 
-// c++ compatibility
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // solver struct
 typedef struct {
     fastect_conjugate_solver_t conjugate_solver;
@@ -19,13 +14,13 @@ typedef struct {
     linalgcu_matrix_t f;
     linalgcu_matrix_t A;
     linalgcu_matrix_t regularization;
-    linalgcu_matrix_data_t regularization_factor;
+    linalgcu_matrix_data_t regularizationFactor;
 } fastect_inverse_solver_s;
 typedef fastect_inverse_solver_s* fastect_inverse_solver_t;
 
 // create inverse_solver
 linalgcu_error_t fastect_inverse_solver_create(fastect_inverse_solver_t* solverPointer,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t regularization_factor,
+    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream);
 
 // release inverse_solver
@@ -37,23 +32,19 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
 
 // calc excitation
 linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
-    linalgcu_matrix_t measured_voltage, cublasHandle_t handle, cudaStream_t stream);
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
+    linalgcu_matrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream);
 
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve_non_linear(fastect_inverse_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
-    linalgcu_matrix_t measured_voltage, linalgcu_matrix_t sigma,
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
+    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t sigma,
     linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve_linear(fastect_inverse_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculated_voltage,
-    linalgcu_matrix_t measured_voltage, linalgcu_matrix_t sigma,
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
+    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t sigma,
     linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
