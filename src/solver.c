@@ -151,6 +151,10 @@ linalgcu_error_t fastect_solver_pre_solve(fastect_solver_t solver, cudaStream_t 
     error |= fastect_inverse_solver_calc_system_matrix(solver->inverse_solver, solver->jacobian,
         solver->cublas_handle, stream);
 
+    // set measured_voltage to calculated_voltage
+    error |= linalgcu_matrix_copy(solver->measured_voltage, solver->calculated_voltage,
+        LINALGCU_TRUE, NULL);
+
     return error;
 }
 
