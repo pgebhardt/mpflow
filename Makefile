@@ -27,7 +27,7 @@ INSTALL_LIB = /usr/local/lib
 CC = clang
 NVCC = $(CUDA_HOME)/bin/nvcc
 CFLAGS = -fPIC
-NVCFLAGS = -Xcompiler -fpic -m64
+NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v
 LDFLAGS = -L/usr/local/lib -llinalgcu -L$(CUDA_HOME)/lib64 -lcudart -lcublas
 
 # Object files
@@ -58,7 +58,7 @@ $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
 # Rule for cuda object files
 $(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
 	mkdir -p $(BUILD)
-	$(NVCC) $(NVCFLAGS) -c -o $@ $<
+	$(NVCC) $(NVFLAGS) -c -o $@ $<
 
 # Install
 install:
