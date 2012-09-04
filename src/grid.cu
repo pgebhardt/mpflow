@@ -59,12 +59,12 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
     // execute kernel
     update_system_matrix_kernel<<<blocks, threads, 0, stream>>>(
         grid->systemMatrix->values,
-        grid->systemMatrix->column_ids,
+        grid->systemMatrix->columnIds,
         grid->gradientMatrixTransposedSparse->values,
-        grid->gradientMatrixTransposedSparse->column_ids,
-        grid->gradientMatrixTransposed->device_data,
-        sigma->device_data,
-        grid->area->device_data,
+        grid->gradientMatrixTransposedSparse->columnIds,
+        grid->gradientMatrixTransposed->deviceData,
+        sigma->deviceData,
+        grid->area->deviceData,
         grid->gradientMatrixTransposed->rows);
 
     return LINALGCU_SUCCESS;

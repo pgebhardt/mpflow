@@ -109,9 +109,9 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns,
         solver->grid->excitationMatrix->rows, measurmentPattern->rows, &alpha,
-        measurmentPattern->device_data, measurmentPattern->rows,
-        solver->grid->excitationMatrix->device_data, solver->grid->excitationMatrix->rows,
-        &beta, solver->voltageCalculation->device_data, solver->voltageCalculation->rows)
+        measurmentPattern->deviceData, measurmentPattern->rows,
+        solver->grid->excitationMatrix->deviceData, solver->grid->excitationMatrix->rows,
+        &beta, solver->voltageCalculation->deviceData, solver->voltageCalculation->rows)
         != CUBLAS_STATUS_SUCCESS) {
         // cleanup
         fastect_forward_solver_release(&solver);

@@ -32,8 +32,8 @@ linalgcu_error_t fastect_conjugate_update_vector(linalgcu_matrix_t result,
 
     // execute kernel
     update_vector_kernel<<<result->rows / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
-        0, stream>>>(result->device_data, x1->device_data, sign, x2->device_data,
-        r1->device_data, r2->device_data);
+        0, stream>>>(result->deviceData, x1->deviceData, sign, x2->deviceData,
+        r1->deviceData, r2->deviceData);
 
     return LINALGCU_SUCCESS;
 }
@@ -88,12 +88,12 @@ linalgcu_error_t fastect_conjugate_gemv(linalgcu_matrix_t A, linalgcu_matrix_t x
     dim3 threads(LINALGCU_BLOCK_SIZE, 1);
 
     // call gemv kernel
-    gemv_kernel<<<blocks, threads, 0, stream>>>(A->device_data, x->device_data,
-        y->device_data, A->rows);
+    gemv_kernel<<<blocks, threads, 0, stream>>>(A->deviceData, x->deviceData,
+        y->deviceData, A->rows);
 
     // call reduce kernel
     reduce_row_kernel<<<A->columns / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE, 0, stream>>>(
-        y->device_data, y->rows);
+        y->deviceData, y->rows);
 
     return LINALGCU_SUCCESS;
 }

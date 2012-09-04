@@ -112,8 +112,8 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
 
     // calc Jt * J
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, solver->A->rows, solver->A->columns,
-        jacobian->rows, &alpha, jacobian->device_data, jacobian->rows, jacobian->device_data,
-        jacobian->rows, &beta, solver->A->device_data, solver->A->rows)
+        jacobian->rows, &alpha, jacobian->deviceData, jacobian->rows, jacobian->deviceData,
+        jacobian->rows, &beta, solver->A->deviceData, solver->A->rows)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
@@ -121,17 +121,17 @@ linalgcu_error_t fastect_inverse_solver_calc_system_matrix(fastect_inverse_solve
     // regularization: L = Jt * J
     // calc regularization
     if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->A->columns, solver->A->rows,
-        solver->A->columns, &alpha, solver->A->device_data, solver->A->rows,
-        solver->A->device_data, solver->A->rows,
-        &beta, solver->regularization->device_data, solver->regularization->rows)
+        solver->A->columns, &alpha, solver->A->deviceData, solver->A->rows,
+        solver->A->deviceData, solver->A->rows,
+        &beta, solver->regularization->deviceData, solver->regularization->rows)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
     // calc A
     if (cublasSaxpy(handle, solver->A->rows * solver->A->columns,
-        &solver->regularizationFactor, solver->regularization->device_data, 1,
-        solver->A->device_data, 1)
+        &solver->regularizationFactor, solver->regularization->deviceData, 1,
+        solver->A->deviceData, 1)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
@@ -153,21 +153,21 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
     linalgcu_matrix_s dummy_matrix;
     dummy_matrix.rows = solver->dU->rows;
     dummy_matrix.columns = solver->dU->columns;
-    dummy_matrix.host_data = NULL;
+    dummy_matrix.hostData = NULL;
 
     // calc dU = mv - cv
-    dummy_matrix.device_data = calculatedVoltage->device_data;
+    dummy_matrix.deviceData = calculatedVoltage->deviceData;
     linalgcu_matrix_copy(solver->dU, &dummy_matrix, LINALGCU_FALSE, stream);
     linalgcu_matrix_scalar_multiply(solver->dU, -1.0f, handle, stream);
 
-    dummy_matrix.device_data = measuredVoltage->device_data;
+    dummy_matrix.deviceData = measuredVoltage->deviceData;
     linalgcu_matrix_add(solver->dU, &dummy_matrix, handle, stream);
 
     // calc f
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
-        jacobian->device_data, jacobian->rows, solver->dU->device_data, 1, &beta,
-        solver->f->device_data, 1) != CUBLAS_STATUS_SUCCESS) {
+        jacobian->deviceData, jacobian->rows, solver->dU->deviceData, 1, &beta,
+        solver->f->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 

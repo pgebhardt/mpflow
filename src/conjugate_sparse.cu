@@ -37,7 +37,7 @@ linalgcu_error_t fastect_conjugate_sparse_add_scalar(linalgcu_matrix_t vector,
     dim3 local(LINALGCU_BLOCK_SIZE, 1);
 
     // execute kernel
-    add_scalar_kernel<<<global, local, 0, stream>>>(vector->device_data, scalar->device_data,
+    add_scalar_kernel<<<global, local, 0, stream>>>(vector->deviceData, scalar->deviceData,
         vector->rows, rows, columns);
 
     return LINALGCU_SUCCESS;
@@ -74,8 +74,8 @@ linalgcu_error_t fastect_conjugate_sparse_update_vector(linalgcu_matrix_t result
     dim3 local(LINALGCU_BLOCK_SIZE, 1);
 
     // execute kernel
-    sparse_update_vector_kernel<<<global, local, 0, stream>>>(result->device_data, x1->device_data, sign, x2->device_data,
-        r1->device_data, r2->device_data, result->rows);
+    sparse_update_vector_kernel<<<global, local, 0, stream>>>(result->deviceData,
+        x1->deviceData, sign, x2->deviceData, r1->deviceData, r2->deviceData, result->rows);
 
     return LINALGCU_SUCCESS;
 }
