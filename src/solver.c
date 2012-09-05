@@ -176,10 +176,7 @@ linalgcu_error_t fastect_solver_calibrate(fastect_solver_t solver, cudaStream_t 
     // calibration
     error |= fastect_calibration_solver_calibrate(solver->calibrationSolver,
         solver->jacobian, solver->calculatedVoltage, solver->measuredVoltage,
-        solver->dSigma, 75, solver->cublasHandle, stream);
-
-    // add to sigma
-    error |= linalgcu_matrix_add(solver->sigmaRef, solver->dSigma, solver->cublasHandle, stream);
+        solver->sigmaRef, 75, solver->cublasHandle, stream);
 
     return error;
 }

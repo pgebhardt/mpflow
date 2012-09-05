@@ -32,7 +32,7 @@ linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t*
 
     // init struct
     solver->conjugate_solver = NULL;
-    solver->deltaVoltage = NULL;
+    solver->dVoltage = NULL;
     solver->zeros = NULL;
     solver->excitation = NULL;
     solver->systemMatrix = NULL;
@@ -40,11 +40,12 @@ linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t*
     solver->regularizationFactor = regularizationFactor;
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->deltaVoltage, jacobian->rows, 1, stream);
+    error  = linalgcu_matrix_create(&solver->dVoltage, jacobian->rows, 1, stream);
+    error |= linalgcu_matrix_create(&solver->dSigma, jacobian->columns, 1, stream);
     error |= linalgcu_matrix_create(&solver->zeros, jacobian->columns, 1, stream);
     error |= linalgcu_matrix_create(&solver->excitation, jacobian->columns, 1, stream);
-    error |= linalgcu_matrix_create(&solver->systemMatrix, jacobian->columns, jacobian->columns,
-        stream);
+    error |= linalgcu_matrix_create(&solver->systemMatrix, jacobian->columns,
+        jacobian->columns, stream);
     error |= linalgcu_matrix_unity(&solver->regularization, jacobian->columns, stream);
 
     // check success
@@ -74,7 +75,8 @@ linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t*
 }
 
 // release solver
-linalgcu_error_t fastect_calibration_solver_release(fastect_calibration_solver_t* solverPointer) {
+linalgcu_error_t fastect_calibration_solver_release(
+    fastect_calibration_solver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
@@ -85,7 +87,8 @@ linalgcu_error_t fastect_calibration_solver_release(fastect_calibration_solver_t
 
     // cleanup
     fastect_conjugate_solver_release(&solver->conjugate_solver);
-    linalgcu_matrix_release(&solver->deltaVoltage);
+    linalgcu_matrix_release(&solver->dVoltage);
+    linalgcu_matrix_release(&solver->dSigma);
     linalgcu_matrix_release(&solver->zeros);
     linalgcu_matrix_release(&solver->excitation);
     linalgcu_matrix_release(&solver->systemMatrix);
@@ -154,22 +157,22 @@ linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_
 
     // dummy matrix to turn matrix to column vector
     linalgcu_matrix_s dummy_matrix;
-    dummy_matrix.rows = solver->deltaVoltage->rows;
-    dummy_matrix.columns = solver->deltaVoltage->columns;
+    dummy_matrix.rows = solver->dVoltage->rows;
+    dummy_matrix.columns = solver->dVoltage->columns;
     dummy_matrix.hostData = NULL;
 
     // calc deltaVoltage = mv - cv
     dummy_matrix.deviceData = calculatedVoltage->deviceData;
-    linalgcu_matrix_copy(solver->deltaVoltage, &dummy_matrix, LINALGCU_FALSE, stream);
-    linalgcu_matrix_scalar_multiply(solver->deltaVoltage, -1.0f, handle, stream);
+    linalgcu_matrix_copy(solver->dVoltage, &dummy_matrix, LINALGCU_FALSE, stream);
+    linalgcu_matrix_scalar_multiply(solver->dVoltage, -1.0f, handle, stream);
 
     dummy_matrix.deviceData = measuredVoltage->deviceData;
-    linalgcu_matrix_add(solver->deltaVoltage, &dummy_matrix, handle, stream);
+    linalgcu_matrix_add(solver->dVoltage, &dummy_matrix, handle, stream);
 
     // calc excitation
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
-        jacobian->deviceData, jacobian->rows, solver->deltaVoltage->deviceData, 1, &beta,
+        jacobian->deviceData, jacobian->rows, solver->dVoltage->deviceData, 1, &beta,
         solver->excitation->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
@@ -192,7 +195,7 @@ linalgcu_error_t fastect_calibration_solver_calibrate(fastect_calibration_solver
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // reset dSigma
-    error  = linalgcu_matrix_copy(sigma, solver->zeros, LINALGCU_FALSE, stream);
+    error  = linalgcu_matrix_copy(solver->dSigma, solver->zeros, LINALGCU_FALSE, stream);
 
     // calc system matrix
     error |= fastect_calibration_solver_calc_system_matrix(solver, jacobian, handle, stream);
@@ -203,7 +206,10 @@ linalgcu_error_t fastect_calibration_solver_calibrate(fastect_calibration_solver
 
     // solve system
     error |= fastect_conjugate_solver_solve(solver->conjugate_solver,
-        solver->systemMatrix, sigma, solver->excitation, steps, handle, stream);
+        solver->systemMatrix, solver->dSigma, solver->excitation, steps, handle, stream);
+
+    // add to sigma
+    error |= linalgcu_matrix_add(sigma, solver->dSigma, handle, stream);
 
     return error;
 }

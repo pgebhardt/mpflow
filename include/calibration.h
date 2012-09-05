@@ -9,7 +9,8 @@
 // solver struct
 typedef struct {
     fastect_conjugate_solver_t conjugate_solver;
-    linalgcu_matrix_t deltaVoltage;
+    linalgcu_matrix_t dVoltage;
+    linalgcu_matrix_t dSigma;
     linalgcu_matrix_t zeros;
     linalgcu_matrix_t excitation;
     linalgcu_matrix_t systemMatrix;
