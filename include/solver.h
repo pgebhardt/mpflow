@@ -9,6 +9,7 @@
 // solver struct
 typedef struct {
     fastect_forward_solver_t forwardSolver;
+    fastect_calibration_solver_t calibrationSolver;
     fastect_inverse_solver_t inverseSolver;
     linalgcu_matrix_t dSigma;
     linalgcu_matrix_t sigmaRef;
