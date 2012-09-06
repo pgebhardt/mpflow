@@ -4,6 +4,7 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "../include/fastect.h"
 
 // create solver grid
@@ -53,8 +54,8 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
         return error;
     }
 
-    // init residual matrix
-    error = fastect_grid_init_residual_matrix(grid, handle, stream);
+    // init system matrix
+    error = fastect_grid_init_system_matrix(grid, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -64,8 +65,8 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
         return error;
     }
 
-    // init system matrix
-    error = fastect_grid_init_system_matrix(grid, handle, stream);
+    // init residual matrix
+    error = fastect_grid_init_residual_matrix(grid, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -235,7 +236,8 @@ linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid, cublasHand
     }
 
     // create sparse matrices
-    error = linalgcu_sparse_matrix_create(&grid->systemMatrix, systemMatrix, stream);
+    error  = linalgcu_sparse_matrix_create(&grid->systemMatrix, systemMatrix, stream);
+    error |= linalgcu_sparse_matrix_create(&grid->residualMatrix, systemMatrix, stream);
     error |= linalgcu_sparse_matrix_create(&grid->gradientMatrixTransposedSparse,
         grid->gradientMatrixTransposed, stream);
     error |= linalgcu_sparse_matrix_create(&grid->gradientMatrixSparse,
@@ -284,6 +286,53 @@ linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, cublasHa
         return LINALGCU_ERROR;
     }
 
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
+    // calc integrals
+    linalgcu_matrix_data_t x[3], y[3];
+    linalgcu_matrix_data_t id[3];
+    linalgcu_matrix_data_t integral;
+    fastect_basis_t basis[3];
+
+    for (linalgcu_size_t k = 0; k < grid->mesh->elementCount; k++) {
+        // get vertices for element
+        for (linalgcu_size_t i = 0; i < 3; i++) {
+            linalgcu_matrix_get_element(grid->mesh->elements, &id[i], k, i);
+            linalgcu_matrix_get_element(grid->mesh->vertices, &x[i], (linalgcu_size_t)id[i], 0);
+            linalgcu_matrix_get_element(grid->mesh->vertices, &y[i], (linalgcu_size_t)id[i], 1);
+        }
+
+        // calc corresponding basis functions
+        fastect_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        fastect_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        fastect_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+
+        // calc all permutations and code them n = i * j (symmetric)
+        for (linalgcu_size_t i = 0; i < 3; i++) {
+            for (linalgcu_size_t j = 0; j < 3; j++) {
+                // calc integral
+                integral = fastect_grid_calc_residual_integral(
+                    x[0], y[0], x[1], y[1], x[2], y[2],
+                    basis[i]->coefficients[0], basis[i]->coefficients[1],
+                    basis[i]->coefficients[2], basis[j]->coefficients[0],
+                    basis[j]->coefficients[1], basis[j]->coefficients[2]);
+
+                // save to matrix
+                linalgcu_matrix_set_element(grid->integralMatrix, integral, k, i * j);
+            }
+        }
+
+        // cleanup
+        fastect_basis_release(&basis[0]);
+        fastect_basis_release(&basis[1]);
+        fastect_basis_release(&basis[2]);
+    }
+
+    // upload to device
+    error = linalgcu_matrix_copy_to_device(grid->integralMatrix, LINALGCU_TRUE, stream);
+
+    // update residual matrix
     return LINALGCU_SUCCESS;
 }
 
