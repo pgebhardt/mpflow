@@ -33,19 +33,34 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     grid->mesh = mesh;
     grid->electrodes = electrodes;
     grid->systemMatrix = NULL;
+    grid->residualMatrix = NULL;
     grid->excitationMatrix = NULL;
     grid->gradientMatrixSparse = NULL;
     grid->gradientMatrixTransposedSparse = NULL;
     grid->gradientMatrixTransposed = NULL;
+    grid->integralMatrix = NULL;
     grid->area = NULL;
 
     // create matrices
     error  = linalgcu_matrix_create(&grid->gradientMatrixTransposed,
         grid->mesh->vertexCount, 2 * grid->mesh->elementCount, stream);
+    error |= linalgcu_matrix_create(&grid->integralMatrix, grid->mesh->elementCount,
+        LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&grid->area, grid->mesh->elementCount, 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
+        return error;
+    }
+
+    // init residual matrix
+    error = fastect_grid_init_residual_matrix(grid, handle, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fastect_grid_release(&grid);
+
         return error;
     }
 
@@ -91,10 +106,12 @@ linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
     fastect_mesh_release(&grid->mesh);
     fastect_electrodes_release(&grid->electrodes);
     linalgcu_sparse_matrix_release(&grid->systemMatrix);
+    linalgcu_sparse_matrix_release(&grid->residualMatrix);
     linalgcu_matrix_release(&grid->excitationMatrix);
-    linalgcu_matrix_release(&grid->gradientMatrixTransposed);
     linalgcu_sparse_matrix_release(&grid->gradientMatrixSparse);
     linalgcu_sparse_matrix_release(&grid->gradientMatrixTransposedSparse);
+    linalgcu_matrix_release(&grid->gradientMatrixTransposed);
+    linalgcu_matrix_release(&grid->integralMatrix);
     linalgcu_matrix_release(&grid->area);
 
     // free struct
@@ -231,6 +248,39 @@ linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid, cublasHand
 
     // check success
     if (error != LINALGCU_SUCCESS) {
+        return LINALGCU_ERROR;
+    }
+
+    return LINALGCU_SUCCESS;
+}
+
+// calc residual integral
+linalgcu_matrix_data_t fastect_grid_calc_residual_integral(
+    linalgcu_matrix_data_t x1, linalgcu_matrix_data_t y1,
+    linalgcu_matrix_data_t x2, linalgcu_matrix_data_t y2,
+    linalgcu_matrix_data_t x3, linalgcu_matrix_data_t y3,
+    linalgcu_matrix_data_t ai, linalgcu_matrix_data_t bi, linalgcu_matrix_data_t ci,
+    linalgcu_matrix_data_t aj, linalgcu_matrix_data_t bj, linalgcu_matrix_data_t cj) {
+    // calc area
+    linalgcu_matrix_data_t area = 0.5 * fabs((x2 - x1) * (y3 - y1) -
+        (x3 - x1) * (y2 - y1));
+
+    // calc integral
+    linalgcu_matrix_data_t integral = 2.0f * area *
+        (ai * (0.5f * aj + (1.0f / 6.0f) * bj * (x1 + x2 + x3) + (1.0f / 6.0f) * cj * (y1 + y2 + y3)) +
+        bi * ((1.0f/ 6.0f) * aj * (x1 + x2 + x3) + (1.0f / 12.0f) * bj * (x1 * x1 + x1 * x2 + x1 * x3 + x2 * x2 + x2 * x3 + x3 * x3) +
+        (1.0f/ 24.0f) * cj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 + 2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)) +
+        ci * ((1.0f / 6.0f) * aj * (y1 + y2 + y3) + (1.0f / 12.0f) * cj * (y1 * y1 + y1 * y2 + y1 * y3 + y2 * y2 + y2 * y3 + y3 * y3) +
+        (1.0f / 24.0f) * bj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 + 2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)));
+
+    return integral;
+}
+
+// init residual matrix
+linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // check input
+    if ((grid == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
