@@ -39,14 +39,17 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     grid->gradientMatrixSparse = NULL;
     grid->gradientMatrixTransposedSparse = NULL;
     grid->gradientMatrixTransposed = NULL;
-    grid->integralMatrix = NULL;
     grid->area = NULL;
+
+    // init matrix buffer
+    for (linalgcu_size_t i = 0; i < 6; i++) {
+        grid->connectivityMatrix[i] = NULL;
+        grid->elementalResidualMatrix[i] = NULL;
+    }
 
     // create matrices
     error  = linalgcu_matrix_create(&grid->gradientMatrixTransposed,
         grid->mesh->vertexCount, 2 * grid->mesh->elementCount, stream);
-    error |= linalgcu_matrix_create(&grid->integralMatrix, grid->mesh->elementCount,
-        LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&grid->area, grid->mesh->elementCount, 1, stream);
 
     // check success
@@ -55,29 +58,13 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     }
 
     // init system matrix
-    error = fastect_grid_init_system_matrix(grid, handle, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fastect_grid_release(&grid);
-
-        return error;
-    }
+    error  = fastect_grid_init_system_matrix(grid, handle, stream);
 
     // init residual matrix
-    error = fastect_grid_init_residual_matrix(grid, handle, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fastect_grid_release(&grid);
-
-        return error;
-    }
+    error |= fastect_grid_init_residual_matrix(grid, handle, stream);
 
     // init excitaion matrix
-    error = fastect_grid_init_exitation_matrix(grid, stream);
+    error |= fastect_grid_init_exitation_matrix(grid, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -112,8 +99,12 @@ linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
     linalgcu_sparse_matrix_release(&grid->gradientMatrixSparse);
     linalgcu_sparse_matrix_release(&grid->gradientMatrixTransposedSparse);
     linalgcu_matrix_release(&grid->gradientMatrixTransposed);
-    linalgcu_matrix_release(&grid->integralMatrix);
     linalgcu_matrix_release(&grid->area);
+
+    for (linalgcu_size_t i = 0; i < 6; i++) {
+        linalgcu_matrix_release(&grid->connectivityMatrix[i]);
+        linalgcu_matrix_release(&grid->elementalResidualMatrix[i]);
+    }
 
     // free struct
     free(grid);
@@ -269,11 +260,16 @@ linalgcu_matrix_data_t fastect_grid_calc_residual_integral(
 
     // calc integral
     linalgcu_matrix_data_t integral = 2.0f * area *
-        (ai * (0.5f * aj + (1.0f / 6.0f) * bj * (x1 + x2 + x3) + (1.0f / 6.0f) * cj * (y1 + y2 + y3)) +
-        bi * ((1.0f/ 6.0f) * aj * (x1 + x2 + x3) + (1.0f / 12.0f) * bj * (x1 * x1 + x1 * x2 + x1 * x3 + x2 * x2 + x2 * x3 + x3 * x3) +
-        (1.0f/ 24.0f) * cj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 + 2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)) +
-        ci * ((1.0f / 6.0f) * aj * (y1 + y2 + y3) + (1.0f / 12.0f) * cj * (y1 * y1 + y1 * y2 + y1 * y3 + y2 * y2 + y2 * y3 + y3 * y3) +
-        (1.0f / 24.0f) * bj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 + 2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)));
+        (ai * (0.5f * aj + (1.0f / 6.0f) * bj * (x1 + x2 + x3) +
+        (1.0f / 6.0f) * cj * (y1 + y2 + y3)) +
+        bi * ((1.0f/ 6.0f) * aj * (x1 + x2 + x3) +
+        (1.0f / 12.0f) * bj * (x1 * x1 + x1 * x2 + x1 * x3 + x2 * x2 + x2 * x3 + x3 * x3) +
+        (1.0f/ 24.0f) * cj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 +
+        2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)) +
+        ci * ((1.0f / 6.0f) * aj * (y1 + y2 + y3) +
+        (1.0f / 12.0f) * cj * (y1 * y1 + y1 * y2 + y1 * y3 + y2 * y2 + y2 * y3 + y3 * y3) +
+        (1.0f / 24.0f) * bj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 +
+        2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)));
 
     return integral;
 }
@@ -289,50 +285,71 @@ linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, cublasHa
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
-    // calc integrals
-    linalgcu_matrix_data_t x[3], y[3];
-    linalgcu_matrix_data_t id[3];
-    linalgcu_matrix_data_t integral;
-    fastect_basis_t basis[3];
-
-    for (linalgcu_size_t k = 0; k < grid->mesh->elementCount; k++) {
-        // get vertices for element
-        for (linalgcu_size_t i = 0; i < 3; i++) {
-            linalgcu_matrix_get_element(grid->mesh->elements, &id[i], k, i);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &x[i], (linalgcu_size_t)id[i], 0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &y[i], (linalgcu_size_t)id[i], 1);
-        }
-
-        // calc corresponding basis functions
-        fastect_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        fastect_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        fastect_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
-
-        // calc all permutations and code them n = i * j (symmetric)
-        for (linalgcu_size_t i = 0; i < 3; i++) {
-            for (linalgcu_size_t j = 0; j < 3; j++) {
-                // calc integral
-                integral = fastect_grid_calc_residual_integral(
-                    x[0], y[0], x[1], y[1], x[2], y[2],
-                    basis[i]->coefficients[0], basis[i]->coefficients[1],
-                    basis[i]->coefficients[2], basis[j]->coefficients[0],
-                    basis[j]->coefficients[1], basis[j]->coefficients[2]);
-
-                // save to matrix
-                linalgcu_matrix_set_element(grid->integralMatrix, integral, k, i * j);
-            }
-        }
-
-        // cleanup
-        fastect_basis_release(&basis[0]);
-        fastect_basis_release(&basis[1]);
-        fastect_basis_release(&basis[2]);
+    // create matrices
+    for (linalgcu_size_t i = 0; i < 6; i++) {
+        error |= linalgcu_matrix_create(&grid->connectivityMatrix[i], grid->mesh->vertexCount,
+            grid->mesh->vertexCount, stream);
+        error |= linalgcu_matrix_create(&grid->elementalResidualMatrix[i],
+            grid->mesh->vertexCount, grid->mesh->vertexCount, stream);
     }
 
-    // upload to device
-    error = linalgcu_matrix_copy_to_device(grid->integralMatrix, LINALGCU_TRUE, stream);
+    // create element count matrix
+    linalgcu_matrix_t elementCount;
+    error |= linalgcu_matrix_create(&elementCount, grid->mesh->vertexCount,
+        grid->mesh->vertexCount, stream);
 
-    // update residual matrix
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return error;
+    }
+
+    // init connectivityMatrix
+    for (linalgcu_size_t k = 0; k < 6; k++) {
+        for (linalgcu_size_t i = 0; i < grid->connectivityMatrix[k]->rows; i++) {
+            for (linalgcu_size_t j = 0; j < grid->connectivityMatrix[k]->columns; j++) {
+                linalgcu_matrix_set_element(grid->connectivityMatrix[k], -1.0f, i, j);
+            }
+        }
+    }
+
+    // fill connectivity matrices
+    linalgcu_matrix_data_t id[3];
+    linalgcu_matrix_data_t temp;
+    for (linalgcu_size_t k = 0; k < grid->mesh->elementCount; k++) {
+        // get node ids
+        linalgcu_matrix_get_element(grid->mesh->elements, &id[0], k, 0);
+        linalgcu_matrix_get_element(grid->mesh->elements, &id[1], k, 1);
+        linalgcu_matrix_get_element(grid->mesh->elements, &id[2], k, 2);
+
+        // set connectivity matrix elements
+        for (linalgcu_size_t i = 0; i < 3; i++) {
+            for (linalgcu_size_t j = 0; j < 3; j++) {
+                // get current element count
+                linalgcu_matrix_get_element(elementCount, &temp,
+                    (linalgcu_size_t)id[i], (linalgcu_size_t)id[j]);
+
+                // check elementCount
+                if (temp >= 6.0f) {
+                    return LINALGCU_ERROR;
+                }
+
+                // set element
+                linalgcu_matrix_set_element(grid->connectivityMatrix[(linalgcu_size_t)temp],
+                    (linalgcu_matrix_data_t)k, (linalgcu_size_t)id[i],
+                    (linalgcu_size_t)id[j]);
+                elementCount->hostData[(linalgcu_size_t)id[i] + (linalgcu_size_t)id[j] *
+                    elementCount->rows] += 1.0f;
+            }
+        }
+    }
+
+    // save to file
+    linalgcu_matrix_save("test.txt", grid->connectivityMatrix[0]);
+    linalgcu_matrix_save("elements.txt", grid->mesh->elements);
+
+    // cleanup
+    linalgcu_matrix_release(&elementCount);
+
     return LINALGCU_SUCCESS;
 }
 

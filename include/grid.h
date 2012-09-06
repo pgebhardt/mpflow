@@ -16,8 +16,9 @@ typedef struct {
     linalgcu_sparse_matrix_t gradientMatrixSparse;
     linalgcu_sparse_matrix_t gradientMatrixTransposedSparse;
     linalgcu_matrix_t gradientMatrixTransposed;
-    linalgcu_matrix_t integralMatrix;
     linalgcu_matrix_t area;
+    linalgcu_matrix_t connectivityMatrix[6];
+    linalgcu_matrix_t elementalResidualMatrix[6];
 } fastect_grid_s;
 typedef fastect_grid_s* fastect_grid_t;
 
