@@ -170,12 +170,12 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     error  = fastect_grid_update_system_matrices(solver->grid, sigma, handle, stream);
 
     // solve for drive phi
-    error |= fastect_conjugate_sparse_solver_solve(solver->driveSolver,
+    error |= fastect_conjugate_sparse_solver_solve_regularized(solver->driveSolver,
         solver->grid->systemMatrices[0], solver->drivePhi, solver->driveF,
         steps, handle, stream);
 
     // solve for measurment phi
-    error |= fastect_conjugate_sparse_solver_solve(solver->measurmentSolver,
+    error |= fastect_conjugate_sparse_solver_solve_regularized(solver->measurmentSolver,
         solver->grid->systemMatrices[0], solver->measurmentPhi, solver->measurmentF,
         steps, handle, stream);
 

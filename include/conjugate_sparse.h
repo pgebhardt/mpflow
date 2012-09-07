@@ -44,4 +44,9 @@ linalgcu_error_t fastect_conjugate_sparse_solver_solve(fastect_conjugate_sparse_
     linalgcu_sparse_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
     linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
 
+// solve conjugate_sparse
+linalgcu_error_t fastect_conjugate_sparse_solver_solve_regularized(
+    fastect_conjugate_sparse_solver_t solver, linalgcu_sparse_matrix_t A, linalgcu_matrix_t x,
+    linalgcu_matrix_t f, linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
+
 #endif
