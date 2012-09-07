@@ -8,10 +8,11 @@
 
 // create electrodes
 linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
-    linalgcu_size_t count, linalgcu_matrix_data_t size, linalgcu_matrix_data_t radius) {
+    linalgcu_size_t count, linalgcu_matrix_data_t width, linalgcu_matrix_data_t height,
+    linalgcu_matrix_data_t meshRadius) {
     // check input
-    if ((electrodesPointer == NULL) || (count == 0) || (radius <= 0.0f) ||
-        (size <= 0.0f)) {
+    if ((electrodesPointer == NULL) || (count == 0) || (width <= 0.0f) || (height <= 0.0f) ||
+        (meshRadius <= 0.0f)) {
         return LINALGCU_ERROR;
     }
 
@@ -33,7 +34,8 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
     electrodes->count = count;
     electrodes->electrodesStart = NULL;
     electrodes->electrodesEnd = NULL;
-    electrodes->size = size;
+    electrodes->width = width;
+    electrodes->height = height;
 
     // create electrode vectors
     electrodes->electrodesStart = malloc(sizeof(linalgcu_matrix_data_t) *
@@ -57,15 +59,15 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
         angle = (linalgcu_matrix_data_t)i * 2.0f * delta_angle;
 
         // calc start coordinates
-        electrodes->electrodesStart[i * 2 + 0] = radius * cos(angle);
-        electrodes->electrodesStart[i * 2 + 1] = radius * sin(angle);
+        electrodes->electrodesStart[i * 2 + 0] = meshRadius * cos(angle);
+        electrodes->electrodesStart[i * 2 + 1] = meshRadius * sin(angle);
 
         // calc end angle
-        angle += size / radius;
+        angle += electrodes->width / meshRadius;
 
         // calc end coordinates
-        electrodes->electrodesEnd[i * 2 + 0] = radius * cos(angle);
-        electrodes->electrodesEnd[i * 2 + 1] = radius * sin(angle);
+        electrodes->electrodesEnd[i * 2 + 0] = meshRadius * cos(angle);
+        electrodes->electrodesEnd[i * 2 + 1] = meshRadius * sin(angle);
     }
 
     // set electrodesPointer

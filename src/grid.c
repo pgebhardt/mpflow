@@ -322,14 +322,12 @@ linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
     cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
         grid->systemMatrix2D->values, 1, grid->systemMatrices[0]->values, 1);
 
-    // TODO: save mesh height in mesh
-    linalgcu_matrix_data_t meshHeight = 0.1f;
-
     // create harmonic system matrices
     linalgcu_matrix_data_t alpha = 0.0f;
     for (linalgcu_size_t n = 1; n < grid->numHarmonics + 1; n++) {
         // calc alpha
-        alpha = (2.0f * n * M_PI / meshHeight) * (2.0f * n * M_PI / meshHeight);
+        alpha = (2.0f * n * M_PI / grid->mesh->height) *
+            (2.0f * n * M_PI / grid->mesh->height);
 
         // init system matrix with 2d system matrix
         cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
@@ -444,10 +442,6 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStr
         return LINALGCU_ERROR;
     }
 
-    // calc electrode area
-    // linalgcu_matrix_data_t element_area = M_PI * electrodes->size * electrodes->size / 4.0f;
-    linalgcu_matrix_data_t element_area = grid->electrodes->size;
-
     // fill exitation_matrix matrix
     linalgcu_matrix_data_t id[3];
     linalgcu_matrix_data_t node[2], left[2], right[2];
@@ -479,7 +473,7 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStr
             linalgcu_matrix_set_element(grid->excitationMatrix,
                 fastect_grid_integrate_basis(node, left, right,
                     &grid->electrodes->electrodesStart[j * 2],
-                    &grid->electrodes->electrodesEnd[j * 2]) / element_area,
+                    &grid->electrodes->electrodesEnd[j * 2]) / grid->electrodes->width,
                     (linalgcu_size_t)id[1], j);
         }
     }

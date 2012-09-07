@@ -44,9 +44,9 @@ int compare_boundary(const void* a, const void* b) {
 
 linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
-    cudaStream_t stream) {
+    linalgcu_matrix_data_t height, cudaStream_t stream) {
     // check input
-    if ((meshPointer == NULL) || (radius <= 0.0)) {
+    if ((meshPointer == NULL) || (radius <= 0.0f) || (distance <= 0.0f) || (height <= 0.0f)) {
         return LINALGCU_ERROR;
     }
 
@@ -73,6 +73,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     mesh->vertices = NULL;
     mesh->elements = NULL;
     mesh->boundary = NULL;
+    mesh->height = height;
 
     // create vertex memory
     error = linalgcu_matrix_create(&mesh->vertices,

@@ -42,7 +42,7 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     solver->voltageCalculation = NULL;
 
     // create grid
-    error = fastect_grid_create(&solver->grid, mesh, electrodes, sigma, 0, handle, stream);
+    error = fastect_grid_create(&solver->grid, mesh, electrodes, sigma, 3, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
