@@ -107,16 +107,34 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     }
 
     // calc excitaion matrices
-    // Run multiply once more to avoid cublas error
-    for (linalgcu_size_t i = 0; i < numHarmonics + 1; i++) {
-        linalgcu_matrix_multiply(solver->driveF[i], solver->grid->excitationMatrix,
+    for (linalgcu_size_t n = 0; n < numHarmonics + 1; n++) {
+        // Run multiply once more to avoid cublas error
+        linalgcu_matrix_multiply(solver->driveF[n], solver->grid->excitationMatrix,
             drivePattern, handle, stream);
-        error |= linalgcu_matrix_multiply(solver->driveF[i], solver->grid->excitationMatrix,
+        error |= linalgcu_matrix_multiply(solver->driveF[n], solver->grid->excitationMatrix,
             drivePattern, handle, stream);
-        linalgcu_matrix_multiply(solver->measurmentF[i], solver->grid->excitationMatrix,
+
+        linalgcu_matrix_multiply(solver->measurmentF[n], solver->grid->excitationMatrix,
             measurmentPattern, handle, stream);
-        error |= linalgcu_matrix_multiply(solver->measurmentF[i],
+        error |= linalgcu_matrix_multiply(solver->measurmentF[n],
             solver->grid->excitationMatrix, measurmentPattern, handle, stream);
+    }
+
+    // adjust excitaion matrices
+    error |= linalgcu_matrix_scalar_multiply(solver->driveF[0], 1.0f / solver->grid->mesh->height,
+        handle, stream);
+    error |= linalgcu_matrix_scalar_multiply(solver->measurmentF[0], 1.0f / solver->grid->mesh->height,
+        handle, stream);
+
+    for (linalgcu_size_t n = 1; n < numHarmonics + 1; n++) {
+        error |= linalgcu_matrix_scalar_multiply(solver->driveF[n],
+            2.0f * sin(n * M_PI * solver->grid->electrodes->height / solver->grid->mesh->height) /
+            (n * M_PI * solver->grid->electrodes->height),
+            handle, stream);
+        error |= linalgcu_matrix_scalar_multiply(solver->measurmentF[n],
+            2.0f * sin(n * M_PI * solver->grid->electrodes->height / solver->grid->mesh->height) /
+            (n * M_PI * solver->grid->electrodes->height),
+            handle, stream);
     }
 
     // check success
@@ -236,7 +254,10 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     }
 
     // calc jacobian
-    error |= fastect_forward_solver_calc_jacobian(solver, jacobian, 0, stream);
+    // TODO: sum jacobian
+    for (linalgcu_size_t n = 0; n < solver->grid->numHarmonics + 1; n++) {
+        error |= fastect_forward_solver_calc_jacobian(solver, jacobian, 0, stream);
+    }
 
     // calc voltage
     error |= linalgcu_matrix_multiply(voltage, solver->voltageCalculation,
