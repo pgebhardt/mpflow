@@ -303,6 +303,7 @@ linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
 
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
+    cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
 
     // update 2d systemMatrix
     error  = fastect_grid_update_2D_system_matrix(grid, sigma, stream);
@@ -319,7 +320,7 @@ linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
     cublasSetStream(handle, stream);
 
     // set first system matrix to 2d system matrix
-    cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
+    cublasError = cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
         grid->systemMatrix2D->values, 1, grid->systemMatrices[0]->values, 1);
 
     // create harmonic system matrices
@@ -330,12 +331,17 @@ linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
             (2.0f * n * M_PI / grid->mesh->height);
 
         // init system matrix with 2d system matrix
-        cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
+        cublasError |= cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
             grid->systemMatrix2D->values, 1, grid->systemMatrices[n]->values, 1);
 
         // add alpha * residualMatrix
-        cublasSaxpy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE, &alpha,
+        cublasError |= cublasSaxpy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE, &alpha,
             grid->residualMatrix->values, 1, grid->systemMatrices[n]->values, 1);
+    }
+
+    // check error
+    if (cublasError != CUBLAS_STATUS_SUCCESS) {
+        return LINALGCU_ERROR;
     }
 
     return LINALGCU_SUCCESS;

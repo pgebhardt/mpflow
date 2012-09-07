@@ -120,12 +120,14 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
             solver->grid->excitationMatrix, measurmentPattern, handle, stream);
     }
 
-    // adjust excitaion matrices
+    // calc fourier coefficients for current pattern
+    // calc ground mode
     error |= linalgcu_matrix_scalar_multiply(solver->driveF[0], 1.0f / solver->grid->mesh->height,
         handle, stream);
     error |= linalgcu_matrix_scalar_multiply(solver->measurmentF[0], 1.0f / solver->grid->mesh->height,
         handle, stream);
 
+    // calc harmonics
     for (linalgcu_size_t n = 1; n < numHarmonics + 1; n++) {
         error |= linalgcu_matrix_scalar_multiply(solver->driveF[n],
             2.0f * sin(n * M_PI * solver->grid->electrodes->height / solver->grid->mesh->height) /
