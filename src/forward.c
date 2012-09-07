@@ -242,5 +242,15 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     error |= linalgcu_matrix_multiply(voltage, solver->voltageCalculation,
         solver->drivePhi[0], handle, stream);
 
+    // add harmonic voltages
+    linalgcu_matrix_data_t alpha = 1.0f, beta = 1.0f;
+    for (linalgcu_size_t n = 1; n < solver->grid->numHarmonics + 1; n++) {
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->voltageCalculation->rows,
+            solver->drivePhi[n]->columns, solver->voltageCalculation->columns, &alpha,
+            solver->voltageCalculation->deviceData, solver->voltageCalculation->rows,
+            solver->drivePhi[n]->deviceData, solver->drivePhi[n]->rows, &beta,
+            voltage->deviceData, voltage->rows);
+    }
+
     return error;
 }
