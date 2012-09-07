@@ -9,10 +9,11 @@
 
 // create solver grid
 linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, cublasHandle_t handle,
-    cudaStream_t stream) {
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_matrix_t sigma,
+    linalgcu_size_t numHarmonics, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((gridPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (handle == NULL)) {
+    if ((gridPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (sigma == NULL) ||
+        (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -33,15 +34,16 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     // init struct
     grid->mesh = mesh;
     grid->electrodes = electrodes;
-    grid->systemMatrix = NULL;
+    grid->systemMatrices = NULL;
+    grid->systemMatrix2D = NULL;
     grid->residualMatrix = NULL;
     grid->excitationMatrix = NULL;
-    grid->gradientMatrixSparse = NULL;
-    grid->gradientMatrixTransposedSparse = NULL;
     grid->gradientMatrixTransposed = NULL;
+    grid->gradientMatrixTransposedSparse = NULL;
     grid->connectivityMatrix = NULL;
     grid->elementalResidualMatrix = NULL;
     grid->area = NULL;
+    grid->numHarmonics = numHarmonics;
 
     // create matrices
     error  = linalgcu_matrix_create(&grid->gradientMatrixTransposed,
@@ -57,14 +59,51 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
         return error;
     }
 
+    // create system matrices
+    grid->systemMatrices = malloc(sizeof(linalgcu_sparse_matrix_t) * (grid->numHarmonics + 1));
+
+    // check success
+    if (grid->systemMatrices == NULL) {
+        // cleanup
+        fastect_grid_release(&grid);
+
+        return LINALGCU_ERROR;
+    }
+
+    // create system matrices
+    error = LINALGCU_SUCCESS;
+    for (linalgcu_size_t i = 0; i < grid->numHarmonics + 1; i++) {
+        error |= linalgcu_sparse_matrix_create_empty(&grid->systemMatrices[i],
+            grid->mesh->vertexCount, grid->mesh->vertexCount, stream);
+    }
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fastect_grid_release(&grid);
+
+        return error;
+    }
+
     // init system matrix
-    error  = fastect_grid_init_system_matrix(grid, handle, stream);
+    error  = fastect_grid_init_2D_system_matrix(grid, handle, stream);
 
     // init residual matrix
-    error |= fastect_grid_init_residual_matrix(grid, handle, stream);
+    error |= fastect_grid_init_residual_matrix(grid, sigma, stream);
 
     // init excitaion matrix
     error |= fastect_grid_init_exitation_matrix(grid, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fastect_grid_release(&grid);
+
+        return error;
+    }
+
+    // update system matrices
+    error = fastect_grid_update_system_matrices(grid, sigma, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -93,15 +132,22 @@ linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
     // cleanup
     fastect_mesh_release(&grid->mesh);
     fastect_electrodes_release(&grid->electrodes);
-    linalgcu_sparse_matrix_release(&grid->systemMatrix);
+    linalgcu_sparse_matrix_release(&grid->systemMatrix2D);
     linalgcu_sparse_matrix_release(&grid->residualMatrix);
     linalgcu_matrix_release(&grid->excitationMatrix);
-    linalgcu_sparse_matrix_release(&grid->gradientMatrixSparse);
-    linalgcu_sparse_matrix_release(&grid->gradientMatrixTransposedSparse);
     linalgcu_matrix_release(&grid->gradientMatrixTransposed);
+    linalgcu_sparse_matrix_release(&grid->gradientMatrixTransposedSparse);
+    linalgcu_sparse_matrix_release(&grid->gradientMatrixSparse);
     linalgcu_matrix_release(&grid->connectivityMatrix);
     linalgcu_matrix_release(&grid->elementalResidualMatrix);
     linalgcu_matrix_release(&grid->area);
+
+    if (grid->systemMatrices != NULL) {
+        for (linalgcu_size_t i = 0; i < grid->numHarmonics + 1; i++) {
+            linalgcu_sparse_matrix_release(&grid->systemMatrices[i]);
+        }
+        free(grid->systemMatrices);
+    }
 
     // free struct
     free(grid);
@@ -112,8 +158,8 @@ linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
     return LINALGCU_SUCCESS;
 }
 
-// init system matrix
-linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid, cublasHandle_t handle,
+// init system matrix 2D
+linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (handle == NULL)) {
@@ -224,12 +270,15 @@ linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid, cublasHand
     }
 
     // create sparse matrices
-    error  = linalgcu_sparse_matrix_create(&grid->systemMatrix, systemMatrix, stream);
+    error  = linalgcu_sparse_matrix_create(&grid->systemMatrix2D, systemMatrix, stream);
     error |= linalgcu_sparse_matrix_create(&grid->residualMatrix, systemMatrix, stream);
-    error |= linalgcu_sparse_matrix_create(&grid->gradientMatrixTransposedSparse,
-        grid->gradientMatrixTransposed, stream);
     error |= linalgcu_sparse_matrix_create(&grid->gradientMatrixSparse,
         gradientMatrix, stream);
+    error |= linalgcu_sparse_matrix_create(&grid->gradientMatrixTransposedSparse,
+        grid->gradientMatrixTransposed, stream);
+    for (linalgcu_size_t i = 0; i < grid->numHarmonics + 1; i++) {
+        error |= linalgcu_sparse_matrix_create(&grid->systemMatrices[i], systemMatrix, stream);
+    }
 
     // cleanup
     linalgcu_matrix_release(&sigmaMatrix);
@@ -239,6 +288,56 @@ linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid, cublasHand
     // check success
     if (error != LINALGCU_SUCCESS) {
         return LINALGCU_ERROR;
+    }
+
+    return LINALGCU_SUCCESS;
+}
+
+// update system matrix
+linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
+    linalgcu_matrix_t sigma, cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if ((grid == NULL) || (sigma == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
+    // update 2d systemMatrix
+    error  = fastect_grid_update_2D_system_matrix(grid, sigma, stream);
+
+    // update residual matrix
+    error |= fastect_grid_update_residual_matrix(grid, sigma, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return error;
+    }
+
+    // set cublas stream
+    cublasSetStream(handle, stream);
+
+    // set first system matrix to 2d system matrix
+    cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
+        grid->systemMatrix2D->values, 1, grid->systemMatrices[0]->values, 1);
+
+    // TODO: save mesh height in mesh
+    linalgcu_matrix_data_t meshHeight = 0.1f;
+
+    // create harmonic system matrices
+    linalgcu_matrix_data_t alpha = 0.0f;
+    for (linalgcu_size_t n = 1; n < grid->numHarmonics + 1; n++) {
+        // calc alpha
+        alpha = (2.0f * n * M_PI / meshHeight) * (2.0f * n * M_PI / meshHeight);
+
+        // init system matrix with 2d system matrix
+        cublasScopy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE,
+            grid->systemMatrix2D->values, 1, grid->systemMatrices[n]->values, 1);
+
+        // add alpha * residualMatrix
+        cublasSaxpy(handle, grid->systemMatrix2D->rows * LINALGCU_BLOCK_SIZE, &alpha,
+            grid->residualMatrix->values, 1, grid->systemMatrices[n]->values, 1);
     }
 
     return LINALGCU_SUCCESS;

@@ -8,11 +8,11 @@
 
 // create forward_solver
 linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t driveCount,
-    linalgcu_size_t measurmentCount, linalgcu_matrix_t drivePattern,
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_matrix_t sigma,
+    linalgcu_size_t driveCount, linalgcu_size_t measurmentCount, linalgcu_matrix_t drivePattern,
     linalgcu_matrix_t measurmentPattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
+    if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (sigma == NULL) ||
         (drivePattern == NULL) || (measurmentPattern == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
@@ -42,7 +42,7 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     solver->voltageCalculation = NULL;
 
     // create grid
-    error = fastect_grid_create(&solver->grid, mesh, electrodes, handle, stream);
+    error = fastect_grid_create(&solver->grid, mesh, electrodes, sigma, 0, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -167,16 +167,16 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // update system matrix
-    error  = fastect_grid_update_system_matrix(solver->grid, sigma, stream);
+    error  = fastect_grid_update_system_matrices(solver->grid, sigma, handle, stream);
 
     // solve for drive phi
     error |= fastect_conjugate_sparse_solver_solve(solver->driveSolver,
-        solver->grid->systemMatrix, solver->drivePhi, solver->driveF,
+        solver->grid->systemMatrices[0], solver->drivePhi, solver->driveF,
         steps, handle, stream);
 
     // solve for measurment phi
     error |= fastect_conjugate_sparse_solver_solve(solver->measurmentSolver,
-        solver->grid->systemMatrix, solver->measurmentPhi, solver->measurmentF,
+        solver->grid->systemMatrices[0], solver->measurmentPhi, solver->measurmentF,
         steps, handle, stream);
 
     // calc jacobian

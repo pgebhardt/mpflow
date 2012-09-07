@@ -69,10 +69,18 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
         return error;
     }
 
+    // init sigmaRef to sigma0
+    for (linalgcu_size_t i = 0; i < mesh->elementCount; i++) {
+        linalgcu_matrix_set_element(solver->sigmaRef, sigma0, i, 0);
+    }
+
+    // copy sigma to device
+    linalgcu_matrix_copy_to_device(solver->sigmaRef, LINALGCU_TRUE, stream);
+
     // create solver
     error  = fastect_forward_solver_create(&solver->forwardSolver, mesh, electrodes,
-        driveCount, measurmentCount, drivePattern, measurmentPattern, solver->cublasHandle,
-        stream);
+        solver->sigmaRef, driveCount, measurmentCount, drivePattern, measurmentPattern,
+        solver->cublasHandle, stream);
     error |= fastect_calibration_solver_create(&solver->calibrationSolver, solver->jacobian,
         regularizationFactor, solver->cublasHandle, stream);
     error |= fastect_inverse_solver_create(&solver->inverseSolver,
@@ -86,17 +94,6 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 
         return error;
     }
-
-    // init sigmaRef to sigma0
-    for (linalgcu_size_t i = 0; i < mesh->elementCount; i++) {
-        linalgcu_matrix_set_element(solver->sigmaRef, sigma0, i, 0);
-    }
-
-    // copy sigma to device
-    linalgcu_matrix_copy_to_device(solver->sigmaRef, LINALGCU_TRUE, stream);
-
-    // update forward system matrix
-    fastect_grid_update_system_matrix(solver->forwardSolver->grid, solver->sigmaRef, stream);
 
     // set solver pointer
     *solverPointer = solver;
