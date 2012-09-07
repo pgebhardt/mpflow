@@ -254,9 +254,10 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     }
 
     // calc jacobian
-    // TODO: sum jacobian
-    for (linalgcu_size_t n = 0; n < solver->grid->numHarmonics + 1; n++) {
-        error |= fastect_forward_solver_calc_jacobian(solver, jacobian, 0, stream);
+    error |= fastect_forward_solver_calc_jacobian(solver, jacobian, 0, LINALGCU_FALSE, stream);
+    for (linalgcu_size_t n = 1; n < solver->grid->numHarmonics + 1; n++) {
+        error |= fastect_forward_solver_calc_jacobian(solver, jacobian, 0, LINALGCU_TRUE,
+            stream);
     }
 
     // calc voltage
