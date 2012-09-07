@@ -16,9 +16,9 @@ typedef struct {
     linalgcu_sparse_matrix_t gradientMatrixSparse;
     linalgcu_sparse_matrix_t gradientMatrixTransposedSparse;
     linalgcu_matrix_t gradientMatrixTransposed;
+    linalgcu_matrix_t connectivityMatrix;
+    linalgcu_matrix_t elementalResidualMatrix;
     linalgcu_matrix_t area;
-    linalgcu_matrix_t connectivityMatrix[6];
-    linalgcu_matrix_t elementalResidualMatrix[6];
 } fastect_grid_s;
 typedef fastect_grid_s* fastect_grid_t;
 
@@ -35,6 +35,7 @@ linalgcu_error_t fastect_grid_init_system_matrix(fastect_grid_t grid, cublasHand
     cudaStream_t stream);
 
 // init residual matrix
+LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, cublasHandle_t handle,
     cudaStream_t stream);
 
