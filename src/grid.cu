@@ -78,7 +78,7 @@ linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, cublasHa
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // create intermediate matrices
-    linalgcu_matrix_t elementCount, connectivityMatrix, elementalResidualMatrix;
+    linalgcu_matrix_t elementCount, connectivityMatrix, elementalResidualMatrix, sigma;
     error  = linalgcu_matrix_create(&elementCount, grid->mesh->vertexCount,
         grid->mesh->vertexCount, stream);
     error |= linalgcu_matrix_create(&connectivityMatrix, grid->connectivityMatrix->rows,
@@ -86,11 +86,18 @@ linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, cublasHa
     error |= linalgcu_matrix_create(&elementalResidualMatrix,
         grid->elementalResidualMatrix->rows, elementCount->columns * LINALGCU_BLOCK_SIZE,
         stream);
+    error |= linalgcu_matrix_create(&sigma, grid->mesh->elementCount, 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         return error;
     }
+
+    // init sigma matrix
+    for (linalgcu_size_t i = 0; i < grid->mesh->elementCount; i++) {
+        linalgcu_matrix_set_element(sigma, 1.0f, i, 0);
+    }
+    linalgcu_matrix_copy_to_device(sigma, LINALGCU_FALSE, stream);
 
     // init connectivityMatrix
     for (linalgcu_size_t i = 0; i < grid->connectivityMatrix->rows; i++) {
@@ -168,10 +175,14 @@ linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, cublasHa
         grid->systemMatrix->columnIds,
         grid->connectivityMatrix->rows, grid->connectivityMatrix->rows);
 
+    // update residual matrix
+    error = fastect_grid_update_residual_matrix(grid, sigma, stream);
+
     // cleanup
     linalgcu_matrix_release(&elementCount);
     linalgcu_matrix_release(&connectivityMatrix);
     linalgcu_matrix_release(&elementalResidualMatrix);
+    linalgcu_matrix_release(&sigma);
 
     // save to file
     linalgcu_matrix_copy_to_host(grid->connectivityMatrix, LINALGCU_TRUE, stream);
@@ -244,11 +255,39 @@ linalgcu_error_t fastect_grid_update_system_matrix(fastect_grid_t grid,
 // update residual matrix kernel
 __global__ void update_residual_matrix_kernel(linalgcu_matrix_data_t* residualMatrixValues,
     linalgcu_column_id_t* residualMatrixColumnIds,
-    linalgcu_column_id_t* gradientMatrixTransposedColumnIds,
-    linalgcu_matrix_data_t* gradientMatrixTransposed,
-    linalgcu_matrix_data_t* integralMatrix, linalgcu_matrix_data_t* sigma,
-    linalgcu_size_t gradientMatrixTransposedRows) {
+    linalgcu_column_id_t* systemMatrixColumnIds,
+    linalgcu_matrix_data_t* connectivityMatrix,
+    linalgcu_matrix_data_t* elementalResidualMatrix,
+    linalgcu_matrix_data_t* sigma, linalgcu_size_t rows) {
+    // get ids
+    linalgcu_size_t row = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcu_size_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
+    // get columnId
+    linalgcu_column_id_t columnId = systemMatrixColumnIds[row * LINALGCU_BLOCK_SIZE + column];
+
+    // set column id
+    residualMatrixColumnIds[row * LINALGCU_BLOCK_SIZE + column] = columnId;
+
+    // check column id
+    if (columnId == -1) {
+        return;
+    }
+
+    // calc residual matrix element
+    linalgcu_matrix_data_t value = 0.0f;
+    linalgcu_column_id_t elementId = -1;
+    for (int k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
+        // get element id
+        elementId = (linalgcu_column_id_t)connectivityMatrix[row +
+            (column + k * LINALGCU_BLOCK_SIZE) * rows];
+
+        value += elementId != -1 ? elementalResidualMatrix[row +
+            (column + k * LINALGCU_BLOCK_SIZE) * rows] * sigma[elementId] : 0.0f;
+    }
+
+    // set residual matrix element
+    residualMatrixValues[row * LINALGCU_BLOCK_SIZE + column] = value;
 }
 
 // update residual matrix
@@ -263,6 +302,13 @@ linalgcu_error_t fastect_grid_update_residual_matrix(fastect_grid_t grid,
     // dimension
     dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
     dim3 blocks(grid->residualMatrix->rows / LINALGCU_BLOCK_SIZE, 1);
+
+    // execute kernel
+    update_residual_matrix_kernel<<<blocks, threads, 0, stream>>>(
+        grid->residualMatrix->values, grid->residualMatrix->columnIds,
+        grid->systemMatrix->columnIds, grid->connectivityMatrix->deviceData,
+        grid->elementalResidualMatrix->deviceData, sigma->deviceData,
+        grid->connectivityMatrix->rows);
 
     return LINALGCU_SUCCESS;
 }
