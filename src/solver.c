@@ -8,10 +8,11 @@
 
 // create solver
 linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t measurmentCount,
-    linalgcu_size_t driveCount, linalgcu_matrix_t measurmentPattern,
-    linalgcu_matrix_t drivePattern, linalgcu_matrix_data_t sigma0,
-    linalgcu_matrix_data_t regularizationFactor, cudaStream_t stream) {
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t numHarmonics,
+    linalgcu_size_t measurmentCount, linalgcu_size_t driveCount,
+    linalgcu_matrix_t measurmentPattern, linalgcu_matrix_t drivePattern,
+    linalgcu_matrix_data_t sigma0, linalgcu_matrix_data_t regularizationFactor,
+    cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
         (drivePattern == NULL) || (measurmentPattern == NULL)) {
@@ -79,8 +80,8 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 
     // create solver
     error  = fastect_forward_solver_create(&solver->forwardSolver, mesh, electrodes,
-        solver->sigmaRef, driveCount, measurmentCount, drivePattern, measurmentPattern,
-        solver->cublasHandle, stream);
+        solver->sigmaRef, numHarmonics, driveCount, measurmentCount, drivePattern,
+        measurmentPattern, solver->cublasHandle, stream);
     error |= fastect_calibration_solver_create(&solver->calibrationSolver, solver->jacobian,
         regularizationFactor, solver->cublasHandle, stream);
     error |= fastect_inverse_solver_create(&solver->inverseSolver,

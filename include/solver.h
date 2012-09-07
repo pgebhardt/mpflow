@@ -22,10 +22,11 @@ typedef fastect_solver_s* fastect_solver_t;
 
 // create solver
 linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t measurmentCount,
-    linalgcu_size_t driveCount, linalgcu_matrix_t measurmentPattern,
-    linalgcu_matrix_t drivePattern, linalgcu_matrix_data_t sigma0,
-    linalgcu_matrix_data_t regularizationFactor, cudaStream_t stream);
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t numHarmonics,
+    linalgcu_size_t measurmentCount, linalgcu_size_t driveCount,
+    linalgcu_matrix_t measurmentPattern, linalgcu_matrix_t drivePattern,
+    linalgcu_matrix_data_t sigma0, linalgcu_matrix_data_t regularizationFactor,
+    cudaStream_t stream);
 
 // release solver
 linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer);
