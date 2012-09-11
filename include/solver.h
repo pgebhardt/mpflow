@@ -11,8 +11,8 @@ typedef struct {
     fastect_forward_solver_t forwardSolver;
     fastect_calibration_solver_t calibrationSolver;
     fastect_inverse_solver_t inverseSolver;
-    linalgcu_matrix_t dSigma;
-    linalgcu_matrix_t sigmaRef;
+    linalgcu_matrix_t dGamma;
+    linalgcu_matrix_t gammaRef;
     linalgcu_matrix_t jacobian;
     linalgcu_matrix_t calculatedVoltage;
     linalgcu_matrix_t measuredVoltage;

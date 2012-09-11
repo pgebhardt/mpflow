@@ -10,7 +10,7 @@
 typedef struct {
     fastect_conjugate_solver_t conjugate_solver;
     linalgcu_matrix_t dVoltage;
-    linalgcu_matrix_t dSigma;
+    linalgcu_matrix_t dGamma;
     linalgcu_matrix_t zeros;
     linalgcu_matrix_t excitation;
     linalgcu_matrix_t systemMatrix;
@@ -40,7 +40,7 @@ linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_
 // calibration solving
 linalgcu_error_t fastect_calibration_solver_calibrate(fastect_calibration_solver_t solver,
     linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
-    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t sigma,
+    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t gamma,
     linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

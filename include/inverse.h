@@ -32,7 +32,7 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
 // inverse solving
 linalgcu_error_t fastect_inverse_solver_solve(fastect_inverse_solver_t solver,
     linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
-    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t sigma,
+    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t gamma,
     linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 #endif
