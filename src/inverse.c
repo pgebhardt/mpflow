@@ -113,17 +113,23 @@ linalgcu_error_t fastect_inverse_solver_calc_excitation(fastect_inverse_solver_t
     // calc dU = mv - cv
     dummy_matrix.deviceData = calculatedVoltage->deviceData;
     linalgcu_matrix_copy(solver->deltaVoltage, &dummy_matrix, LINALGCU_FALSE, stream);
-    linalgcu_matrix_scalar_multiply(solver->deltaVoltage, -1.0f, handle, stream);
+    linalgcu_matrix_scalar_multiply(solver->deltaVoltage, -1.0f, stream);
 
     dummy_matrix.deviceData = measuredVoltage->deviceData;
-    linalgcu_matrix_add(solver->deltaVoltage, &dummy_matrix, handle, stream);
+    linalgcu_matrix_add(solver->deltaVoltage, &dummy_matrix, stream);
 
     // calc excitation
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
         jacobian->deviceData, jacobian->rows, solver->deltaVoltage->deviceData, 1, &beta,
         solver->excitation->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
-        return LINALGCU_ERROR;
+        // try once again
+        if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
+            jacobian->deviceData, jacobian->rows, solver->deltaVoltage->deviceData, 1, &beta,
+            solver->excitation->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
+
+            return LINALGCU_ERROR;
+        }
     }
 
     return LINALGCU_SUCCESS;

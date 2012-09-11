@@ -56,6 +56,7 @@ linalgcu_error_t fastect_grid_update_residual_matrix(fastect_grid_t,
     linalgcu_matrix_t sigma, cudaStream_t stream);
 
 // init exitation matrix
-linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStream_t stream);
+linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
+    linalgcu_matrix_data_t current, cudaStream_t stream);
 
 #endif

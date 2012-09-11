@@ -46,7 +46,9 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     grid->numHarmonics = numHarmonics;
 
     // create matrices
-    error  = linalgcu_matrix_create(&grid->gradientMatrixTransposed,
+    error  = linalgcu_matrix_create(&grid->excitationMatrix,
+        grid->mesh->vertexCount, grid->electrodes->count, stream);
+    error |= linalgcu_matrix_create(&grid->gradientMatrixTransposed,
         grid->mesh->vertexCount, 2 * grid->mesh->elementCount, stream);
     error |= linalgcu_matrix_create(&grid->connectivityMatrix, grid->mesh->vertexCount,
         LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE, stream);
@@ -92,7 +94,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     error |= fastect_grid_init_residual_matrix(grid, sigma, stream);
 
     // init excitaion matrix
-    error |= fastect_grid_init_exitation_matrix(grid, stream);
+    error |= fastect_grid_init_exitation_matrix(grid, 1.0, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -430,7 +432,8 @@ linalgcu_matrix_data_t fastect_grid_integrate_basis(linalgcu_matrix_data_t* node
 }
 
 // init exitation matrix
-linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStream_t stream) {
+linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
+    linalgcu_matrix_data_t current, cudaStream_t stream) {
     // check input
     if (grid == NULL) {
         return LINALGCU_ERROR;
@@ -438,15 +441,6 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStr
 
     // error
     linalgcu_error_t error = LINALGCU_SUCCESS;
-
-    // create exitation_matrix
-    error = linalgcu_matrix_create(&grid->excitationMatrix,
-        grid->mesh->vertexCount, grid->electrodes->count, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return LINALGCU_ERROR;
-    }
 
     // fill exitation_matrix matrix
     linalgcu_matrix_data_t id[3];
@@ -479,8 +473,8 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid, cudaStr
             linalgcu_matrix_set_element(grid->excitationMatrix,
                 fastect_grid_integrate_basis(node, left, right,
                     &grid->electrodes->electrodesStart[j * 2],
-                    &grid->electrodes->electrodesEnd[j * 2]) / grid->electrodes->width,
-                    (linalgcu_size_t)id[1], j);
+                    &grid->electrodes->electrodesEnd[j * 2]) *
+                    current / grid->electrodes->width, (linalgcu_size_t)id[1], j);
         }
     }
 

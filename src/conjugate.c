@@ -104,8 +104,8 @@ linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solve
 
     // calc residuum r = f - A * x
     error  = linalgcu_matrix_multiply(solver->residuum, A, x, handle, stream);
-    error |= linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, handle, stream);
-    error |= linalgcu_matrix_add(solver->residuum, f, handle, stream);
+    error |= linalgcu_matrix_scalar_multiply(solver->residuum, -1.0, stream);
+    error |= linalgcu_matrix_add(solver->residuum, f, stream);
 
     // p = r
     error |= linalgcu_matrix_copy(solver->projection, solver->residuum, LINALGCU_FALSE, stream);

@@ -164,10 +164,10 @@ linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_
     // calc deltaVoltage = mv - cv
     dummy_matrix.deviceData = calculatedVoltage->deviceData;
     linalgcu_matrix_copy(solver->dVoltage, &dummy_matrix, LINALGCU_FALSE, stream);
-    linalgcu_matrix_scalar_multiply(solver->dVoltage, -1.0f, handle, stream);
+    linalgcu_matrix_scalar_multiply(solver->dVoltage, -1.0f, stream);
 
     dummy_matrix.deviceData = measuredVoltage->deviceData;
-    linalgcu_matrix_add(solver->dVoltage, &dummy_matrix, handle, stream);
+    linalgcu_matrix_add(solver->dVoltage, &dummy_matrix, stream);
 
     // calc excitation
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
@@ -209,7 +209,7 @@ linalgcu_error_t fastect_calibration_solver_calibrate(fastect_calibration_solver
         solver->systemMatrix, solver->dSigma, solver->excitation, steps, handle, stream);
 
     // add to sigma
-    error |= linalgcu_matrix_add(sigma, solver->dSigma, handle, stream);
+    error |= linalgcu_matrix_add(sigma, solver->dSigma, stream);
 
     return error;
 }
