@@ -3,16 +3,8 @@
 # Copyright (C) 2012  Patrik Gebhardt
 # Contact: patrik.gebhardt@rub.de
 
-# os name
-UNAME := $(shell uname)
-
 # cuda paths
-ifeq ($(UNAME), Linux)
 CUDA_HOME = /usr/local/cuda
-endif
-ifeq ($(UNAME), Darwin)
-CUDA_HOME = /usr/local/CUDA-5.0
-endif
 
 # Directories
 SRC = src
