@@ -14,6 +14,7 @@ typedef struct {
     linalgcu_matrix_t zeros;
     linalgcu_matrix_t excitation;
     linalgcu_matrix_t systemMatrix;
+    linalgcu_matrix_t jacobianSquare;
     linalgcu_matrix_t regularization;
     linalgcu_matrix_data_t regularizationFactor;
 } fastect_calibration_solver_s;

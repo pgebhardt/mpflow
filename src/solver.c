@@ -78,7 +78,7 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     error |= fastect_calibration_solver_create(&solver->calibrationSolver, solver->jacobian,
         regularizationFactor, solver->cublasHandle, stream);
     error |= fastect_inverse_solver_create(&solver->inverseSolver,
-        solver->calibrationSolver->systemMatrix, solver->jacobian, solver->cublasHandle,
+        solver->calibrationSolver->jacobianSquare, solver->jacobian, solver->cublasHandle,
         stream);
 
     // check success

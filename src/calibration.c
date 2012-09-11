@@ -36,6 +36,7 @@ linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t*
     solver->zeros = NULL;
     solver->excitation = NULL;
     solver->systemMatrix = NULL;
+    solver->jacobianSquare = NULL;
     solver->regularization = NULL;
     solver->regularizationFactor = regularizationFactor;
 
@@ -45,6 +46,8 @@ linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t*
     error |= linalgcu_matrix_create(&solver->zeros, jacobian->columns, 1, stream);
     error |= linalgcu_matrix_create(&solver->excitation, jacobian->columns, 1, stream);
     error |= linalgcu_matrix_create(&solver->systemMatrix, jacobian->columns,
+        jacobian->columns, stream);
+    error |= linalgcu_matrix_create(&solver->jacobianSquare, jacobian->columns,
         jacobian->columns, stream);
     error |= linalgcu_matrix_unity(&solver->regularization, jacobian->columns, stream);
 
@@ -92,6 +95,7 @@ linalgcu_error_t fastect_calibration_solver_release(
     linalgcu_matrix_release(&solver->zeros);
     linalgcu_matrix_release(&solver->excitation);
     linalgcu_matrix_release(&solver->systemMatrix);
+    linalgcu_matrix_release(&solver->jacobianSquare);
     linalgcu_matrix_release(&solver->regularization);
 
     // free struct
@@ -112,37 +116,38 @@ linalgcu_error_t fastect_calibration_solver_calc_system_matrix(
         return LINALGCU_ERROR;
     }
 
+    // error
+    linalgcu_error_t error = LINALGCU_SUCCESS;
+
     // cublas coeficients
     linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, solver->systemMatrix->rows,
-        solver->systemMatrix->columns, jacobian->rows, &alpha, jacobian->deviceData,
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, solver->jacobianSquare->rows,
+        solver->jacobianSquare->columns, jacobian->rows, &alpha, jacobian->deviceData,
         jacobian->rows, jacobian->deviceData, jacobian->rows, &beta,
-        solver->systemMatrix->deviceData, solver->systemMatrix->rows) != CUBLAS_STATUS_SUCCESS) {
+        solver->jacobianSquare->deviceData, solver->jacobianSquare->rows)
+        != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
     // regularization: L = Jt * J
     // calc regularization
-    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->systemMatrix->columns,
-        solver->systemMatrix->rows, solver->systemMatrix->columns, &alpha,
-        solver->systemMatrix->deviceData, solver->systemMatrix->rows,
-        solver->systemMatrix->deviceData, solver->systemMatrix->rows,
+    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->jacobianSquare->columns,
+        solver->jacobianSquare->rows, solver->jacobianSquare->columns, &alpha,
+        solver->jacobianSquare->deviceData, solver->jacobianSquare->rows,
+        solver->jacobianSquare->deviceData, solver->jacobianSquare->rows,
         &beta, solver->regularization->deviceData, solver->regularization->rows)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
     // calc systemMatrix
-    if (cublasSaxpy(handle, solver->systemMatrix->rows * solver->systemMatrix->columns,
-        &solver->regularizationFactor, solver->regularization->deviceData, 1,
-        solver->systemMatrix->deviceData, 1)
-        != CUBLAS_STATUS_SUCCESS) {
-        return LINALGCU_ERROR;
-    }
+    error  = linalgcu_matrix_copy(solver->systemMatrix, solver->jacobianSquare, LINALGCU_FALSE,
+        stream);
+    error |= linalgcu_matrix_add(solver->systemMatrix, solver->regularization, stream);
 
-    return LINALGCU_SUCCESS;
+    return error;
 }
 
 // calc excitation
