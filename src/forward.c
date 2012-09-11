@@ -8,12 +8,12 @@
 
 // create forward_solver
 linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_matrix_t gamma,
+    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_matrix_data_t sigmaRef,
     linalgcu_size_t numHarmonics, linalgcu_size_t driveCount, linalgcu_size_t measurmentCount,
     linalgcu_matrix_t drivePattern, linalgcu_matrix_t measurmentPattern, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
-    if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (gamma == NULL) ||
+    if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
         (drivePattern == NULL) || (measurmentPattern == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
@@ -43,8 +43,8 @@ linalgcu_error_t fastect_forward_solver_create(fastect_forward_solver_t* solverP
     solver->voltageCalculation = NULL;
 
     // create grid
-    error = fastect_grid_create(&solver->grid, mesh, electrodes, gamma, numHarmonics, handle,
-        stream);
+    error = fastect_grid_create(&solver->grid, mesh, electrodes, sigmaRef, numHarmonics,
+        handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -217,8 +217,9 @@ linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solver
 
 // forward solving
 linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
-    linalgcu_matrix_t gamma, linalgcu_matrix_t jacobian, linalgcu_matrix_t voltage,
-    linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream) {
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef,
+    linalgcu_matrix_t voltage, linalgcu_size_t steps, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (gamma == NULL) || (jacobian == NULL) || (voltage == NULL) ||
         (handle == NULL)) {
@@ -229,7 +230,7 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // update system matrix
-    error  = fastect_grid_update_system_matrices(solver->grid, gamma, handle, stream);
+    error  = fastect_grid_update_system_matrices(solver->grid, gamma, 50E-3f, handle, stream);
 
     // solve for ground mode
     // solve for drive phi
@@ -256,10 +257,10 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     }
 
     // calc jacobian
-    error |= fastect_forward_solver_calc_jacobian(solver, jacobian, gamma, 0,
+    error |= fastect_forward_solver_calc_jacobian(solver, jacobian, gamma, sigmaRef, 0,
         LINALGCU_FALSE, stream);
     for (linalgcu_size_t n = 1; n < solver->grid->numHarmonics + 1; n++) {
-        error |= fastect_forward_solver_calc_jacobian(solver, jacobian, gamma, n,
+        error |= fastect_forward_solver_calc_jacobian(solver, jacobian, gamma, sigmaRef, n,
             LINALGCU_TRUE, stream);
     }
 

@@ -68,7 +68,7 @@ __global__ void reduce_residual_matrices(linalgcu_matrix_data_t* connectivityMat
 // init residual matrix
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, cudaStream_t stream) {
+    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL)) {
         return LINALGCU_ERROR;
@@ -169,7 +169,7 @@ linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid,
         grid->connectivityMatrix->rows, grid->connectivityMatrix->rows);
 
     // update residual matrix
-    error = fastect_grid_update_residual_matrix(grid, gamma, stream);
+    error = fastect_grid_update_residual_matrix(grid, gamma, sigmaRef, stream);
 
     // cleanup
     linalgcu_matrix_release(&elementCount);
@@ -185,7 +185,7 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* systemMatrix
     linalgcu_matrix_data_t* gradientMatrixTransposedValues,
     linalgcu_column_id_t* gradientMatrixTransposedColumnIds,
     linalgcu_matrix_data_t* gradientMatrixTransposed,
-    linalgcu_matrix_data_t* gamma,
+    linalgcu_matrix_data_t* gamma, linalgcu_matrix_data_t sigmaRef,
     linalgcu_matrix_data_t* area,
     linalgcu_size_t gradientMatrixTransposedRows) {
     // get ids
@@ -203,7 +203,7 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* systemMatrix
 
         element += id != -1 && j != -1 ?
             gradientMatrixTransposedValues[i * LINALGCU_BLOCK_SIZE + k] *
-            50E-3f * exp10f(gamma[id / 2] / 10.0f) * area[id / 2] *
+            sigmaRef * exp10f(gamma[id / 2] / 10.0f) * area[id / 2] *
             gradientMatrixTransposed[j + id * gradientMatrixTransposedRows] :
             0.0f;
     }
@@ -213,10 +213,10 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* systemMatrix
         element;
 }
 
-// update system matrix
+// update system matrix 2D
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_update_2D_system_matrix(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, cudaStream_t stream) {
+    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL)) {
         return LINALGCU_ERROR;
@@ -233,7 +233,7 @@ linalgcu_error_t fastect_grid_update_2D_system_matrix(fastect_grid_t grid,
         grid->gradientMatrixTransposedSparse->values,
         grid->gradientMatrixTransposedSparse->columnIds,
         grid->gradientMatrixTransposed->deviceData,
-        gamma->deviceData,
+        gamma->deviceData, sigmaRef,
         grid->area->deviceData,
         grid->gradientMatrixTransposed->rows);
 
@@ -246,7 +246,8 @@ __global__ void update_residual_matrix_kernel(linalgcu_matrix_data_t* residualMa
     linalgcu_column_id_t* systemMatrixColumnIds,
     linalgcu_matrix_data_t* connectivityMatrix,
     linalgcu_matrix_data_t* elementalResidualMatrix,
-    linalgcu_matrix_data_t* gamma, linalgcu_size_t rows) {
+    linalgcu_matrix_data_t* gamma, linalgcu_matrix_data_t sigmaRef,
+    linalgcu_size_t rows) {
     // get ids
     linalgcu_size_t row = blockIdx.x * blockDim.x + threadIdx.x;
     linalgcu_size_t column = blockIdx.y * blockDim.y + threadIdx.y;
@@ -272,7 +273,7 @@ __global__ void update_residual_matrix_kernel(linalgcu_matrix_data_t* residualMa
 
         value += elementId != -1 ? elementalResidualMatrix[row +
             (column + k * LINALGCU_BLOCK_SIZE) * rows] *
-            50E-3f * exp10f(gamma[elementId] / 10.0f) : 0.0f;
+            sigmaRef * exp10f(gamma[elementId] / 10.0f) : 0.0f;
     }
 
     // set residual matrix element
@@ -282,7 +283,7 @@ __global__ void update_residual_matrix_kernel(linalgcu_matrix_data_t* residualMa
 // update residual matrix
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_update_residual_matrix(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, cudaStream_t stream) {
+    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL)) {
         return LINALGCU_ERROR;
@@ -297,7 +298,7 @@ linalgcu_error_t fastect_grid_update_residual_matrix(fastect_grid_t grid,
         grid->residualMatrix->values, grid->residualMatrix->columnIds,
         grid->systemMatrix2D->columnIds, grid->connectivityMatrix->deviceData,
         grid->elementalResidualMatrix->deviceData, gamma->deviceData,
-        grid->connectivityMatrix->rows);
+        sigmaRef, grid->connectivityMatrix->rows);
 
     return LINALGCU_SUCCESS;
 }

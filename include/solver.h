@@ -12,7 +12,8 @@ typedef struct {
     fastect_calibration_solver_t calibrationSolver;
     fastect_inverse_solver_t inverseSolver;
     linalgcu_matrix_t dGamma;
-    linalgcu_matrix_t gammaRef;
+    linalgcu_matrix_t gamma;
+    linalgcu_matrix_data_t sigmaRef;
     linalgcu_matrix_t jacobian;
     linalgcu_matrix_t calculatedVoltage;
     linalgcu_matrix_t measuredVoltage;
@@ -25,7 +26,7 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t numHarmonics,
     linalgcu_size_t measurmentCount, linalgcu_size_t driveCount,
     linalgcu_matrix_t measurmentPattern, linalgcu_matrix_t drivePattern,
-    linalgcu_matrix_data_t sigma0, linalgcu_matrix_data_t regularizationFactor,
+    linalgcu_matrix_data_t sigmaRef, linalgcu_matrix_data_t regularizationFactor,
     cudaStream_t stream);
 
 // release solver
