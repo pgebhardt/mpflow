@@ -230,7 +230,7 @@ linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
     linalgcu_error_t error = LINALGCU_SUCCESS;
 
     // update system matrix
-    error  = fastect_grid_update_system_matrices(solver->grid, gamma, 50E-3f, handle, stream);
+    error  = fastect_grid_update_system_matrices(solver->grid, gamma, sigmaRef, handle, stream);
 
     // solve for ground mode
     // solve for drive phi
