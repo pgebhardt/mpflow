@@ -143,9 +143,11 @@ linalgcu_error_t fastect_calibration_solver_calc_system_matrix(
     }
 
     // calc systemMatrix
-    error  = linalgcu_matrix_copy(solver->systemMatrix, solver->jacobianSquare, LINALGCU_FALSE,
+    error  = linalgcu_matrix_copy(solver->systemMatrix, solver->regularization, LINALGCU_FALSE,
         stream);
-    error |= linalgcu_matrix_add(solver->systemMatrix, solver->regularization, stream);
+    error |= linalgcu_matrix_scalar_multiply(solver->systemMatrix, solver->regularizationFactor,
+        stream);
+    error |= linalgcu_matrix_add(solver->systemMatrix, solver->jacobianSquare, stream);
 
     return error;
 }
