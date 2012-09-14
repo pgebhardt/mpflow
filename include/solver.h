@@ -13,7 +13,6 @@ typedef struct {
     fastect_inverse_solver_t inverseSolver;
     linalgcu_matrix_t dGamma;
     linalgcu_matrix_t gamma;
-    linalgcu_matrix_data_t sigmaRef;
     linalgcu_matrix_t jacobian;
     linalgcu_matrix_t calculatedVoltage;
     linalgcu_matrix_t measuredVoltage;

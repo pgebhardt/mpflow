@@ -10,6 +10,7 @@
 typedef struct {
     fastect_mesh_t mesh;
     fastect_electrodes_t electrodes;
+    linalgcu_matrix_data_t sigmaRef;
     linalgcu_sparse_matrix_t* systemMatrices;
     linalgcu_sparse_matrix_t systemMatrix2D;
     linalgcu_sparse_matrix_t residualMatrix;
@@ -39,22 +40,21 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
 // init residual matrix
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid, linalgcu_matrix_t gamma,
-    linalgcu_matrix_data_t sigmaRef, cudaStream_t stream);
+    cudaStream_t stream);
 
 // update system matrix
 linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cublasHandle_t handle,
-    cudaStream_t stream);
+    linalgcu_matrix_t gamma, cublasHandle_t handle, cudaStream_t stream);
 
 // update system matrix 2D
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_update_2D_system_matrix(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream);
+    linalgcu_matrix_t gamma, cudaStream_t stream);
 
 // update residual matrix
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_update_residual_matrix(fastect_grid_t,
-    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream);
+    linalgcu_matrix_t gamma, cudaStream_t stream);
 
 // init exitation matrix
 linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,

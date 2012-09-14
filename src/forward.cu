@@ -83,8 +83,8 @@ __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
 // calc jacobian
 extern "C"
 linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef,
-    linalgcu_size_t harmonic, linalgcu_bool_t additiv, cudaStream_t stream) {
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_size_t harmonic,
+    linalgcu_bool_t additiv, cudaStream_t stream) {
     if ((solver == NULL) || (jacobian == NULL) || (gamma == NULL) ||
         (harmonic > solver->grid->numHarmonics)) {
         return LINALGCU_ERROR;
@@ -101,7 +101,7 @@ linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t s
         solver->measurmentPhi[harmonic]->deviceData,
         solver->grid->gradientMatrixSparse->values,
         solver->grid->gradientMatrixSparse->columnIds,
-        solver->grid->area->deviceData, gamma->deviceData, sigmaRef,
+        solver->grid->area->deviceData, gamma->deviceData, solver->grid->sigmaRef,
         jacobian->rows, solver->drivePhi[harmonic]->rows,
         solver->measurmentPhi[harmonic]->columns, solver->grid->mesh->elementCount,
         additiv);

@@ -32,13 +32,12 @@ linalgcu_error_t fastect_forward_solver_release(fastect_forward_solver_t* solver
 // calc jacobian
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef,
-    linalgcu_size_t harmonic, linalgcu_bool_t additiv, cudaStream_t stream);
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_size_t harmonic,
+    linalgcu_bool_t additiv, cudaStream_t stream);
 
 // forward solving
 linalgcu_error_t fastect_forward_solver_solve(fastect_forward_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef,
-    linalgcu_matrix_t voltage, linalgcu_size_t steps, cublasHandle_t handle,
-    cudaStream_t stream);
+    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_matrix_t voltage,
+    linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

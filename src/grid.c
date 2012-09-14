@@ -33,6 +33,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     // init struct
     grid->mesh = mesh;
     grid->electrodes = electrodes;
+    grid->sigmaRef = sigmaRef;
     grid->systemMatrices = NULL;
     grid->systemMatrix2D = NULL;
     grid->residualMatrix = NULL;
@@ -102,7 +103,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     error  = fastect_grid_init_2D_system_matrix(grid, handle, stream);
 
     // init residual matrix
-    error |= fastect_grid_init_residual_matrix(grid, gamma, sigmaRef, stream);
+    error |= fastect_grid_init_residual_matrix(grid, gamma, stream);
 
     // init excitaion matrix
     error |= fastect_grid_init_exitation_matrix(grid, stream);
@@ -117,7 +118,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     }
 
     // update system matrices
-    error = fastect_grid_update_system_matrices(grid, gamma, sigmaRef, handle, stream);
+    error = fastect_grid_update_system_matrices(grid, gamma, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -310,8 +311,7 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
 
 // update system matrix
 linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cublasHandle_t handle,
-    cudaStream_t stream) {
+    linalgcu_matrix_t gamma, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
@@ -322,10 +322,10 @@ linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
     cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
 
     // update 2d systemMatrix
-    error  = fastect_grid_update_2D_system_matrix(grid, gamma, sigmaRef, stream);
+    error  = fastect_grid_update_2D_system_matrix(grid, gamma, stream);
 
     // update residual matrix
-    error |= fastect_grid_update_residual_matrix(grid, gamma, sigmaRef, stream);
+    error |= fastect_grid_update_residual_matrix(grid, gamma, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {

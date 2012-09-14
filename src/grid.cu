@@ -68,7 +68,7 @@ __global__ void reduce_residual_matrices(linalgcu_matrix_data_t* connectivityMat
 // init residual matrix
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream) {
+    linalgcu_matrix_t gamma, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL)) {
         return LINALGCU_ERROR;
@@ -169,7 +169,7 @@ linalgcu_error_t fastect_grid_init_residual_matrix(fastect_grid_t grid,
         grid->connectivityMatrix->rows, grid->connectivityMatrix->rows);
 
     // update residual matrix
-    error = fastect_grid_update_residual_matrix(grid, gamma, sigmaRef, stream);
+    error = fastect_grid_update_residual_matrix(grid, gamma, stream);
 
     // cleanup
     linalgcu_matrix_release(&elementCount);
@@ -216,7 +216,7 @@ __global__ void update_system_matrix_kernel(linalgcu_matrix_data_t* systemMatrix
 // update system matrix 2D
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_update_2D_system_matrix(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream) {
+    linalgcu_matrix_t gamma, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL)) {
         return LINALGCU_ERROR;
@@ -233,7 +233,7 @@ linalgcu_error_t fastect_grid_update_2D_system_matrix(fastect_grid_t grid,
         grid->gradientMatrixTransposedSparse->values,
         grid->gradientMatrixTransposedSparse->columnIds,
         grid->gradientMatrixTransposed->deviceData,
-        gamma->deviceData, sigmaRef,
+        gamma->deviceData, grid->sigmaRef,
         grid->area->deviceData,
         grid->gradientMatrixTransposed->rows);
 
@@ -283,7 +283,7 @@ __global__ void update_residual_matrix_kernel(linalgcu_matrix_data_t* residualMa
 // update residual matrix
 LINALGCU_EXTERN_C
 linalgcu_error_t fastect_grid_update_residual_matrix(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, linalgcu_matrix_data_t sigmaRef, cudaStream_t stream) {
+    linalgcu_matrix_t gamma, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL)) {
         return LINALGCU_ERROR;
@@ -298,7 +298,7 @@ linalgcu_error_t fastect_grid_update_residual_matrix(fastect_grid_t grid,
         grid->residualMatrix->values, grid->residualMatrix->columnIds,
         grid->systemMatrix2D->columnIds, grid->connectivityMatrix->deviceData,
         grid->elementalResidualMatrix->deviceData, gamma->deviceData,
-        sigmaRef, grid->connectivityMatrix->rows);
+        grid->sigmaRef, grid->connectivityMatrix->rows);
 
     return LINALGCU_SUCCESS;
 }
