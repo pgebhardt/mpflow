@@ -131,21 +131,20 @@ linalgcu_error_t fastect_calibration_solver_calc_system_matrix(
         return LINALGCU_ERROR;
     }
 
-    // regularization: L = Jt * J
-    // calc regularization
+    // regularization: reg = lamda * (Jt * J * Jt * J) + diag(Jt * J)
     if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->jacobianSquare->columns,
-        solver->jacobianSquare->rows, solver->jacobianSquare->columns, &alpha,
+        solver->jacobianSquare->rows, solver->jacobianSquare->columns, &solver->regularizationFactor,
         solver->jacobianSquare->deviceData, solver->jacobianSquare->rows,
         solver->jacobianSquare->deviceData, solver->jacobianSquare->rows,
-        &beta, solver->regularization->deviceData, solver->regularization->rows)
+        &alpha, solver->regularization->deviceData, solver->regularization->rows)
         != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
+    error  = linalgcu_matrix_diagonal(solver->regularization, solver->jacobianSquare, stream);
+
     // calc systemMatrix
     error |= linalgcu_matrix_copy(solver->systemMatrix, solver->regularization, LINALGCU_FALSE,
-        stream);
-    error |= linalgcu_matrix_scalar_multiply(solver->systemMatrix, solver->regularizationFactor,
         stream);
     error |= linalgcu_matrix_add(solver->systemMatrix, solver->jacobianSquare, stream);
 
