@@ -8,20 +8,20 @@
 
 // electrodes struct
 typedef struct {
-    linalgcu_size_t count;
-    linalgcu_matrix_data_t* electrodesStart;
-    linalgcu_matrix_data_t* electrodesEnd;
-    linalgcu_matrix_data_t width;
-    linalgcu_matrix_data_t height;
-} fastect_electrodes_s;
-typedef fastect_electrodes_s* fastect_electrodes_t;
+    linalgcuSize_t count;
+    linalgcuMatrixData_t* electrodesStart;
+    linalgcuMatrixData_t* electrodesEnd;
+    linalgcuMatrixData_t width;
+    linalgcuMatrixData_t height;
+} fastectElectrodes_s;
+typedef fastectElectrodes_s* fastectElectrodes_t;
 
 // create electrodes
-linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
-    linalgcu_size_t count, linalgcu_matrix_data_t width, linalgcu_matrix_data_t height,
-    linalgcu_matrix_data_t meshRadius);
+linalgcuError_t fastect_electrodes_create(fastectElectrodes_t* electrodesPointer,
+    linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
+    linalgcuMatrixData_t meshRadius);
 
 // release electrodes
-linalgcu_error_t fastect_electrodes_release(fastect_electrodes_t* electrodesPointer);
+linalgcuError_t fastect_electrodes_release(fastectElectrodes_t* electrodesPointer);
 
 #endif

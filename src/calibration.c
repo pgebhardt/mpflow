@@ -8,8 +8,8 @@
 #include "../include/fastect.h"
 
 // create calibration_solver
-linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t* solverPointer,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t regularizationFactor,
+linalgcuError_t fastect_calibration_solver_create(fastectCalibrationSolver_t* solverPointer,
+    linalgcuMatrix_t jacobian, linalgcuMatrixData_t regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (jacobian == NULL) || (handle == NULL)) {
@@ -17,13 +17,13 @@ linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t*
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // init solver pointer
     *solverPointer = NULL;
 
     // create struct
-    fastect_calibration_solver_t solver = malloc(sizeof(fastect_calibration_solver_s));
+    fastectCalibrationSolver_t solver = malloc(sizeof(fastectCalibrationSolver_s));
 
     // check success
     if (solver == NULL) {
@@ -78,15 +78,15 @@ linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t*
 }
 
 // release solver
-linalgcu_error_t fastect_calibration_solver_release(
-    fastect_calibration_solver_t* solverPointer) {
+linalgcuError_t fastect_calibration_solver_release(
+    fastectCalibrationSolver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fastect_calibration_solver_t solver = *solverPointer;
+    fastectCalibrationSolver_t solver = *solverPointer;
 
     // cleanup
     fastect_conjugate_solver_release(&solver->conjugate_solver);
@@ -108,8 +108,8 @@ linalgcu_error_t fastect_calibration_solver_release(
 }
 
 // calc system matrix
-linalgcu_error_t fastect_calibration_solver_calc_system_matrix(
-    fastect_calibration_solver_t solver, linalgcu_matrix_t jacobian, cublasHandle_t handle,
+linalgcuError_t fastect_calibration_solver_calc_system_matrix(
+    fastectCalibrationSolver_t solver, linalgcuMatrix_t jacobian, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (jacobian == NULL) || (handle == NULL)) {
@@ -117,10 +117,10 @@ linalgcu_error_t fastect_calibration_solver_calc_system_matrix(
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // cublas coeficients
-    linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
+    linalgcuMatrixData_t alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, solver->jacobianSquare->rows,
@@ -152,9 +152,9 @@ linalgcu_error_t fastect_calibration_solver_calc_system_matrix(
 }
 
 // calc excitation
-linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
-    linalgcu_matrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream) {
+linalgcuError_t fastect_calibration_solver_calc_excitation(fastectCalibrationSolver_t solver,
+    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+    linalgcuMatrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (jacobian == NULL) || (calculatedVoltage == NULL) ||
         (measuredVoltage == NULL) || (handle == NULL)) {
@@ -162,7 +162,7 @@ linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_
     }
 
     // dummy matrix to turn matrix to column vector
-    linalgcu_matrix_s dummy_matrix;
+    linalgcuMatrix_s dummy_matrix;
     dummy_matrix.rows = solver->dVoltage->rows;
     dummy_matrix.columns = solver->dVoltage->columns;
     dummy_matrix.hostData = NULL;
@@ -176,7 +176,7 @@ linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_
     linalgcu_matrix_add(solver->dVoltage, &dummy_matrix, stream);
 
     // calc excitation
-    linalgcu_matrix_data_t alpha = 1.0f, beta = 0.0f;
+    linalgcuMatrixData_t alpha = 1.0f, beta = 0.0f;
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
         jacobian->deviceData, jacobian->rows, solver->dVoltage->deviceData, 1, &beta,
         solver->excitation->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
@@ -187,10 +187,10 @@ linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_
 }
 
 // calibration
-linalgcu_error_t fastect_calibration_solver_calibrate(fastect_calibration_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
-    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t gamma,
-    linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream) {
+linalgcuError_t fastect_calibration_solver_calibrate(fastectCalibrationSolver_t solver,
+    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+    linalgcuMatrix_t measuredVoltage, linalgcuMatrix_t gamma,
+    linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (jacobian == NULL) || (calculatedVoltage == NULL) ||
         (measuredVoltage == NULL) || (gamma == NULL) || (handle == NULL)) {
@@ -198,7 +198,7 @@ linalgcu_error_t fastect_calibration_solver_calibrate(fastect_calibration_solver
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // reset dGamma
     error  = linalgcu_matrix_copy(solver->dGamma, solver->zeros, LINALGCU_FALSE, stream);

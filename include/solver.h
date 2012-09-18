@@ -8,36 +8,36 @@
 
 // solver struct
 typedef struct {
-    fastect_forward_solver_t forwardSolver;
-    fastect_calibration_solver_t calibrationSolver;
-    fastect_inverse_solver_t inverseSolver;
-    linalgcu_matrix_t dGamma;
-    linalgcu_matrix_t gamma;
-    linalgcu_matrix_t jacobian;
-    linalgcu_matrix_t calculatedVoltage;
-    linalgcu_matrix_t measuredVoltage;
+    fastectForwardSolver_t forwardSolver;
+    fastectCalibrationSolver_t calibrationSolver;
+    fastectInverseSolver_t inverseSolver;
+    linalgcuMatrix_t dGamma;
+    linalgcuMatrix_t gamma;
+    linalgcuMatrix_t jacobian;
+    linalgcuMatrix_t calculatedVoltage;
+    linalgcuMatrix_t measuredVoltage;
     cublasHandle_t cublasHandle;
-} fastect_solver_s;
-typedef fastect_solver_s* fastect_solver_t;
+} fastectSolver_s;
+typedef fastectSolver_s* fastectSolver_t;
 
 // create solver
-linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t numHarmonics,
-    linalgcu_size_t measurmentCount, linalgcu_size_t driveCount,
-    linalgcu_matrix_t measurmentPattern, linalgcu_matrix_t drivePattern,
-    linalgcu_matrix_data_t sigmaRef, linalgcu_matrix_data_t regularizationFactor,
+linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
+    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuSize_t numHarmonics,
+    linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
+    linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
+    linalgcuMatrixData_t sigmaRef, linalgcuMatrixData_t regularizationFactor,
     cudaStream_t stream);
 
 // release solver
-linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer);
+linalgcuError_t fastect_solver_release(fastectSolver_t* solverPointer);
 
 // pre solve for accurate initial jacobian
-linalgcu_error_t fastect_solver_pre_solve(fastect_solver_t solver, cudaStream_t stream);
+linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cudaStream_t stream);
 
 // calibrate
-linalgcu_error_t fastect_solver_calibrate(fastect_solver_t solver, cudaStream_t stream);
+linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cudaStream_t stream);
 
 // solving
-linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cudaStream_t stream);
+linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cudaStream_t stream);
 
 #endif

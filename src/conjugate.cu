@@ -10,21 +10,21 @@
 #include "../include/fastect.h"
 
 // update vector
-__global__ void update_vector_kernel(linalgcu_matrix_data_t* result,
-    linalgcu_matrix_data_t* x1, linalgcu_matrix_data_t sign,
-    linalgcu_matrix_data_t* x2, linalgcu_matrix_data_t* r1, linalgcu_matrix_data_t* r2) {
+__global__ void update_vector_kernel(linalgcuMatrixData_t* result,
+    linalgcuMatrixData_t* x1, linalgcuMatrixData_t sign,
+    linalgcuMatrixData_t* x2, linalgcuMatrixData_t* r1, linalgcuMatrixData_t* r2) {
     // get id
-    linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuSize_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
     // calc value
     result[i] = r2[0] != 0.0f ? x1[i] + sign * x2[i] * r1[0] / r2[0] : 0.0f;
 }
 
 // update vector
-extern "C"
-linalgcu_error_t fastect_conjugate_update_vector(linalgcu_matrix_t result,
-    linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
-    linalgcu_matrix_t r1, linalgcu_matrix_t r2, cudaStream_t stream) {
+LINALGCU_EXTERN_C
+linalgcuError_t fastect_conjugate_update_vector(linalgcuMatrix_t result,
+    linalgcuMatrix_t x1, linalgcuMatrixData_t sign, linalgcuMatrix_t x2,
+    linalgcuMatrix_t r1, linalgcuMatrix_t r2, cudaStream_t stream) {
     // check input
     if ((result == NULL) || (x1 == NULL) || (x2 == NULL) || (r1 == NULL) || (r2 == NULL)) {
         return LINALGCU_ERROR;
@@ -39,18 +39,18 @@ linalgcu_error_t fastect_conjugate_update_vector(linalgcu_matrix_t result,
 }
 
 // gemv kernel
-__global__ void gemv_kernel(linalgcu_matrix_data_t* A, linalgcu_matrix_data_t* x,
-    linalgcu_matrix_data_t* y, linalgcu_size_t rows) {
+__global__ void gemv_kernel(linalgcuMatrixData_t* A, linalgcuMatrixData_t* x,
+    linalgcuMatrixData_t* y, linalgcuSize_t rows) {
     // column
-    linalgcu_size_t col0 = blockIdx.y * LINALGCU_BLOCK_SIZE;
+    linalgcuSize_t col0 = blockIdx.y * LINALGCU_BLOCK_SIZE;
 
     // Load one slice of x in work
-    __shared__ linalgcu_matrix_data_t work[LINALGCU_BLOCK_SIZE];
+    __shared__ linalgcuMatrixData_t work[LINALGCU_BLOCK_SIZE];
     work[threadIdx.x] = x[col0 + threadIdx.x];
     __syncthreads();
 
     // compute partial dot product
-    linalgcu_matrix_data_t sum = 0.0f;
+    linalgcuMatrixData_t sum = 0.0f;
     for (int k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
         sum += A[(blockIdx.x * blockDim.x + threadIdx.x) + (col0 + k) * rows] * work[k];
     }
@@ -60,12 +60,12 @@ __global__ void gemv_kernel(linalgcu_matrix_data_t* A, linalgcu_matrix_data_t* x
 }
 
 // row reduce kernel
-__global__ void reduce_row_kernel(linalgcu_matrix_data_t* vector, linalgcu_size_t rows) {
+__global__ void reduce_row_kernel(linalgcuMatrixData_t* vector, linalgcuSize_t rows) {
     // get id
-    linalgcu_size_t column = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuSize_t column = blockIdx.x * blockDim.x + threadIdx.x;
 
     // sum row
-    linalgcu_matrix_data_t sum = 0.0f;
+    linalgcuMatrixData_t sum = 0.0f;
     for (int i = 0; i < rows / LINALGCU_BLOCK_SIZE; i++) {
         sum += vector[column + i * rows];
     }
@@ -75,9 +75,9 @@ __global__ void reduce_row_kernel(linalgcu_matrix_data_t* vector, linalgcu_size_
 }
 
 // fast gemv
-extern "C"
-linalgcu_error_t fastect_conjugate_gemv(linalgcu_matrix_t A, linalgcu_matrix_t x,
-    linalgcu_matrix_t y, cudaStream_t stream) {
+LINALGCU_EXTERN_C
+linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t A, linalgcuMatrix_t x,
+    linalgcuMatrix_t y, cudaStream_t stream) {
     // check input
     if ((A == NULL) || (x == NULL) || (y == NULL)) {
         return LINALGCU_ERROR;

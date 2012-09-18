@@ -10,32 +10,32 @@
 #include "../include/fastect.h"
 
 // calc jacobian kernel
-__global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
-    linalgcu_matrix_data_t* applied_phi,
-    linalgcu_matrix_data_t* lead_phi,
-    linalgcu_matrix_data_t* gradient_matrix_values,
-    linalgcu_column_id_t* gradient_matrix_column_ids,
-    linalgcu_matrix_data_t* area, linalgcu_matrix_data_t* gamma,
-    linalgcu_matrix_data_t sigmaRef, linalgcu_size_t jacobian_rows,
-    linalgcu_size_t phi_rows, linalgcu_size_t measurment_count,
-    linalgcu_size_t element_count, linalgcu_bool_t additiv) {
+__global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
+    linalgcuMatrixData_t* applied_phi,
+    linalgcuMatrixData_t* lead_phi,
+    linalgcuMatrixData_t* gradient_matrix_values,
+    linalgcuColumnId_t* gradient_matrix_column_ids,
+    linalgcuMatrixData_t* area, linalgcuMatrixData_t* gamma,
+    linalgcuMatrixData_t sigmaRef, linalgcuSize_t jacobian_rows,
+    linalgcuSize_t phi_rows, linalgcuSize_t measurment_count,
+    linalgcuSize_t element_count, linalgcuBool_t additiv) {
     // get id
-    linalgcu_size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcu_size_t j = blockIdx.y * blockDim.y + threadIdx.y;
+    linalgcuSize_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuSize_t j = blockIdx.y * blockDim.y + threadIdx.y;
 
     if (j >= element_count) {
         return;
     }
 
     // calc measurment and drive id
-    linalgcu_size_t measurment_id = i % measurment_count;
-    linalgcu_size_t drive_id = i / measurment_count;
+    linalgcuSize_t measurment_id = i % measurment_count;
+    linalgcuSize_t drive_id = i / measurment_count;
 
     // memory
-    linalgcu_matrix_data_t element = 0.0f;
+    linalgcuMatrixData_t element = 0.0f;
     float2 grad_applied_phi = {0.0f, 0.0f};
     float2 grad_lead_phi = {0.0f, 0.0f};
-    linalgcu_column_id_t idx, idy;
+    linalgcuColumnId_t idx, idy;
 
     // calc x components
     for (int k = 0; k < 3; k++) {
@@ -81,10 +81,10 @@ __global__ void calc_jacobian_kernel(linalgcu_matrix_data_t* jacobian,
 }
 
 // calc jacobian
-extern "C"
-linalgcu_error_t fastect_forward_solver_calc_jacobian(fastect_forward_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t gamma, linalgcu_size_t harmonic,
-    linalgcu_bool_t additiv, cudaStream_t stream) {
+LINALGCU_EXTERN_C
+linalgcuError_t fastect_forward_solver_calc_jacobian(fastectForwardSolver_t solver,
+    linalgcuMatrix_t jacobian, linalgcuMatrix_t gamma, linalgcuSize_t harmonic,
+    linalgcuBool_t additiv, cudaStream_t stream) {
     if ((solver == NULL) || (jacobian == NULL) || (gamma == NULL) ||
         (harmonic > solver->grid->numHarmonics)) {
         return LINALGCU_ERROR;

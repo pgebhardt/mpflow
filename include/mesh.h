@@ -8,24 +8,24 @@
 
 // mesh struct
 typedef struct {
-    linalgcu_matrix_data_t radius;
-    linalgcu_matrix_data_t distance;
-    linalgcu_matrix_data_t height;
-    linalgcu_size_t vertexCount;
-    linalgcu_size_t elementCount;
-    linalgcu_size_t boundaryCount;
-    linalgcu_matrix_t vertices;
-    linalgcu_matrix_t elements;
-    linalgcu_matrix_t boundary;
-} fastect_mesh_s;
-typedef fastect_mesh_s* fastect_mesh_t;
+    linalgcuMatrixData_t radius;
+    linalgcuMatrixData_t distance;
+    linalgcuMatrixData_t height;
+    linalgcuSize_t vertexCount;
+    linalgcuSize_t elementCount;
+    linalgcuSize_t boundaryCount;
+    linalgcuMatrix_t vertices;
+    linalgcuMatrix_t elements;
+    linalgcuMatrix_t boundary;
+} fastectMesh_s;
+typedef fastectMesh_s* fastectMesh_t;
 
 // create new mesh
-linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
-    linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
-    linalgcu_matrix_data_t height, cudaStream_t stream);
+linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
+    linalgcuMatrixData_t radius, linalgcuMatrixData_t distance,
+    linalgcuMatrixData_t height, cudaStream_t stream);
 
 // cleanup mesh
-linalgcu_error_t fastect_mesh_release(fastect_mesh_t* meshPointer);
+linalgcuError_t fastect_mesh_release(fastectMesh_t* meshPointer);
 
 #endif

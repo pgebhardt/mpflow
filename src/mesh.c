@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include "../include/fastect.h"
 
-linalgcu_matrix_data_t fastect_mesh_angle(linalgcu_matrix_data_t x,
-    linalgcu_matrix_data_t y) {
+linalgcuMatrixData_t fastect_mesh_angle(linalgcuMatrixData_t x,
+    linalgcuMatrixData_t y) {
     if (x > 0.0f) {
         return atan(y / x);
     }
@@ -29,7 +29,7 @@ linalgcu_matrix_data_t fastect_mesh_angle(linalgcu_matrix_data_t x,
 }
 
 int compare_boundary(const void* a, const void* b) {
-    linalgcu_matrix_data_t temp = ((linalgcu_matrix_data_t*)a)[1] - ((linalgcu_matrix_data_t*)b)[1];
+    linalgcuMatrixData_t temp = ((linalgcuMatrixData_t*)a)[1] - ((linalgcuMatrixData_t*)b)[1];
 
     if (temp > 0) {
         return 1;
@@ -42,22 +42,22 @@ int compare_boundary(const void* a, const void* b) {
     }
 }
 
-linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
-    linalgcu_matrix_data_t radius, linalgcu_matrix_data_t distance,
-    linalgcu_matrix_data_t height, cudaStream_t stream) {
+linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
+    linalgcuMatrixData_t radius, linalgcuMatrixData_t distance,
+    linalgcuMatrixData_t height, cudaStream_t stream) {
     // check input
     if ((meshPointer == NULL) || (radius <= 0.0f) || (distance <= 0.0f) || (height <= 0.0f)) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // init mesh pointer
     *meshPointer = NULL;
 
     // create mesg struct
-    fastect_mesh_t mesh = malloc(sizeof(fastect_mesh_s));
+    fastectMesh_t mesh = malloc(sizeof(fastectMesh_s));
 
     // check success
     if (mesh == NULL) {
@@ -77,7 +77,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
 
     // create vertex memory
     error = linalgcu_matrix_create(&mesh->vertices,
-        2 * (linalgcu_size_t)(mesh->radius * mesh->radius /
+        2 * (linalgcuSize_t)(mesh->radius * mesh->radius /
         (0.25 * mesh->distance * mesh->distance)), 2, stream);
 
     // check success
@@ -89,11 +89,11 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     }
 
     // create vertex matrix
-    linalgcu_matrix_t vertices;
-    linalgcu_matrix_data_t r = sqrt(3.0 * mesh->distance * mesh->distance / 4.0);
+    linalgcuMatrix_t vertices;
+    linalgcuMatrixData_t r = sqrt(3.0 * mesh->distance * mesh->distance / 4.0);
     error = linalgcu_matrix_create(&vertices,
-        (linalgcu_size_t)(3.0 * mesh->radius / mesh->distance + 1),
-        (linalgcu_size_t)(3.0 * mesh->radius / mesh->distance + 1), stream);
+        (linalgcuSize_t)(3.0 * mesh->radius / mesh->distance + 1),
+        (linalgcuSize_t)(3.0 * mesh->radius / mesh->distance + 1), stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -104,14 +104,14 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     }
 
     // create vertices
-    linalgcu_matrix_data_t x, y;
+    linalgcuMatrixData_t x, y;
 
-    for (linalgcu_size_t i = 0; i < vertices->rows; i++) {
-        for (linalgcu_size_t j = 0; j < vertices->columns; j++) {
+    for (linalgcuSize_t i = 0; i < vertices->rows; i++) {
+        for (linalgcuSize_t j = 0; j < vertices->columns; j++) {
             // calc x and y
-            x = 1.25 * mesh->radius - mesh->distance * (linalgcu_matrix_data_t)i +
-                (linalgcu_matrix_data_t)(j % 2) * 0.5 * mesh->distance;
-            y = (int)(mesh->radius / r + 1) * r - r * (linalgcu_matrix_data_t)j;
+            x = 1.25 * mesh->radius - mesh->distance * (linalgcuMatrixData_t)i +
+                (linalgcuMatrixData_t)(j % 2) * 0.5 * mesh->distance;
+            y = (int)(mesh->radius / r + 1) * r - r * (linalgcuMatrixData_t)j;
 
             // check point
             if (sqrt(x * x + y * y) < mesh->radius - 0.25f * mesh->distance) {
@@ -120,7 +120,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 linalgcu_matrix_set_element(mesh->vertices, y, mesh->vertexCount, 1);
 
                 // save vertex id in vertex matrix
-                linalgcu_matrix_set_element(vertices, (linalgcu_size_t)mesh->vertexCount, i, j);
+                linalgcu_matrix_set_element(vertices, (linalgcuSize_t)mesh->vertexCount, i, j);
 
                 mesh->vertexCount++;
             }
@@ -134,7 +134,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
                 linalgcu_matrix_set_element(mesh->vertices, y, mesh->vertexCount, 1);
 
                 // save vertex id in vertex matrix
-                linalgcu_matrix_set_element(vertices, (linalgcu_size_t)mesh->vertexCount, i, j);
+                linalgcu_matrix_set_element(vertices, (linalgcuSize_t)mesh->vertexCount, i, j);
 
                 mesh->vertexCount++;
             }
@@ -147,7 +147,7 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
 
     // create boundary matrix
     error = linalgcu_matrix_create(&mesh->boundary,
-        (linalgcu_size_t)(3.0 * M_PI * mesh->radius / mesh->distance), 1, stream);
+        (linalgcuSize_t)(3.0 * M_PI * mesh->radius / mesh->distance), 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -159,11 +159,11 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     }
 
     // get boundary vertices
-    linalgcu_matrix_data_t boundary[mesh->boundary->rows * 2];
-    linalgcu_matrix_data_t id;
-    linalgcu_matrix_data_t angle;
+    linalgcuMatrixData_t boundary[mesh->boundary->rows * 2];
+    linalgcuMatrixData_t id;
+    linalgcuMatrixData_t angle;
 
-    for (linalgcu_size_t i = 0; i < mesh->vertexCount; i++) {
+    for (linalgcuSize_t i = 0; i < mesh->vertexCount; i++) {
         // get vertex
         linalgcu_matrix_get_element(mesh->vertices, &x, i, 0);
         linalgcu_matrix_get_element(mesh->vertices, &y, i, 1);
@@ -175,17 +175,17 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
 
         // check radius and angle
         if (radius >= mesh->radius - mesh->distance / 4.0f) {
-            boundary[mesh->boundaryCount * 2 + 0] = (linalgcu_matrix_data_t)i;
+            boundary[mesh->boundaryCount * 2 + 0] = (linalgcuMatrixData_t)i;
             boundary[mesh->boundaryCount * 2 + 1] = angle;
             mesh->boundaryCount++;
         }
     }
 
     // sort boundary
-    qsort(boundary, mesh->boundaryCount, 2 * sizeof(linalgcu_matrix_data_t), compare_boundary);
+    qsort(boundary, mesh->boundaryCount, 2 * sizeof(linalgcuMatrixData_t), compare_boundary);
 
     // write boundary ids to matrix
-    for (linalgcu_size_t i = 0; i < mesh->boundaryCount; i++) {
+    for (linalgcuSize_t i = 0; i < mesh->boundaryCount; i++) {
         linalgcu_matrix_set_element(mesh->boundary, boundary[i * 2], i, 0);
     }
 
@@ -202,11 +202,11 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
         return error;
     }
 
-    linalgcu_matrix_data_t neighbours[6];
-    linalgcu_matrix_data_t node;
+    linalgcuMatrixData_t neighbours[6];
+    linalgcuMatrixData_t node;
 
-    for (linalgcu_size_t i = 0; i < vertices->rows; i++) {
-        for (linalgcu_size_t j = 0; j < vertices->columns; j++) {
+    for (linalgcuSize_t i = 0; i < vertices->rows; i++) {
+        for (linalgcuSize_t j = 0; j < vertices->columns; j++) {
             // get node
             linalgcu_matrix_get_element(vertices, &node, i, j);
 
@@ -401,14 +401,14 @@ linalgcu_error_t fastect_mesh_create(fastect_mesh_t* meshPointer,
     return LINALGCU_SUCCESS;
 }
 
-linalgcu_error_t fastect_mesh_release(fastect_mesh_t* meshPointer) {
+linalgcuError_t fastect_mesh_release(fastectMesh_t* meshPointer) {
     // check input
     if ((meshPointer == NULL) || (*meshPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get mesh
-    fastect_mesh_t mesh = *meshPointer;
+    fastectMesh_t mesh = *meshPointer;
 
     // cleanup vertices
     linalgcu_matrix_release(&mesh->vertices);

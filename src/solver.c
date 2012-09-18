@@ -7,11 +7,11 @@
 #include "../include/fastect.h"
 
 // create solver
-linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_size_t numHarmonics,
-    linalgcu_size_t measurmentCount, linalgcu_size_t driveCount,
-    linalgcu_matrix_t measurmentPattern, linalgcu_matrix_t drivePattern,
-    linalgcu_matrix_data_t sigmaRef, linalgcu_matrix_data_t regularizationFactor,
+linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
+    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuSize_t numHarmonics,
+    linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
+    linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
+    linalgcuMatrixData_t sigmaRef, linalgcuMatrixData_t regularizationFactor,
     cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
@@ -20,13 +20,13 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // init solver pointer
     *solverPointer = NULL;
 
     // create struct
-    fastect_solver_t solver = malloc(sizeof(fastect_solver_s));
+    fastectSolver_t solver = malloc(sizeof(fastectSolver_s));
 
     // check success
     if (solver == NULL) {
@@ -95,14 +95,14 @@ linalgcu_error_t fastect_solver_create(fastect_solver_t* solverPointer,
 }
 
 // release solver
-linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer) {
+linalgcuError_t fastect_solver_release(fastectSolver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fastect_solver_t solver = *solverPointer;
+    fastectSolver_t solver = *solverPointer;
 
     // cleanup
     fastect_forward_solver_release(&solver->forwardSolver);
@@ -125,14 +125,14 @@ linalgcu_error_t fastect_solver_release(fastect_solver_t* solverPointer) {
 }
 
 // pre solve for accurate initial jacobian
-linalgcu_error_t fastect_solver_pre_solve(fastect_solver_t solver, cudaStream_t stream) {
+linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cudaStream_t stream) {
     // check input
     if (solver == NULL) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // forward solving a few steps
     error |= fastect_forward_solver_solve(solver->forwardSolver, solver->jacobian,
@@ -150,14 +150,14 @@ linalgcu_error_t fastect_solver_pre_solve(fastect_solver_t solver, cudaStream_t 
 }
 
 // calibrate
-linalgcu_error_t fastect_solver_calibrate(fastect_solver_t solver, cudaStream_t stream) {
+linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cudaStream_t stream) {
     // check input
     if (solver == NULL) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // forward
     error  = fastect_forward_solver_solve(solver->forwardSolver, solver->jacobian,
@@ -172,14 +172,14 @@ linalgcu_error_t fastect_solver_calibrate(fastect_solver_t solver, cudaStream_t 
 }
 
 // solving
-linalgcu_error_t fastect_solver_solve(fastect_solver_t solver, cudaStream_t stream) {
+linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cudaStream_t stream) {
     // check input
     if (solver == NULL) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // calibration
     error |= fastect_inverse_solver_solve(solver->inverseSolver,

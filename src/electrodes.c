@@ -7,9 +7,9 @@
 #include "../include/fastect.h"
 
 // create electrodes
-linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPointer,
-    linalgcu_size_t count, linalgcu_matrix_data_t width, linalgcu_matrix_data_t height,
-    linalgcu_matrix_data_t meshRadius) {
+linalgcuError_t fastect_electrodes_create(fastectElectrodes_t* electrodesPointer,
+    linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
+    linalgcuMatrixData_t meshRadius) {
     // check input
     if ((electrodesPointer == NULL) || (count == 0) || (width <= 0.0f) || (height <= 0.0f) ||
         (meshRadius <= 0.0f)) {
@@ -17,13 +17,13 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // set electrodesPointer to NULL
     *electrodesPointer = NULL;
 
     // create struct
-    fastect_electrodes_t electrodes = malloc(sizeof(fastect_electrodes_s));
+    fastectElectrodes_t electrodes = malloc(sizeof(fastectElectrodes_s));
 
     // check success
     if (electrodes == NULL) {
@@ -38,9 +38,9 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
     electrodes->height = height;
 
     // create electrode vectors
-    electrodes->electrodesStart = malloc(sizeof(linalgcu_matrix_data_t) *
+    electrodes->electrodesStart = malloc(sizeof(linalgcuMatrixData_t) *
         electrodes->count * 2);
-    electrodes->electrodesEnd = malloc(sizeof(linalgcu_matrix_data_t) *
+    electrodes->electrodesEnd = malloc(sizeof(linalgcuMatrixData_t) *
         electrodes->count * 2);
 
     // check success
@@ -52,11 +52,11 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
     }
 
     // fill electrode vectors
-    linalgcu_matrix_data_t angle = 0.0f;
-    linalgcu_matrix_data_t delta_angle = M_PI / (linalgcu_matrix_data_t)electrodes->count;
-    for (linalgcu_size_t i = 0; i < electrodes->count; i++) {
+    linalgcuMatrixData_t angle = 0.0f;
+    linalgcuMatrixData_t delta_angle = M_PI / (linalgcuMatrixData_t)electrodes->count;
+    for (linalgcuSize_t i = 0; i < electrodes->count; i++) {
         // calc start angle
-        angle = (linalgcu_matrix_data_t)i * 2.0f * delta_angle;
+        angle = (linalgcuMatrixData_t)i * 2.0f * delta_angle;
 
         // calc start coordinates
         electrodes->electrodesStart[i * 2 + 0] = meshRadius * cos(angle);
@@ -77,14 +77,14 @@ linalgcu_error_t fastect_electrodes_create(fastect_electrodes_t* electrodesPoint
 }
 
 // release electrodes
-linalgcu_error_t fastect_electrodes_release(fastect_electrodes_t* electrodesPointer) {
+linalgcuError_t fastect_electrodes_release(fastectElectrodes_t* electrodesPointer) {
     // check input
     if ((electrodesPointer == NULL) || (*electrodesPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get electrodes
-    fastect_electrodes_t electrodes = *electrodesPointer;
+    fastectElectrodes_t electrodes = *electrodesPointer;
 
     // free electrode vectors
     if (electrodes->electrodesStart != NULL) {

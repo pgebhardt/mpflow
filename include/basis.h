@@ -8,22 +8,22 @@
 
 // basis struct
 typedef struct {
-    linalgcu_matrix_data_t coefficients[3];
-    linalgcu_matrix_data_t gradient[2];
-} fastect_basis_s;
-typedef fastect_basis_s* fastect_basis_t;
+    linalgcuMatrixData_t coefficients[3];
+    linalgcuMatrixData_t gradient[2];
+} fastectBasts_s;
+typedef fastectBasts_s* fastectBasis_t;
 
 // create basis
-linalgcu_error_t fastect_basis_create(fastect_basis_t* basisPointer,
-    linalgcu_matrix_data_t Ax, linalgcu_matrix_data_t Ay,
-    linalgcu_matrix_data_t Bx, linalgcu_matrix_data_t By,
-    linalgcu_matrix_data_t Cx, linalgcu_matrix_data_t Cy);
+linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
+    linalgcuMatrixData_t Ax, linalgcuMatrixData_t Ay,
+    linalgcuMatrixData_t Bx, linalgcuMatrixData_t By,
+    linalgcuMatrixData_t Cx, linalgcuMatrixData_t Cy);
 
 // release basis
-linalgcu_error_t fastect_basis_release(fastect_basis_t* basisPointer);
+linalgcuError_t fastect_basis_release(fastectBasis_t* basisPointer);
 
 // evaluate basis function
-linalgcu_error_t fastect_basis_function(fastect_basis_t basis,
-    linalgcu_matrix_data_t* resultPointer, linalgcu_matrix_data_t x, linalgcu_matrix_data_t y);
+linalgcuError_t fastect_basis_function(fastectBasis_t basis,
+    linalgcuMatrixData_t* resultPointer, linalgcuMatrixData_t x, linalgcuMatrixData_t y);
 
 #endif

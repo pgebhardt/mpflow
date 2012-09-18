@@ -10,23 +10,23 @@
 #include "../include/fastect.h"
 
 // add scalar kernel
-__global__ void add_scalar_kernel(linalgcu_matrix_data_t* vector,
-    linalgcu_matrix_data_t* scalar, linalgcu_size_t vector_rows,
-    linalgcu_size_t rows, linalgcu_size_t columns) {
+__global__ void add_scalar_kernel(linalgcuMatrixData_t* vector,
+    linalgcuMatrixData_t* scalar, linalgcuSize_t vector_rows,
+    linalgcuSize_t rows, linalgcuSize_t columns) {
     // get row
-    linalgcu_size_t row = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // get column
-    linalgcu_size_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // add data
     vector[row + column * vector_rows] += row < rows && column < columns ? scalar[column * vector_rows] : 0.0f;
 }
 
 // add scalar
-extern "C"
-linalgcu_error_t fastect_conjugate_sparse_add_scalar(linalgcu_matrix_t vector,
-    linalgcu_matrix_t scalar, linalgcu_size_t rows, linalgcu_size_t columns, cudaStream_t stream) {
+LINALGCU_EXTERN_C
+linalgcuError_t fastect_conjugate_sparse_add_scalar(linalgcuMatrix_t vector,
+    linalgcuMatrix_t scalar, linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
     // check input
     if ((vector == NULL) || (scalar == NULL)) {
         return LINALGCU_ERROR;
@@ -44,15 +44,15 @@ linalgcu_error_t fastect_conjugate_sparse_add_scalar(linalgcu_matrix_t vector,
 }
 
 // update vector
-__global__ void sparse_update_vector_kernel(linalgcu_matrix_data_t* result,
-    linalgcu_matrix_data_t* x1, linalgcu_matrix_data_t sign,
-    linalgcu_matrix_data_t* x2, linalgcu_matrix_data_t* r1, linalgcu_matrix_data_t* r2,
-    linalgcu_size_t rows) {
+__global__ void sparse_update_vector_kernel(linalgcuMatrixData_t* result,
+    linalgcuMatrixData_t* x1, linalgcuMatrixData_t sign,
+    linalgcuMatrixData_t* x2, linalgcuMatrixData_t* r1, linalgcuMatrixData_t* r2,
+    linalgcuSize_t rows) {
     // get row
-    linalgcu_size_t row = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // get column
-    linalgcu_size_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
     result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] + sign * x2[row + column * rows] *
@@ -60,10 +60,10 @@ __global__ void sparse_update_vector_kernel(linalgcu_matrix_data_t* result,
 }
 
 // update vector
-extern "C"
-linalgcu_error_t fastect_conjugate_sparse_update_vector(linalgcu_matrix_t result,
-    linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
-    linalgcu_matrix_t r1, linalgcu_matrix_t r2, cudaStream_t stream) {
+LINALGCU_EXTERN_C
+linalgcuError_t fastect_conjugate_sparse_update_vector(linalgcuMatrix_t result,
+    linalgcuMatrix_t x1, linalgcuMatrixData_t sign, linalgcuMatrix_t x2,
+    linalgcuMatrix_t r1, linalgcuMatrix_t r2, cudaStream_t stream) {
     // check input
     if ((result == NULL) || (x1 == NULL) || (x2 == NULL) || (r1 == NULL) || (r2 == NULL)) {
         return LINALGCU_ERROR;

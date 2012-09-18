@@ -8,22 +8,22 @@
 #include "../include/fastect.h"
 
 // create solver grid
-linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
-    fastect_mesh_t mesh, fastect_electrodes_t electrodes, linalgcu_matrix_data_t sigmaRef,
-    linalgcu_size_t numHarmonics, cublasHandle_t handle, cudaStream_t stream) {
+linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
+    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuMatrixData_t sigmaRef,
+    linalgcuSize_t numHarmonics, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((gridPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // init grid pointer
     *gridPointer = NULL;
 
     // create grid struct
-    fastect_grid_t grid = malloc(sizeof(fastect_grid_s));
+    fastectGrid_t grid = malloc(sizeof(fastectGrid_s));
 
     // check success
     if (grid == NULL) {
@@ -62,7 +62,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     }
 
     // create system matrices
-    grid->systemMatrices = malloc(sizeof(linalgcu_sparse_matrix_t) * (grid->numHarmonics + 1));
+    grid->systemMatrices = malloc(sizeof(linalgcuSparseMatrix_t) * (grid->numHarmonics + 1));
 
     // check success
     if (grid->systemMatrices == NULL) {
@@ -74,7 +74,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
 
     // create system matrices
     error = LINALGCU_SUCCESS;
-    for (linalgcu_size_t i = 0; i < grid->numHarmonics + 1; i++) {
+    for (linalgcuSize_t i = 0; i < grid->numHarmonics + 1; i++) {
         error |= linalgcu_sparse_matrix_create_empty(&grid->systemMatrices[i],
             grid->mesh->vertexCount, grid->mesh->vertexCount, stream);
     }
@@ -88,7 +88,7 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
     }
 
     // create initial gamma
-    linalgcu_matrix_t gamma = NULL;
+    linalgcuMatrix_t gamma = NULL;
     error = linalgcu_matrix_create(&gamma, grid->mesh->elementCount, 1, stream);
 
     // check success
@@ -136,14 +136,14 @@ linalgcu_error_t fastect_grid_create(fastect_grid_t* gridPointer,
 }
 
 // release solver grid
-linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
+linalgcuError_t fastect_grid_release(fastectGrid_t* gridPointer) {
     // check input
     if ((gridPointer == NULL) || (*gridPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get grid
-    fastect_grid_t grid = *gridPointer;
+    fastectGrid_t grid = *gridPointer;
 
     // cleanup
     fastect_mesh_release(&grid->mesh);
@@ -159,7 +159,7 @@ linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
     linalgcu_matrix_release(&grid->area);
 
     if (grid->systemMatrices != NULL) {
-        for (linalgcu_size_t i = 0; i < grid->numHarmonics + 1; i++) {
+        for (linalgcuSize_t i = 0; i < grid->numHarmonics + 1; i++) {
             linalgcu_sparse_matrix_release(&grid->systemMatrices[i]);
         }
         free(grid->systemMatrices);
@@ -175,7 +175,7 @@ linalgcu_error_t fastect_grid_release(fastect_grid_t* gridPointer) {
 }
 
 // init system matrix 2D
-linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasHandle_t handle,
+linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t grid, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (handle == NULL)) {
@@ -183,11 +183,11 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // calc initial system matrix
     // create matrices
-    linalgcu_matrix_t systemMatrix, gradientMatrix, sigmaMatrix;
+    linalgcuMatrix_t systemMatrix, gradientMatrix, sigmaMatrix;
     error = linalgcu_matrix_create(&systemMatrix,
         grid->mesh->vertexCount, grid->mesh->vertexCount, stream);
     error += linalgcu_matrix_create(&gradientMatrix,
@@ -201,17 +201,17 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
     }
 
     // calc gradient matrix
-    linalgcu_matrix_data_t x[3], y[3];
-    linalgcu_matrix_data_t id[3];
-    fastect_basis_t basis[3];
-    linalgcu_matrix_data_t area;
+    linalgcuMatrixData_t x[3], y[3];
+    linalgcuMatrixData_t id[3];
+    fastectBasis_t basis[3];
+    linalgcuMatrixData_t area;
 
-    for (linalgcu_size_t k = 0; k < grid->mesh->elementCount; k++) {
+    for (linalgcuSize_t k = 0; k < grid->mesh->elementCount; k++) {
         // get vertices for element
-        for (linalgcu_size_t i = 0; i < 3; i++) {
+        for (linalgcuSize_t i = 0; i < 3; i++) {
             linalgcu_matrix_get_element(grid->mesh->elements, &id[i], k, i);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &x[i], (linalgcu_size_t)id[i], 0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &y[i], (linalgcu_size_t)id[i], 1);
+            linalgcu_matrix_get_element(grid->mesh->vertices, &x[i], (linalgcuSize_t)id[i], 0);
+            linalgcu_matrix_get_element(grid->mesh->vertices, &y[i], (linalgcuSize_t)id[i], 1);
         }
 
         // calc corresponding basis functions
@@ -220,15 +220,15 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
         fastect_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
 
         // calc matrix elements
-        for (linalgcu_size_t i = 0; i < 3; i++) {
+        for (linalgcuSize_t i = 0; i < 3; i++) {
             linalgcu_matrix_set_element(gradientMatrix,
-                basis[i]->gradient[0], 2 * k, (linalgcu_size_t)id[i]);
+                basis[i]->gradient[0], 2 * k, (linalgcuSize_t)id[i]);
             linalgcu_matrix_set_element(gradientMatrix,
-                basis[i]->gradient[1], 2 * k + 1, (linalgcu_size_t)id[i]);
+                basis[i]->gradient[1], 2 * k + 1, (linalgcuSize_t)id[i]);
             linalgcu_matrix_set_element(grid->gradientMatrixTransposed,
-                basis[i]->gradient[0], (linalgcu_size_t)id[i], 2 * k);
+                basis[i]->gradient[0], (linalgcuSize_t)id[i], 2 * k);
             linalgcu_matrix_set_element(grid->gradientMatrixTransposed,
-                basis[i]->gradient[1], (linalgcu_size_t)id[i], 2 * k + 1);
+                basis[i]->gradient[1], (linalgcuSize_t)id[i], 2 * k + 1);
         }
 
         // calc area of element
@@ -263,7 +263,7 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
     }
 
     // calc system matrix
-    linalgcu_matrix_t temp = NULL;
+    linalgcuMatrix_t temp = NULL;
     error = linalgcu_matrix_create(&temp, grid->mesh->vertexCount,
         2 * grid->mesh->elementCount, stream);
 
@@ -292,7 +292,7 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
         gradientMatrix, stream);
     error |= linalgcu_sparse_matrix_create(&grid->gradientMatrixTransposedSparse,
         grid->gradientMatrixTransposed, stream);
-    for (linalgcu_size_t i = 0; i < grid->numHarmonics + 1; i++) {
+    for (linalgcuSize_t i = 0; i < grid->numHarmonics + 1; i++) {
         error |= linalgcu_sparse_matrix_create(&grid->systemMatrices[i], systemMatrix, stream);
     }
 
@@ -310,15 +310,15 @@ linalgcu_error_t fastect_grid_init_2D_system_matrix(fastect_grid_t grid, cublasH
 }
 
 // update system matrix
-linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
-    linalgcu_matrix_t gamma, cublasHandle_t handle, cudaStream_t stream) {
+linalgcuError_t fastect_grid_update_system_matrices(fastectGrid_t grid,
+    linalgcuMatrix_t gamma, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((grid == NULL) || (gamma == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
     cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
 
     // update 2d systemMatrix
@@ -340,8 +340,8 @@ linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
         grid->systemMatrix2D->values, 1, grid->systemMatrices[0]->values, 1);
 
     // create harmonic system matrices
-    linalgcu_matrix_data_t alpha = 0.0f;
-    for (linalgcu_size_t n = 1; n < grid->numHarmonics + 1; n++) {
+    linalgcuMatrixData_t alpha = 0.0f;
+    for (linalgcuSize_t n = 1; n < grid->numHarmonics + 1; n++) {
         // calc alpha
         alpha = (2.0f * n * M_PI / grid->mesh->height) *
             (2.0f * n * M_PI / grid->mesh->height);
@@ -363,7 +363,7 @@ linalgcu_error_t fastect_grid_update_system_matrices(fastect_grid_t grid,
     return LINALGCU_SUCCESS;
 }
 
-linalgcu_matrix_data_t fastect_grid_angle(linalgcu_matrix_data_t x, linalgcu_matrix_data_t y) {
+linalgcuMatrixData_t fastect_grid_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     if (x > 0.0f) {
         return atan(y / x);
     }
@@ -384,21 +384,21 @@ linalgcu_matrix_data_t fastect_grid_angle(linalgcu_matrix_data_t x, linalgcu_mat
     }
 }
 
-linalgcu_matrix_data_t fastect_grid_integrate_basis(linalgcu_matrix_data_t* node,
-    linalgcu_matrix_data_t* left, linalgcu_matrix_data_t* right,
-    linalgcu_matrix_data_t* start, linalgcu_matrix_data_t* end) {
+linalgcuMatrixData_t fastect_grid_integrate_basis(linalgcuMatrixData_t* node,
+    linalgcuMatrixData_t* left, linalgcuMatrixData_t* right,
+    linalgcuMatrixData_t* start, linalgcuMatrixData_t* end) {
     // integral
-    linalgcu_matrix_data_t integral = 0.0f;
+    linalgcuMatrixData_t integral = 0.0f;
 
     // calc angle of node
-    linalgcu_matrix_data_t angle = fastect_grid_angle(node[0], node[1]);
-    linalgcu_matrix_data_t radius = sqrt(start[0] * start[0] + start[1] * start[1]);
+    linalgcuMatrixData_t angle = fastect_grid_angle(node[0], node[1]);
+    linalgcuMatrixData_t radius = sqrt(start[0] * start[0] + start[1] * start[1]);
 
     // calc s parameter
-    linalgcu_matrix_data_t sleft = radius * (fastect_grid_angle(left[0], left[1]) - angle);
-    linalgcu_matrix_data_t sright = radius * (fastect_grid_angle(right[0], right[1]) - angle);
-    linalgcu_matrix_data_t sstart = radius * (fastect_grid_angle(start[0], start[1]) - angle);
-    linalgcu_matrix_data_t send = radius * (fastect_grid_angle(end[0], end[1]) - angle);
+    linalgcuMatrixData_t sleft = radius * (fastect_grid_angle(left[0], left[1]) - angle);
+    linalgcuMatrixData_t sright = radius * (fastect_grid_angle(right[0], right[1]) - angle);
+    linalgcuMatrixData_t sstart = radius * (fastect_grid_angle(start[0], start[1]) - angle);
+    linalgcuMatrixData_t send = radius * (fastect_grid_angle(end[0], end[1]) - angle);
 
     // correct s parameter
     sleft -= (sleft > sright) && (sleft > 0.0f) ? radius * 2.0f * M_PI : 0.0f;
@@ -446,7 +446,7 @@ linalgcu_matrix_data_t fastect_grid_integrate_basis(linalgcu_matrix_data_t* node
 }
 
 // init exitation matrix
-linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
+linalgcuError_t fastect_grid_init_exitation_matrix(fastectGrid_t grid,
     cudaStream_t stream) {
     // check input
     if (grid == NULL) {
@@ -454,11 +454,11 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // fill exitation_matrix matrix
-    linalgcu_matrix_data_t id[3];
-    linalgcu_matrix_data_t node[2], left[2], right[2];
+    linalgcuMatrixData_t id[3];
+    linalgcuMatrixData_t node[2], left[2], right[2];
 
     for (int i = 0; i < grid->mesh->boundaryCount; i++) {
         for (int j = 0; j < grid->electrodes->count; j++) {
@@ -470,17 +470,17 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
                 (i + 1) % grid->mesh->boundaryCount, 0);
 
             // get coordinates
-            linalgcu_matrix_get_element(grid->mesh->vertices, &left[0], (linalgcu_size_t)id[0],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &left[0], (linalgcuSize_t)id[0],
                 0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &left[1], (linalgcu_size_t)id[0],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &left[1], (linalgcuSize_t)id[0],
                 1);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcu_size_t)id[1],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcuSize_t)id[1],
                 0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcu_size_t)id[1],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcuSize_t)id[1],
                 1);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &right[0], (linalgcu_size_t)id[2],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &right[0], (linalgcuSize_t)id[2],
                 0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &right[1], (linalgcu_size_t)id[2],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &right[1], (linalgcuSize_t)id[2],
                 1);
 
             // calc element
@@ -488,7 +488,7 @@ linalgcu_error_t fastect_grid_init_exitation_matrix(fastect_grid_t grid,
                 fastect_grid_integrate_basis(node, left, right,
                     &grid->electrodes->electrodesStart[j * 2],
                     &grid->electrodes->electrodesEnd[j * 2]) / grid->electrodes->width,
-                    (linalgcu_size_t)id[1], j);
+                    (linalgcuSize_t)id[1], j);
         }
     }
 

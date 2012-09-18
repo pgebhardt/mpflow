@@ -8,40 +8,40 @@
 
 // solver struct
 typedef struct {
-    fastect_conjugate_solver_t conjugate_solver;
-    linalgcu_matrix_t dVoltage;
-    linalgcu_matrix_t dGamma;
-    linalgcu_matrix_t zeros;
-    linalgcu_matrix_t excitation;
-    linalgcu_matrix_t systemMatrix;
-    linalgcu_matrix_t jacobianSquare;
-    linalgcu_matrix_t regularization;
-    linalgcu_matrix_data_t regularizationFactor;
-} fastect_calibration_solver_s;
-typedef fastect_calibration_solver_s* fastect_calibration_solver_t;
+    fastectConjugateSolver_t conjugate_solver;
+    linalgcuMatrix_t dVoltage;
+    linalgcuMatrix_t dGamma;
+    linalgcuMatrix_t zeros;
+    linalgcuMatrix_t excitation;
+    linalgcuMatrix_t systemMatrix;
+    linalgcuMatrix_t jacobianSquare;
+    linalgcuMatrix_t regularization;
+    linalgcuMatrixData_t regularizationFactor;
+} fastectCalibrationSolver_s;
+typedef fastectCalibrationSolver_s* fastectCalibrationSolver_t;
 
 // create calibration_solver
-linalgcu_error_t fastect_calibration_solver_create(fastect_calibration_solver_t* solverPointer,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_data_t regularizationFactor,
+linalgcuError_t fastect_calibration_solver_create(fastectCalibrationSolver_t* solverPointer,
+    linalgcuMatrix_t jacobian, linalgcuMatrixData_t regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream);
 
 // release calibration_solver
-linalgcu_error_t fastect_calibration_solver_release(fastect_calibration_solver_t* solverPointer);
+linalgcuError_t fastect_calibration_solver_release(fastectCalibrationSolver_t* solverPointer);
 
 // calc system matrix
-linalgcu_error_t fastect_calibration_solver_calc_system_matrix(
-    fastect_calibration_solver_t solver, linalgcu_matrix_t jacobian, cublasHandle_t handle,
+linalgcuError_t fastect_calibration_solver_calc_system_matrix(
+    fastectCalibrationSolver_t solver, linalgcuMatrix_t jacobian, cublasHandle_t handle,
     cudaStream_t stream);
 
 // calc excitation
-linalgcu_error_t fastect_calibration_solver_calc_excitation(fastect_calibration_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
-    linalgcu_matrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream);
+linalgcuError_t fastect_calibration_solver_calc_excitation(fastectCalibrationSolver_t solver,
+    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+    linalgcuMatrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream);
 
 // calibration solving
-linalgcu_error_t fastect_calibration_solver_calibrate(fastect_calibration_solver_t solver,
-    linalgcu_matrix_t jacobian, linalgcu_matrix_t calculatedVoltage,
-    linalgcu_matrix_t measuredVoltage, linalgcu_matrix_t gamma,
-    linalgcu_size_t steps, cublasHandle_t handle, cudaStream_t stream);
+linalgcuError_t fastect_calibration_solver_calibrate(fastectCalibrationSolver_t solver,
+    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+    linalgcuMatrix_t measuredVoltage, linalgcuMatrix_t gamma,
+    linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

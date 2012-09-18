@@ -8,37 +8,37 @@
 
 // conjugate solver struct
 typedef struct {
-    linalgcu_size_t rows;
-    linalgcu_matrix_t residuum;
-    linalgcu_matrix_t projection;
-    linalgcu_matrix_t rsold;
-    linalgcu_matrix_t rsnew;
-    linalgcu_matrix_t tempVector;
-    linalgcu_matrix_t tempNumber;
-} fastect_conjugate_solver_s;
-typedef fastect_conjugate_solver_s* fastect_conjugate_solver_t;
+    linalgcuSize_t rows;
+    linalgcuMatrix_t residuum;
+    linalgcuMatrix_t projection;
+    linalgcuMatrix_t rsold;
+    linalgcuMatrix_t rsnew;
+    linalgcuMatrix_t tempVector;
+    linalgcuMatrix_t tempNumber;
+} fastectConjugateSolver_s;
+typedef fastectConjugateSolver_s* fastectConjugateSolver_t;
 
 // create solver
-linalgcu_error_t fastect_conjugate_solver_create(fastect_conjugate_solver_t* solverPointer,
-    linalgcu_size_t rows, cublasHandle_t handle, cudaStream_t stream);
+linalgcuError_t fastect_conjugate_solver_create(fastectConjugateSolver_t* solverPointer,
+    linalgcuSize_t rows, cublasHandle_t handle, cudaStream_t stream);
 
 // release solver
-linalgcu_error_t fastect_conjugate_solver_release(fastect_conjugate_solver_t* solverPointer);
+linalgcuError_t fastect_conjugate_solver_release(fastectConjugateSolver_t* solverPointer);
 
 // update vector
 LINALGCU_EXTERN_C
-linalgcu_error_t fastect_conjugate_update_vector(linalgcu_matrix_t result,
-    linalgcu_matrix_t x1, linalgcu_matrix_data_t sign, linalgcu_matrix_t x2,
-    linalgcu_matrix_t r1, linalgcu_matrix_t r2, cudaStream_t stream);
+linalgcuError_t fastect_conjugate_update_vector(linalgcuMatrix_t result,
+    linalgcuMatrix_t x1, linalgcuMatrixData_t sign, linalgcuMatrix_t x2,
+    linalgcuMatrix_t r1, linalgcuMatrix_t r2, cudaStream_t stream);
 
 // fast gemv
 LINALGCU_EXTERN_C
-linalgcu_error_t fastect_conjugate_gemv(linalgcu_matrix_t A, linalgcu_matrix_t x,
-    linalgcu_matrix_t y, cudaStream_t stream);
+linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t A, linalgcuMatrix_t x,
+    linalgcuMatrix_t y, cudaStream_t stream);
 
 // solve conjugate
-linalgcu_error_t fastect_conjugate_solver_solve(fastect_conjugate_solver_t solver,
-    linalgcu_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
-    linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream);
+linalgcuError_t fastect_conjugate_solver_solve(fastectConjugateSolver_t solver,
+    linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
+    linalgcuSize_t iterations, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

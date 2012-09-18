@@ -7,21 +7,21 @@
 #include "../include/fastect.h"
 
 // create conjugate solver
-linalgcu_error_t fastect_conjugate_sparse_solver_create(fastect_conjugate_sparse_solver_t* solverPointer,
-    linalgcu_size_t rows, linalgcu_size_t columns, cublasHandle_t handle, cudaStream_t stream) {
+linalgcuError_t fastect_conjugate_sparse_solver_create(fastectConjugateSparseSolver_t* solverPointer,
+    linalgcuSize_t rows, linalgcuSize_t columns, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (rows <= 1) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // init solver pointer
     *solverPointer = NULL;
 
     // create solver struct
-    fastect_conjugate_sparse_solver_t solver = malloc(sizeof(fastect_conjugate_sparse_solver_s));
+    fastectConjugateSparseSolver_t solver = malloc(sizeof(fastectConjugateSparseSolver_s));
 
     // check success
     if (solver == NULL) {
@@ -61,14 +61,14 @@ linalgcu_error_t fastect_conjugate_sparse_solver_create(fastect_conjugate_sparse
 }
 
 // release solver
-linalgcu_error_t fastect_conjugate_sparse_solver_release(fastect_conjugate_sparse_solver_t* solverPointer) {
+linalgcuError_t fastect_conjugate_sparse_solver_release(fastectConjugateSparseSolver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fastect_conjugate_sparse_solver_t solver = *solverPointer;
+    fastectConjugateSparseSolver_t solver = *solverPointer;
 
     // release matrices
     linalgcu_matrix_release(&solver->residuum);
@@ -88,19 +88,19 @@ linalgcu_error_t fastect_conjugate_sparse_solver_release(fastect_conjugate_spars
 }
 
 // solve conjugate_sparse sparse
-linalgcu_error_t fastect_conjugate_sparse_solver_solve(fastect_conjugate_sparse_solver_t solver,
-    linalgcu_sparse_matrix_t A, linalgcu_matrix_t x, linalgcu_matrix_t f,
-    linalgcu_size_t iterations, cublasHandle_t handle, cudaStream_t stream) {
+linalgcuError_t fastect_conjugate_sparse_solver_solve(fastectConjugateSparseSolver_t solver,
+    linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
+    linalgcuSize_t iterations, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (A == NULL) || (x == NULL) || (f == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // temp for pointer swap
-    linalgcu_matrix_t temp = NULL;
+    linalgcuMatrix_t temp = NULL;
 
     // calc residuum r = f - A * x
     error |= linalgcu_sparse_matrix_multiply(solver->residuum, A, x, stream);
@@ -120,7 +120,7 @@ linalgcu_error_t fastect_conjugate_sparse_solver_solve(fastect_conjugate_sparse_
     }
 
     // iterate
-    for (linalgcu_size_t i = 0; i < iterations; i++) {
+    for (linalgcuSize_t i = 0; i < iterations; i++) {
         // calc A * p
         error |= linalgcu_sparse_matrix_multiply(solver->tempVector, A, solver->projection,
             stream);
@@ -160,9 +160,9 @@ linalgcu_error_t fastect_conjugate_sparse_solver_solve(fastect_conjugate_sparse_
 }
 
 // solve conjugate_sparse sparse
-linalgcu_error_t fastect_conjugate_sparse_solver_solve_regularized(
-    fastect_conjugate_sparse_solver_t solver, linalgcu_sparse_matrix_t A, linalgcu_matrix_t x,
-    linalgcu_matrix_t f, linalgcu_size_t iterations, cublasHandle_t handle,
+linalgcuError_t fastect_conjugate_sparse_solver_solve_regularized(
+    fastectConjugateSparseSolver_t solver, linalgcuSparseMatrix_t A, linalgcuMatrix_t x,
+    linalgcuMatrix_t f, linalgcuSize_t iterations, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (A == NULL) || (x == NULL) || (f == NULL) || (handle == NULL)) {
@@ -170,10 +170,10 @@ linalgcu_error_t fastect_conjugate_sparse_solver_solve_regularized(
     }
 
     // error
-    linalgcu_error_t error = LINALGCU_SUCCESS;
+    linalgcuError_t error = LINALGCU_SUCCESS;
 
     // temp for pointer swap
-    linalgcu_matrix_t temp = NULL;
+    linalgcuMatrix_t temp = NULL;
 
     // calc residuum r = f - A * x
     error  = linalgcu_matrix_sum(solver->tempNumber, x, stream);
@@ -196,7 +196,7 @@ linalgcu_error_t fastect_conjugate_sparse_solver_solve_regularized(
     }
 
     // iterate
-    for (linalgcu_size_t i = 0; i < iterations; i++) {
+    for (linalgcuSize_t i = 0; i < iterations; i++) {
         // calc A * p
         error |= linalgcu_matrix_sum(solver->tempNumber, solver->projection, stream);
         error |= linalgcu_sparse_matrix_multiply(solver->tempVector, A, solver->projection,
