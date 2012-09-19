@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTECT_FASTECT_SOLVER_H
-#define FASTECT_FASTECT_SOLVER_H
+#ifndef FASTECT_FASTECT_H
+#define FASTECT_FASTECT_H
 
 #include <cuda/cuda_runtime.h>
 #include <cuda/cublas_v2.h>
