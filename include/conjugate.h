@@ -33,8 +33,8 @@ linalgcuError_t fastect_conjugate_update_vector(linalgcuMatrix_t result,
 
 // fast gemv
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t A, linalgcuMatrix_t x,
-    linalgcuMatrix_t y, cudaStream_t stream);
+linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
+    linalgcuMatrix_t vector, cudaStream_t stream);
 
 // solve conjugate
 linalgcuError_t fastect_conjugate_solver_solve(fastectConjugateSolver_t solver,

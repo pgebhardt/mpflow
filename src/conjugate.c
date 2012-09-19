@@ -122,7 +122,7 @@ linalgcuError_t fastect_conjugate_solver_solve(fastectConjugateSolver_t solver,
     // iterate
     for (linalgcuSize_t i = 0; i < iterations; i++) {
         // calc A * p
-        error  = fastect_conjugate_gemv(A, solver->projection, solver->tempVector, stream);
+        error  = fastect_conjugate_gemv(solver->tempVector, A, solver->projection, stream);
 
         // calc p * A * p
         error |= linalgcu_matrix_vector_dot_product(solver->tempNumber, solver->projection,
