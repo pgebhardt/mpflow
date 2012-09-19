@@ -246,11 +246,10 @@ linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t grid, cublasHan
     }
 
     // copy matrices to device
-    error  = linalgcu_matrix_copy_to_device(gradientMatrix, LINALGCU_TRUE, stream);
-    error |= linalgcu_matrix_copy_to_device(grid->gradientMatrixTransposed,
-        LINALGCU_TRUE, stream);
-    error |= linalgcu_matrix_copy_to_device(sigmaMatrix, LINALGCU_TRUE, stream);
-    error |= linalgcu_matrix_copy_to_device(grid->area, LINALGCU_TRUE, stream);
+    error  = linalgcu_matrix_copy_to_device(gradientMatrix, stream);
+    error |= linalgcu_matrix_copy_to_device(grid->gradientMatrixTransposed, stream);
+    error |= linalgcu_matrix_copy_to_device(sigmaMatrix, stream);
+    error |= linalgcu_matrix_copy_to_device(grid->area, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -493,7 +492,7 @@ linalgcuError_t fastect_grid_init_exitation_matrix(fastectGrid_t grid,
     }
 
     // upload matrix
-    linalgcu_matrix_copy_to_device(grid->excitationMatrix, LINALGCU_TRUE, stream);
+    linalgcu_matrix_copy_to_device(grid->excitationMatrix, stream);
 
     return LINALGCU_SUCCESS;
 }

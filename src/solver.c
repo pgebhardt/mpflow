@@ -133,8 +133,7 @@ linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cublasHandle_t 
         solver->jacobian, handle, stream);
 
     // set measuredVoltage to calculatedVoltage
-    error |= linalgcu_matrix_copy(solver->measuredVoltage, solver->calculatedVoltage,
-        LINALGCU_TRUE, NULL);
+    error |= linalgcu_matrix_copy(solver->measuredVoltage, solver->calculatedVoltage, stream);
 
     return error;
 }

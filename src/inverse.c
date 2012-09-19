@@ -112,7 +112,7 @@ linalgcuError_t fastect_inverse_solver_calc_excitation(fastectInverseSolver_t so
 
     // calc dU = mv - cv
     dummy_matrix.deviceData = calculatedVoltage->deviceData;
-    linalgcu_matrix_copy(solver->deltaVoltage, &dummy_matrix, LINALGCU_FALSE, stream);
+    linalgcu_matrix_copy(solver->deltaVoltage, &dummy_matrix, stream);
     linalgcu_matrix_scalar_multiply(solver->deltaVoltage, -1.0f, stream);
 
     dummy_matrix.deviceData = measuredVoltage->deviceData;
@@ -153,7 +153,7 @@ linalgcuError_t fastect_inverse_solver_solve(fastectInverseSolver_t solver,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // reset dSigma
-    error  = linalgcu_matrix_copy(gamma, solver->zeros, LINALGCU_FALSE, stream);
+    error  = linalgcu_matrix_copy(gamma, solver->zeros, stream);
 
     // calc excitation
     error |= fastect_inverse_solver_calc_excitation(solver, jacobian, calculatedVoltage,

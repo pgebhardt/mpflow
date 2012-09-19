@@ -33,8 +33,8 @@ linalgcuError_t fastect_conjugate_sparse_add_scalar(linalgcuMatrix_t vector,
     }
 
     // kernel dimension
-    dim3 global(vector->rows / LINALGCU_BLOCK_SIZE, vector->columns);
-    dim3 local(LINALGCU_BLOCK_SIZE, 1);
+    dim3 global(vector->rows / LINALGCU_BLOCK_SIZE, vector->columns / LINALGCU_BLOCK_SIZE);
+    dim3 local(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
 
     // execute kernel
     add_scalar_kernel<<<global, local, 0, stream>>>(vector->deviceData, scalar->deviceData,
@@ -48,10 +48,8 @@ __global__ void sparse_update_vector_kernel(linalgcuMatrixData_t* result,
     linalgcuMatrixData_t* x1, linalgcuMatrixData_t sign,
     linalgcuMatrixData_t* x2, linalgcuMatrixData_t* r1, linalgcuMatrixData_t* r2,
     linalgcuSize_t rows) {
-    // get row
+    // get ids
     linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // get column
     linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
@@ -70,8 +68,8 @@ linalgcuError_t fastect_conjugate_sparse_update_vector(linalgcuMatrix_t result,
     }
 
     // kernel dimension
-    dim3 global(result->rows / LINALGCU_BLOCK_SIZE, result->columns);
-    dim3 local(LINALGCU_BLOCK_SIZE, 1);
+    dim3 global(result->rows / LINALGCU_BLOCK_SIZE, result->columns / LINALGCU_BLOCK_SIZE);
+    dim3 local(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
 
     // execute kernel
     sparse_update_vector_kernel<<<global, local, 0, stream>>>(result->deviceData,

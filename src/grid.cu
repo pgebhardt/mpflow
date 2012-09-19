@@ -98,7 +98,7 @@ linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t grid,
             linalgcu_matrix_set_element(grid->connectivityMatrix, -1.0f, i, j);
         }
     }
-    linalgcu_matrix_copy_to_device(grid->connectivityMatrix, LINALGCU_FALSE, stream);
+    linalgcu_matrix_copy_to_device(grid->connectivityMatrix, stream);
 
     // fill intermediate connectivity and elementalResidual matrices
     linalgcuMatrixData_t id[3], x[3], y[3];
@@ -154,8 +154,8 @@ linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t grid,
     }
 
     // upload intermediate matrices
-    linalgcu_matrix_copy_to_device(connectivityMatrix, LINALGCU_TRUE, stream);
-    linalgcu_matrix_copy_to_device(elementalResidualMatrix, LINALGCU_TRUE, stream);
+    linalgcu_matrix_copy_to_device(connectivityMatrix, stream);
+    linalgcu_matrix_copy_to_device(elementalResidualMatrix, stream);
 
     // reduce matrices
     dim3 blocks(connectivityMatrix->rows / LINALGCU_BLOCK_SIZE, 1);
