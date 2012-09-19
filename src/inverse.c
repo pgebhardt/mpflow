@@ -118,6 +118,9 @@ linalgcuError_t fastect_inverse_solver_calc_excitation(fastectInverseSolver_t so
     dummy_matrix.deviceData = measuredVoltage->deviceData;
     linalgcu_matrix_add(solver->deltaVoltage, &dummy_matrix, stream);
 
+    // set cublas stream
+    cublasSetStream(handle, stream);
+
     // calc excitation
     linalgcuMatrixData_t alpha = 1.0f, beta = 0.0f;
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,

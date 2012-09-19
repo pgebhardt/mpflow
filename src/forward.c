@@ -56,9 +56,9 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
 
     // create conjugate solver
     error  = fastect_conjugate_sparse_solver_create(&solver->driveSolver,
-        mesh->vertexCount, driveCount, handle, stream);
+        mesh->vertexCount, driveCount, stream);
     error |= fastect_conjugate_sparse_solver_create(&solver->measurmentSolver,
-        mesh->vertexCount, measurmentCount, handle, stream);
+        mesh->vertexCount, measurmentCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -233,26 +233,26 @@ linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t solver,
 
     // solve for ground mode
     // solve for drive phi
-    error |= fastect_conjugate_sparse_solver_solve_regularized(solver->driveSolver,
+    error |= fastect_conjugate_sparse_solver_solve(solver->driveSolver,
         solver->grid->systemMatrices[0], solver->drivePhi[0], solver->driveF[0],
-        steps, handle, stream);
+        steps, LINALGCU_TRUE, stream);
 
     // solve for measurment phi
-    error |= fastect_conjugate_sparse_solver_solve_regularized(solver->measurmentSolver,
+    error |= fastect_conjugate_sparse_solver_solve(solver->measurmentSolver,
         solver->grid->systemMatrices[0], solver->measurmentPhi[0], solver->measurmentF[0],
-        steps, handle, stream);
+        steps, LINALGCU_TRUE, stream);
 
     // solve for higher harmonics
     for (linalgcuSize_t n = 1; n < solver->grid->numHarmonics + 1; n++) {
         // solve for drive phi
         error |= fastect_conjugate_sparse_solver_solve(solver->driveSolver,
             solver->grid->systemMatrices[n], solver->drivePhi[n], solver->driveF[n],
-            steps, handle, stream);
+            steps, LINALGCU_FALSE, stream);
 
         // solve for measurment phi
         error |= fastect_conjugate_sparse_solver_solve(solver->measurmentSolver,
             solver->grid->systemMatrices[n], solver->measurmentPhi[n], solver->measurmentF[n],
-            steps, handle, stream);
+            steps, LINALGCU_FALSE, stream);
     }
 
     // calc jacobian
@@ -266,6 +266,9 @@ linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t solver,
     // calc voltage
     error |= linalgcu_matrix_multiply(voltage, solver->voltageCalculation,
         solver->drivePhi[0], handle, stream);
+
+    // set stream
+    cublasSetStream(handle, stream);
 
     // add harmonic voltages
     linalgcuMatrixData_t alpha = 1.0f, beta = 1.0f;
