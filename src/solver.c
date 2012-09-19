@@ -12,7 +12,7 @@ linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
     linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
     linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
     linalgcuMatrixData_t sigmaRef, linalgcuMatrixData_t regularizationFactor,
-    cudaStream_t stream) {
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||
         (drivePattern == NULL) || (measurmentPattern == NULL)) {
@@ -42,15 +42,6 @@ linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
     solver->jacobian = NULL;
     solver->calculatedVoltage = NULL;
     solver->measuredVoltage = NULL;
-    solver->cublasHandle = NULL;
-
-    // create cublas handle
-    if (cublasCreate(&solver->cublasHandle) != CUBLAS_STATUS_SUCCESS) {
-        // cleanup
-        fastect_solver_release(&solver);
-
-        return LINALGCU_ERROR;
-    }
 
     // create matrices
     error  = linalgcu_matrix_create(&solver->dGamma, mesh->elementCount, 1, stream);
@@ -73,12 +64,11 @@ linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
     // create solver
     error  = fastect_forward_solver_create(&solver->forwardSolver, mesh, electrodes,
         sigmaRef, numHarmonics, driveCount, measurmentCount, drivePattern,
-        measurmentPattern, solver->cublasHandle, stream);
+        measurmentPattern, handle, stream);
     error |= fastect_calibration_solver_create(&solver->calibrationSolver, solver->jacobian,
-        regularizationFactor, solver->cublasHandle, stream);
+        regularizationFactor, handle, stream);
     error |= fastect_inverse_solver_create(&solver->inverseSolver,
-        solver->calibrationSolver->jacobianSquare, solver->jacobian, solver->cublasHandle,
-        stream);
+        solver->calibrationSolver->jacobianSquare, solver->jacobian, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -113,7 +103,6 @@ linalgcuError_t fastect_solver_release(fastectSolver_t* solverPointer) {
     linalgcu_matrix_release(&solver->jacobian);
     linalgcu_matrix_release(&solver->calculatedVoltage);
     linalgcu_matrix_release(&solver->measuredVoltage);
-    cublasDestroy(solver->cublasHandle);
 
     // free struct
     free(solver);
@@ -125,9 +114,10 @@ linalgcuError_t fastect_solver_release(fastectSolver_t* solverPointer) {
 }
 
 // pre solve for accurate initial jacobian
-linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cudaStream_t stream) {
+linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
-    if (solver == NULL) {
+    if ((solver == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -136,11 +126,11 @@ linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cudaStream_t st
 
     // forward solving a few steps
     error |= fastect_forward_solver_solve(solver->forwardSolver, solver->jacobian,
-        solver->gamma, solver->calculatedVoltage, 1000, solver->cublasHandle, stream);
+        solver->gamma, solver->calculatedVoltage, 1000, handle, stream);
 
     // calc system matrix
     error |= fastect_calibration_solver_calc_system_matrix(solver->calibrationSolver,
-        solver->jacobian, solver->cublasHandle, stream);
+        solver->jacobian, handle, stream);
 
     // set measuredVoltage to calculatedVoltage
     error |= linalgcu_matrix_copy(solver->measuredVoltage, solver->calculatedVoltage,
@@ -150,9 +140,10 @@ linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cudaStream_t st
 }
 
 // calibrate
-linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cudaStream_t stream) {
+linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
-    if (solver == NULL) {
+    if ((solver == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -161,20 +152,21 @@ linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cudaStream_t st
 
     // forward
     error  = fastect_forward_solver_solve(solver->forwardSolver, solver->jacobian,
-        solver->gamma, solver->calculatedVoltage, 10, solver->cublasHandle, stream);
+        solver->gamma, solver->calculatedVoltage, 10, handle, stream);
 
     // calibration
     error |= fastect_calibration_solver_calibrate(solver->calibrationSolver,
         solver->jacobian, solver->calculatedVoltage, solver->measuredVoltage,
-        solver->gamma, 75, solver->cublasHandle, stream);
+        solver->gamma, 75, handle, stream);
 
     return error;
 }
 
 // solving
-linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cudaStream_t stream) {
+linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
-    if (solver == NULL) {
+    if ((solver == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -184,7 +176,7 @@ linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cudaStream_t stream
     // calibration
     error |= fastect_inverse_solver_solve(solver->inverseSolver,
         solver->jacobian, solver->calculatedVoltage, solver->measuredVoltage,
-        solver->dGamma, 90, solver->cublasHandle, stream);
+        solver->dGamma, 90, handle, stream);
 
     return error;
 }

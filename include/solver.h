@@ -16,7 +16,6 @@ typedef struct {
     linalgcuMatrix_t jacobian;
     linalgcuMatrix_t calculatedVoltage;
     linalgcuMatrix_t measuredVoltage;
-    cublasHandle_t cublasHandle;
 } fastectSolver_s;
 typedef fastectSolver_s* fastectSolver_t;
 
@@ -26,18 +25,21 @@ linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
     linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
     linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
     linalgcuMatrixData_t sigmaRef, linalgcuMatrixData_t regularizationFactor,
-    cudaStream_t stream);
+    cublasHandle_t handle, cudaStream_t stream);
 
 // release solver
 linalgcuError_t fastect_solver_release(fastectSolver_t* solverPointer);
 
 // pre solve for accurate initial jacobian
-linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cudaStream_t stream);
+linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cublasHandle_t handle,
+    cudaStream_t stream);
 
 // calibrate
-linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cudaStream_t stream);
+linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cublasHandle_t handle,
+    cudaStream_t stream);
 
 // solving
-linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cudaStream_t stream);
+linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cublasHandle_t handle,
+    cudaStream_t stream);
 
 #endif
