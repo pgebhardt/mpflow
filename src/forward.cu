@@ -38,6 +38,7 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuColumnId_t idx, idy;
 
     // calc x components
+    linalgcuMatrixData_t value = 0.0f;
     for (int k = 0; k < 3; k++) {
         idx = gradient_matrix_column_ids[2 * j * LINALGCU_BLOCK_SIZE + k];
 
@@ -45,11 +46,12 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
             break;
         }
 
+        // read x gradient value
+        value = gradient_matrix_values[2 * j * LINALGCU_BLOCK_SIZE + k];
+
         // x gradient
-        grad_applied_phi.x += gradient_matrix_values[2 * j * LINALGCU_BLOCK_SIZE + k] *
-            applied_phi[idx + drive_id * phi_rows];
-        grad_lead_phi.x += gradient_matrix_values[2 * j * LINALGCU_BLOCK_SIZE + k] *
-            lead_phi[idx + measurment_id * phi_rows];
+        grad_applied_phi.x += value * applied_phi[idx + drive_id * phi_rows];
+        grad_lead_phi.x += value * lead_phi[idx + measurment_id * phi_rows];
     }
 
     // calc y components
@@ -60,11 +62,12 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
             break;
         }
 
+        // read y gradient value
+        value = gradient_matrix_values[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k];
+
         // y gradient
-        grad_applied_phi.y += gradient_matrix_values[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k] *
-            applied_phi[idy + drive_id * phi_rows];
-        grad_lead_phi.y += gradient_matrix_values[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k] *
-            lead_phi[idy + measurment_id * phi_rows];
+        grad_applied_phi.y += value * applied_phi[idy + drive_id * phi_rows];
+        grad_lead_phi.y += value * lead_phi[idy + measurment_id * phi_rows];
     }
 
     // calc matrix element

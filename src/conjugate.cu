@@ -45,11 +45,6 @@ __global__ void gemv_kernel(linalgcuMatrixData_t* matrix, linalgcuMatrixData_t* 
     linalgcuSize_t j = blockIdx.y * blockDim.y + threadIdx.y;
     linalgcuSize_t col0 = j * LINALGCU_BLOCK_SIZE;
 
-    // check index
-    if (j >= rows / LINALGCU_BLOCK_SIZE) {
-        return;
-    }
-
     // Load one slice of vector in work
     __shared__ linalgcuMatrixData_t work[LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE];
     work[threadIdx.x + threadIdx.y * LINALGCU_BLOCK_SIZE] = col0 + threadIdx.x < rows ?
@@ -65,7 +60,9 @@ __global__ void gemv_kernel(linalgcuMatrixData_t* matrix, linalgcuMatrixData_t* 
     }
 
     // store to result
-    result[(blockIdx.x * blockDim.x + threadIdx.x) + j * rows] = sum;
+    if (j < rows / LINALGCU_BLOCK_SIZE) {
+        result[(blockIdx.x * blockDim.x + threadIdx.x) + j * rows] = sum;
+    }
 }
 
 // row reduce kernel

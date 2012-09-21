@@ -19,7 +19,8 @@ INSTALL_LIB = /usr/local/lib
 CC = clang
 NVCC = $(CUDA_HOME)/bin/nvcc
 CFLAGS = -fPIC
-NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v
+NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -lineinfo
+LDFLAGS = -L/usr/local/lib -llinalgcu -L$(CUDA_HOME)/lib64 -lcudart -lcublas
 
 # Object files
 _OBJ = mesh.o basis.o electrodes.o grid.o conjugate.o conjugate_sparse.o forward.o inverse.o calibration.o solver.o
@@ -39,7 +40,7 @@ LIB = libfastect.so
 # Rule for library
 $(LIB): $(OBJ) $(CUOBJ) $(DEPS)
 	mkdir -p $(BUILD)
-	$(CC) -shared -o $(BUILD)/$(LIB) $(OBJ) $(CUOBJ)
+	$(CC) -shared -o $(BUILD)/$(LIB) $(OBJ) $(CUOBJ) $(LDFLAGS)
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.c $(DEPS)
