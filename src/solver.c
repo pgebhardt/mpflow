@@ -4,6 +4,7 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "../include/fastect.h"
 
 // create solver
@@ -69,6 +70,7 @@ linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
         regularizationFactor, handle, stream);
     error |= fastect_inverse_solver_create(&solver->inverseSolver,
         solver->calibrationSolver->jacobianSquare, solver->jacobian, handle, stream);
+
 
     // check success
     if (error != LINALGCU_SUCCESS) {

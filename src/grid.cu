@@ -7,6 +7,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "../include/fastect.h"
 
 // calc residual integral

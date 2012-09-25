@@ -383,61 +383,71 @@ linalgcuMatrixData_t fastect_grid_angle(linalgcuMatrixData_t x, linalgcuMatrixDa
     }
 }
 
-linalgcuMatrixData_t fastect_grid_integrate_basis(linalgcuMatrixData_t* node,
-    linalgcuMatrixData_t* left, linalgcuMatrixData_t* right,
-    linalgcuMatrixData_t* start, linalgcuMatrixData_t* end) {
+linalgcuMatrixData_t fastect_grid_integrate_basis(linalgcuMatrixData_t* start,
+    linalgcuMatrixData_t* end, linalgcuMatrixData_t* electrodeStart,
+    linalgcuMatrixData_t* electrodeEnd) {
     // integral
     linalgcuMatrixData_t integral = 0.0f;
 
-    // calc angle of node
-    linalgcuMatrixData_t angle = fastect_grid_angle(node[0], node[1]);
-    linalgcuMatrixData_t radius = sqrt(start[0] * start[0] + start[1] * start[1]);
+    // calc radius
+    linalgcuMatrixData_t radius = sqrt(electrodeStart[0] * electrodeStart[0]
+        + electrodeStart[1] * electrodeStart[1]);
 
-    // calc s parameter
-    linalgcuMatrixData_t sleft = radius * (fastect_grid_angle(left[0], left[1]) - angle);
-    linalgcuMatrixData_t sright = radius * (fastect_grid_angle(right[0], right[1]) - angle);
-    linalgcuMatrixData_t sstart = radius * (fastect_grid_angle(start[0], start[1]) - angle);
-    linalgcuMatrixData_t send = radius * (fastect_grid_angle(end[0], end[1]) - angle);
+    // calc angle
+    linalgcuMatrixData_t angleStart = fastect_grid_angle(start[0], start[1]);
+    linalgcuMatrixData_t angleEnd = fastect_grid_angle(end[0], end[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeStart = fastect_grid_angle(electrodeStart[0], electrodeStart[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeEnd = fastect_grid_angle(electrodeEnd[0], electrodeEnd[1]) - angleStart;
 
-    // correct s parameter
-    sleft -= (sleft > sright) && (sleft > 0.0f) ? radius * 2.0f * M_PI : 0.0f;
-    sright += (sleft > sright) && (sleft < 0.0f) ? radius * 2.0f * M_PI : 0.0f;
-    sstart -= (sstart > send) && (sstart > 0.0f) ? radius * 2.0f * M_PI : 0.0f;
-    sstart += (sstart > send) && (sstart < 0.0f) ? radius * 2.0f * M_PI : 0.0f;
+    // correct angle
+    angleEnd += (angleEnd < M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeStart += (angleElectrodeStart < M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeEnd += (angleElectrodeEnd < M_PI) ? 2.0f * M_PI : 0.0f;
+    angleEnd -= (angleEnd > M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeStart -= (angleElectrodeStart > M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeEnd -= (angleElectrodeEnd > M_PI) ? 2.0f * M_PI : 0.0f;
+
+    // calc parameter
+    linalgcuMatrixData_t sEnd = radius * angleEnd;
+    linalgcuMatrixData_t sElectrodeStart = radius * angleElectrodeStart;
+    linalgcuMatrixData_t sElectrodeEnd = radius * angleElectrodeEnd;
 
     // integrate left triangle
-    if ((sstart < 0.0f) && (send > sleft)) {
-        if ((send >= 0.0f) && (sstart <= sleft)) {
-            integral = -0.5f * sleft;
-        }
-        else if ((send >= 0.0f) && (sstart > sleft)) {
-            integral = -(sstart - 0.5 * sstart * sstart / sleft);
-        }
-        else if ((send < 0.0f) && (sstart <= sleft)) {
-            integral = (send - 0.5 * send * send / sleft) -
-                       (sleft - 0.5 * sleft * sleft / sleft);
-        }
-        else if ((send < 0.0f) && (sstart > sleft)) {
-            integral = (send - 0.5 * send * send / sleft) -
-                       (sstart - 0.5 * sstart * sstart / sleft);
+    if (sEnd < 0.0f) {
+        if ((sElectrodeStart < 0.0f) && (sElectrodeEnd > sEnd)) {
+            if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart <= sEnd)) {
+                integral = -0.5f * sEnd;
+            }
+            else if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart > sEnd)) {
+                integral = -(sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
+            }
+            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart <= sEnd)) {
+                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
+                           (sEnd - 0.5 * sEnd * sEnd / sEnd);
+            }
+            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart > sEnd)) {
+                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
+                           (sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
+            }
         }
     }
-
-    // integrate right triangle
-    if ((send > 0.0f) && (sright > sstart)) {
-        if ((sstart <= 0.0f) && (send >= sright)) {
-            integral += 0.5f * sright;
-        }
-        else if ((sstart <= 0.0f) && (send < sright)) {
-            integral += (send - 0.5f * send * send / sright);
-        }
-        else if ((sstart > 0.0f) && (send >= sright)) {
-            integral += (sright - 0.5f * sright * sright / sright) -
-                        (sstart - 0.5f * sstart * sstart / sright);
-        }
-        else if ((sstart > 0.0f) && (send < sright)) {
-            integral += (send - 0.5f * send * send / sright) -
-                        (sstart - 0.5f * sstart * sstart / sright);
+    else {
+        // integrate right triangle
+        if ((sElectrodeEnd > 0.0f) && (sEnd > sElectrodeStart)) {
+            if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd >= sEnd)) {
+                integral = 0.5f * sEnd;
+            }
+            else if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd < sEnd)) {
+                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd);
+            }
+            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd >= sEnd)) {
+                integral = (sEnd - 0.5f * sEnd * sEnd / sEnd) -
+                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
+            }
+            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd < sEnd)) {
+                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd) -
+                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
+            }
         }
     }
 
@@ -456,38 +466,34 @@ linalgcuError_t fastect_grid_init_exitation_matrix(fastectGrid_t grid,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // fill exitation_matrix matrix
-    linalgcuMatrixData_t id[3];
-    linalgcuMatrixData_t node[2], left[2], right[2];
+    linalgcuMatrixData_t id[2];
+    linalgcuMatrixData_t node[2], end[2];
 
     for (int i = 0; i < grid->mesh->boundaryCount; i++) {
         for (int j = 0; j < grid->electrodes->count; j++) {
             // get boundary node id
-            linalgcu_matrix_get_element(grid->mesh->boundary, &id[0],
-                i - 1 < 0 ? grid->mesh->boundaryCount - 1 : i - 1, 0);
-            linalgcu_matrix_get_element(grid->mesh->boundary, &id[1], i, 0);
-            linalgcu_matrix_get_element(grid->mesh->boundary, &id[2],
-                (i + 1) % grid->mesh->boundaryCount, 0);
+            linalgcu_matrix_get_element(grid->mesh->boundary, &id[0], i, 0);
+            linalgcu_matrix_get_element(grid->mesh->boundary, &id[1], i, 1);
 
             // get coordinates
-            linalgcu_matrix_get_element(grid->mesh->vertices, &left[0], (linalgcuSize_t)id[0],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcuSize_t)id[0],
                 0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &left[1], (linalgcuSize_t)id[0],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcuSize_t)id[0],
                 1);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &node[0], (linalgcuSize_t)id[1],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &end[0], (linalgcuSize_t)id[1],
                 0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &node[1], (linalgcuSize_t)id[1],
-                1);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &right[0], (linalgcuSize_t)id[2],
-                0);
-            linalgcu_matrix_get_element(grid->mesh->vertices, &right[1], (linalgcuSize_t)id[2],
+            linalgcu_matrix_get_element(grid->mesh->vertices, &end[1], (linalgcuSize_t)id[1],
                 1);
 
             // calc element
-            linalgcu_matrix_set_element(grid->excitationMatrix,
-                fastect_grid_integrate_basis(node, left, right,
+            grid->excitationMatrix->hostData[(linalgcuSize_t)id[0] + j * grid->excitationMatrix->rows] +=
+                fastect_grid_integrate_basis(node, end,
                     &grid->electrodes->electrodesStart[j * 2],
-                    &grid->electrodes->electrodesEnd[j * 2]) / grid->electrodes->width,
-                    (linalgcuSize_t)id[1], j);
+                    &grid->electrodes->electrodesEnd[j * 2]) / grid->electrodes->width;
+            grid->excitationMatrix->hostData[(linalgcuSize_t)id[1] + j * grid->excitationMatrix->rows] +=
+                fastect_grid_integrate_basis(end, node,
+                    &grid->electrodes->electrodesStart[j * 2],
+                    &grid->electrodes->electrodesEnd[j * 2]) / grid->electrodes->width;
         }
     }
 
