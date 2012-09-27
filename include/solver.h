@@ -16,6 +16,7 @@ typedef struct {
     linalgcuMatrix_t jacobian;
     linalgcuMatrix_t calculatedVoltage;
     linalgcuMatrix_t measuredVoltage;
+    linalgcuMatrix_t calibrationVoltage;
 } fastectSolver_s;
 typedef fastectSolver_s* fastectSolver_t;
 
