@@ -70,6 +70,11 @@ __global__ void reduce_row_kernel(linalgcuMatrixData_t* vector, linalgcuSize_t r
     // get id
     linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
 
+    // check row
+    if (row >= rows) {
+        return;
+    }
+
     // sum row
     linalgcuMatrixData_t sum = 0.0f;
     for (int i = 0; i < rows / LINALGCU_BLOCK_SIZE; i++) {
@@ -99,7 +104,7 @@ linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t
         result->deviceData, matrix->rows);
 
     // call reduce kernel
-    reduce_row_kernel<<<matrix->columns / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE, 0, stream>>>(
+    reduce_row_kernel<<<matrix->columns / (2 * LINALGCU_BLOCK_SIZE), 2 * LINALGCU_BLOCK_SIZE, 0, stream>>>(
         result->deviceData, result->rows);
 
     return LINALGCU_SUCCESS;
