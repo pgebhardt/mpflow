@@ -9,10 +9,10 @@
 
 // create calibration_solver
 linalgcuError_t fastect_calibration_solver_create(fastectCalibrationSolver_t* solverPointer,
-    linalgcuMatrix_t jacobian, linalgcuMatrixData_t regularizationFactor,
-    cublasHandle_t handle, cudaStream_t stream) {
+    linalgcuSize_t elementCount, linalgcuSize_t voltageCount,
+    linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solverPointer == NULL) || (jacobian == NULL) || (handle == NULL)) {
+    if ((solverPointer == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -37,19 +37,17 @@ linalgcuError_t fastect_calibration_solver_create(fastectCalibrationSolver_t* so
     solver->excitation = NULL;
     solver->systemMatrix = NULL;
     solver->jacobianSquare = NULL;
-    solver->regularization = NULL;
     solver->regularizationFactor = regularizationFactor;
 
     // create matrices
-    error  = linalgcu_matrix_create(&solver->dVoltage, jacobian->rows, 1, stream);
-    error |= linalgcu_matrix_create(&solver->dGamma, jacobian->columns, 1, stream);
-    error |= linalgcu_matrix_create(&solver->zeros, jacobian->columns, 1, stream);
-    error |= linalgcu_matrix_create(&solver->excitation, jacobian->columns, 1, stream);
-    error |= linalgcu_matrix_create(&solver->systemMatrix, jacobian->columns,
-        jacobian->columns, stream);
-    error |= linalgcu_matrix_create(&solver->jacobianSquare, jacobian->columns,
-        jacobian->columns, stream);
-    error |= linalgcu_matrix_unity(&solver->regularization, jacobian->columns, stream);
+    error  = linalgcu_matrix_create(&solver->dVoltage, voltageCount, 1, stream);
+    error |= linalgcu_matrix_create(&solver->dGamma, elementCount, 1, stream);
+    error |= linalgcu_matrix_create(&solver->zeros, elementCount, 1, stream);
+    error |= linalgcu_matrix_create(&solver->excitation, elementCount, 1, stream);
+    error |= linalgcu_matrix_create(&solver->systemMatrix, elementCount,
+        elementCount, stream);
+    error |= linalgcu_matrix_create(&solver->jacobianSquare, elementCount,
+        elementCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -61,7 +59,7 @@ linalgcuError_t fastect_calibration_solver_create(fastectCalibrationSolver_t* so
 
     // create conjugate solver
     error = fastect_conjugate_solver_create(&solver->conjugate_solver,
-        jacobian->columns, handle, stream);
+        elementCount, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -96,7 +94,6 @@ linalgcuError_t fastect_calibration_solver_release(
     linalgcu_matrix_release(&solver->excitation);
     linalgcu_matrix_release(&solver->systemMatrix);
     linalgcu_matrix_release(&solver->jacobianSquare);
-    linalgcu_matrix_release(&solver->regularization);
 
     // free struct
     free(solver);
@@ -131,14 +128,16 @@ linalgcuError_t fastect_calibration_solver_calc_system_matrix(
         return LINALGCU_ERROR;
     }
 
+    // copy jacobianSquare to systemMatrix
     error |= linalgcu_matrix_copy(solver->systemMatrix, solver->jacobianSquare, stream);
 
+    // add lambda * Jt * J * Jt * J to systemMatrix
     if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, solver->jacobianSquare->columns,
-        solver->jacobianSquare->rows, solver->jacobianSquare->columns, &solver->regularizationFactor,
-        solver->jacobianSquare->deviceData, solver->jacobianSquare->rows,
-        solver->jacobianSquare->deviceData, solver->jacobianSquare->rows,
-        &alpha, solver->systemMatrix->deviceData, solver->systemMatrix->rows)
-        != CUBLAS_STATUS_SUCCESS) {
+        solver->jacobianSquare->rows, solver->jacobianSquare->columns,
+        &solver->regularizationFactor, solver->jacobianSquare->deviceData,
+        solver->jacobianSquare->rows, solver->jacobianSquare->deviceData,
+        solver->jacobianSquare->rows, &alpha, solver->systemMatrix->deviceData,
+        solver->systemMatrix->rows) != CUBLAS_STATUS_SUCCESS) {
         return LINALGCU_ERROR;
     }
 
@@ -182,9 +181,9 @@ linalgcuError_t fastect_calibration_solver_calc_excitation(fastectCalibrationSol
 
 // calibration
 linalgcuError_t fastect_calibration_solver_calibrate(fastectCalibrationSolver_t solver,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
-    linalgcuMatrix_t measuredVoltage, linalgcuMatrix_t gamma,
-    linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream) {
+    linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+    linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
     if ((solver == NULL) || (jacobian == NULL) || (calculatedVoltage == NULL) ||
         (measuredVoltage == NULL) || (gamma == NULL) || (handle == NULL)) {

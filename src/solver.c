@@ -69,10 +69,12 @@ linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
     error  = fastect_forward_solver_create(&solver->forwardSolver, mesh, electrodes,
         sigmaRef, numHarmonics, driveCount, measurmentCount, drivePattern,
         measurmentPattern, handle, stream);
-    error |= fastect_calibration_solver_create(&solver->calibrationSolver, solver->jacobian,
+    error |= fastect_calibration_solver_create(&solver->calibrationSolver,
+        mesh->elementCount, measurmentPattern->columns * drivePattern->columns,
         regularizationFactor, handle, stream);
     error |= fastect_inverse_solver_create(&solver->inverseSolver,
-        solver->calibrationSolver->jacobianSquare, solver->jacobian, handle, stream);
+        mesh->elementCount, measurmentPattern->columns * drivePattern->columns,
+        solver->calibrationSolver->jacobianSquare, handle, stream);
 
 
     // check success
@@ -162,8 +164,8 @@ linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cublasHandle_t 
 
     // calibration
     error |= fastect_calibration_solver_calibrate(solver->calibrationSolver,
-        solver->jacobian, solver->calculatedVoltage, solver->calibrationVoltage,
-        solver->gamma, 75, handle, stream);
+        solver->gamma, solver->jacobian, solver->calculatedVoltage, solver->calibrationVoltage,
+        75, handle, stream);
 
     return error;
 }
@@ -179,10 +181,10 @@ linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cublasHandle_t hand
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
 
-    // calibration
+    // solve
     error |= fastect_inverse_solver_solve(solver->inverseSolver,
-        solver->jacobian, solver->calibrationVoltage, solver->measuredVoltage,
-        solver->dGamma, 90, handle, stream);
+        solver->dGamma, solver->jacobian, solver->calibrationVoltage, solver->measuredVoltage,
+        90, handle, stream);
 
     return error;
 }

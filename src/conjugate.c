@@ -111,8 +111,8 @@ linalgcuError_t fastect_conjugate_solver_solve(fastectConjugateSolver_t solver,
     error |= linalgcu_matrix_copy(solver->projection, solver->residuum, stream);
 
     // calc rsold
-    error |= linalgcu_matrix_vector_dot_product(solver->rsold, solver->residuum, solver->residuum,
-        stream);
+    error |= linalgcu_matrix_vector_dot_product(solver->rsold, solver->residuum,
+        solver->residuum, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {

@@ -10,8 +10,8 @@
 typedef struct {
     linalgcuMatrixData_t coefficients[3];
     linalgcuMatrixData_t gradient[2];
-} fastectBasts_s;
-typedef fastectBasts_s* fastectBasis_t;
+} fastectBasis_s;
+typedef fastectBasis_s* fastectBasis_t;
 
 // create basis
 linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,

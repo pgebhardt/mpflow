@@ -15,15 +15,14 @@ typedef struct {
     linalgcuMatrix_t excitation;
     linalgcuMatrix_t systemMatrix;
     linalgcuMatrix_t jacobianSquare;
-    linalgcuMatrix_t regularization;
     linalgcuMatrixData_t regularizationFactor;
 } fastectCalibrationSolver_s;
 typedef fastectCalibrationSolver_s* fastectCalibrationSolver_t;
 
 // create calibration_solver
 linalgcuError_t fastect_calibration_solver_create(fastectCalibrationSolver_t* solverPointer,
-    linalgcuMatrix_t jacobian, linalgcuMatrixData_t regularizationFactor,
-    cublasHandle_t handle, cudaStream_t stream);
+    linalgcuSize_t elementCount, linalgcuSize_t voltageCount,
+    linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
 
 // release calibration_solver
 linalgcuError_t fastect_calibration_solver_release(fastectCalibrationSolver_t* solverPointer);
@@ -40,8 +39,8 @@ linalgcuError_t fastect_calibration_solver_calc_excitation(fastectCalibrationSol
 
 // calibration solving
 linalgcuError_t fastect_calibration_solver_calibrate(fastectCalibrationSolver_t solver,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
-    linalgcuMatrix_t measuredVoltage, linalgcuMatrix_t gamma,
-    linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream);
+    linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+    linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps, cublasHandle_t handle,
+    cudaStream_t stream);
 
 #endif

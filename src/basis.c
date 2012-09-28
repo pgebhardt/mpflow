@@ -23,7 +23,7 @@ linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
     *basisPointer = NULL;
 
     // create basis struct
-    fastectBasis_t basis = malloc(sizeof(fastectBasts_s));
+    fastectBasis_t basis = malloc(sizeof(fastectBasis_s));
 
     // check success
     if (basis == NULL) {
