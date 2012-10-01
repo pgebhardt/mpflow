@@ -9,7 +9,6 @@
 // solver struct
 typedef struct {
     fastectForwardSolver_t forwardSolver;
-    fastectCalibrationSolver_t calibrationSolver;
     fastectInverseSolver_t inverseSolver;
     linalgcuMatrix_t dGamma;
     linalgcuMatrix_t gamma;
@@ -32,15 +31,15 @@ linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
 linalgcuError_t fastect_solver_release(fastectSolver_t* solverPointer);
 
 // pre solve for accurate initial jacobian
-linalgcuError_t fastect_solver_pre_solve(fastectSolver_t solver, cublasHandle_t handle,
+linalgcuError_t fastect_solver_pre_solve(fastectSolver_t self, cublasHandle_t handle,
     cudaStream_t stream);
 
 // calibrate
-linalgcuError_t fastect_solver_calibrate(fastectSolver_t solver, cublasHandle_t handle,
+linalgcuError_t fastect_solver_calibrate(fastectSolver_t self, cublasHandle_t handle,
     cudaStream_t stream);
 
 // solving
-linalgcuError_t fastect_solver_solve(fastectSolver_t solver, cublasHandle_t handle,
+linalgcuError_t fastect_solver_solve(fastectSolver_t self, cublasHandle_t handle,
     cudaStream_t stream);
 
 #endif

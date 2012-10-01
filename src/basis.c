@@ -23,19 +23,19 @@ linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
     *basisPointer = NULL;
 
     // create basis struct
-    fastectBasis_t basis = malloc(sizeof(fastectBasis_s));
+    fastectBasis_t self = malloc(sizeof(fastectBasis_s));
 
     // check success
-    if (basis == NULL) {
+    if (self == NULL) {
         return LINALGCU_ERROR;
     }
 
     // init struct
-    basis->coefficients[0] = 0.0;
-    basis->coefficients[1] = 0.0;
-    basis->coefficients[2] = 0.0;
-    basis->gradient[0] = 0.0;
-    basis->gradient[1] = 0.0;
+    self->coefficients[0] = 0.0;
+    self->coefficients[1] = 0.0;
+    self->coefficients[2] = 0.0;
+    self->gradient[0] = 0.0;
+    self->gradient[1] = 0.0;
 
     // calc coefficients (A * c = b)
     linalgcuMatrixData_t Ainv[3][3];
@@ -65,16 +65,16 @@ linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
     Ainv[2][2] = (a * e - b * d) / det;
 
     // calc coefficients
-    basis->coefficients[0] = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
-    basis->coefficients[1] = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
-    basis->coefficients[2] = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
+    self->coefficients[0] = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
+    self->coefficients[1] = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
+    self->coefficients[2] = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
 
     // save gradient
-    basis->gradient[0] = basis->coefficients[1];
-    basis->gradient[1] = basis->coefficients[2];
+    self->gradient[0] = self->coefficients[1];
+    self->gradient[1] = self->coefficients[2];
 
     // set basis pointer
-    *basisPointer = basis;
+    *basisPointer = self;
 
     return LINALGCU_SUCCESS;
 }
@@ -96,16 +96,16 @@ linalgcuError_t fastect_basis_release(fastectBasis_t* basisPointer) {
 }
 
 // evaluate basis function
-linalgcuError_t fastect_basis_function(fastectBasis_t basis,
+linalgcuError_t fastect_basis_function(fastectBasis_t self,
     linalgcuMatrixData_t* resultPointer, linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     // check input
-    if ((basis == NULL) || (resultPointer == NULL)) {
+    if ((self == NULL) || (resultPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // calc result
-    *resultPointer = basis->coefficients[0] + basis->coefficients[1] * x +
-        basis->coefficients[2] * y;
+    *resultPointer = self->coefficients[0] + self->coefficients[1] * x +
+        self->coefficients[2] * y;
 
     return LINALGCU_SUCCESS;
 }

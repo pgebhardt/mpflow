@@ -23,7 +23,7 @@ linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
 linalgcuError_t fastect_basis_release(fastectBasis_t* basisPointer);
 
 // evaluate basis function
-linalgcuError_t fastect_basis_function(fastectBasis_t basis,
+linalgcuError_t fastect_basis_function(fastectBasis_t self,
     linalgcuMatrixData_t* resultPointer, linalgcuMatrixData_t x, linalgcuMatrixData_t y);
 
 #endif

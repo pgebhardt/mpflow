@@ -12,7 +12,9 @@ linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
     linalgcuMatrixData_t radius, linalgcuMatrixData_t height) {
     // check input
     if ((meshPointer == NULL) || (vertices == NULL) || (elements == NULL) ||
-        (boundary == NULL) || (radius <= 0.0f) || (height <= 0.0f)) {
+        (boundary == NULL) || (vertexCount > vertices->rows) ||
+        (elementCount > elements->rows) || (boundaryCount > boundary->rows) ||
+        (radius <= 0.0f) || (height <= 0.0f)) {
         return LINALGCU_ERROR;
     }
 
@@ -23,25 +25,25 @@ linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
     *meshPointer = NULL;
 
     // create mesg struct
-    fastectMesh_t mesh = malloc(sizeof(fastectMesh_s));
+    fastectMesh_t self = malloc(sizeof(fastectMesh_s));
 
     // check success
-    if (mesh == NULL) {
+    if (self == NULL) {
         return LINALGCU_ERROR;
     }
 
     // init struct
-    mesh->radius = radius;
-    mesh->height = height;
-    mesh->vertexCount = vertexCount;
-    mesh->elementCount = elementCount;
-    mesh->boundaryCount = boundaryCount;
-    mesh->vertices = vertices;
-    mesh->elements = elements;
-    mesh->boundary = boundary;
+    self->radius = radius;
+    self->height = height;
+    self->vertexCount = vertexCount;
+    self->elementCount = elementCount;
+    self->boundaryCount = boundaryCount;
+    self->vertices = vertices;
+    self->elements = elements;
+    self->boundary = boundary;
 
     // set mesh pointer
-    *meshPointer = mesh;
+    *meshPointer = self;
 
     return LINALGCU_SUCCESS;
 }
@@ -53,19 +55,19 @@ linalgcuError_t fastect_mesh_release(fastectMesh_t* meshPointer) {
     }
 
     // get mesh
-    fastectMesh_t mesh = *meshPointer;
+    fastectMesh_t self = *meshPointer;
 
     // cleanup vertices
-    linalgcu_matrix_release(&mesh->vertices);
+    linalgcu_matrix_release(&self->vertices);
 
     // cleanup elements
-    linalgcu_matrix_release(&mesh->elements);
+    linalgcu_matrix_release(&self->elements);
 
     // cleanup boundary
-    linalgcu_matrix_release(&mesh->boundary);
+    linalgcu_matrix_release(&self->boundary);
 
     // free struct
-    free(mesh);
+    free(self);
 
     // set mesh pointer to NULL
     *meshPointer = NULL;

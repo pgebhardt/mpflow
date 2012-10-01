@@ -23,7 +23,7 @@ NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-alias
 LDFLAGS = -L/usr/local/lib -llinalgcu -L$(CUDA_HOME)/lib64 -lcudart -lcublas
 
 # Object files
-_OBJ = mesh.o basis.o electrodes.o grid.o conjugate.o conjugate_sparse.o forward.o inverse.o calibration.o solver.o
+_OBJ = mesh.o basis.o electrodes.o grid.o conjugate.o conjugate_sparse.o forward.o inverse.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
@@ -31,7 +31,7 @@ _CUOBJ = grid.cu_o conjugate.cu_o conjugate_sparse.cu_o forward.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fastect.h mesh.h basis.h electrodes.h grid.h conjugate.h conjugate_sparse.h forward.h inverse.h calibration.h solver.h
+_DEPS = fastect.h mesh.h basis.h electrodes.h grid.h conjugate.h conjugate_sparse.h forward.h inverse.h solver.h
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Library

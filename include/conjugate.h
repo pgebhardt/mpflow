@@ -37,7 +37,7 @@ linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t
     linalgcuMatrix_t vector, cudaStream_t stream);
 
 // solve conjugate
-linalgcuError_t fastect_conjugate_solver_solve(fastectConjugateSolver_t solver,
+linalgcuError_t fastect_conjugate_solver_solve(fastectConjugateSolver_t self,
     linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
     linalgcuSize_t iterations, cublasHandle_t handle, cudaStream_t stream);
 

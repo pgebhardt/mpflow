@@ -34,21 +34,21 @@ linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
 linalgcuError_t fastect_grid_release(fastectGrid_t* gridPointer);
 
 // init system matrix 2D
-linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t grid, cublasHandle_t handle,
+linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t self, cublasHandle_t handle,
     cudaStream_t stream);
 
 // init residual matrix
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t grid, linalgcuMatrix_t gamma,
+linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t self, linalgcuMatrix_t gamma,
     cudaStream_t stream);
 
 // update system matrix
-linalgcuError_t fastect_grid_update_system_matrices(fastectGrid_t grid,
+linalgcuError_t fastect_grid_update_system_matrices(fastectGrid_t self,
     linalgcuMatrix_t gamma, cublasHandle_t handle, cudaStream_t stream);
 
 // update system matrix 2D
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_grid_update_2D_system_matrix(fastectGrid_t grid,
+linalgcuError_t fastect_grid_update_2D_system_matrix(fastectGrid_t self,
     linalgcuMatrix_t gamma, cudaStream_t stream);
 
 // update residual matrix
@@ -57,7 +57,7 @@ linalgcuError_t fastect_grid_update_residual_matrix(fastectGrid_t,
     linalgcuMatrix_t gamma, cudaStream_t stream);
 
 // init exitation matrix
-linalgcuError_t fastect_grid_init_exitation_matrix(fastectGrid_t grid,
+linalgcuError_t fastect_grid_init_exitation_matrix(fastectGrid_t self,
     cudaStream_t stream);
 
 #endif

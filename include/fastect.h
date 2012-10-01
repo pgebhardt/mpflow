@@ -23,7 +23,6 @@ extern "C" {
 #include "conjugate_sparse.h"
 #include "forward.h"
 #include "inverse.h"
-#include "calibration.h"
 #include "solver.h"
 
 #ifdef __cplusplus
