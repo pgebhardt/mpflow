@@ -42,7 +42,7 @@ linalgcuError_t fastect_conjugate_solver_create(fastectConjugateSolver_t* solver
     error |= linalgcu_matrix_create(&self->projection, self->rows, 1, stream);
     error |= linalgcu_matrix_create(&self->rsold, self->rows, 1, stream);
     error |= linalgcu_matrix_create(&self->rsnew, self->rows, 1, stream);
-    error |= linalgcu_matrix_create(&self->tempVector, self->rows, self->rows /
+    error |= linalgcu_matrix_create(&self->tempVector, self->rows, self->residuum->rows /
         LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&self->tempNumber, self->rows, 1, stream);
 
