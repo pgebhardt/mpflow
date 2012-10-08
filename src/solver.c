@@ -126,7 +126,7 @@ linalgcuError_t fastect_solver_pre_solve(fastectSolver_t self, cublasHandle_t ha
     error |= fastect_inverse_solver_calc_system_matrix(self->inverseSolver,
         self->forwardSolver->jacobian, handle, stream);
 
-    // set measuredVoltage and calculatedVoltage to calculatedVoltage
+    // set measuredVoltage and calibrationVoltage to calculatedVoltage
     error |= linalgcu_matrix_copy(self->measuredVoltage, self->forwardSolver->voltage, stream);
     error |= linalgcu_matrix_copy(self->calibrationVoltage, self->forwardSolver->voltage,
         stream);
