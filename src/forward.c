@@ -36,6 +36,8 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
     self->grid = NULL;
     self->driveSolver = NULL;
     self->measurmentSolver = NULL;
+    self->jacobian = NULL;
+    self->voltage = NULL;
     self->drivePhi = NULL;
     self->measurmentPhi = NULL;
     self->driveF = NULL;
@@ -67,6 +69,12 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
 
         return error;
     }
+
+    // create matrices
+    error |= linalgcu_matrix_create(&self->jacobian,
+        measurmentPattern->columns * drivePattern->columns, mesh->elementCount, stream);
+    error |= linalgcu_matrix_create(&self->voltage, measurmentPattern->columns,
+        drivePattern->columns, stream);
 
     // create matrix buffer
     self->drivePhi = malloc(sizeof(linalgcuMatrix_t) * (numHarmonics + 1));
@@ -178,6 +186,9 @@ linalgcuError_t fastect_forward_solver_release(fastectForwardSolver_t* solverPoi
     fastectForwardSolver_t self = *solverPointer;
 
     // cleanup
+    linalgcu_matrix_release(&self->jacobian);
+    linalgcu_matrix_release(&self->voltage);
+
     if (self->drivePhi != NULL) {
         for (linalgcuSize_t i = 0; i < self->grid->numHarmonics + 1; i++) {
             linalgcu_matrix_release(&self->drivePhi[i]);
@@ -217,11 +228,10 @@ linalgcuError_t fastect_forward_solver_release(fastectForwardSolver_t* solverPoi
 
 // forward solving
 linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t self,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t gamma, linalgcuMatrix_t voltage,
-    linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream) {
+    linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
-    if ((self == NULL) || (gamma == NULL) || (jacobian == NULL) || (voltage == NULL) ||
-        (handle == NULL)) {
+    if ((self == NULL) || (gamma == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -256,15 +266,13 @@ linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t self,
     }
 
     // calc jacobian
-    error |= fastect_forward_solver_calc_jacobian(self, jacobian, gamma, 0,
-        LINALGCU_FALSE, stream);
+    error |= fastect_forward_solver_calc_jacobian(self, gamma, 0, LINALGCU_FALSE, stream);
     for (linalgcuSize_t n = 1; n < self->grid->numHarmonics + 1; n++) {
-        error |= fastect_forward_solver_calc_jacobian(self, jacobian, gamma, n,
-            LINALGCU_TRUE, stream);
+        error |= fastect_forward_solver_calc_jacobian(self, gamma, n, LINALGCU_TRUE, stream);
     }
 
     // calc voltage
-    error |= linalgcu_matrix_multiply(voltage, self->voltageCalculation,
+    error |= linalgcu_matrix_multiply(self->voltage, self->voltageCalculation,
         self->drivePhi[0], handle, stream);
 
     // set stream
@@ -277,7 +285,7 @@ linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t self,
             self->drivePhi[n]->columns, self->voltageCalculation->columns, &alpha,
             self->voltageCalculation->deviceData, self->voltageCalculation->rows,
             self->drivePhi[n]->deviceData, self->drivePhi[n]->rows, &beta,
-            voltage->deviceData, voltage->rows);
+            self->voltage->deviceData, self->voltage->rows);
     }
 
     return error;

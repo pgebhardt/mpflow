@@ -11,6 +11,8 @@ typedef struct {
     fastectGrid_t grid;
     fastectConjugateSparseSolver_t driveSolver;
     fastectConjugateSparseSolver_t measurmentSolver;
+    linalgcuMatrix_t jacobian;
+    linalgcuMatrix_t voltage;
     linalgcuMatrix_t* drivePhi;
     linalgcuMatrix_t* measurmentPhi;
     linalgcuMatrix_t* driveF;
@@ -32,12 +34,11 @@ linalgcuError_t fastect_forward_solver_release(fastectForwardSolver_t* solverPoi
 // calc jacobian
 LINALGCU_EXTERN_C
 linalgcuError_t fastect_forward_solver_calc_jacobian(fastectForwardSolver_t self,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t gamma, linalgcuSize_t harmonic,
-    linalgcuBool_t additiv, cudaStream_t stream);
+    linalgcuMatrix_t gamma, linalgcuSize_t harmonic, linalgcuBool_t additiv,
+    cudaStream_t stream);
 
 // forward solving
 linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t self,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t gamma, linalgcuMatrix_t voltage,
-    linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream);
+    linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

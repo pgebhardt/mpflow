@@ -85,28 +85,28 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
 
 // calc jacobian
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_forward_solver_calc_jacobian(fastectForwardSolver_t solver,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t gamma, linalgcuSize_t harmonic,
-    linalgcuBool_t additiv, cudaStream_t stream) {
-    if ((solver == NULL) || (jacobian == NULL) || (gamma == NULL) ||
-        (harmonic > solver->grid->numHarmonics)) {
+linalgcuError_t fastect_forward_solver_calc_jacobian(fastectForwardSolver_t self,
+    linalgcuMatrix_t gamma, linalgcuSize_t harmonic, linalgcuBool_t additiv,
+    cudaStream_t stream) {
+    if ((self == NULL) || (gamma == NULL) || (harmonic > self->grid->numHarmonics)) {
         return LINALGCU_ERROR;
     }
 
     // dimension
-    dim3 blocks(jacobian->rows / LINALGCU_BLOCK_SIZE, jacobian->columns / LINALGCU_BLOCK_SIZE);
+    dim3 blocks(self->jacobian->rows / LINALGCU_BLOCK_SIZE,
+        self->jacobian->columns / LINALGCU_BLOCK_SIZE);
     dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
 
     // calc jacobian
     calc_jacobian_kernel<<<blocks, threads, 0, stream>>>(
-        jacobian->deviceData,
-        solver->drivePhi[harmonic]->deviceData,
-        solver->measurmentPhi[harmonic]->deviceData,
-        solver->grid->gradientMatrixSparse->values,
-        solver->grid->gradientMatrixSparse->columnIds,
-        solver->grid->area->deviceData, gamma->deviceData, solver->grid->sigmaRef,
-        jacobian->rows, solver->drivePhi[harmonic]->rows,
-        solver->measurmentPhi[harmonic]->columns, solver->grid->mesh->elementCount,
+        self->jacobian->deviceData,
+        self->drivePhi[harmonic]->deviceData,
+        self->measurmentPhi[harmonic]->deviceData,
+        self->grid->gradientMatrixSparse->values,
+        self->grid->gradientMatrixSparse->columnIds,
+        self->grid->area->deviceData, gamma->deviceData, self->grid->sigmaRef,
+        self->jacobian->rows, self->drivePhi[harmonic]->rows,
+        self->measurmentPhi[harmonic]->columns, self->grid->mesh->elementCount,
         additiv);
 
     return LINALGCU_SUCCESS;
