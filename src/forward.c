@@ -8,9 +8,9 @@
 
 // create forward_solver
 linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPointer,
-    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuMatrixData_t sigmaRef,
-    linalgcuSize_t numHarmonics, linalgcuSize_t driveCount, linalgcuSize_t measurmentCount,
-    linalgcuMatrix_t drivePattern, linalgcuMatrix_t measurmentPattern, cublasHandle_t handle,
+    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
+    linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
+    linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (mesh == NULL) || (electrodes == NULL) ||

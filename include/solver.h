@@ -19,11 +19,10 @@ typedef fastectSolver_s* fastectSolver_t;
 
 // create solver
 linalgcuError_t fastect_solver_create(fastectSolver_t* solverPointer,
-    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuSize_t numHarmonics,
-    linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
-    linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
-    linalgcuMatrixData_t sigmaRef, linalgcuMatrixData_t regularizationFactor,
-    cublasHandle_t handle, cudaStream_t stream);
+    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
+    linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
+    linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef,
+    linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
 
 // release solver
 linalgcuError_t fastect_solver_release(fastectSolver_t* solverPointer);
