@@ -151,7 +151,7 @@ linalgcuError_t fastect_solver_calibrate(fastectSolver_t self, cublasHandle_t ha
     // calibration
     error |= fastect_inverse_solver_non_linear(self->inverseSolver,
         self->gamma, self->dGamma, self->forwardSolver->jacobian, self->forwardSolver->voltage,
-        self->calibrationVoltage, 100, handle, stream);
+        self->calibrationVoltage, 75, handle, stream);
 
     return error;
 }
@@ -170,7 +170,7 @@ linalgcuError_t fastect_solver_solve(fastectSolver_t self, cublasHandle_t handle
     // solve
     error |= fastect_inverse_solver_linear(self->inverseSolver,
         self->dGamma, self->forwardSolver->jacobian, self->calibrationVoltage,
-        self->measuredVoltage, 100, handle, stream);
+        self->measuredVoltage, 90, handle, stream);
 
     return error;
 }
