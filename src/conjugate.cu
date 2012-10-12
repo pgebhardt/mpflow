@@ -41,27 +41,25 @@ linalgcuError_t fastect_conjugate_update_vector(linalgcuMatrix_t result,
 // gemv kernel
 __global__ void gemv_kernel(linalgcuMatrixData_t* matrix, linalgcuMatrixData_t* vector,
     linalgcuMatrixData_t* result, linalgcuSize_t rows) {
-    // column
-    linalgcuSize_t j = blockIdx.y * blockDim.y + threadIdx.y;
-    linalgcuSize_t col0 = j * LINALGCU_BLOCK_SIZE;
+    // get ids
+    linalgcuSize_t row = threadIdx.x + blockIdx.x * blockDim.x;
+    linalgcuSize_t column = (threadIdx.y + blockIdx.y * blockDim.y) * 2 * LINALGCU_BLOCK_SIZE;
 
-    // Load one slice of vector in work
-    __shared__ linalgcuMatrixData_t work[LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE];
-    work[threadIdx.x + threadIdx.y * LINALGCU_BLOCK_SIZE] = col0 + threadIdx.x < rows ?
-        vector[col0 + threadIdx.x] : 0.0f;
+    // load vector to shared memory
+    __shared__ linalgcuMatrixData_t work[2 * LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE];
+    work[threadIdx.x + threadIdx.y * 2 * LINALGCU_BLOCK_SIZE] = column + threadIdx.x < rows ?
+        vector[column + threadIdx.x] : 0.0f;
     __syncthreads();
 
-    // compute partial dot product
-    linalgcuMatrixData_t sum = 0.0f;
-    for (int k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
-        sum += col0 + k < rows ? matrix[
-            (blockIdx.x * blockDim.x + threadIdx.x) + (col0 + k) * rows] *
-            work[k + threadIdx.y * LINALGCU_BLOCK_SIZE] : 0.0f;
+    // compute partial vector product
+    linalgcuMatrixData_t product = 0.0f;
+    for (int i = 0; i < 2 * LINALGCU_BLOCK_SIZE; i++) {
+        product += row < rows && column + i < rows ? matrix[row + (column + i) * rows] * work[i + threadIdx.y * 2 * LINALGCU_BLOCK_SIZE] : 0.0f;
     }
 
-    // store to result
-    if (j < rows / LINALGCU_BLOCK_SIZE) {
-        result[(blockIdx.x * blockDim.x + threadIdx.x) + j * rows] = sum;
+    // set result
+    if (row < rows) {
+        result[row + (threadIdx.y + blockIdx.y * blockDim.y) * rows] = product;
     }
 }
 
@@ -77,7 +75,7 @@ __global__ void reduce_row_kernel(linalgcuMatrixData_t* vector, linalgcuSize_t r
 
     // sum row
     linalgcuMatrixData_t sum = 0.0f;
-    for (int i = 0; i < rows / LINALGCU_BLOCK_SIZE; i++) {
+    for (int i = 0; i < (rows + 2 * LINALGCU_BLOCK_SIZE - 1) / (2 * LINALGCU_BLOCK_SIZE); i++) {
         sum += vector[row + i * rows];
     }
 
@@ -95,9 +93,9 @@ linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t
     }
 
     // dimension
-    dim3 blocks(matrix->rows / LINALGCU_BLOCK_SIZE,
-        (matrix->columns / LINALGCU_BLOCK_SIZE + LINALGCU_BLOCK_SIZE - 1) / LINALGCU_BLOCK_SIZE);
-    dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
+    dim3 blocks((matrix->rows + 2 * LINALGCU_BLOCK_SIZE - 1) / (2 * LINALGCU_BLOCK_SIZE),
+        (matrix->rows / (2 * LINALGCU_BLOCK_SIZE) + LINALGCU_BLOCK_SIZE - 1) / LINALGCU_BLOCK_SIZE);
+    dim3 threads(2 * LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
 
     // call gemv kernel
     gemv_kernel<<<blocks, threads, 0, stream>>>(matrix->deviceData, vector->deviceData,
