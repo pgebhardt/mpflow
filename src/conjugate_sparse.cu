@@ -1,4 +1,4 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
@@ -7,7 +7,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // add scalar kernel
 __global__ void add_scalar_kernel(linalgcuMatrixData_t* vector,
@@ -25,7 +25,7 @@ __global__ void add_scalar_kernel(linalgcuMatrixData_t* vector,
 
 // add scalar
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_conjugate_sparse_add_scalar(linalgcuMatrix_t vector,
+linalgcuError_t fasteit_conjugate_sparse_add_scalar(linalgcuMatrix_t vector,
     linalgcuMatrix_t scalar, linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
     // check input
     if ((vector == NULL) || (scalar == NULL)) {
@@ -59,7 +59,7 @@ __global__ void sparse_update_vector_kernel(linalgcuMatrixData_t* result,
 
 // update vector
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_conjugate_sparse_update_vector(linalgcuMatrix_t result,
+linalgcuError_t fasteit_conjugate_sparse_update_vector(linalgcuMatrix_t result,
     linalgcuMatrix_t x1, linalgcuMatrixData_t sign, linalgcuMatrix_t x2,
     linalgcuMatrix_t r1, linalgcuMatrix_t r2, cudaStream_t stream) {
     // check input

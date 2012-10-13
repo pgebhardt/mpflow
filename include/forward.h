@@ -1,16 +1,16 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTECT_FORWARD_SOLVER_H
-#define FASTECT_FORWARD_SOLVER_H
+#ifndef FASTEIT_FORWARD_SOLVER_H
+#define FASTEIT_FORWARD_SOLVER_H
 
 // solver struct
 typedef struct {
-    fastectGrid_t grid;
-    fastectConjugateSparseSolver_t driveSolver;
-    fastectConjugateSparseSolver_t measurmentSolver;
+    fasteitGrid_t grid;
+    fasteitConjugateSparseSolver_t driveSolver;
+    fasteitConjugateSparseSolver_t measurmentSolver;
     linalgcuMatrix_t jacobian;
     linalgcuMatrix_t voltage;
     linalgcuMatrix_t* drivePhi;
@@ -18,27 +18,27 @@ typedef struct {
     linalgcuMatrix_t* driveF;
     linalgcuMatrix_t* measurmentF;
     linalgcuMatrix_t voltageCalculation;
-} fastectForwardSolver_s;
-typedef fastectForwardSolver_s* fastectForwardSolver_t;
+} fasteitForwardSolver_s;
+typedef fasteitForwardSolver_s* fasteitForwardSolver_t;
 
 // create forward_solver
-linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPointer,
-    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
+linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPointer,
+    fasteitMesh_t mesh, fasteitElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
     linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
     linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef, cublasHandle_t handle,
     cudaStream_t stream);
 
 // release forward_solver
-linalgcuError_t fastect_forward_solver_release(fastectForwardSolver_t* solverPointer);
+linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPointer);
 
 // calc jacobian
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_forward_solver_calc_jacobian(fastectForwardSolver_t self,
+linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self,
     linalgcuMatrix_t gamma, linalgcuSize_t harmonic, linalgcuBool_t additiv,
     cudaStream_t stream);
 
 // forward solving
-linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t self,
+linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
     linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream);
 
 #endif

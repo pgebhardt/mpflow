@@ -1,4 +1,4 @@
-# fastECT
+# fastEIT
 #
 # Copyright (C) 2012  Patrik Gebhardt
 # Contact: patrik.gebhardt@rub.de
@@ -12,7 +12,7 @@ INCLUDES = include
 BUILD = build
 
 # Install directories
-INSTALL_INCLUDES = /usr/local/include/fastect
+INSTALL_INCLUDES = /usr/local/include/fasteit
 INSTALL_LIB = /usr/local/lib
 
 # Copmiler
@@ -31,11 +31,11 @@ _CUOBJ = grid.cu_o conjugate.cu_o conjugate_sparse.cu_o forward.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fastect.h mesh.h basis.h electrodes.h grid.h conjugate.h conjugate_sparse.h forward.h inverse.h solver.h
+_DEPS = fasteit.h mesh.h basis.h electrodes.h grid.h conjugate.h conjugate_sparse.h forward.h inverse.h solver.h
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Library
-LIB = libfastect.so
+LIB = libfasteit.so
 
 # Rule for library
 $(LIB): $(OBJ) $(CUOBJ) $(DEPS)

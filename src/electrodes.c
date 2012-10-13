@@ -1,13 +1,13 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // create electrodes
-linalgcuError_t fastect_electrodes_create(fastectElectrodes_t* electrodesPointer,
+linalgcuError_t fasteit_electrodes_create(fasteitElectrodes_t* electrodesPointer,
     linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
     linalgcuMatrixData_t meshRadius) {
     // check input
@@ -23,7 +23,7 @@ linalgcuError_t fastect_electrodes_create(fastectElectrodes_t* electrodesPointer
     *electrodesPointer = NULL;
 
     // create struct
-    fastectElectrodes_t self = malloc(sizeof(fastectElectrodes_s));
+    fasteitElectrodes_t self = malloc(sizeof(fasteitElectrodes_s));
 
     // check success
     if (self == NULL) {
@@ -46,7 +46,7 @@ linalgcuError_t fastect_electrodes_create(fastectElectrodes_t* electrodesPointer
     // check success
     if ((self->electrodesStart == NULL) || (self->electrodesEnd == NULL)) {
         // cleanup
-        fastect_electrodes_release(&self);
+        fasteit_electrodes_release(&self);
 
         return LINALGCU_ERROR;
     }
@@ -77,14 +77,14 @@ linalgcuError_t fastect_electrodes_create(fastectElectrodes_t* electrodesPointer
 }
 
 // release electrodes
-linalgcuError_t fastect_electrodes_release(fastectElectrodes_t* electrodesPointer) {
+linalgcuError_t fasteit_electrodes_release(fasteitElectrodes_t* electrodesPointer) {
     // check input
     if ((electrodesPointer == NULL) || (*electrodesPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get electrodes
-    fastectElectrodes_t self = *electrodesPointer;
+    fasteitElectrodes_t self = *electrodesPointer;
 
     // free electrode vectors
     if (self->electrodesStart != NULL) {

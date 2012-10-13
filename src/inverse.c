@@ -1,13 +1,13 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // create inverse_solver
-linalgcuError_t fastect_inverse_solver_create(fastectInverseSolver_t* solverPointer,
+linalgcuError_t fasteit_inverse_solver_create(fasteitInverseSolver_t* solverPointer,
     linalgcuSize_t elementCount, linalgcuSize_t voltageCount,
     linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
     // check input
@@ -22,7 +22,7 @@ linalgcuError_t fastect_inverse_solver_create(fastectInverseSolver_t* solverPoin
     *solverPointer = NULL;
 
     // create struct
-    fastectInverseSolver_t self = malloc(sizeof(fastectInverseSolver_s));
+    fasteitInverseSolver_t self = malloc(sizeof(fasteitInverseSolver_s));
 
     // check success
     if (self == NULL) {
@@ -50,19 +50,19 @@ linalgcuError_t fastect_inverse_solver_create(fastectInverseSolver_t* solverPoin
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_inverse_solver_release(&self);
+        fasteit_inverse_solver_release(&self);
 
         return error;
     }
 
     // create conjugate solver
-    error = fastect_conjugate_solver_create(&self->conjugateSolver,
+    error = fasteit_conjugate_solver_create(&self->conjugateSolver,
         elementCount, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_inverse_solver_release(&self);
+        fasteit_inverse_solver_release(&self);
 
         return error;
     }
@@ -74,18 +74,18 @@ linalgcuError_t fastect_inverse_solver_create(fastectInverseSolver_t* solverPoin
 }
 
 // release solver
-linalgcuError_t fastect_inverse_solver_release(
-    fastectInverseSolver_t* solverPointer) {
+linalgcuError_t fasteit_inverse_solver_release(
+    fasteitInverseSolver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fastectInverseSolver_t self = *solverPointer;
+    fasteitInverseSolver_t self = *solverPointer;
 
     // cleanup
-    fastect_conjugate_solver_release(&self->conjugateSolver);
+    fasteit_conjugate_solver_release(&self->conjugateSolver);
     linalgcu_matrix_release(&self->dVoltage);
     linalgcu_matrix_release(&self->zeros);
     linalgcu_matrix_release(&self->excitation);
@@ -102,8 +102,8 @@ linalgcuError_t fastect_inverse_solver_release(
 }
 
 // calc system matrix
-linalgcuError_t fastect_inverse_solver_calc_system_matrix(
-    fastectInverseSolver_t self, linalgcuMatrix_t jacobian, cublasHandle_t handle,
+linalgcuError_t fasteit_inverse_solver_calc_system_matrix(
+    fasteitInverseSolver_t self, linalgcuMatrix_t jacobian, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((self == NULL) || (jacobian == NULL) || (handle == NULL)) {
@@ -142,7 +142,7 @@ linalgcuError_t fastect_inverse_solver_calc_system_matrix(
 }
 
 // calc excitation
-linalgcuError_t fastect_inverse_solver_calc_excitation(fastectInverseSolver_t self,
+linalgcuError_t fasteit_inverse_solver_calc_excitation(fasteitInverseSolver_t self,
     linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
     linalgcuMatrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream) {
     // check input
@@ -186,7 +186,7 @@ linalgcuError_t fastect_inverse_solver_calc_excitation(fastectInverseSolver_t se
 }
 
 // inverse solving non linear
-linalgcuError_t fastect_inverse_solver_non_linear(fastectInverseSolver_t self,
+linalgcuError_t fasteit_inverse_solver_non_linear(fasteitInverseSolver_t self,
     linalgcuMatrix_t gamma, linalgcuMatrix_t dGamma, linalgcuMatrix_t jacobian,
     linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps,
     cublasHandle_t handle, cudaStream_t stream) {
@@ -203,14 +203,14 @@ linalgcuError_t fastect_inverse_solver_non_linear(fastectInverseSolver_t self,
     error  = linalgcu_matrix_copy(dGamma, self->zeros, stream);
 
     // calc system matrix
-    error |= fastect_inverse_solver_calc_system_matrix(self, jacobian, handle, stream);
+    error |= fasteit_inverse_solver_calc_system_matrix(self, jacobian, handle, stream);
 
     // calc excitation
-    error |= fastect_inverse_solver_calc_excitation(self, jacobian, calculatedVoltage,
+    error |= fasteit_inverse_solver_calc_excitation(self, jacobian, calculatedVoltage,
         measuredVoltage, handle, stream);
 
     // solve system
-    error |= fastect_conjugate_solver_solve(self->conjugateSolver,
+    error |= fasteit_conjugate_solver_solve(self->conjugateSolver,
         self->systemMatrix, dGamma, self->excitation, steps, handle, stream);
 
     // add to gamma
@@ -220,7 +220,7 @@ linalgcuError_t fastect_inverse_solver_non_linear(fastectInverseSolver_t self,
 }
 
 // inverse solving linear
-linalgcuError_t fastect_inverse_solver_linear(fastectInverseSolver_t self,
+linalgcuError_t fasteit_inverse_solver_linear(fasteitInverseSolver_t self,
     linalgcuMatrix_t dGamma, linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
     linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps, cublasHandle_t handle,
     cudaStream_t stream) {
@@ -237,11 +237,11 @@ linalgcuError_t fastect_inverse_solver_linear(fastectInverseSolver_t self,
     error  = linalgcu_matrix_copy(dGamma, self->zeros, stream);
 
     // calc excitation
-    error |= fastect_inverse_solver_calc_excitation(self, jacobian, calculatedVoltage,
+    error |= fasteit_inverse_solver_calc_excitation(self, jacobian, calculatedVoltage,
         measuredVoltage, handle, stream);
 
     // solve system
-    error |= fastect_conjugate_solver_solve(self->conjugateSolver,
+    error |= fasteit_conjugate_solver_solve(self->conjugateSolver,
         self->jacobianSquare, dGamma, self->excitation, steps, handle, stream);
 
     return error;

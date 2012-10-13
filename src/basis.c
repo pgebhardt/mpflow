@@ -1,13 +1,13 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // create basis
-linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
+linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
     linalgcuMatrixData_t Ax, linalgcuMatrixData_t Ay,
     linalgcuMatrixData_t Bx, linalgcuMatrixData_t By,
     linalgcuMatrixData_t Cx, linalgcuMatrixData_t Cy) {
@@ -23,7 +23,7 @@ linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
     *basisPointer = NULL;
 
     // create basis struct
-    fastectBasis_t self = malloc(sizeof(fastectBasis_s));
+    fasteitBasis_t self = malloc(sizeof(fasteitBasis_s));
 
     // check success
     if (self == NULL) {
@@ -80,7 +80,7 @@ linalgcuError_t fastect_basis_create(fastectBasis_t* basisPointer,
 }
 
 // release basis
-linalgcuError_t fastect_basis_release(fastectBasis_t* basisPointer) {
+linalgcuError_t fasteit_basis_release(fasteitBasis_t* basisPointer) {
     // check input
     if ((basisPointer == NULL) || (*basisPointer == NULL)) {
         return LINALGCU_ERROR;
@@ -96,7 +96,7 @@ linalgcuError_t fastect_basis_release(fastectBasis_t* basisPointer) {
 }
 
 // evaluate basis function
-linalgcuError_t fastect_basis_function(fastectBasis_t self,
+linalgcuError_t fasteit_basis_function(fasteitBasis_t self,
     linalgcuMatrixData_t* resultPointer, linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     // check input
     if ((self == NULL) || (resultPointer == NULL)) {

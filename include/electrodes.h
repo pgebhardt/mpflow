@@ -1,10 +1,10 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTECT_ELECTRODES_H
-#define FASTECT_ELECTRODES_H
+#ifndef FASTEIT_ELECTRODES_H
+#define FASTEIT_ELECTRODES_H
 
 // electrodes struct
 typedef struct {
@@ -13,15 +13,15 @@ typedef struct {
     linalgcuMatrixData_t* electrodesEnd;
     linalgcuMatrixData_t width;
     linalgcuMatrixData_t height;
-} fastectElectrodes_s;
-typedef fastectElectrodes_s* fastectElectrodes_t;
+} fasteitElectrodes_s;
+typedef fasteitElectrodes_s* fasteitElectrodes_t;
 
 // create electrodes
-linalgcuError_t fastect_electrodes_create(fastectElectrodes_t* electrodesPointer,
+linalgcuError_t fasteit_electrodes_create(fasteitElectrodes_t* electrodesPointer,
     linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
     linalgcuMatrixData_t meshRadius);
 
 // release electrodes
-linalgcuError_t fastect_electrodes_release(fastectElectrodes_t* electrodesPointer);
+linalgcuError_t fasteit_electrodes_release(fasteitElectrodes_t* electrodesPointer);
 
 #endif

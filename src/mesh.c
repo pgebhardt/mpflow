@@ -1,12 +1,12 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
-linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
+linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
     linalgcuMatrix_t vertices, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
     linalgcuSize_t vertexCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
     linalgcuMatrixData_t radius, linalgcuMatrixData_t height) {
@@ -25,7 +25,7 @@ linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
     *meshPointer = NULL;
 
     // create mesg struct
-    fastectMesh_t self = malloc(sizeof(fastectMesh_s));
+    fasteitMesh_t self = malloc(sizeof(fasteitMesh_s));
 
     // check success
     if (self == NULL) {
@@ -48,14 +48,14 @@ linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
     return LINALGCU_SUCCESS;
 }
 
-linalgcuError_t fastect_mesh_release(fastectMesh_t* meshPointer) {
+linalgcuError_t fasteit_mesh_release(fasteitMesh_t* meshPointer) {
     // check input
     if ((meshPointer == NULL) || (*meshPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get mesh
-    fastectMesh_t self = *meshPointer;
+    fasteitMesh_t self = *meshPointer;
 
     // cleanup vertices
     linalgcu_matrix_release(&self->vertices);

@@ -1,14 +1,14 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // create forward_solver
-linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPointer,
-    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
+linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPointer,
+    fasteitMesh_t mesh, fasteitElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
     linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
     linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef, cublasHandle_t handle,
     cudaStream_t stream) {
@@ -25,7 +25,7 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
     *solverPointer = NULL;
 
     // create struct
-    fastectForwardSolver_t self = malloc(sizeof(fastectForwardSolver_s));
+    fasteitForwardSolver_t self = malloc(sizeof(fasteitForwardSolver_s));
 
     // check success
     if (self == NULL) {
@@ -45,27 +45,27 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
     self->voltageCalculation = NULL;
 
     // create grid
-    error = fastect_grid_create(&self->grid, mesh, electrodes, sigmaRef, numHarmonics,
+    error = fasteit_grid_create(&self->grid, mesh, electrodes, sigmaRef, numHarmonics,
         handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_forward_solver_release(&self);
+        fasteit_forward_solver_release(&self);
 
         return error;
     }
 
     // create conjugate solver
-    error  = fastect_conjugate_sparse_solver_create(&self->driveSolver,
+    error  = fasteit_conjugate_sparse_solver_create(&self->driveSolver,
         mesh->vertexCount, driveCount, stream);
-    error |= fastect_conjugate_sparse_solver_create(&self->measurmentSolver,
+    error |= fasteit_conjugate_sparse_solver_create(&self->measurmentSolver,
         mesh->vertexCount, measurmentCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_forward_solver_release(&self);
+        fasteit_forward_solver_release(&self);
 
         return error;
     }
@@ -86,7 +86,7 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
     if ((self->drivePhi == NULL) || (self->measurmentPhi == NULL) ||
         (self->driveF == NULL) || (self->measurmentF == NULL)) {
         // cleanup
-        fastect_forward_solver_release(&self);
+        fasteit_forward_solver_release(&self);
 
         return LINALGCU_ERROR;
     }
@@ -109,7 +109,7 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_forward_solver_release(&self);
+        fasteit_forward_solver_release(&self);
 
         return error;
     }
@@ -150,7 +150,7 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_forward_solver_release(&self);
+        fasteit_forward_solver_release(&self);
 
         return error;
     }
@@ -164,7 +164,7 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
         &beta, self->voltageCalculation->deviceData, self->voltageCalculation->rows)
         != CUBLAS_STATUS_SUCCESS) {
         // cleanup
-        fastect_forward_solver_release(&self);
+        fasteit_forward_solver_release(&self);
 
         return LINALGCU_ERROR;
     }
@@ -176,14 +176,14 @@ linalgcuError_t fastect_forward_solver_create(fastectForwardSolver_t* solverPoin
 }
 
 // release solver
-linalgcuError_t fastect_forward_solver_release(fastectForwardSolver_t* solverPointer) {
+linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fastectForwardSolver_t self = *solverPointer;
+    fasteitForwardSolver_t self = *solverPointer;
 
     // cleanup
     linalgcu_matrix_release(&self->jacobian);
@@ -213,9 +213,9 @@ linalgcuError_t fastect_forward_solver_release(fastectForwardSolver_t* solverPoi
         }
         free(self->measurmentF);
     }
-    fastect_grid_release(&self->grid);
-    fastect_conjugate_sparse_solver_release(&self->driveSolver);
-    fastect_conjugate_sparse_solver_release(&self->measurmentSolver);
+    fasteit_grid_release(&self->grid);
+    fasteit_conjugate_sparse_solver_release(&self->driveSolver);
+    fasteit_conjugate_sparse_solver_release(&self->measurmentSolver);
 
     // free struct
     free(self);
@@ -227,7 +227,7 @@ linalgcuError_t fastect_forward_solver_release(fastectForwardSolver_t* solverPoi
 }
 
 // forward solving
-linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t self,
+linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
     linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
@@ -239,36 +239,36 @@ linalgcuError_t fastect_forward_solver_solve(fastectForwardSolver_t self,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // update system matrix
-    error  = fastect_grid_update_system_matrices(self->grid, gamma, handle, stream);
+    error  = fasteit_grid_update_system_matrices(self->grid, gamma, handle, stream);
 
     // solve for ground mode
     // solve for drive phi
-    error |= fastect_conjugate_sparse_solver_solve(self->driveSolver,
+    error |= fasteit_conjugate_sparse_solver_solve(self->driveSolver,
         self->grid->systemMatrices[0], self->drivePhi[0], self->driveF[0],
         steps, LINALGCU_TRUE, stream);
 
     // solve for measurment phi
-    error |= fastect_conjugate_sparse_solver_solve(self->measurmentSolver,
+    error |= fasteit_conjugate_sparse_solver_solve(self->measurmentSolver,
         self->grid->systemMatrices[0], self->measurmentPhi[0], self->measurmentF[0],
         steps, LINALGCU_TRUE, stream);
 
     // solve for higher harmonics
     for (linalgcuSize_t n = 1; n < self->grid->numHarmonics + 1; n++) {
         // solve for drive phi
-        error |= fastect_conjugate_sparse_solver_solve(self->driveSolver,
+        error |= fasteit_conjugate_sparse_solver_solve(self->driveSolver,
             self->grid->systemMatrices[n], self->drivePhi[n], self->driveF[n],
             steps, LINALGCU_FALSE, stream);
 
         // solve for measurment phi
-        error |= fastect_conjugate_sparse_solver_solve(self->measurmentSolver,
+        error |= fasteit_conjugate_sparse_solver_solve(self->measurmentSolver,
             self->grid->systemMatrices[n], self->measurmentPhi[n], self->measurmentF[n],
             steps, LINALGCU_FALSE, stream);
     }
 
     // calc jacobian
-    error |= fastect_forward_solver_calc_jacobian(self, gamma, 0, LINALGCU_FALSE, stream);
+    error |= fasteit_forward_solver_calc_jacobian(self, gamma, 0, LINALGCU_FALSE, stream);
     for (linalgcuSize_t n = 1; n < self->grid->numHarmonics + 1; n++) {
-        error |= fastect_forward_solver_calc_jacobian(self, gamma, n, LINALGCU_TRUE, stream);
+        error |= fasteit_forward_solver_calc_jacobian(self, gamma, n, LINALGCU_TRUE, stream);
     }
 
     // calc voltage

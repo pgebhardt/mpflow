@@ -1,10 +1,10 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTECT_MESH_H
-#define FASTECT_MESH_H
+#ifndef FASTEIT_MESH_H
+#define FASTEIT_MESH_H
 
 // mesh struct
 typedef struct {
@@ -16,16 +16,16 @@ typedef struct {
     linalgcuMatrix_t vertices;
     linalgcuMatrix_t elements;
     linalgcuMatrix_t boundary;
-} fastectMesh_s;
-typedef fastectMesh_s* fastectMesh_t;
+} fasteitMesh_s;
+typedef fasteitMesh_s* fasteitMesh_t;
 
 // create new mesh
-linalgcuError_t fastect_mesh_create(fastectMesh_t* meshPointer,
+linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
     linalgcuMatrix_t vertices, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
     linalgcuSize_t vertexCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
     linalgcuMatrixData_t radius, linalgcuMatrixData_t height);
 
 // cleanup mesh
-linalgcuError_t fastect_mesh_release(fastectMesh_t* meshPointer);
+linalgcuError_t fasteit_mesh_release(fasteitMesh_t* meshPointer);
 
 #endif

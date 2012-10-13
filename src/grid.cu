@@ -1,4 +1,4 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // calc residual integral
 linalgcuMatrixData_t calc_residual_integral(
@@ -68,7 +68,7 @@ __global__ void reduce_residual_matrices(linalgcuMatrixData_t* connectivityMatri
 
 // init residual matrix
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t self,
+linalgcuError_t fasteit_grid_init_residual_matrix(fasteitGrid_t self,
     linalgcuMatrix_t gamma, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL)) {
@@ -104,7 +104,7 @@ linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t self,
     // fill intermediate connectivity and elementalResidual matrices
     linalgcuMatrixData_t id[3], x[3], y[3];
     linalgcuMatrixData_t temp;
-    fastectBasis_t basis[3];
+    fasteitBasis_t basis[3];
 
     for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
         // get vertices for element
@@ -117,9 +117,9 @@ linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t self,
         }
 
         // calc corresponding basis functions
-        fastect_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        fastect_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        fastect_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
 
         // set connectivity and elemental residual matrix elements
         for (linalgcuSize_t i = 0; i < 3; i++) {
@@ -149,9 +149,9 @@ linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t self,
         }
 
         // cleanup
-        fastect_basis_release(&basis[0]);
-        fastect_basis_release(&basis[1]);
-        fastect_basis_release(&basis[2]);
+        fasteit_basis_release(&basis[0]);
+        fasteit_basis_release(&basis[1]);
+        fasteit_basis_release(&basis[2]);
     }
 
     // upload intermediate matrices
@@ -170,7 +170,7 @@ linalgcuError_t fastect_grid_init_residual_matrix(fastectGrid_t self,
         self->connectivityMatrix->rows, self->connectivityMatrix->rows);
 
     // update residual matrix
-    error = fastect_grid_update_residual_matrix(self, gamma, stream);
+    error = fasteit_grid_update_residual_matrix(self, gamma, stream);
 
     // cleanup
     linalgcu_matrix_release(&elementCount);
@@ -216,7 +216,7 @@ __global__ void update_system_matrix_kernel(linalgcuMatrixData_t* systemMatrixVa
 
 // update system matrix 2D
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_grid_update_2D_system_matrix(fastectGrid_t self,
+linalgcuError_t fasteit_grid_update_2D_system_matrix(fasteitGrid_t self,
     linalgcuMatrix_t gamma, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL)) {
@@ -283,7 +283,7 @@ __global__ void update_residual_matrix_kernel(linalgcuMatrixData_t* residualMatr
 
 // update residual matrix
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_grid_update_residual_matrix(fastectGrid_t self,
+linalgcuError_t fasteit_grid_update_residual_matrix(fasteitGrid_t self,
     linalgcuMatrix_t gamma, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL)) {

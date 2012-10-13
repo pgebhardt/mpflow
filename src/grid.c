@@ -1,15 +1,15 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // create solver grid
-linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
-    fastectMesh_t mesh, fastectElectrodes_t electrodes, linalgcuMatrixData_t sigmaRef,
+linalgcuError_t fasteit_grid_create(fasteitGrid_t* gridPointer,
+    fasteitMesh_t mesh, fasteitElectrodes_t electrodes, linalgcuMatrixData_t sigmaRef,
     linalgcuSize_t numHarmonics, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((gridPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (handle == NULL)) {
@@ -23,7 +23,7 @@ linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
     *gridPointer = NULL;
 
     // create grid struct
-    fastectGrid_t self = malloc(sizeof(fastectGrid_s));
+    fasteitGrid_t self = malloc(sizeof(fasteitGrid_s));
 
     // check success
     if (self == NULL) {
@@ -67,7 +67,7 @@ linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
     // check success
     if (self->systemMatrices == NULL) {
         // cleanup
-        fastect_grid_release(&self);
+        fasteit_grid_release(&self);
 
         return LINALGCU_ERROR;
     }
@@ -82,7 +82,7 @@ linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_grid_release(&self);
+        fasteit_grid_release(&self);
 
         return error;
     }
@@ -94,37 +94,37 @@ linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_grid_release(&self);
+        fasteit_grid_release(&self);
 
         return error;
     }
 
     // init system matrix
-    error  = fastect_grid_init_2D_system_matrix(self, handle, stream);
+    error  = fasteit_grid_init_2D_system_matrix(self, handle, stream);
 
     // init residual matrix
-    error |= fastect_grid_init_residual_matrix(self, gamma, stream);
+    error |= fasteit_grid_init_residual_matrix(self, gamma, stream);
 
     // init excitaion matrix
-    error |= fastect_grid_init_exitation_matrix(self, stream);
+    error |= fasteit_grid_init_exitation_matrix(self, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
         linalgcu_matrix_release(&gamma);
-        fastect_grid_release(&self);
+        fasteit_grid_release(&self);
 
         return error;
     }
 
     // update system matrices
-    error = fastect_grid_update_system_matrices(self, gamma, handle, stream);
+    error = fasteit_grid_update_system_matrices(self, gamma, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
         linalgcu_matrix_release(&gamma);
-        fastect_grid_release(&self);
+        fasteit_grid_release(&self);
 
         return error;
     }
@@ -136,18 +136,18 @@ linalgcuError_t fastect_grid_create(fastectGrid_t* gridPointer,
 }
 
 // release solver grid
-linalgcuError_t fastect_grid_release(fastectGrid_t* gridPointer) {
+linalgcuError_t fasteit_grid_release(fasteitGrid_t* gridPointer) {
     // check input
     if ((gridPointer == NULL) || (*gridPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get grid
-    fastectGrid_t self = *gridPointer;
+    fasteitGrid_t self = *gridPointer;
 
     // cleanup
-    fastect_mesh_release(&self->mesh);
-    fastect_electrodes_release(&self->electrodes);
+    fasteit_mesh_release(&self->mesh);
+    fasteit_electrodes_release(&self->electrodes);
     linalgcu_sparse_matrix_release(&self->systemMatrix2D);
     linalgcu_sparse_matrix_release(&self->residualMatrix);
     linalgcu_matrix_release(&self->excitationMatrix);
@@ -175,7 +175,7 @@ linalgcuError_t fastect_grid_release(fastectGrid_t* gridPointer) {
 }
 
 // init system matrix 2D
-linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t self, cublasHandle_t handle,
+linalgcuError_t fasteit_grid_init_2D_system_matrix(fasteitGrid_t self, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((self == NULL) || (handle == NULL)) {
@@ -203,7 +203,7 @@ linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t self, cublasHan
     // calc gradient matrix
     linalgcuMatrixData_t x[3], y[3];
     linalgcuMatrixData_t id[3];
-    fastectBasis_t basis[3];
+    fasteitBasis_t basis[3];
     linalgcuMatrixData_t area;
 
     for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
@@ -215,9 +215,9 @@ linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t self, cublasHan
         }
 
         // calc corresponding basis functions
-        fastect_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        fastect_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        fastect_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
 
         // calc matrix elements
         for (linalgcuSize_t i = 0; i < 3; i++) {
@@ -240,9 +240,9 @@ linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t self, cublasHan
         linalgcu_matrix_set_element(sigmaMatrix, area, 2 * k + 1, 2 * k + 1);
 
         // cleanup
-        fastect_basis_release(&basis[0]);
-        fastect_basis_release(&basis[1]);
-        fastect_basis_release(&basis[2]);
+        fasteit_basis_release(&basis[0]);
+        fasteit_basis_release(&basis[1]);
+        fasteit_basis_release(&basis[2]);
     }
 
     // copy matrices to device
@@ -309,7 +309,7 @@ linalgcuError_t fastect_grid_init_2D_system_matrix(fastectGrid_t self, cublasHan
 }
 
 // update system matrix
-linalgcuError_t fastect_grid_update_system_matrices(fastectGrid_t self,
+linalgcuError_t fasteit_grid_update_system_matrices(fasteitGrid_t self,
     linalgcuMatrix_t gamma, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL) || (handle == NULL)) {
@@ -321,10 +321,10 @@ linalgcuError_t fastect_grid_update_system_matrices(fastectGrid_t self,
     cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
 
     // update 2d systemMatrix
-    error  = fastect_grid_update_2D_system_matrix(self, gamma, stream);
+    error  = fasteit_grid_update_2D_system_matrix(self, gamma, stream);
 
     // update residual matrix
-    error |= fastect_grid_update_residual_matrix(self, gamma, stream);
+    error |= fasteit_grid_update_residual_matrix(self, gamma, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -362,7 +362,7 @@ linalgcuError_t fastect_grid_update_system_matrices(fastectGrid_t self,
     return LINALGCU_SUCCESS;
 }
 
-linalgcuMatrixData_t fastect_grid_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+linalgcuMatrixData_t fasteit_grid_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     if (x > 0.0f) {
         return atan(y / x);
     }
@@ -383,7 +383,7 @@ linalgcuMatrixData_t fastect_grid_angle(linalgcuMatrixData_t x, linalgcuMatrixDa
     }
 }
 
-linalgcuMatrixData_t fastect_grid_integrate_basis(linalgcuMatrixData_t* start,
+linalgcuMatrixData_t fasteit_grid_integrate_basis(linalgcuMatrixData_t* start,
     linalgcuMatrixData_t* end, linalgcuMatrixData_t* electrodeStart,
     linalgcuMatrixData_t* electrodeEnd) {
     // integral
@@ -394,10 +394,10 @@ linalgcuMatrixData_t fastect_grid_integrate_basis(linalgcuMatrixData_t* start,
         + electrodeStart[1] * electrodeStart[1]);
 
     // calc angle
-    linalgcuMatrixData_t angleStart = fastect_grid_angle(start[0], start[1]);
-    linalgcuMatrixData_t angleEnd = fastect_grid_angle(end[0], end[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeStart = fastect_grid_angle(electrodeStart[0], electrodeStart[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeEnd = fastect_grid_angle(electrodeEnd[0], electrodeEnd[1]) - angleStart;
+    linalgcuMatrixData_t angleStart = fasteit_grid_angle(start[0], start[1]);
+    linalgcuMatrixData_t angleEnd = fasteit_grid_angle(end[0], end[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeStart = fasteit_grid_angle(electrodeStart[0], electrodeStart[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeEnd = fasteit_grid_angle(electrodeEnd[0], electrodeEnd[1]) - angleStart;
 
     // correct angle
     angleEnd += (angleEnd < M_PI) ? 2.0f * M_PI : 0.0f;
@@ -455,7 +455,7 @@ linalgcuMatrixData_t fastect_grid_integrate_basis(linalgcuMatrixData_t* start,
 }
 
 // init exitation matrix
-linalgcuError_t fastect_grid_init_exitation_matrix(fastectGrid_t self,
+linalgcuError_t fasteit_grid_init_exitation_matrix(fasteitGrid_t self,
     cudaStream_t stream) {
     // check input
     if (self == NULL) {
@@ -487,11 +487,11 @@ linalgcuError_t fastect_grid_init_exitation_matrix(fastectGrid_t self,
 
             // calc element
             self->excitationMatrix->hostData[(linalgcuSize_t)id[0] + j * self->excitationMatrix->rows] +=
-                fastect_grid_integrate_basis(node, end,
+                fasteit_grid_integrate_basis(node, end,
                     &self->electrodes->electrodesStart[j * 2],
                     &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;
             self->excitationMatrix->hostData[(linalgcuSize_t)id[1] + j * self->excitationMatrix->rows] +=
-                fastect_grid_integrate_basis(end, node,
+                fasteit_grid_integrate_basis(end, node,
                     &self->electrodes->electrodesStart[j * 2],
                     &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;
         }

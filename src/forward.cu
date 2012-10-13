@@ -1,4 +1,4 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
@@ -7,7 +7,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // calc jacobian kernel
 __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
@@ -85,7 +85,7 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
 
 // calc jacobian
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_forward_solver_calc_jacobian(fastectForwardSolver_t self,
+linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self,
     linalgcuMatrix_t gamma, linalgcuSize_t harmonic, linalgcuBool_t additiv,
     cudaStream_t stream) {
     if ((self == NULL) || (gamma == NULL) || (harmonic > self->grid->numHarmonics)) {

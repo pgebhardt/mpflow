@@ -1,4 +1,4 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
@@ -7,7 +7,7 @@
 #define LINALGCU_EXTERN_C extern "C"
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // update vector
 __global__ void update_vector_kernel(linalgcuMatrixData_t* result,
@@ -22,7 +22,7 @@ __global__ void update_vector_kernel(linalgcuMatrixData_t* result,
 
 // update vector
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_conjugate_update_vector(linalgcuMatrix_t result,
+linalgcuError_t fasteit_conjugate_update_vector(linalgcuMatrix_t result,
     linalgcuMatrix_t x1, linalgcuMatrixData_t sign, linalgcuMatrix_t x2,
     linalgcuMatrix_t r1, linalgcuMatrix_t r2, cudaStream_t stream) {
     // check input
@@ -85,7 +85,7 @@ __global__ void reduce_row_kernel(linalgcuMatrixData_t* vector, linalgcuSize_t r
 
 // fast gemv
 LINALGCU_EXTERN_C
-linalgcuError_t fastect_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
+linalgcuError_t fasteit_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
     linalgcuMatrix_t vector, cudaStream_t stream) {
     // check input
     if ((matrix == NULL) || (vector == NULL) || (result == NULL)) {

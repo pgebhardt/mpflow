@@ -1,14 +1,14 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
-#include "../include/fastect.h"
+#include "../include/fasteit.h"
 
 // create conjugate solver
-linalgcuError_t fastect_conjugate_sparse_solver_create(
-    fastectConjugateSparseSolver_t* solverPointer, linalgcuSize_t rows, linalgcuSize_t columns,
+linalgcuError_t fasteit_conjugate_sparse_solver_create(
+    fasteitConjugateSparseSolver_t* solverPointer, linalgcuSize_t rows, linalgcuSize_t columns,
     cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (rows <= 1)) {
@@ -22,7 +22,7 @@ linalgcuError_t fastect_conjugate_sparse_solver_create(
     *solverPointer = NULL;
 
     // create solver struct
-    fastectConjugateSparseSolver_t self = malloc(sizeof(fastectConjugateSparseSolver_s));
+    fasteitConjugateSparseSolver_t self = malloc(sizeof(fasteitConjugateSparseSolver_s));
 
     // check success
     if (self == NULL) {
@@ -50,7 +50,7 @@ linalgcuError_t fastect_conjugate_sparse_solver_create(
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fastect_conjugate_sparse_solver_release(&self);
+        fasteit_conjugate_sparse_solver_release(&self);
 
         return error;
     }
@@ -62,14 +62,14 @@ linalgcuError_t fastect_conjugate_sparse_solver_create(
 }
 
 // release solver
-linalgcuError_t fastect_conjugate_sparse_solver_release(fastectConjugateSparseSolver_t* solverPointer) {
+linalgcuError_t fasteit_conjugate_sparse_solver_release(fasteitConjugateSparseSolver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fastectConjugateSparseSolver_t self = *solverPointer;
+    fasteitConjugateSparseSolver_t self = *solverPointer;
 
     // release matrices
     linalgcu_matrix_release(&self->residuum);
@@ -89,7 +89,7 @@ linalgcuError_t fastect_conjugate_sparse_solver_release(fastectConjugateSparseSo
 }
 
 // solve conjugate_sparse sparse
-linalgcuError_t fastect_conjugate_sparse_solver_solve(fastectConjugateSparseSolver_t self,
+linalgcuError_t fasteit_conjugate_sparse_solver_solve(fasteitConjugateSparseSolver_t self,
     linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f, linalgcuSize_t iterations,
     linalgcuBool_t dcFree, cudaStream_t stream) {
     // check input
@@ -109,7 +109,7 @@ linalgcuError_t fastect_conjugate_sparse_solver_solve(fastectConjugateSparseSolv
     // regularize for dc free solution
     if (dcFree == LINALGCU_TRUE) {
         error |= linalgcu_matrix_sum(self->tempNumber, x, stream);
-        error |= fastect_conjugate_sparse_add_scalar(self->residuum, self->tempNumber,
+        error |= fasteit_conjugate_sparse_add_scalar(self->residuum, self->tempNumber,
             self->rows, self->columns, stream);
     }
 
@@ -137,7 +137,7 @@ linalgcuError_t fastect_conjugate_sparse_solver_solve(fastectConjugateSparseSolv
         // regularize for dc free solution
         if (dcFree == LINALGCU_TRUE) {
             error |= linalgcu_matrix_sum(self->tempNumber, self->projection, stream);
-            error |= fastect_conjugate_sparse_add_scalar(self->tempVector, self->tempNumber,
+            error |= fasteit_conjugate_sparse_add_scalar(self->tempVector, self->tempNumber,
                 self->rows, self->columns, stream);
         }
 
@@ -146,11 +146,11 @@ linalgcuError_t fastect_conjugate_sparse_solver_solve(fastectConjugateSparseSolv
             self->tempVector, stream);
 
         // update residuum
-        error |= fastect_conjugate_sparse_update_vector(self->residuum, self->residuum,
+        error |= fasteit_conjugate_sparse_update_vector(self->residuum, self->residuum,
             -1.0f, self->tempVector, self->rsold, self->tempNumber, stream);
 
         // update x
-        error |= fastect_conjugate_sparse_update_vector(x, x, 1.0f, self->projection,
+        error |= fasteit_conjugate_sparse_update_vector(x, x, 1.0f, self->projection,
             self->rsold, self->tempNumber, stream);
 
         // calc rsnew
@@ -158,7 +158,7 @@ linalgcuError_t fastect_conjugate_sparse_solver_solve(fastectConjugateSparseSolv
             self->residuum, stream);
 
         // update projection
-        error |= fastect_conjugate_sparse_update_vector(self->projection, self->residuum,
+        error |= fasteit_conjugate_sparse_update_vector(self->projection, self->residuum,
             1.0f, self->projection, self->rsnew, self->rsold, stream);
 
         // swap rsold and rsnew

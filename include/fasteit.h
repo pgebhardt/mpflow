@@ -1,10 +1,10 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTECT_FASTECT_H
-#define FASTECT_FASTECT_H
+#ifndef FASTEIT_FASTEIT_H
+#define FASTEIT_FASTEIT_H
 
 #include <cuda/cuda_runtime.h>
 #include <cuda/cublas_v2.h>
