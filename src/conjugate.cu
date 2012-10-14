@@ -75,7 +75,8 @@ __global__ void reduce_row_kernel(linalgcuMatrixData_t* vector, linalgcuSize_t r
 
     // sum row
     linalgcuMatrixData_t sum = 0.0f;
-    for (int i = 0; i < (rows + 2 * LINALGCU_BLOCK_SIZE - 1) / (2 * LINALGCU_BLOCK_SIZE); i++) {
+    linalgcuSize_t count = (rows + 2 * LINALGCU_BLOCK_SIZE - 1) / (2 * LINALGCU_BLOCK_SIZE);
+    for (int i = 0; i < count; i++) {
         sum += vector[row + i * rows];
     }
 
