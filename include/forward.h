@@ -9,14 +9,13 @@
 // solver struct
 typedef struct {
     fasteitGrid_t grid;
-    fasteitConjugateSparseSolver_t driveSolver;
-    fasteitConjugateSparseSolver_t measurmentSolver;
+    fasteitConjugateSparseSolver_t conjugateSolver;
+    linalgcuSize_t driveCount;
+    linalgcuSize_t measurmentCount;
     linalgcuMatrix_t jacobian;
     linalgcuMatrix_t voltage;
-    linalgcuMatrix_t* drivePhi;
-    linalgcuMatrix_t* measurmentPhi;
-    linalgcuMatrix_t* driveF;
-    linalgcuMatrix_t* measurmentF;
+    linalgcuMatrix_t* phi;
+    linalgcuMatrix_t* excitation;
     linalgcuMatrix_t voltageCalculation;
 } fasteitForwardSolver_s;
 typedef fasteitForwardSolver_s* fasteitForwardSolver_t;

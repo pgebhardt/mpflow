@@ -17,8 +17,9 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuColumnId_t* gradientMatrixColumnIds,
     linalgcuMatrixData_t* area, linalgcuMatrixData_t* gamma,
     linalgcuMatrixData_t sigmaRef, linalgcuSize_t jacobianRows,
-    linalgcuSize_t phiRows, linalgcuSize_t measurmentCount,
-    linalgcuSize_t elementCount, linalgcuBool_t additiv) {
+    linalgcuSize_t phiRows, linalgcuSize_t driveCount,
+    linalgcuSize_t measurmentCount, linalgcuSize_t elementCount,
+    linalgcuBool_t additiv) {
     // get id
     linalgcuSize_t i = blockIdx.x * blockDim.x + threadIdx.x;
     linalgcuSize_t j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -28,8 +29,8 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     }
 
     // calc measurment and drive id
-    linalgcuSize_t measurmentId = i % measurmentCount;
-    linalgcuSize_t driveId = i / measurmentCount;
+    linalgcuSize_t measurmentId = i % 16;
+    linalgcuSize_t driveId = i / 16;
 
     // memory
     linalgcuMatrixData_t element = 0.0f;
@@ -50,8 +51,8 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
         value = gradientMatrixValues[2 * j * LINALGCU_BLOCK_SIZE + k];
 
         // x gradient
-        gradDrivePhi.x += value * drivePhi[idx + driveId * phiRows];
-        gradMeasurmentPhi.x += value * measurmentPhi[idx + measurmentId * phiRows];
+        gradDrivePhi.x += driveId < driveCount ? value * drivePhi[idx + driveId * phiRows] : 0.0f;
+        gradMeasurmentPhi.x += measurmentId < measurmentCount ? value * measurmentPhi[idx + measurmentId * phiRows] : 0.0f;
     }
 
     // calc y components
@@ -66,8 +67,8 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
         value = gradientMatrixValues[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k];
 
         // y gradient
-        gradDrivePhi.y += value * drivePhi[idy + driveId * phiRows];
-        gradMeasurmentPhi.y += value * measurmentPhi[idy + measurmentId * phiRows];
+        gradDrivePhi.y += driveId < driveCount ? value * drivePhi[idy + driveId * phiRows] : 0.0f;
+        gradMeasurmentPhi.y += measurmentId < measurmentCount ? value * measurmentPhi[idy + measurmentId * phiRows] : 0.0f;
     }
 
     // calc matrix element
@@ -100,13 +101,13 @@ linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self
     // calc jacobian
     calc_jacobian_kernel<<<blocks, threads, 0, stream>>>(
         self->jacobian->deviceData,
-        self->drivePhi[harmonic]->deviceData,
-        self->measurmentPhi[harmonic]->deviceData,
+        self->phi[harmonic]->deviceData,
+        &self->phi[harmonic]->deviceData[self->driveCount * self->phi[harmonic]->rows],
         self->grid->gradientMatrixSparse->values,
         self->grid->gradientMatrixSparse->columnIds,
         self->grid->area->deviceData, gamma->deviceData, self->grid->sigmaRef,
-        self->jacobian->rows, self->drivePhi[harmonic]->rows,
-        self->measurmentPhi[harmonic]->columns, self->grid->mesh->elementCount,
+        self->jacobian->rows, self->phi[harmonic]->rows,
+        self->driveCount, self->measurmentCount, self->grid->mesh->elementCount,
         additiv);
 
     return LINALGCU_SUCCESS;
