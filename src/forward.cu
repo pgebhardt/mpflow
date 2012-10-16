@@ -29,8 +29,9 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     }
 
     // calc measurment and drive id
-    linalgcuSize_t measurmentId = i % 16;
-    linalgcuSize_t driveId = i / 16;
+    linalgcuSize_t roundMeasurmentCount = ((measurmentCount + LINALGCU_BLOCK_SIZE - 1) / LINALGCU_BLOCK_SIZE) * LINALGCU_BLOCK_SIZE;
+    linalgcuSize_t measurmentId = i % roundMeasurmentCount;
+    linalgcuSize_t driveId = i / roundMeasurmentCount;
 
     // memory
     linalgcuMatrixData_t element = 0.0f;
