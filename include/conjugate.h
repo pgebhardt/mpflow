@@ -25,6 +25,12 @@ linalgcuError_t fasteit_conjugate_solver_create(fasteitConjugateSolver_t* solver
 // release solver
 linalgcuError_t fasteit_conjugate_solver_release(fasteitConjugateSolver_t* solverPointer);
 
+// add scalar
+LINALGCU_EXTERN_C
+linalgcuError_t fasteit_conjugate_add_scalar(linalgcuMatrix_t vector,
+    linalgcuMatrix_t scalar, linalgcuSize_t rows, linalgcuSize_t columns,
+    cudaStream_t stream);
+
 // update vector
 LINALGCU_EXTERN_C
 linalgcuError_t fasteit_conjugate_update_vector(linalgcuMatrix_t result,

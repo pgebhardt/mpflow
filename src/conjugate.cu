@@ -9,15 +9,53 @@
 #include <stdlib.h>
 #include "../include/fasteit.h"
 
+// add scalar kernel
+__global__ void add_scalar_kernel(linalgcuMatrixData_t* vector,
+    linalgcuMatrixData_t* scalar, linalgcuSize_t vector_rows,
+    linalgcuSize_t rows, linalgcuSize_t columns) {
+    // get row
+    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // get column
+    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // add data
+    vector[row + column * vector_rows] += row < rows && column < columns ? scalar[column * vector_rows] : 0.0f;
+}
+
+// add scalar
+LINALGCU_EXTERN_C
+linalgcuError_t fasteit_conjugate_add_scalar(linalgcuMatrix_t vector,
+    linalgcuMatrix_t scalar, linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
+    // check input
+    if ((vector == NULL) || (scalar == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // kernel dimension
+    dim3 global(vector->rows / LINALGCU_BLOCK_SIZE, vector->columns == 1 ? 1 :
+        vector->columns / LINALGCU_BLOCK_SIZE);
+    dim3 local(LINALGCU_BLOCK_SIZE, vector->columns == 1 ? 1 : LINALGCU_BLOCK_SIZE);
+
+    // execute kernel
+    add_scalar_kernel<<<global, local, 0, stream>>>(vector->deviceData, scalar->deviceData,
+        vector->rows, rows, columns);
+
+    return LINALGCU_SUCCESS;
+}
+
 // update vector
 __global__ void update_vector_kernel(linalgcuMatrixData_t* result,
     linalgcuMatrixData_t* x1, linalgcuMatrixData_t sign,
-    linalgcuMatrixData_t* x2, linalgcuMatrixData_t* r1, linalgcuMatrixData_t* r2) {
-    // get id
-    linalgcuSize_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuMatrixData_t* x2, linalgcuMatrixData_t* r1, linalgcuMatrixData_t* r2,
+    linalgcuSize_t rows) {
+    // get ids
+    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
-    result[i] = r2[0] != 0.0f ? x1[i] + sign * x2[i] * r1[0] / r2[0] : 0.0f;
+    result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] + sign * x2[row + column * rows] *
+        r1[column * rows] / r2[column * rows] : 0.0f;
 }
 
 // update vector
@@ -30,14 +68,17 @@ linalgcuError_t fasteit_conjugate_update_vector(linalgcuMatrix_t result,
         return LINALGCU_ERROR;
     }
 
+    // kernel dimension
+    dim3 global(result->rows / LINALGCU_BLOCK_SIZE, result->columns == 1 ? 1 :
+        result->columns / LINALGCU_BLOCK_SIZE);
+    dim3 local(LINALGCU_BLOCK_SIZE, result->columns == 1 ? 1 : LINALGCU_BLOCK_SIZE);
+
     // execute kernel
-    update_vector_kernel<<<result->rows / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
-        0, stream>>>(result->deviceData, x1->deviceData, sign, x2->deviceData,
-        r1->deviceData, r2->deviceData);
+    update_vector_kernel<<<global, local, 0, stream>>>(result->deviceData,
+        x1->deviceData, sign, x2->deviceData, r1->deviceData, r2->deviceData, result->rows);
 
     return LINALGCU_SUCCESS;
 }
-
 // gemv kernel
 __global__ void gemv_kernel(linalgcuMatrixData_t* matrix, linalgcuMatrixData_t* vector,
     linalgcuMatrixData_t* result, linalgcuSize_t rows) {

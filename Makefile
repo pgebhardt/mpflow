@@ -27,7 +27,7 @@ _OBJ = mesh.o basis.o electrodes.o grid.o conjugate.o conjugate_sparse.o forward
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
-_CUOBJ = grid.cu_o conjugate.cu_o conjugate_sparse.cu_o forward.cu_o
+_CUOBJ = grid.cu_o conjugate.cu_o forward.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies

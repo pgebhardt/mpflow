@@ -109,7 +109,7 @@ linalgcuError_t fasteit_conjugate_sparse_solver_solve(fasteitConjugateSparseSolv
     // regularize for dc free solution
     if (dcFree == LINALGCU_TRUE) {
         error |= linalgcu_matrix_sum(self->tempNumber, x, stream);
-        error |= fasteit_conjugate_sparse_add_scalar(self->residuum, self->tempNumber,
+        error |= fasteit_conjugate_add_scalar(self->residuum, self->tempNumber,
             self->rows, self->columns, stream);
     }
 
@@ -137,7 +137,7 @@ linalgcuError_t fasteit_conjugate_sparse_solver_solve(fasteitConjugateSparseSolv
         // regularize for dc free solution
         if (dcFree == LINALGCU_TRUE) {
             error |= linalgcu_matrix_sum(self->tempNumber, self->projection, stream);
-            error |= fasteit_conjugate_sparse_add_scalar(self->tempVector, self->tempNumber,
+            error |= fasteit_conjugate_add_scalar(self->tempVector, self->tempNumber,
                 self->rows, self->columns, stream);
         }
 
@@ -146,11 +146,11 @@ linalgcuError_t fasteit_conjugate_sparse_solver_solve(fasteitConjugateSparseSolv
             self->tempVector, stream);
 
         // update residuum
-        error |= fasteit_conjugate_sparse_update_vector(self->residuum, self->residuum,
+        error |= fasteit_conjugate_update_vector(self->residuum, self->residuum,
             -1.0f, self->tempVector, self->rsold, self->tempNumber, stream);
 
         // update x
-        error |= fasteit_conjugate_sparse_update_vector(x, x, 1.0f, self->projection,
+        error |= fasteit_conjugate_update_vector(x, x, 1.0f, self->projection,
             self->rsold, self->tempNumber, stream);
 
         // calc rsnew
@@ -158,7 +158,7 @@ linalgcuError_t fasteit_conjugate_sparse_solver_solve(fasteitConjugateSparseSolv
             self->residuum, stream);
 
         // update projection
-        error |= fasteit_conjugate_sparse_update_vector(self->projection, self->residuum,
+        error |= fasteit_conjugate_update_vector(self->projection, self->residuum,
             1.0f, self->projection, self->rsnew, self->rsold, stream);
 
         // swap rsold and rsnew
