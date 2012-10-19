@@ -57,7 +57,7 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     }
 
     // create conjugate solver
-    error  = fasteit_conjugate_sparse_solver_create(&self->conjugateSolver,
+    error  = fasteit_sparse_conjugate_solver_create(&self->conjugateSolver,
         mesh->vertexCount, self->driveCount + self->measurmentCount, stream);
 
     // check success
@@ -230,7 +230,7 @@ linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPoi
         free(self->excitation);
     }
     fasteit_grid_release(&self->grid);
-    fasteit_conjugate_sparse_solver_release(&self->conjugateSolver);
+    fasteit_sparse_conjugate_solver_release(&self->conjugateSolver);
 
     // free struct
     free(self);
@@ -258,14 +258,14 @@ linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
 
     // solve for ground mode
     // solve for drive phi
-    error |= fasteit_conjugate_sparse_solver_solve(self->conjugateSolver,
+    error |= fasteit_sparse_conjugate_solver_solve(self->conjugateSolver,
         self->grid->systemMatrices[0], self->phi[0], self->excitation[0],
         steps, LINALGCU_TRUE, stream);
 
     // solve for higher harmonics
     for (linalgcuSize_t n = 1; n < self->grid->numHarmonics + 1; n++) {
         // solve for drive phi
-        error |= fasteit_conjugate_sparse_solver_solve(self->conjugateSolver,
+        error |= fasteit_sparse_conjugate_solver_solve(self->conjugateSolver,
             self->grid->systemMatrices[n], self->phi[n], self->excitation[n],
             steps, LINALGCU_FALSE, stream);
     }

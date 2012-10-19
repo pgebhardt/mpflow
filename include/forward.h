@@ -9,7 +9,7 @@
 // solver struct
 typedef struct {
     fasteitGrid_t grid;
-    fasteitConjugateSparseSolver_t conjugateSolver;
+    fasteitSparseConjugateSolver_t conjugateSolver;
     linalgcuSize_t driveCount;
     linalgcuSize_t measurmentCount;
     linalgcuMatrix_t jacobian;

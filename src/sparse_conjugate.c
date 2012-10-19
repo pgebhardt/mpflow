@@ -7,8 +7,8 @@
 #include "../include/fasteit.h"
 
 // create conjugate solver
-linalgcuError_t fasteit_conjugate_sparse_solver_create(
-    fasteitConjugateSparseSolver_t* solverPointer, linalgcuSize_t rows, linalgcuSize_t columns,
+linalgcuError_t fasteit_sparse_conjugate_solver_create(
+    fasteitSparseConjugateSolver_t* solverPointer, linalgcuSize_t rows, linalgcuSize_t columns,
     cudaStream_t stream) {
     // check input
     if ((solverPointer == NULL) || (rows <= 1)) {
@@ -22,7 +22,7 @@ linalgcuError_t fasteit_conjugate_sparse_solver_create(
     *solverPointer = NULL;
 
     // create solver struct
-    fasteitConjugateSparseSolver_t self = malloc(sizeof(fasteitConjugateSparseSolver_s));
+    fasteitSparseConjugateSolver_t self = malloc(sizeof(fasteitSparseConjugateSolver_s));
 
     // check success
     if (self == NULL) {
@@ -50,7 +50,7 @@ linalgcuError_t fasteit_conjugate_sparse_solver_create(
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fasteit_conjugate_sparse_solver_release(&self);
+        fasteit_sparse_conjugate_solver_release(&self);
 
         return error;
     }
@@ -62,14 +62,15 @@ linalgcuError_t fasteit_conjugate_sparse_solver_create(
 }
 
 // release solver
-linalgcuError_t fasteit_conjugate_sparse_solver_release(fasteitConjugateSparseSolver_t* solverPointer) {
+linalgcuError_t fasteit_sparse_conjugate_solver_release(
+    fasteitSparseConjugateSolver_t* solverPointer) {
     // check input
     if ((solverPointer == NULL) || (*solverPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // get solver
-    fasteitConjugateSparseSolver_t self = *solverPointer;
+    fasteitSparseConjugateSolver_t self = *solverPointer;
 
     // release matrices
     linalgcu_matrix_release(&self->residuum);
@@ -88,8 +89,8 @@ linalgcuError_t fasteit_conjugate_sparse_solver_release(fasteitConjugateSparseSo
     return LINALGCU_SUCCESS;
 }
 
-// solve conjugate_sparse sparse
-linalgcuError_t fasteit_conjugate_sparse_solver_solve(fasteitConjugateSparseSolver_t self,
+// solve conjugate sparse
+linalgcuError_t fasteit_sparse_conjugate_solver_solve(fasteitSparseConjugateSolver_t self,
     linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f, linalgcuSize_t iterations,
     linalgcuBool_t dcFree, cudaStream_t stream) {
     // check input
