@@ -3,9 +3,6 @@
 # Copyright (C) 2012  Patrik Gebhardt
 # Contact: patrik.gebhardt@rub.de
 
-# cuda paths
-CUDA_HOME = /usr/local/cuda
-
 # Directories
 SRC = src
 INCLUDES = include
@@ -17,10 +14,10 @@ INSTALL_LIB = /usr/local/lib
 
 # Copmiler
 CC = clang
-NVCC = $(CUDA_HOME)/bin/nvcc
+NVCC = nvcc
 CFLAGS = -fPIC
 NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -lineinfo
-LDFLAGS = -L/usr/local/lib -llinalgcu -L$(CUDA_HOME)/lib64 -lcudart -lcublas
+LDFLAGS = -L/usr/local/lib -llinalgcu -lcudart -lcublas
 
 # Object files
 _OBJ = mesh.o basis.o electrodes.o grid.o conjugate.o conjugate_sparse.o forward.o inverse.o solver.o

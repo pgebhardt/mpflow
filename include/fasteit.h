@@ -6,8 +6,8 @@
 #ifndef FASTEIT_FASTEIT_H
 #define FASTEIT_FASTEIT_H
 
-#include <cuda/cuda_runtime.h>
-#include <cuda/cublas_v2.h>
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
 #include <linalgcu/linalgcu.h>
 
 // c++ compatibility
