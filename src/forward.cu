@@ -90,7 +90,7 @@ LINALGCU_EXTERN_C
 linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self,
     linalgcuMatrix_t gamma, linalgcuSize_t harmonic, linalgcuBool_t additiv,
     cudaStream_t stream) {
-    if ((self == NULL) || (gamma == NULL) || (harmonic > self->grid->numHarmonics)) {
+    if ((self == NULL) || (gamma == NULL) || (harmonic > self->model->numHarmonics)) {
         return LINALGCU_ERROR;
     }
 
@@ -104,11 +104,11 @@ linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self
         self->jacobian->deviceData,
         self->phi[harmonic]->deviceData,
         &self->phi[harmonic]->deviceData[self->driveCount * self->phi[harmonic]->rows],
-        self->grid->gradientMatrixSparse->values,
-        self->grid->gradientMatrixSparse->columnIds,
-        self->grid->area->deviceData, gamma->deviceData, self->grid->sigmaRef,
+        self->model->gradientMatrixSparse->values,
+        self->model->gradientMatrixSparse->columnIds,
+        self->model->area->deviceData, gamma->deviceData, self->model->sigmaRef,
         self->jacobian->rows, self->phi[harmonic]->rows,
-        self->driveCount, self->measurmentCount, self->grid->mesh->elementCount,
+        self->driveCount, self->measurmentCount, self->model->mesh->elementCount,
         additiv);
 
     return LINALGCU_SUCCESS;

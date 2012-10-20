@@ -34,7 +34,7 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     }
 
     // init struct
-    self->grid = NULL;
+    self->model = NULL;
     self->conjugateSolver = NULL;
     self->driveCount = driveCount;
     self->measurmentCount = measurmentCount;
@@ -44,8 +44,8 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     self->excitation = NULL;
     self->voltageCalculation = NULL;
 
-    // create grid
-    error = fasteit_grid_create(&self->grid, mesh, electrodes, sigmaRef, numHarmonics,
+    // create model
+    error = fasteit_model_create(&self->model, mesh, electrodes, sigmaRef, numHarmonics,
         handle, stream);
 
     // check success
@@ -144,23 +144,23 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     // calc excitation matrices
     for (linalgcuSize_t n = 0; n < numHarmonics + 1; n++) {
         // Run multiply once more to avoid cublas error
-        linalgcu_matrix_multiply(self->excitation[n], self->grid->excitationMatrix,
+        linalgcu_matrix_multiply(self->excitation[n], self->model->excitationMatrix,
             pattern, handle, stream);
-        error |= linalgcu_matrix_multiply(self->excitation[n], self->grid->excitationMatrix,
+        error |= linalgcu_matrix_multiply(self->excitation[n], self->model->excitationMatrix,
             pattern, handle, stream);
     }
 
     // calc fourier coefficients for current pattern
     // calc ground mode
     error |= linalgcu_matrix_scalar_multiply(self->excitation[0],
-        1.0f / self->grid->mesh->height, stream);
+        1.0f / self->model->mesh->height, stream);
 
     // calc harmonics
     for (linalgcuSize_t n = 1; n < numHarmonics + 1; n++) {
         error |= linalgcu_matrix_scalar_multiply(self->excitation[n],
-            2.0f * sin(n * M_PI * self->grid->electrodes->height /
-            self->grid->mesh->height) /
-            (n * M_PI * self->grid->electrodes->height), stream);
+            2.0f * sin(n * M_PI * self->model->electrodes->height /
+            self->model->mesh->height) /
+            (n * M_PI * self->model->electrodes->height), stream);
     }
 
     // cleanup
@@ -180,15 +180,15 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     // one prerum for cublas
     cublasSetStream(handle, stream);
     cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns,
-        self->grid->excitationMatrix->rows, measurmentPattern->rows, &alpha,
+        self->model->excitationMatrix->rows, measurmentPattern->rows, &alpha,
         measurmentPattern->deviceData, measurmentPattern->rows,
-        self->grid->excitationMatrix->deviceData, self->grid->excitationMatrix->rows,
+        self->model->excitationMatrix->deviceData, self->model->excitationMatrix->rows,
         &beta, self->voltageCalculation->deviceData, self->voltageCalculation->rows);
 
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns,
-        self->grid->excitationMatrix->rows, measurmentPattern->rows, &alpha,
+        self->model->excitationMatrix->rows, measurmentPattern->rows, &alpha,
         measurmentPattern->deviceData, measurmentPattern->rows,
-        self->grid->excitationMatrix->deviceData, self->grid->excitationMatrix->rows,
+        self->model->excitationMatrix->deviceData, self->model->excitationMatrix->rows,
         &beta, self->voltageCalculation->deviceData, self->voltageCalculation->rows)
         != CUBLAS_STATUS_SUCCESS) {
         // cleanup
@@ -218,18 +218,18 @@ linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPoi
     linalgcu_matrix_release(&self->voltage);
 
     if (self->phi != NULL) {
-        for (linalgcuSize_t i = 0; i < self->grid->numHarmonics + 1; i++) {
+        for (linalgcuSize_t i = 0; i < self->model->numHarmonics + 1; i++) {
             linalgcu_matrix_release(&self->phi[i]);
         }
         free(self->phi);
     }
     if (self->excitation != NULL) {
-        for (linalgcuSize_t i = 0; i < self->grid->numHarmonics + 1; i++) {
+        for (linalgcuSize_t i = 0; i < self->model->numHarmonics + 1; i++) {
             linalgcu_matrix_release(&self->excitation[i]);
         }
         free(self->excitation);
     }
-    fasteit_grid_release(&self->grid);
+    fasteit_model_release(&self->model);
     fasteit_sparse_conjugate_solver_release(&self->conjugateSolver);
 
     // free struct
@@ -254,25 +254,25 @@ linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // update system matrix
-    error  = fasteit_grid_update_system_matrices(self->grid, gamma, handle, stream);
+    error  = fasteit_model_update_system_matrices(self->model, gamma, handle, stream);
 
     // solve for ground mode
     // solve for drive phi
     error |= fasteit_sparse_conjugate_solver_solve(self->conjugateSolver,
-        self->grid->systemMatrices[0], self->phi[0], self->excitation[0],
+        self->model->systemMatrices[0], self->phi[0], self->excitation[0],
         steps, LINALGCU_TRUE, stream);
 
     // solve for higher harmonics
-    for (linalgcuSize_t n = 1; n < self->grid->numHarmonics + 1; n++) {
+    for (linalgcuSize_t n = 1; n < self->model->numHarmonics + 1; n++) {
         // solve for drive phi
         error |= fasteit_sparse_conjugate_solver_solve(self->conjugateSolver,
-            self->grid->systemMatrices[n], self->phi[n], self->excitation[n],
+            self->model->systemMatrices[n], self->phi[n], self->excitation[n],
             steps, LINALGCU_FALSE, stream);
     }
 
     // calc jacobian
     error |= fasteit_forward_solver_calc_jacobian(self, gamma, 0, LINALGCU_FALSE, stream);
-    for (linalgcuSize_t n = 1; n < self->grid->numHarmonics + 1; n++) {
+    for (linalgcuSize_t n = 1; n < self->model->numHarmonics + 1; n++) {
         error |= fasteit_forward_solver_calc_jacobian(self, gamma, n, LINALGCU_TRUE, stream);
     }
 
@@ -289,7 +289,7 @@ linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
 
     // add harmonic voltages
     beta = 1.0f;
-    for (linalgcuSize_t n = 1; n < self->grid->numHarmonics + 1; n++) {
+    for (linalgcuSize_t n = 1; n < self->model->numHarmonics + 1; n++) {
         cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, self->voltageCalculation->rows,
             self->driveCount, self->voltageCalculation->columns, &alpha,
             self->voltageCalculation->deviceData, self->voltageCalculation->rows,

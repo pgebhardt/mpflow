@@ -68,7 +68,7 @@ __global__ void reduce_residual_matrices(linalgcuMatrixData_t* connectivityMatri
 
 // init residual matrix
 LINALGCU_EXTERN_C
-linalgcuError_t fasteit_grid_init_residual_matrix(fasteitGrid_t self,
+linalgcuError_t fasteit_model_init_residual_matrix(fasteitModel_t self,
     linalgcuMatrix_t gamma, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL)) {
@@ -170,7 +170,7 @@ linalgcuError_t fasteit_grid_init_residual_matrix(fasteitGrid_t self,
         self->connectivityMatrix->rows, self->connectivityMatrix->rows);
 
     // update residual matrix
-    error = fasteit_grid_update_residual_matrix(self, gamma, stream);
+    error = fasteit_model_update_residual_matrix(self, gamma, stream);
 
     // cleanup
     linalgcu_matrix_release(&elementCount);
@@ -216,7 +216,7 @@ __global__ void update_system_matrix_kernel(linalgcuMatrixData_t* systemMatrixVa
 
 // update system matrix 2D
 LINALGCU_EXTERN_C
-linalgcuError_t fasteit_grid_update_2D_system_matrix(fasteitGrid_t self,
+linalgcuError_t fasteit_model_update_2D_system_matrix(fasteitModel_t self,
     linalgcuMatrix_t gamma, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL)) {
@@ -283,7 +283,7 @@ __global__ void update_residual_matrix_kernel(linalgcuMatrixData_t* residualMatr
 
 // update residual matrix
 LINALGCU_EXTERN_C
-linalgcuError_t fasteit_grid_update_residual_matrix(fasteitGrid_t self,
+linalgcuError_t fasteit_model_update_residual_matrix(fasteitModel_t self,
     linalgcuMatrix_t gamma, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL)) {

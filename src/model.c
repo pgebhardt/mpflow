@@ -7,23 +7,23 @@
 #include <stdio.h>
 #include "../include/fasteit.h"
 
-// create solver grid
-linalgcuError_t fasteit_grid_create(fasteitGrid_t* gridPointer,
+// create solver model
+linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
     fasteitMesh_t mesh, fasteitElectrodes_t electrodes, linalgcuMatrixData_t sigmaRef,
     linalgcuSize_t numHarmonics, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((gridPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (handle == NULL)) {
+    if ((modelPointer == NULL) || (mesh == NULL) || (electrodes == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
 
-    // init grid pointer
-    *gridPointer = NULL;
+    // init model pointer
+    *modelPointer = NULL;
 
-    // create grid struct
-    fasteitGrid_t self = malloc(sizeof(fasteitGrid_s));
+    // create model struct
+    fasteitModel_t self = malloc(sizeof(fasteitModel_s));
 
     // check success
     if (self == NULL) {
@@ -67,7 +67,7 @@ linalgcuError_t fasteit_grid_create(fasteitGrid_t* gridPointer,
     // check success
     if (self->systemMatrices == NULL) {
         // cleanup
-        fasteit_grid_release(&self);
+        fasteit_model_release(&self);
 
         return LINALGCU_ERROR;
     }
@@ -82,7 +82,7 @@ linalgcuError_t fasteit_grid_create(fasteitGrid_t* gridPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fasteit_grid_release(&self);
+        fasteit_model_release(&self);
 
         return error;
     }
@@ -94,56 +94,56 @@ linalgcuError_t fasteit_grid_create(fasteitGrid_t* gridPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        fasteit_grid_release(&self);
+        fasteit_model_release(&self);
 
         return error;
     }
 
     // init system matrix
-    error  = fasteit_grid_init_2D_system_matrix(self, handle, stream);
+    error  = fasteit_model_init_2D_system_matrix(self, handle, stream);
 
     // init residual matrix
-    error |= fasteit_grid_init_residual_matrix(self, gamma, stream);
+    error |= fasteit_model_init_residual_matrix(self, gamma, stream);
 
     // init excitaion matrix
-    error |= fasteit_grid_init_exitation_matrix(self, stream);
+    error |= fasteit_model_init_exitation_matrix(self, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
         linalgcu_matrix_release(&gamma);
-        fasteit_grid_release(&self);
+        fasteit_model_release(&self);
 
         return error;
     }
 
     // update system matrices
-    error = fasteit_grid_update_system_matrices(self, gamma, handle, stream);
+    error = fasteit_model_update_system_matrices(self, gamma, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
         linalgcu_matrix_release(&gamma);
-        fasteit_grid_release(&self);
+        fasteit_model_release(&self);
 
         return error;
     }
 
-    // set grid pointer
-    *gridPointer = self;
+    // set model pointer
+    *modelPointer = self;
 
     return LINALGCU_SUCCESS;
 }
 
-// release solver grid
-linalgcuError_t fasteit_grid_release(fasteitGrid_t* gridPointer) {
+// release solver model
+linalgcuError_t fasteit_model_release(fasteitModel_t* modelPointer) {
     // check input
-    if ((gridPointer == NULL) || (*gridPointer == NULL)) {
+    if ((modelPointer == NULL) || (*modelPointer == NULL)) {
         return LINALGCU_ERROR;
     }
 
-    // get grid
-    fasteitGrid_t self = *gridPointer;
+    // get model
+    fasteitModel_t self = *modelPointer;
 
     // cleanup
     fasteit_mesh_release(&self->mesh);
@@ -168,14 +168,14 @@ linalgcuError_t fasteit_grid_release(fasteitGrid_t* gridPointer) {
     // free struct
     free(self);
 
-    // set grid pointer to NULL
-    *gridPointer = NULL;
+    // set model pointer to NULL
+    *modelPointer = NULL;
 
     return LINALGCU_SUCCESS;
 }
 
 // init system matrix 2D
-linalgcuError_t fasteit_grid_init_2D_system_matrix(fasteitGrid_t self, cublasHandle_t handle,
+linalgcuError_t fasteit_model_init_2D_system_matrix(fasteitModel_t self, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((self == NULL) || (handle == NULL)) {
@@ -309,7 +309,7 @@ linalgcuError_t fasteit_grid_init_2D_system_matrix(fasteitGrid_t self, cublasHan
 }
 
 // update system matrix
-linalgcuError_t fasteit_grid_update_system_matrices(fasteitGrid_t self,
+linalgcuError_t fasteit_model_update_system_matrices(fasteitModel_t self,
     linalgcuMatrix_t gamma, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (gamma == NULL) || (handle == NULL)) {
@@ -321,10 +321,10 @@ linalgcuError_t fasteit_grid_update_system_matrices(fasteitGrid_t self,
     cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
 
     // update 2d systemMatrix
-    error  = fasteit_grid_update_2D_system_matrix(self, gamma, stream);
+    error  = fasteit_model_update_2D_system_matrix(self, gamma, stream);
 
     // update residual matrix
-    error |= fasteit_grid_update_residual_matrix(self, gamma, stream);
+    error |= fasteit_model_update_residual_matrix(self, gamma, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -362,7 +362,7 @@ linalgcuError_t fasteit_grid_update_system_matrices(fasteitGrid_t self,
     return LINALGCU_SUCCESS;
 }
 
-linalgcuMatrixData_t fasteit_grid_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+linalgcuMatrixData_t fasteit_model_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     if (x > 0.0f) {
         return atan(y / x);
     }
@@ -383,7 +383,7 @@ linalgcuMatrixData_t fasteit_grid_angle(linalgcuMatrixData_t x, linalgcuMatrixDa
     }
 }
 
-linalgcuMatrixData_t fasteit_grid_integrate_basis(linalgcuMatrixData_t* start,
+linalgcuMatrixData_t fasteit_model_integrate_basis(linalgcuMatrixData_t* start,
     linalgcuMatrixData_t* end, linalgcuMatrixData_t* electrodeStart,
     linalgcuMatrixData_t* electrodeEnd) {
     // integral
@@ -394,10 +394,10 @@ linalgcuMatrixData_t fasteit_grid_integrate_basis(linalgcuMatrixData_t* start,
         + electrodeStart[1] * electrodeStart[1]);
 
     // calc angle
-    linalgcuMatrixData_t angleStart = fasteit_grid_angle(start[0], start[1]);
-    linalgcuMatrixData_t angleEnd = fasteit_grid_angle(end[0], end[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeStart = fasteit_grid_angle(electrodeStart[0], electrodeStart[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeEnd = fasteit_grid_angle(electrodeEnd[0], electrodeEnd[1]) - angleStart;
+    linalgcuMatrixData_t angleStart = fasteit_model_angle(start[0], start[1]);
+    linalgcuMatrixData_t angleEnd = fasteit_model_angle(end[0], end[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeStart = fasteit_model_angle(electrodeStart[0], electrodeStart[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeEnd = fasteit_model_angle(electrodeEnd[0], electrodeEnd[1]) - angleStart;
 
     // correct angle
     angleEnd += (angleEnd < M_PI) ? 2.0f * M_PI : 0.0f;
@@ -455,7 +455,7 @@ linalgcuMatrixData_t fasteit_grid_integrate_basis(linalgcuMatrixData_t* start,
 }
 
 // init exitation matrix
-linalgcuError_t fasteit_grid_init_exitation_matrix(fasteitGrid_t self,
+linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
     cudaStream_t stream) {
     // check input
     if (self == NULL) {
@@ -487,11 +487,11 @@ linalgcuError_t fasteit_grid_init_exitation_matrix(fasteitGrid_t self,
 
             // calc element
             self->excitationMatrix->hostData[(linalgcuSize_t)id[0] + j * self->excitationMatrix->rows] +=
-                fasteit_grid_integrate_basis(node, end,
+                fasteit_model_integrate_basis(node, end,
                     &self->electrodes->electrodesStart[j * 2],
                     &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;
             self->excitationMatrix->hostData[(linalgcuSize_t)id[1] + j * self->excitationMatrix->rows] +=
-                fasteit_grid_integrate_basis(end, node,
+                fasteit_model_integrate_basis(end, node,
                     &self->electrodes->electrodesStart[j * 2],
                     &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;
         }

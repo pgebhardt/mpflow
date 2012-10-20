@@ -18,7 +18,7 @@ extern "C" {
 #include "mesh.h"
 #include "basis.h"
 #include "electrodes.h"
-#include "grid.h"
+#include "model.h"
 #include "conjugate.h"
 #include "sparse_conjugate.h"
 #include "forward.h"
