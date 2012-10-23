@@ -60,4 +60,8 @@ linalgcuError_t fasteit_model_update_residual_matrix(fasteitModel_t,
 linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
     cudaStream_t stream);
 
+// calc excitaions
+linalgcuError_t fasteit_model_calc_excitaions(fasteitModel_t self, linalgcuMatrix_t* excitations,
+    linalgcuMatrix_t pattern, cublasHandle_t handle, cudaStream_t stream);
+
 #endif

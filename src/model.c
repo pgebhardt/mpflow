@@ -502,3 +502,38 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
 
     return LINALGCU_SUCCESS;
 }
+
+// calc excitaions
+linalgcuError_t fasteit_model_calc_excitaions(fasteitModel_t self, linalgcuMatrix_t* excitations,
+    linalgcuMatrix_t pattern, cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if ((self == NULL) || (excitations == NULL) || (pattern == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // error
+    linalgcuError_t error = LINALGCU_SUCCESS;
+
+    // calc excitation matrices
+    for (linalgcuSize_t n = 0; n < self->numHarmonics + 1; n++) {
+        // Run multiply once more to avoid cublas error
+        linalgcu_matrix_multiply(excitations[n], self->excitationMatrix,
+            pattern, handle, stream);
+        error |= linalgcu_matrix_multiply(excitations[n], self->excitationMatrix,
+            pattern, handle, stream);
+    }
+
+    // calc fourier coefficients for current pattern
+    // calc ground mode
+    error |= linalgcu_matrix_scalar_multiply(excitations[0],
+        1.0f / self->mesh->height, stream);
+
+    // calc harmonics
+    for (linalgcuSize_t n = 1; n < self->numHarmonics + 1; n++) {
+        error |= linalgcu_matrix_scalar_multiply(excitations[n],
+            2.0f * sin(n * M_PI * self->electrodes->height / self->mesh->height) /
+            (n * M_PI * self->electrodes->height), stream);
+    }
+
+    return error;
+}

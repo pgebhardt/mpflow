@@ -142,26 +142,8 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     linalgcu_matrix_copy_to_device(pattern, stream);
 
     // calc excitation matrices
-    for (linalgcuSize_t n = 0; n < numHarmonics + 1; n++) {
-        // Run multiply once more to avoid cublas error
-        linalgcu_matrix_multiply(self->excitation[n], self->model->excitationMatrix,
-            pattern, handle, stream);
-        error |= linalgcu_matrix_multiply(self->excitation[n], self->model->excitationMatrix,
-            pattern, handle, stream);
-    }
-
-    // calc fourier coefficients for current pattern
-    // calc ground mode
-    error |= linalgcu_matrix_scalar_multiply(self->excitation[0],
-        1.0f / self->model->mesh->height, stream);
-
-    // calc harmonics
-    for (linalgcuSize_t n = 1; n < numHarmonics + 1; n++) {
-        error |= linalgcu_matrix_scalar_multiply(self->excitation[n],
-            2.0f * sin(n * M_PI * self->model->electrodes->height /
-            self->model->mesh->height) /
-            (n * M_PI * self->model->electrodes->height), stream);
-    }
+    error = fasteit_model_calc_excitaions(self->model, self->excitation, pattern,
+        handle, stream);
 
     // cleanup
     linalgcu_matrix_release(&pattern);
