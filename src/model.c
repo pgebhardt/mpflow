@@ -486,11 +486,11 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
                 1);
 
             // calc element
-            self->excitationMatrix->hostData[(linalgcuSize_t)id[0] + j * self->excitationMatrix->rows] +=
+            self->excitationMatrix->hostData[(linalgcuSize_t)id[0] + j * self->excitationMatrix->rows] -=
                 fasteit_model_integrate_basis(node, end,
                     &self->electrodes->electrodesStart[j * 2],
                     &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;
-            self->excitationMatrix->hostData[(linalgcuSize_t)id[1] + j * self->excitationMatrix->rows] +=
+            self->excitationMatrix->hostData[(linalgcuSize_t)id[1] + j * self->excitationMatrix->rows] -=
                 fasteit_model_integrate_basis(end, node,
                     &self->electrodes->electrodesStart[j * 2],
                     &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;

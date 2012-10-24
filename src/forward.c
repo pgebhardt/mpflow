@@ -128,14 +128,15 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
         }
     }
 
-    // fill pattern matrix with measurment pattern
+    // fill pattern matrix with measurment pattern and turn sign of measurment
+    // for correct current pattern
     for (linalgcuSize_t i = 0; i < pattern->rows; i++) {
         for (linalgcuSize_t j = 0; j < self->measurmentCount; j++) {
             // get value
             linalgcu_matrix_get_element(measurmentPattern, &value, i, j);
 
             // set value
-            linalgcu_matrix_set_element(pattern, value, i, j + self->driveCount);
+            linalgcu_matrix_set_element(pattern, -value, i, j + self->driveCount);
         }
     }
 
@@ -157,9 +158,9 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     }
 
     // calc voltage calculation matrix
-    linalgcuMatrixData_t alpha = 1.0f, beta = 0.0f;
+    linalgcuMatrixData_t alpha = -1.0f, beta = 0.0f;
 
-    // one prerum for cublas
+    // one prerun for cublas
     cublasSetStream(handle, stream);
     cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns,
         self->model->excitationMatrix->rows, measurmentPattern->rows, &alpha,
