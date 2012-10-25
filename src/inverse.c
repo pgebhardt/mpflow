@@ -185,48 +185,14 @@ linalgcuError_t fasteit_inverse_solver_calc_excitation(fasteitInverseSolver_t se
     return LINALGCU_SUCCESS;
 }
 
-// inverse solving non linear
-linalgcuError_t fasteit_inverse_solver_non_linear(fasteitInverseSolver_t self,
-    linalgcuMatrix_t gamma, linalgcuMatrix_t dGamma, linalgcuMatrix_t jacobian,
-    linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps,
-    cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if ((self == NULL) || (jacobian == NULL) || (calculatedVoltage == NULL) ||
-        (measuredVoltage == NULL) || (gamma == NULL) || (dGamma == NULL) || (handle == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // reset dGamma
-    error  = linalgcu_matrix_copy(dGamma, self->zeros, stream);
-
-    // calc system matrix
-    error |= fasteit_inverse_solver_calc_system_matrix(self, jacobian, handle, stream);
-
-    // calc excitation
-    error |= fasteit_inverse_solver_calc_excitation(self, jacobian, calculatedVoltage,
-        measuredVoltage, handle, stream);
-
-    // solve system
-    error |= fasteit_conjugate_solver_solve(self->conjugateSolver,
-        self->systemMatrix, dGamma, self->excitation, steps, handle, stream);
-
-    // add to gamma
-    error |= linalgcu_matrix_add(gamma, dGamma, stream);
-
-    return error;
-}
-
-// inverse solving linear
-linalgcuError_t fasteit_inverse_solver_linear(fasteitInverseSolver_t self,
-    linalgcuMatrix_t dGamma, linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+// inverse solving
+linalgcuError_t fasteit_inverse_solver_solve(fasteitInverseSolver_t self,
+    linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
     linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((self == NULL) || (jacobian == NULL) || (calculatedVoltage == NULL) ||
-        (measuredVoltage == NULL) || (dGamma == NULL) || (handle == NULL)) {
+        (measuredVoltage == NULL) || (gamma == NULL) || (handle == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -234,7 +200,7 @@ linalgcuError_t fasteit_inverse_solver_linear(fasteitInverseSolver_t self,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // reset dSigma
-    error  = linalgcu_matrix_copy(dGamma, self->zeros, stream);
+    error  = linalgcu_matrix_copy(gamma, self->zeros, stream);
 
     // calc excitation
     error |= fasteit_inverse_solver_calc_excitation(self, jacobian, calculatedVoltage,
@@ -242,7 +208,7 @@ linalgcuError_t fasteit_inverse_solver_linear(fasteitInverseSolver_t self,
 
     // solve system
     error |= fasteit_conjugate_solver_solve(self->conjugateSolver,
-        self->jacobianSquare, dGamma, self->excitation, steps, handle, stream);
+        self->jacobianSquare, gamma, self->excitation, steps, handle, stream);
 
     return error;
 }

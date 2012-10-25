@@ -144,14 +144,21 @@ linalgcuError_t fasteit_solver_calibrate(fasteitSolver_t self, cublasHandle_t ha
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
 
-    // forward
+    // solve forward
     error  = fasteit_forward_solver_solve(self->forwardSolver, self->gamma, 10, handle,
         stream);
 
-    // calibration
-    error |= fasteit_inverse_solver_non_linear(self->inverseSolver,
-        self->gamma, self->dGamma, self->forwardSolver->jacobian, self->forwardSolver->voltage,
+    // calc inverse system matrix
+    error |= fasteit_inverse_solver_calc_system_matrix(self->inverseSolver,
+        self->forwardSolver->jacobian, handle, stream);
+
+    // solve inverse
+    error |= fasteit_inverse_solver_solve(self->inverseSolver, self->dGamma,
+        self->forwardSolver->jacobian, self->forwardSolver->voltage,
         self->calibrationVoltage, 75, handle, stream);
+
+    // add to gamma
+    error |= linalgcu_matrix_add(self->gamma, self->dGamma, stream);
 
     return error;
 }
@@ -168,7 +175,7 @@ linalgcuError_t fasteit_solver_solve(fasteitSolver_t self, cublasHandle_t handle
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // solve
-    error |= fasteit_inverse_solver_linear(self->inverseSolver,
+    error |= fasteit_inverse_solver_solve(self->inverseSolver,
         self->dGamma, self->forwardSolver->jacobian, self->calibrationVoltage,
         self->measuredVoltage, 90, handle, stream);
 
