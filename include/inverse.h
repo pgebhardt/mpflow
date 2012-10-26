@@ -39,7 +39,7 @@ linalgcuError_t fasteit_inverse_solver_calc_excitation(fasteitInverseSolver_t se
 // inverse solving
 linalgcuError_t fasteit_inverse_solver_solve(fasteitInverseSolver_t self,
     linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
-    linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps, cublasHandle_t handle,
-    cudaStream_t stream);
+    linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps, linalgcuBool_t regularized,
+    cublasHandle_t handle, cudaStream_t stream);
 
 #endif
