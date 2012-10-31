@@ -10,33 +10,6 @@
 #include <stdio.h>
 #include "../include/fasteit.h"
 
-// calc residual integral
-linalgcuMatrixData_t calc_residual_integral(
-    linalgcuMatrixData_t x1, linalgcuMatrixData_t y1,
-    linalgcuMatrixData_t x2, linalgcuMatrixData_t y2,
-    linalgcuMatrixData_t x3, linalgcuMatrixData_t y3,
-    linalgcuMatrixData_t ai, linalgcuMatrixData_t bi, linalgcuMatrixData_t ci,
-    linalgcuMatrixData_t aj, linalgcuMatrixData_t bj, linalgcuMatrixData_t cj) {
-    // calc area
-    linalgcuMatrixData_t area = 0.5 * fabs((x2 - x1) * (y3 - y1) -
-        (x3 - x1) * (y2 - y1));
-
-    // calc integral
-    linalgcuMatrixData_t integral = 2.0f * area *
-        (ai * (0.5f * aj + (1.0f / 6.0f) * bj * (x1 + x2 + x3) +
-        (1.0f / 6.0f) * cj * (y1 + y2 + y3)) +
-        bi * ((1.0f/ 6.0f) * aj * (x1 + x2 + x3) +
-        (1.0f / 12.0f) * bj * (x1 * x1 + x1 * x2 + x1 * x3 + x2 * x2 + x2 * x3 + x3 * x3) +
-        (1.0f/ 24.0f) * cj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 +
-        2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)) +
-        ci * ((1.0f / 6.0f) * aj * (y1 + y2 + y3) +
-        (1.0f / 12.0f) * cj * (y1 * y1 + y1 * y2 + y1 * y3 + y2 * y2 + y2 * y3 + y3 * y3) +
-        (1.0f / 24.0f) * bj * (2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 +
-        2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)));
-
-    return integral;
-}
-
 // reduce connectivity and elementalResidual matrix
 __global__ void reduce_residual_matrices(linalgcuMatrixData_t* connectivityMatrix,
     linalgcuMatrixData_t* elementalResidualMatrix,
@@ -135,10 +108,7 @@ linalgcuError_t fasteit_model_init_residual_matrix(fasteitModel_t self,
 
                 // set elemental residual element
                 linalgcu_matrix_set_element(elementalResidualMatrix,
-                    calc_residual_integral(x[0], y[0], x[1], y[1], x[2], y[2],
-                        basis[i]->coefficients[0], basis[i]->coefficients[1],
-                        basis[i]->coefficients[2], basis[j]->coefficients[0],
-                        basis[j]->coefficients[1], basis[j]->coefficients[2]),
+                    fasteit_basis_integrate_with_basis(basis[i], basis[j]),
                     (linalgcuSize_t)id[i],
                     (linalgcuSize_t)(id[j] + connectivityMatrix->rows * temp));
 
