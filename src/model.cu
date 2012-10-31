@@ -55,40 +55,6 @@ linalgcuError_t fasteit_model_reduce_matrix(fasteitModel_t self, linalgcuMatrix_
     return LINALGCU_SUCCESS;
 }
 
-// update_system_matrix_kernel
-__global__ void update_system_matrix_kernel(linalgcuMatrixData_t* systemMatrixValues,
-    linalgcuColumnId_t* systemMatrixColumnIds,
-    linalgcuMatrixData_t* gradientMatrixTransposedValues,
-    linalgcuColumnId_t* gradientMatrixTransposedColumnIds,
-    linalgcuMatrixData_t* gradientMatrixTransposed,
-    linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef,
-    linalgcuMatrixData_t* area,
-    linalgcuSize_t gradientMatrixTransposedRows) {
-    // get ids
-    linalgcuSize_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuColumnId_t j = systemMatrixColumnIds[i * LINALGCU_BLOCK_SIZE +
-        (blockIdx.y * blockDim.y + threadIdx.y)];
-
-    // calc system matrix elements
-    linalgcuMatrixData_t element = 0.0f;
-    linalgcuColumnId_t id = -1;
-
-    for (int k = 0; k < LINALGCU_BLOCK_SIZE; k++) {
-        // get id
-        id = gradientMatrixTransposedColumnIds[i * LINALGCU_BLOCK_SIZE + k];
-
-        element += id != -1 && j != -1 ?
-            gradientMatrixTransposedValues[i * LINALGCU_BLOCK_SIZE + k] *
-            sigmaRef * exp10f(gamma[id / 2] / 10.0f) * area[id / 2] *
-            gradientMatrixTransposed[j + id * gradientMatrixTransposedRows] :
-            0.0f;
-    }
-
-    // set element
-    systemMatrixValues[i * LINALGCU_BLOCK_SIZE + (blockIdx.y * blockDim.y + threadIdx.y)] =
-        element;
-}
-
 // update matrix kernel
 __global__ void update_matrix_kernel(linalgcuMatrixData_t* matrixValues,
     linalgcuColumnId_t* matrixColumnIds, linalgcuColumnId_t* columnIds,
