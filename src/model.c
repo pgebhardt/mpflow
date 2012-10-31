@@ -87,18 +87,6 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
         return error;
     }
 
-    // create initial gamma
-    linalgcuMatrix_t gamma = NULL;
-    error = linalgcu_matrix_create(&gamma, self->mesh->elementCount, 1, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fasteit_model_release(&self);
-
-        return error;
-    }
-
     // init model
     error |= fasteit_model_init(self, handle, stream);
 
@@ -108,19 +96,6 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
     // check success
     if (error != LINALGCU_SUCCESS) {
         // cleanup
-        linalgcu_matrix_release(&gamma);
-        fasteit_model_release(&self);
-
-        return error;
-    }
-
-    // update system matrices
-    error = fasteit_model_update(self, gamma, handle, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        linalgcu_matrix_release(&gamma);
         fasteit_model_release(&self);
 
         return error;
