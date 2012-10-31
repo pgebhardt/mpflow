@@ -237,7 +237,7 @@ linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // update system matrix
-    error  = fasteit_model_update_system_matrices(self->model, gamma, handle, stream);
+    error  = fasteit_model_update(self->model, gamma, handle, stream);
 
     // solve for ground mode
     // solve for drive phi

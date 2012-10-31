@@ -14,11 +14,10 @@ typedef struct {
     linalgcuSparseMatrix_t* systemMatrices;
     linalgcuSparseMatrix_t systemMatrix2D;
     linalgcuSparseMatrix_t residualMatrix;
-    linalgcuMatrix_t excitationMatrix;
-    linalgcuMatrix_t gradientMatrixTransposed;
-    linalgcuSparseMatrix_t gradientMatrixTransposedSparse;
     linalgcuSparseMatrix_t gradientMatrixSparse;
+    linalgcuMatrix_t excitationMatrix;
     linalgcuMatrix_t connectivityMatrix;
+    linalgcuMatrix_t elementalSystemMatrix;
     linalgcuMatrix_t elementalResidualMatrix;
     linalgcuMatrix_t area;
     linalgcuSize_t numHarmonics;
@@ -33,28 +32,22 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
 // release model
 linalgcuError_t fasteit_model_release(fasteitModel_t* modelPointer);
 
+// init model
+linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle, cudaStream_t stream);
+
 // init system matrix 2D
 linalgcuError_t fasteit_model_init_2D_system_matrix(fasteitModel_t self, cublasHandle_t handle,
     cudaStream_t stream);
 
-// init residual matrix
+// update model
+linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma,
+    cublasHandle_t handle, cudaStream_t stream);
+
+// update matrix
 LINALGCU_EXTERN_C
-linalgcuError_t fasteit_model_init_residual_matrix(fasteitModel_t self, linalgcuMatrix_t gamma,
+linalgcuError_t fasteit_model_update_matrix(fasteitModel_t self,
+    linalgcuSparseMatrix_t matrix, linalgcuMatrix_t elements, linalgcuMatrix_t gamma,
     cudaStream_t stream);
-
-// update system matrix
-linalgcuError_t fasteit_model_update_system_matrices(fasteitModel_t self,
-    linalgcuMatrix_t gamma, cublasHandle_t handle, cudaStream_t stream);
-
-// update system matrix 2D
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_model_update_2D_system_matrix(fasteitModel_t self,
-    linalgcuMatrix_t gamma, cudaStream_t stream);
-
-// update residual matrix
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_model_update_residual_matrix(fasteitModel_t,
-    linalgcuMatrix_t gamma, cudaStream_t stream);
 
 // init exitation matrix
 linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
@@ -63,5 +56,10 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
 // calc excitaions
 linalgcuError_t fasteit_model_calc_excitaions(fasteitModel_t self, linalgcuMatrix_t* excitations,
     linalgcuMatrix_t pattern, cublasHandle_t handle, cudaStream_t stream);
+
+// reduce matrix
+LINALGCU_EXTERN_C
+linalgcuError_t fasteit_model_reduce_matrix(fasteitModel_t self, linalgcuMatrix_t matrix,
+    linalgcuMatrix_t intermediateMatrix, cudaStream_t stream);
 
 #endif

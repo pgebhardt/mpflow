@@ -153,3 +153,16 @@ linalgcuMatrixData_t fasteit_basis_integrate_with_basis(fasteitBasis_t self, fas
     return integral;
 }
 
+// integrate gradient with basis
+linalgcuMatrixData_t fasteit_basis_integrate_gradient_with_basis(fasteitBasis_t self,
+    fasteitBasis_t other) {
+    // calc area
+    linalgcuMatrixData_t area = 0.5 * fabs((self->points[1][0] - self->points[0][0]) *
+        (self->points[2][1] - self->points[0][1]) -
+        (self->points[2][0] - self->points[0][0]) *
+        (self->points[1][1] - self->points[0][1]));
+
+    // calc integral
+    return area * (self->gradient[0] * other->gradient[0] + self->gradient[1] * other->gradient[1]);
+}
+

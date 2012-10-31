@@ -30,4 +30,8 @@ linalgcuError_t fasteit_basis_function(fasteitBasis_t self,
 // integrate with basis
 linalgcuMatrixData_t fasteit_basis_integrate_with_basis(fasteitBasis_t self, fasteitBasis_t other);
 
+// integrate gradient with basis
+linalgcuMatrixData_t fasteit_basis_integrate_gradient_with_basis(fasteitBasis_t self,
+    fasteitBasis_t other);
+
 #endif
