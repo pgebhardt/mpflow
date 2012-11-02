@@ -50,6 +50,9 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
         }
     }
 
+    // diff sigma to gamma
+    element *= sigmaRef * exp10f(gamma[column] / 10.0f);
+
     // set matrix element
     if (additiv == LINALGCU_TRUE) {
         jacobian[row + column * jacobianRows] += -element;
