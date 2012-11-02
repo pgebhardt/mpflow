@@ -32,6 +32,10 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
 // release forward_solver
 linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPointer);
 
+// init jacobian calculation matrices
+linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwardSolver_t self,
+    cublasHandle_t handle, cudaStream_t stream);
+
 // calc jacobian
 LINALGCU_EXTERN_C
 linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self,

@@ -183,10 +183,37 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
         return LINALGCU_ERROR;
     }
 
+    // init jacobian calculation matrices
+    error = fasteit_forward_init_jacobian_calculation_matrices(self, handle, stream);
+
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fasteit_forward_solver_release(&self);
+
+        return error;
+    }
+
+    // set solver pointer
+    *solverPointer = self;
+
+    return LINALGCU_SUCCESS;
+}
+
+// init jacobian calculation matrices
+linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwardSolver_t self,
+    cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if ((self == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // error
+    linalgcuError_t error = LINALGCU_SUCCESS;
+
     // create matrices
     linalgcuMatrix_t gradientMatrix;
     error = linalgcu_matrix_create(&gradientMatrix,
-        2 * mesh->elementCount, mesh->vertexCount, stream);
+        2 * self->model->mesh->elementCount, self->model->mesh->vertexCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -202,12 +229,14 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     fasteitBasis_t basis[3];
     linalgcuMatrixData_t area;
 
-    for (linalgcuSize_t k = 0; k < mesh->elementCount; k++) {
+    for (linalgcuSize_t k = 0; k < self->model->mesh->elementCount; k++) {
         // get vertices for element
         for (linalgcuSize_t i = 0; i < 3; i++) {
-            linalgcu_matrix_get_element(mesh->elements, &id[i], k, i);
-            linalgcu_matrix_get_element(mesh->vertices, &x[i], (linalgcuSize_t)id[i], 0);
-            linalgcu_matrix_get_element(mesh->vertices, &y[i], (linalgcuSize_t)id[i], 1);
+            linalgcu_matrix_get_element(self->model->mesh->elements, &id[i], k, i);
+            linalgcu_matrix_get_element(self->model->mesh->vertices, &x[i],
+                (linalgcuSize_t)id[i], 0);
+            linalgcu_matrix_get_element(self->model->mesh->vertices, &y[i],
+                (linalgcuSize_t)id[i], 1);
         }
 
         // calc corresponding basis functions
@@ -261,9 +290,6 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
 
         return LINALGCU_ERROR;
     }
-
-    // set solver pointer
-    *solverPointer = self;
 
     return LINALGCU_SUCCESS;
 }
