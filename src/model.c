@@ -151,8 +151,8 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
 
-    // init 2D system matrix
-    error = fasteit_model_init_2D_system_matrix(self, handle, stream);
+    // init sparse matrices
+    error = fasteit_model_init_sparse_matrices(self, handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -274,7 +274,7 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
 }
 
 // init system matrix 2D
-linalgcuError_t fasteit_model_init_2D_system_matrix(fasteitModel_t self, cublasHandle_t handle,
+linalgcuError_t fasteit_model_init_sparse_matrices(fasteitModel_t self, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if ((self == NULL) || (handle == NULL)) {
