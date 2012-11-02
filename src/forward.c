@@ -43,6 +43,8 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     self->phi = NULL;
     self->excitation = NULL;
     self->voltageCalculation = NULL;
+    self->area = NULL;
+    self->gradientMatrixSparse = NULL;
 
     // create model
     error = fasteit_model_create(&self->model, mesh, electrodes, sigmaRef, numHarmonics,
@@ -74,6 +76,7 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     error |= linalgcu_matrix_create(&self->voltage, measurmentCount, driveCount, stream);
     error |= linalgcu_matrix_create(&self->voltageCalculation,
         self->measurmentCount, mesh->vertexCount, stream);
+    error |= linalgcu_matrix_create(&self->area, mesh->elementCount, 1, stream);
 
     // create matrix buffer
     self->phi = malloc(sizeof(linalgcuMatrix_t) * (numHarmonics + 1));
@@ -180,6 +183,85 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
         return LINALGCU_ERROR;
     }
 
+    // create matrices
+    linalgcuMatrix_t gradientMatrix;
+    error = linalgcu_matrix_create(&gradientMatrix,
+        2 * mesh->elementCount, mesh->vertexCount, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fasteit_forward_solver_release(&self);
+
+        return LINALGCU_ERROR;
+    }
+
+    // calc gradient matrix
+    linalgcuMatrixData_t x[3], y[3];
+    linalgcuMatrixData_t id[3];
+    fasteitBasis_t basis[3];
+    linalgcuMatrixData_t area;
+
+    for (linalgcuSize_t k = 0; k < mesh->elementCount; k++) {
+        // get vertices for element
+        for (linalgcuSize_t i = 0; i < 3; i++) {
+            linalgcu_matrix_get_element(mesh->elements, &id[i], k, i);
+            linalgcu_matrix_get_element(mesh->vertices, &x[i], (linalgcuSize_t)id[i], 0);
+            linalgcu_matrix_get_element(mesh->vertices, &y[i], (linalgcuSize_t)id[i], 1);
+        }
+
+        // calc corresponding basis functions
+        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+
+        // calc matrix elements
+        for (linalgcuSize_t i = 0; i < 3; i++) {
+            linalgcu_matrix_set_element(gradientMatrix,
+                basis[i]->coefficients[1], 2 * k, (linalgcuSize_t)id[i]);
+            linalgcu_matrix_set_element(gradientMatrix,
+                basis[i]->coefficients[2], 2 * k + 1, (linalgcuSize_t)id[i]);
+        }
+
+        // calc area of element
+        area = 0.5 * fabs((x[1] - x[0]) * (y[2] - y[0]) -
+            (x[2] - x[0]) * (y[1] - y[0]));
+
+        linalgcu_matrix_set_element(self->area, area, k, 0);
+
+        // cleanup
+        fasteit_basis_release(&basis[0]);
+        fasteit_basis_release(&basis[1]);
+        fasteit_basis_release(&basis[2]);
+    }
+
+    // copy matrices to device
+    error  = linalgcu_matrix_copy_to_device(gradientMatrix, stream);
+    error |= linalgcu_matrix_copy_to_device(self->area, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        linalgcu_matrix_release(&gradientMatrix);
+        fasteit_forward_solver_release(&self);
+
+        return LINALGCU_ERROR;
+    }
+
+    // create sparse matrices
+    error = linalgcu_sparse_matrix_create(&self->gradientMatrixSparse, gradientMatrix, stream);
+
+    // cleanup
+    linalgcu_matrix_release(&gradientMatrix);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fasteit_forward_solver_release(&self);
+
+        return LINALGCU_ERROR;
+    }
+
     // set solver pointer
     *solverPointer = self;
 
@@ -199,6 +281,9 @@ linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPoi
     // cleanup
     linalgcu_matrix_release(&self->jacobian);
     linalgcu_matrix_release(&self->voltage);
+    linalgcu_matrix_release(&self->voltageCalculation);
+    linalgcu_matrix_release(&self->area);
+    linalgcu_sparse_matrix_release(&self->gradientMatrixSparse);
 
     if (self->phi != NULL) {
         for (linalgcuSize_t i = 0; i < self->model->numHarmonics + 1; i++) {

@@ -10,7 +10,6 @@
 typedef struct {
     linalgcuMatrixData_t points[3][2];
     linalgcuMatrixData_t coefficients[3];
-    linalgcuMatrixData_t gradient[2];
 } fasteitBasis_s;
 typedef fasteitBasis_s* fasteitBasis_t;
 

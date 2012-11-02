@@ -37,12 +37,10 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
     self->systemMatrices = NULL;
     self->systemMatrix2D = NULL;
     self->residualMatrix = NULL;
-    self->gradientMatrixSparse = NULL;
     self->excitationMatrix = NULL;
     self->connectivityMatrix = NULL;
     self->elementalSystemMatrix = NULL;
     self->elementalResidualMatrix = NULL;
-    self->area = NULL;
     self->numHarmonics = numHarmonics;
 
     // create matrices
@@ -54,7 +52,6 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
         LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&self->elementalResidualMatrix, self->mesh->vertexCount,
         LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&self->area, self->mesh->elementCount, 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -122,12 +119,10 @@ linalgcuError_t fasteit_model_release(fasteitModel_t* modelPointer) {
     fasteit_electrodes_release(&self->electrodes);
     linalgcu_sparse_matrix_release(&self->systemMatrix2D);
     linalgcu_sparse_matrix_release(&self->residualMatrix);
-    linalgcu_sparse_matrix_release(&self->gradientMatrixSparse);
     linalgcu_matrix_release(&self->excitationMatrix);
     linalgcu_matrix_release(&self->connectivityMatrix);
     linalgcu_matrix_release(&self->elementalSystemMatrix);
     linalgcu_matrix_release(&self->elementalResidualMatrix);
-    linalgcu_matrix_release(&self->area);
 
     if (self->systemMatrices != NULL) {
         for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
@@ -291,15 +286,13 @@ linalgcuError_t fasteit_model_init_2D_system_matrix(fasteitModel_t self, cublasH
 
     // calc initial system matrix
     // create matrices
-    linalgcuMatrix_t systemMatrix, gradientMatrix, gradientMatrixTransposed, sigmaMatrix;
+    linalgcuMatrix_t systemMatrix, gradientMatrix, gradientMatrixTransposed;
     error = linalgcu_matrix_create(&systemMatrix,
         self->mesh->vertexCount, self->mesh->vertexCount, stream);
     error += linalgcu_matrix_create(&gradientMatrix,
         2 * self->mesh->elementCount, self->mesh->vertexCount, stream);
     error += linalgcu_matrix_create(&gradientMatrixTransposed,
         self->mesh->vertexCount, 2 * self->mesh->elementCount, stream);
-    error += linalgcu_matrix_unity(&sigmaMatrix,
-        2 * self->mesh->elementCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -307,55 +300,26 @@ linalgcuError_t fasteit_model_init_2D_system_matrix(fasteitModel_t self, cublasH
     }
 
     // calc gradient matrix
-    linalgcuMatrixData_t x[3], y[3];
     linalgcuMatrixData_t id[3];
-    fasteitBasis_t basis[3];
-    linalgcuMatrixData_t area;
-
     for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
         // get vertices for element
         for (linalgcuSize_t i = 0; i < 3; i++) {
             linalgcu_matrix_get_element(self->mesh->elements, &id[i], k, i);
-            linalgcu_matrix_get_element(self->mesh->vertices, &x[i], (linalgcuSize_t)id[i], 0);
-            linalgcu_matrix_get_element(self->mesh->vertices, &y[i], (linalgcuSize_t)id[i], 1);
         }
-
-        // calc corresponding basis functions
-        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
 
         // calc matrix elements
         for (linalgcuSize_t i = 0; i < 3; i++) {
-            linalgcu_matrix_set_element(gradientMatrix,
-                basis[i]->gradient[0], 2 * k, (linalgcuSize_t)id[i]);
-            linalgcu_matrix_set_element(gradientMatrix,
-                basis[i]->gradient[1], 2 * k + 1, (linalgcuSize_t)id[i]);
-            linalgcu_matrix_set_element(gradientMatrixTransposed,
-                basis[i]->gradient[0], (linalgcuSize_t)id[i], 2 * k);
-            linalgcu_matrix_set_element(gradientMatrixTransposed,
-                basis[i]->gradient[1], (linalgcuSize_t)id[i], 2 * k + 1);
+            linalgcu_matrix_set_element(gradientMatrix, 1.0f, 2 * k, (linalgcuSize_t)id[i]);
+            linalgcu_matrix_set_element(gradientMatrix, 1.0f, 2 * k + 1, (linalgcuSize_t)id[i]);
+            linalgcu_matrix_set_element(gradientMatrixTransposed, 1.0f, (linalgcuSize_t)id[i], 2 * k);
+            linalgcu_matrix_set_element(gradientMatrixTransposed, 1.0f, (linalgcuSize_t)id[i],
+                2 * k + 1);
         }
-
-        // calc area of element
-        area = 0.5 * fabs((x[1] - x[0]) * (y[2] - y[0]) -
-            (x[2] - x[0]) * (y[1] - y[0]));
-
-        linalgcu_matrix_set_element(self->area, area, k, 0);
-        linalgcu_matrix_set_element(sigmaMatrix, area, 2 * k, 2 * k);
-        linalgcu_matrix_set_element(sigmaMatrix, area, 2 * k + 1, 2 * k + 1);
-
-        // cleanup
-        fasteit_basis_release(&basis[0]);
-        fasteit_basis_release(&basis[1]);
-        fasteit_basis_release(&basis[2]);
     }
 
     // copy matrices to device
     error  = linalgcu_matrix_copy_to_device(gradientMatrix, stream);
     error |= linalgcu_matrix_copy_to_device(gradientMatrixTransposed, stream);
-    error |= linalgcu_matrix_copy_to_device(sigmaMatrix, stream);
-    error |= linalgcu_matrix_copy_to_device(self->area, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -363,23 +327,15 @@ linalgcuError_t fasteit_model_init_2D_system_matrix(fasteitModel_t self, cublasH
         linalgcu_matrix_release(&systemMatrix);
         linalgcu_matrix_release(&gradientMatrix);
         linalgcu_matrix_release(&gradientMatrixTransposed);
-        linalgcu_matrix_release(&sigmaMatrix);
 
         return LINALGCU_ERROR;
     }
 
     // calc system matrix
-    linalgcuMatrix_t temp = NULL;
-    error = linalgcu_matrix_create(&temp, self->mesh->vertexCount,
-        2 * self->mesh->elementCount, stream);
-
     // one prerun cublas to get ready
-    linalgcu_matrix_multiply(temp, gradientMatrixTransposed, sigmaMatrix, handle, stream);
-    error |= linalgcu_matrix_multiply(temp, gradientMatrixTransposed, sigmaMatrix, handle, stream);
-    error |= linalgcu_matrix_multiply(systemMatrix, temp, gradientMatrix, handle, stream);
-
-    cudaStreamSynchronize(stream);
-    linalgcu_matrix_release(&temp);
+    linalgcu_matrix_multiply(systemMatrix, gradientMatrixTransposed, gradientMatrix, handle, stream);
+    error |= linalgcu_matrix_multiply(systemMatrix, gradientMatrixTransposed, gradientMatrix,
+        handle, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -392,14 +348,12 @@ linalgcuError_t fasteit_model_init_2D_system_matrix(fasteitModel_t self, cublasH
     // create sparse matrices
     error  = linalgcu_sparse_matrix_create(&self->systemMatrix2D, systemMatrix, stream);
     error |= linalgcu_sparse_matrix_create(&self->residualMatrix, systemMatrix, stream);
-    error |= linalgcu_sparse_matrix_create(&self->gradientMatrixSparse, gradientMatrix, stream);
 
     for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
         error |= linalgcu_sparse_matrix_create(&self->systemMatrices[i], systemMatrix, stream);
     }
 
     // cleanup
-    linalgcu_matrix_release(&sigmaMatrix);
     linalgcu_matrix_release(&gradientMatrix);
     linalgcu_matrix_release(&gradientMatrixTransposed);
     linalgcu_matrix_release(&systemMatrix);

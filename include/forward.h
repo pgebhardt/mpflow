@@ -17,6 +17,8 @@ typedef struct {
     linalgcuMatrix_t* phi;
     linalgcuMatrix_t* excitation;
     linalgcuMatrix_t voltageCalculation;
+    linalgcuMatrix_t area;
+    linalgcuSparseMatrix_t gradientMatrixSparse;
 } fasteitForwardSolver_s;
 typedef fasteitForwardSolver_s* fasteitForwardSolver_t;
 

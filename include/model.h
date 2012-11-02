@@ -14,12 +14,10 @@ typedef struct {
     linalgcuSparseMatrix_t* systemMatrices;
     linalgcuSparseMatrix_t systemMatrix2D;
     linalgcuSparseMatrix_t residualMatrix;
-    linalgcuSparseMatrix_t gradientMatrixSparse;
     linalgcuMatrix_t excitationMatrix;
     linalgcuMatrix_t connectivityMatrix;
     linalgcuMatrix_t elementalSystemMatrix;
     linalgcuMatrix_t elementalResidualMatrix;
-    linalgcuMatrix_t area;
     linalgcuSize_t numHarmonics;
 } fasteitModel_s;
 typedef fasteitModel_s* fasteitModel_t;

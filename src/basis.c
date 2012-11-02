@@ -40,8 +40,6 @@ linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
     self->coefficients[0] = 0.0;
     self->coefficients[1] = 0.0;
     self->coefficients[2] = 0.0;
-    self->gradient[0] = 0.0;
-    self->gradient[1] = 0.0;
 
     // calc coefficients (A * c = b)
     linalgcuMatrixData_t Ainv[3][3];
@@ -74,10 +72,6 @@ linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
     self->coefficients[0] = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
     self->coefficients[1] = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
     self->coefficients[2] = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
-
-    // save gradient
-    self->gradient[0] = self->coefficients[1];
-    self->gradient[1] = self->coefficients[2];
 
     // set basis pointer
     *basisPointer = self;
@@ -163,6 +157,7 @@ linalgcuMatrixData_t fasteit_basis_integrate_gradient_with_basis(fasteitBasis_t 
         (self->points[1][1] - self->points[0][1]));
 
     // calc integral
-    return area * (self->gradient[0] * other->gradient[0] + self->gradient[1] * other->gradient[1]);
+    return area * (self->coefficients[1] * other->coefficients[1] +
+        self->coefficients[2] * other->coefficients[2]);
 }
 
