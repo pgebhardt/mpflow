@@ -13,75 +13,49 @@
 __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuMatrixData_t* drivePhi,
     linalgcuMatrixData_t* measurmentPhi,
-    linalgcuMatrixData_t* gradientMatrixValues,
-    linalgcuColumnId_t* gradientMatrixColumnIds,
-    linalgcuMatrixData_t* area, linalgcuMatrixData_t* gamma,
-    linalgcuMatrixData_t sigmaRef, linalgcuSize_t jacobianRows,
-    linalgcuSize_t phiRows, linalgcuSize_t driveCount,
-    linalgcuSize_t measurmentCount, linalgcuSize_t elementCount,
-    linalgcuBool_t additiv) {
+    linalgcuMatrixData_t* connectivityMatrix,
+    linalgcuMatrixData_t* elementalJacobianMatrix,
+    linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef,
+    linalgcuSize_t jacobianRows, linalgcuSize_t phiRows,
+    linalgcuSize_t driveCount, linalgcuSize_t measurmentCount,
+    linalgcuSize_t connectivityRows, linalgcuBool_t additiv) {
     // get id
-    linalgcuSize_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuSize_t j = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (j >= elementCount) {
-        return;
-    }
+    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
+    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc measurment and drive id
-    linalgcuSize_t roundMeasurmentCount = ((measurmentCount + LINALGCU_BLOCK_SIZE - 1) / LINALGCU_BLOCK_SIZE) * LINALGCU_BLOCK_SIZE;
-    linalgcuSize_t measurmentId = i % roundMeasurmentCount;
-    linalgcuSize_t driveId = i / roundMeasurmentCount;
+    linalgcuSize_t roundMeasurmentCount = ((measurmentCount + LINALGCU_BLOCK_SIZE - 1) /
+        LINALGCU_BLOCK_SIZE) * LINALGCU_BLOCK_SIZE;
+    linalgcuSize_t measurmentId = row % roundMeasurmentCount;
+    linalgcuSize_t driveId = row / roundMeasurmentCount;
 
-    // memory
-    linalgcuMatrixData_t element = 0.0f;
-    float2 gradDrivePhi = {0.0f, 0.0f};
-    float2 gradMeasurmentPhi = {0.0f, 0.0f};
-    linalgcuColumnId_t idx, idy;
+    // variables
+    linalgcuMatrixData_t dPhi[3], mPhi[3];
+    linalgcuMatrixData_t id;
 
-    // calc x components
-    linalgcuMatrixData_t value = 0.0f;
-    for (int k = 0; k < 3; k++) {
-        idx = gradientMatrixColumnIds[2 * j * LINALGCU_BLOCK_SIZE + k];
-
-        if (idx == -1) {
-            break;
-        }
-
-        // read x gradient value
-        value = gradientMatrixValues[2 * j * LINALGCU_BLOCK_SIZE + k];
-
-        // x gradient
-        gradDrivePhi.x += driveId < driveCount ? value * drivePhi[idx + driveId * phiRows] : 0.0f;
-        gradMeasurmentPhi.x += measurmentId < measurmentCount ? value * measurmentPhi[idx + measurmentId * phiRows] : 0.0f;
-    }
-
-    // calc y components
-    for (int k = 0; k < 3; k++) {
-        idy = gradientMatrixColumnIds[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k];
-
-        if (idy == -1) {
-            break;
-        }
-
-        // read y gradient value
-        value = gradientMatrixValues[(2 * j + 1) * LINALGCU_BLOCK_SIZE + k];
-
-        // y gradient
-        gradDrivePhi.y += driveId < driveCount ? value * drivePhi[idy + driveId * phiRows] : 0.0f;
-        gradMeasurmentPhi.y += measurmentId < measurmentCount ? value * measurmentPhi[idy + measurmentId * phiRows] : 0.0f;
+    // get data
+    for (int i = 0; i < 3; i++) {
+        id = connectivityMatrix[column + i * connectivityRows];
+        dPhi[i] = driveId < driveCount ? drivePhi[(linalgcuSize_t)id + driveId * phiRows] : 0.0f;
+        mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[(linalgcuSize_t)id +
+            measurmentId * phiRows] : 0.0f;
     }
 
     // calc matrix element
-    element = -area[j] * (gradDrivePhi.x * gradMeasurmentPhi.x +
-        gradDrivePhi.y * gradMeasurmentPhi.y) * (sigmaRef * exp10f(gamma[j] / 10.0f) / 10.0f);
+    linalgcuMatrixData_t element = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column + (i + j * 3) *
+                connectivityRows];
+        }
+    }
 
     // set matrix element
     if (additiv == LINALGCU_TRUE) {
-        jacobian[i + j * jacobianRows] += element;
+        jacobian[row + column * jacobianRows] += -element;
     }
     else {
-        jacobian[i + j * jacobianRows] = element;
+        jacobian[row + column * jacobianRows] = -element;
     }
 }
 
@@ -104,12 +78,9 @@ linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self
         self->jacobian->deviceData,
         self->phi[harmonic]->deviceData,
         &self->phi[harmonic]->deviceData[self->driveCount * self->phi[harmonic]->rows],
-        self->gradientMatrixSparse->values,
-        self->gradientMatrixSparse->columnIds,
-        self->area->deviceData, gamma->deviceData, self->model->sigmaRef,
-        self->jacobian->rows, self->phi[harmonic]->rows,
-        self->driveCount, self->measurmentCount, self->model->mesh->elementCount,
-        additiv);
+        self->connectivityMatrix->deviceData, self->elementalJacobianMatrix->deviceData,
+        gamma->deviceData, self->model->sigmaRef, self->jacobian->rows, self->phi[harmonic]->rows,
+        self->driveCount, self->measurmentCount, self->connectivityMatrix->rows, additiv);
 
     return LINALGCU_SUCCESS;
 }

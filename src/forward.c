@@ -43,8 +43,8 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     self->phi = NULL;
     self->excitation = NULL;
     self->voltageCalculation = NULL;
-    self->area = NULL;
-    self->gradientMatrixSparse = NULL;
+    self->connectivityMatrix = NULL;
+    self->elementalJacobianMatrix = NULL;
 
     // create model
     error = fasteit_model_create(&self->model, mesh, electrodes, sigmaRef, numHarmonics,
@@ -76,7 +76,10 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     error |= linalgcu_matrix_create(&self->voltage, measurmentCount, driveCount, stream);
     error |= linalgcu_matrix_create(&self->voltageCalculation,
         self->measurmentCount, mesh->vertexCount, stream);
-    error |= linalgcu_matrix_create(&self->area, mesh->elementCount, 1, stream);
+    error |= linalgcu_matrix_create(&self->connectivityMatrix, mesh->elementCount,
+        LINALGCU_BLOCK_SIZE, stream);
+    error |= linalgcu_matrix_create(&self->elementalJacobianMatrix, mesh->elementCount,
+        LINALGCU_BLOCK_SIZE, stream);
 
     // create matrix buffer
     self->phi = malloc(sizeof(linalgcuMatrix_t) * (numHarmonics + 1));
@@ -199,101 +202,6 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     return LINALGCU_SUCCESS;
 }
 
-// init jacobian calculation matrices
-linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwardSolver_t self,
-    cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if ((self == NULL) || (handle == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // create matrices
-    linalgcuMatrix_t gradientMatrix;
-    error = linalgcu_matrix_create(&gradientMatrix,
-        2 * self->model->mesh->elementCount, self->model->mesh->vertexCount, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fasteit_forward_solver_release(&self);
-
-        return LINALGCU_ERROR;
-    }
-
-    // calc gradient matrix
-    linalgcuMatrixData_t x[3], y[3];
-    linalgcuMatrixData_t id[3];
-    fasteitBasis_t basis[3];
-    linalgcuMatrixData_t area;
-
-    for (linalgcuSize_t k = 0; k < self->model->mesh->elementCount; k++) {
-        // get vertices for element
-        for (linalgcuSize_t i = 0; i < 3; i++) {
-            linalgcu_matrix_get_element(self->model->mesh->elements, &id[i], k, i);
-            linalgcu_matrix_get_element(self->model->mesh->vertices, &x[i],
-                (linalgcuSize_t)id[i], 0);
-            linalgcu_matrix_get_element(self->model->mesh->vertices, &y[i],
-                (linalgcuSize_t)id[i], 1);
-        }
-
-        // calc corresponding basis functions
-        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
-
-        // calc matrix elements
-        for (linalgcuSize_t i = 0; i < 3; i++) {
-            linalgcu_matrix_set_element(gradientMatrix,
-                basis[i]->coefficients[1], 2 * k, (linalgcuSize_t)id[i]);
-            linalgcu_matrix_set_element(gradientMatrix,
-                basis[i]->coefficients[2], 2 * k + 1, (linalgcuSize_t)id[i]);
-        }
-
-        // calc area of element
-        area = 0.5 * fabs((x[1] - x[0]) * (y[2] - y[0]) -
-            (x[2] - x[0]) * (y[1] - y[0]));
-
-        linalgcu_matrix_set_element(self->area, area, k, 0);
-
-        // cleanup
-        fasteit_basis_release(&basis[0]);
-        fasteit_basis_release(&basis[1]);
-        fasteit_basis_release(&basis[2]);
-    }
-
-    // copy matrices to device
-    error  = linalgcu_matrix_copy_to_device(gradientMatrix, stream);
-    error |= linalgcu_matrix_copy_to_device(self->area, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        linalgcu_matrix_release(&gradientMatrix);
-        fasteit_forward_solver_release(&self);
-
-        return LINALGCU_ERROR;
-    }
-
-    // create sparse matrices
-    error = linalgcu_sparse_matrix_create(&self->gradientMatrixSparse, gradientMatrix, stream);
-
-    // cleanup
-    linalgcu_matrix_release(&gradientMatrix);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fasteit_forward_solver_release(&self);
-
-        return LINALGCU_ERROR;
-    }
-
-    return LINALGCU_SUCCESS;
-}
-
 // release solver
 linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPointer) {
     // check input
@@ -308,8 +216,8 @@ linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPoi
     linalgcu_matrix_release(&self->jacobian);
     linalgcu_matrix_release(&self->voltage);
     linalgcu_matrix_release(&self->voltageCalculation);
-    linalgcu_matrix_release(&self->area);
-    linalgcu_sparse_matrix_release(&self->gradientMatrixSparse);
+    linalgcu_matrix_release(&self->connectivityMatrix);
+    linalgcu_matrix_release(&self->elementalJacobianMatrix);
 
     if (self->phi != NULL) {
         for (linalgcuSize_t i = 0; i < self->model->numHarmonics + 1; i++) {
@@ -331,6 +239,70 @@ linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPoi
 
     // set solver pointer to NULL
     *solverPointer = NULL;
+
+    return LINALGCU_SUCCESS;
+}
+
+// init jacobian calculation matrices
+linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwardSolver_t self,
+    cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if ((self == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // error
+    linalgcuError_t error = LINALGCU_SUCCESS;
+
+    // init connectivity matrix
+    for (linalgcuSize_t i = 0; i < self->connectivityMatrix->rows; i++) {
+        for (linalgcuSize_t j = 0; j < self->connectivityMatrix->columns; j++) {
+            linalgcu_matrix_set_element(self->connectivityMatrix, -1.0f, i, j);
+        }
+    }
+
+    // variables
+    linalgcuMatrixData_t id[3], x[3], y[3];
+    fasteitBasis_t basis[3];
+
+    // fill connectivity and elementalJacobianMatrix
+    for (linalgcuSize_t k = 0; k < self->model->mesh->elementCount; k++) {
+        // get vertices for element
+        for (linalgcuSize_t i = 0; i < 3; i++) {
+            linalgcu_matrix_get_element(self->model->mesh->elements, &id[i], k, i);
+            linalgcu_matrix_get_element(self->model->mesh->vertices, &x[i],
+                (linalgcuSize_t)id[i], 0);
+            linalgcu_matrix_get_element(self->model->mesh->vertices, &y[i],
+                (linalgcuSize_t)id[i], 1);
+        }
+
+        // calc corresponding basis functions
+        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
+        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
+        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+
+        // fill matrices
+        for (linalgcuSize_t i = 0; i < 3; i++) {
+            // set connectivity matrix element
+            linalgcu_matrix_set_element(self->connectivityMatrix, id[i], k, i);
+
+            for (linalgcuSize_t j = 0; j < 3; j++) {
+                // set elementalJacobianMatrix element
+                linalgcu_matrix_set_element(self->elementalJacobianMatrix,
+                    fasteit_basis_integrate_gradient_with_basis(basis[i], basis[j]),
+                    k, i + j * 3);
+            }
+        }
+
+        // cleanup
+        fasteit_basis_release(&basis[0]);
+        fasteit_basis_release(&basis[1]);
+        fasteit_basis_release(&basis[2]);
+    }
+
+    // upload to device
+    linalgcu_matrix_copy_to_device(self->connectivityMatrix, stream);
+    linalgcu_matrix_copy_to_device(self->elementalJacobianMatrix, stream);
 
     return LINALGCU_SUCCESS;
 }
