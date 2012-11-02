@@ -16,9 +16,9 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuMatrixData_t* connectivityMatrix,
     linalgcuMatrixData_t* elementalJacobianMatrix,
     linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef,
-    linalgcuSize_t jacobianRows, linalgcuSize_t phiRows,
-    linalgcuSize_t driveCount, linalgcuSize_t measurmentCount,
-    linalgcuSize_t connectivityRows, linalgcuBool_t additiv) {
+    linalgcuSize_t rows, linalgcuSize_t columns,
+    linalgcuSize_t phiRows, linalgcuSize_t driveCount,
+    linalgcuSize_t measurmentCount, linalgcuBool_t additiv) {
     // get id
     linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
     linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
@@ -35,7 +35,7 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
 
     // get data
     for (int i = 0; i < 3; i++) {
-        id = connectivityMatrix[column + i * connectivityRows];
+        id = connectivityMatrix[column + i * columns];
         dPhi[i] = driveId < driveCount ? drivePhi[(linalgcuSize_t)id + driveId * phiRows] : 0.0f;
         mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[(linalgcuSize_t)id +
             measurmentId * phiRows] : 0.0f;
@@ -45,8 +45,7 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuMatrixData_t element = 0.0f;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column + (i + j * 3) *
-                connectivityRows];
+            element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column + (i + j * 3) * columns];
         }
     }
 
@@ -55,10 +54,10 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
 
     // set matrix element
     if (additiv == LINALGCU_TRUE) {
-        jacobian[row + column * jacobianRows] += -element;
+        jacobian[row + column * rows] += -element;
     }
     else {
-        jacobian[row + column * jacobianRows] = -element;
+        jacobian[row + column * rows] = -element;
     }
 }
 
@@ -82,8 +81,8 @@ linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self
         self->phi[harmonic]->deviceData,
         &self->phi[harmonic]->deviceData[self->driveCount * self->phi[harmonic]->rows],
         self->connectivityMatrix->deviceData, self->elementalJacobianMatrix->deviceData,
-        gamma->deviceData, self->model->sigmaRef, self->jacobian->rows, self->phi[harmonic]->rows,
-        self->driveCount, self->measurmentCount, self->connectivityMatrix->rows, additiv);
+        gamma->deviceData, self->model->sigmaRef, self->jacobian->rows, self->jacobian->columns,
+        self->phi[harmonic]->rows, self->driveCount, self->measurmentCount, additiv);
 
     return LINALGCU_SUCCESS;
 }

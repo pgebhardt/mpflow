@@ -276,7 +276,7 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
                 (linalgcuSize_t)id[i], 1);
         }
 
-        // calc corresponding basis functions
+        // calc basis functions
         fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
         fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
         fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
