@@ -68,9 +68,6 @@ __global__ void update_matrix_kernel(linalgcuMatrixData_t* matrixValues,
     // get columnId
     linalgcuColumnId_t columnId = columnIds[row * LINALGCU_BLOCK_SIZE + column];
 
-    // set column id
-    matrixColumnIds[row * LINALGCU_BLOCK_SIZE + column] = columnId;
-
     // check column id
     if (columnId == -1) {
         return;
