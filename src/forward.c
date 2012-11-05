@@ -262,13 +262,14 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
     }
 
     // variables
-    linalgcuMatrixData_t id[3], x[3], y[3];
-    fasteitBasis_t basis[3];
+    linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT],
+        x[FASTEIT_NODES_PER_ELEMENT], y[FASTEIT_NODES_PER_ELEMENT];
+    fasteitBasis_t basis[FASTEIT_NODES_PER_ELEMENT];
 
     // fill connectivity and elementalJacobianMatrix
     for (linalgcuSize_t k = 0; k < self->model->mesh->elementCount; k++) {
         // get vertices for element
-        for (linalgcuSize_t i = 0; i < 3; i++) {
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
             linalgcu_matrix_get_element(self->model->mesh->elements, &id[i], k, i);
             linalgcu_matrix_get_element(self->model->mesh->vertices, &x[i],
                 (linalgcuSize_t)id[i], 0);
@@ -277,27 +278,29 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
         }
 
         // calc basis functions
-        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            fasteit_basis_create(&basis[i], x[i], y[i],
+                x[(i + 1) % FASTEIT_NODES_PER_ELEMENT], y[(i + 1) % FASTEIT_NODES_PER_ELEMENT],
+                x[(i + 2) % FASTEIT_NODES_PER_ELEMENT], y[(i + 2) % FASTEIT_NODES_PER_ELEMENT]);
+        }
 
         // fill matrices
-        for (linalgcuSize_t i = 0; i < 3; i++) {
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
             // set connectivity matrix element
             linalgcu_matrix_set_element(self->connectivityMatrix, id[i], k, i);
 
-            for (linalgcuSize_t j = 0; j < 3; j++) {
+            for (linalgcuSize_t j = 0; j < FASTEIT_NODES_PER_ELEMENT; j++) {
                 // set elementalJacobianMatrix element
                 linalgcu_matrix_set_element(self->elementalJacobianMatrix,
                     fasteit_basis_integrate_gradient_with_basis(basis[i], basis[j]),
-                    k, i + j * 3);
+                    k, i + j * FASTEIT_NODES_PER_ELEMENT);
             }
         }
 
         // cleanup
-        fasteit_basis_release(&basis[0]);
-        fasteit_basis_release(&basis[1]);
-        fasteit_basis_release(&basis[2]);
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            fasteit_basis_release(&basis[i]);
+        }
     }
 
     // upload to device

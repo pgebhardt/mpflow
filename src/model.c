@@ -187,13 +187,14 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     linalgcu_matrix_copy_to_device(self->connectivityMatrix, stream);
 
     // fill intermediate connectivity and elemental matrices
-    linalgcuMatrixData_t id[3], x[3], y[3];
+    linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT],
+        x[FASTEIT_NODES_PER_ELEMENT], y[FASTEIT_NODES_PER_ELEMENT];
     linalgcuMatrixData_t temp;
-    fasteitBasis_t basis[3];
+    fasteitBasis_t basis[FASTEIT_NODES_PER_ELEMENT];
 
     for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
         // get vertices for element
-        for (linalgcuSize_t i = 0; i < 3; i++) {
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
             linalgcu_matrix_get_element(self->mesh->elements, &id[i], k, i);
             linalgcu_matrix_get_element(self->mesh->vertices, &x[i],
                 (linalgcuSize_t)id[i], 0);
@@ -202,13 +203,15 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
         }
 
         // calc corresponding basis functions
-        fasteit_basis_create(&basis[0], x[0], y[0], x[1], y[1], x[2], y[2]);
-        fasteit_basis_create(&basis[1], x[1], y[1], x[2], y[2], x[0], y[0]);
-        fasteit_basis_create(&basis[2], x[2], y[2], x[0], y[0], x[1], y[1]);
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            fasteit_basis_create(&basis[i], x[i], y[i],
+                x[(i + 1) % FASTEIT_NODES_PER_ELEMENT], y[(i + 1) % FASTEIT_NODES_PER_ELEMENT],
+                x[(i + 2) % FASTEIT_NODES_PER_ELEMENT], y[(i + 2) % FASTEIT_NODES_PER_ELEMENT]);
+        }
 
         // set connectivity and elemental residual matrix elements
-        for (linalgcuSize_t i = 0; i < 3; i++) {
-            for (linalgcuSize_t j = 0; j < 3; j++) {
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            for (linalgcuSize_t j = 0; j < FASTEIT_NODES_PER_ELEMENT; j++) {
                 // get current element count
                 linalgcu_matrix_get_element(elementCount, &temp,
                     (linalgcuSize_t)id[i], (linalgcuSize_t)id[j]);
@@ -237,9 +240,9 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
         }
 
         // cleanup
-        fasteit_basis_release(&basis[0]);
-        fasteit_basis_release(&basis[1]);
-        fasteit_basis_release(&basis[2]);
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            fasteit_basis_release(&basis[i]);
+        }
     }
 
     // upload intermediate matrices
@@ -296,16 +299,16 @@ linalgcuError_t fasteit_model_init_sparse_matrices(fasteitModel_t self, cublasHa
     }
 
     // calc generate empty system matrix
-    linalgcuMatrixData_t id[3];
+    linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT];
     for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
         // get vertices for element
-        for (linalgcuSize_t i = 0; i < 3; i++) {
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
             linalgcu_matrix_get_element(self->mesh->elements, &id[i], k, i);
         }
 
         // set system matrix elements
-        for (linalgcuSize_t i = 0; i < 3; i++) {
-            for (linalgcuSize_t j = 0; j < 3; j++) {
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            for (linalgcuSize_t j = 0; j < FASTEIT_NODES_PER_ELEMENT; j++) {
                 linalgcu_matrix_set_element(systemMatrix, 1.0f, (linalgcuSize_t)id[i],
                     (linalgcuSize_t)id[j]);
             }

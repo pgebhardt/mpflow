@@ -6,10 +6,13 @@
 #ifndef FASTEIT_BASIS_H
 #define FASTEIT_BASIS_H
 
+// nodes per element
+#define FASTEIT_NODES_PER_ELEMENT (3)
+
 // basis struct
 typedef struct {
-    linalgcuMatrixData_t points[3][2];
-    linalgcuMatrixData_t coefficients[3];
+    linalgcuMatrixData_t points[FASTEIT_NODES_PER_ELEMENT][2];
+    linalgcuMatrixData_t coefficients[FASTEIT_NODES_PER_ELEMENT];
 } fasteitBasis_s;
 typedef fasteitBasis_s* fasteitBasis_t;
 

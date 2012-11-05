@@ -30,11 +30,11 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuSize_t driveId = row / roundMeasurmentCount;
 
     // variables
-    linalgcuMatrixData_t dPhi[3], mPhi[3];
+    linalgcuMatrixData_t dPhi[FASTEIT_NODES_PER_ELEMENT], mPhi[FASTEIT_NODES_PER_ELEMENT];
     linalgcuMatrixData_t id;
 
     // get data
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
         id = connectivityMatrix[column + i * columns];
         dPhi[i] = driveId < driveCount ? drivePhi[(linalgcuSize_t)id + driveId * phiRows] : 0.0f;
         mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[(linalgcuSize_t)id +
@@ -43,9 +43,10 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
 
     // calc matrix element
     linalgcuMatrixData_t element = 0.0f;
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column + (i + j * 3) * columns];
+    for (int i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+        for (int j = 0; j < FASTEIT_NODES_PER_ELEMENT; j++) {
+            element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column +
+                (i + j * FASTEIT_NODES_PER_ELEMENT) * columns];
         }
     }
 

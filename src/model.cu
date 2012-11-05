@@ -65,14 +65,6 @@ __global__ void update_matrix_kernel(linalgcuMatrixData_t* matrixValues,
     linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
     linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
-    // get columnId
-    linalgcuColumnId_t columnId = columnIds[row * LINALGCU_BLOCK_SIZE + column];
-
-    // check column id
-    if (columnId == -1) {
-        return;
-    }
-
     // calc residual matrix element
     linalgcuMatrixData_t value = 0.0f;
     linalgcuColumnId_t elementId = -1;
