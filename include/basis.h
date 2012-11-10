@@ -18,9 +18,7 @@ typedef fasteitBasis_s* fasteitBasis_t;
 
 // create basis
 linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
-    linalgcuMatrixData_t Ax, linalgcuMatrixData_t Ay,
-    linalgcuMatrixData_t Bx, linalgcuMatrixData_t By,
-    linalgcuMatrixData_t Cx, linalgcuMatrixData_t Cy);
+    linalgcuMatrixData_t* nodeX, linalgcuMatrixData_t* nodeY);
 
 // release basis
 linalgcuError_t fasteit_basis_release(fasteitBasis_t* basisPointer);

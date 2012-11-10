@@ -8,11 +8,9 @@
 
 // create basis
 linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
-    linalgcuMatrixData_t Ax, linalgcuMatrixData_t Ay,
-    linalgcuMatrixData_t Bx, linalgcuMatrixData_t By,
-    linalgcuMatrixData_t Cx, linalgcuMatrixData_t Cy) {
+    linalgcuMatrixData_t* nodeX, linalgcuMatrixData_t* nodeY) {
     // check input
-    if (basisPointer == NULL) {
+    if ((basisPointer == NULL) || (nodeX == NULL) || (nodeY == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -31,15 +29,11 @@ linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
     }
 
     // init struct
-    self->points[0][0] = Ax;
-    self->points[0][1] = Ay;
-    self->points[1][0] = Bx;
-    self->points[1][1] = By;
-    self->points[2][0] = Cx;
-    self->points[2][1] = Cy;
-    self->coefficients[0] = 0.0;
-    self->coefficients[1] = 0.0;
-    self->coefficients[2] = 0.0;
+    for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+        self->points[i][0] = nodeX[i];
+        self->points[i][1] = nodeY[i];
+        self->coefficients[i] = 0.0;
+    }
 
     // calc coefficients (A * c = b)
     linalgcuMatrixData_t Ainv[3][3];
@@ -48,14 +42,14 @@ linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
     // invert matrix A directly
     linalgcuMatrixData_t a, b, c, d, e, f, g, h, i;
     a = 1.0;
-    b = Ax;
-    c = Ay;
+    b = self->points[0][0];
+    c = self->points[0][1];
     d = 1.0;
-    e = Bx;
-    f = By;
+    e = self->points[1][0];
+    f = self->points[1][1];
     g = 1.0;
-    h = Cx;
-    i = Cy;
+    h = self->points[2][0];
+    i = self->points[2][1];
     linalgcuMatrixData_t det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
 
     Ainv[0][0] = (e * i - f * h) / det;

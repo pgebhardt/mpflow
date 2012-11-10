@@ -263,7 +263,7 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
 
     // variables
     linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT],
-        x[FASTEIT_NODES_PER_ELEMENT], y[FASTEIT_NODES_PER_ELEMENT];
+        x[2 * FASTEIT_NODES_PER_ELEMENT], y[2 * FASTEIT_NODES_PER_ELEMENT];
     fasteitBasis_t basis[FASTEIT_NODES_PER_ELEMENT];
 
     // fill connectivity and elementalJacobianMatrix
@@ -275,13 +275,15 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
                 (linalgcuSize_t)id[i], 0);
             linalgcu_matrix_get_element(self->model->mesh->vertices, &y[i],
                 (linalgcuSize_t)id[i], 1);
+
+            // get coordinates once more for permutations
+            x[i + FASTEIT_NODES_PER_ELEMENT] = x[i];
+            y[i + FASTEIT_NODES_PER_ELEMENT] = y[i];
         }
 
         // calc basis functions
         for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
-            fasteit_basis_create(&basis[i], x[i], y[i],
-                x[(i + 1) % FASTEIT_NODES_PER_ELEMENT], y[(i + 1) % FASTEIT_NODES_PER_ELEMENT],
-                x[(i + 2) % FASTEIT_NODES_PER_ELEMENT], y[(i + 2) % FASTEIT_NODES_PER_ELEMENT]);
+            fasteit_basis_create(&basis[i], &x[i], &y[i]);
         }
 
         // fill matrices
