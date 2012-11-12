@@ -43,7 +43,6 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     self->phi = NULL;
     self->excitation = NULL;
     self->voltageCalculation = NULL;
-    self->connectivityMatrix = NULL;
     self->elementalJacobianMatrix = NULL;
 
     // create model
@@ -76,8 +75,6 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
     error |= linalgcu_matrix_create(&self->voltage, measurmentCount, driveCount, stream);
     error |= linalgcu_matrix_create(&self->voltageCalculation,
         self->measurmentCount, mesh->nodeCount, stream);
-    error |= linalgcu_matrix_create(&self->connectivityMatrix, mesh->elementCount,
-        LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&self->elementalJacobianMatrix, mesh->elementCount,
         LINALGCU_BLOCK_SIZE, stream);
 
@@ -186,8 +183,8 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
         return LINALGCU_ERROR;
     }
 
-    // init jacobian calculation matrices
-    error = fasteit_forward_init_jacobian_calculation_matrices(self, handle, stream);
+    // init jacobian calculation matrix
+    error = fasteit_forward_init_jacobian_calculation_matrix(self, handle, stream);
 
     if (error != LINALGCU_SUCCESS) {
         // cleanup
@@ -216,7 +213,6 @@ linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPoi
     linalgcu_matrix_release(&self->jacobian);
     linalgcu_matrix_release(&self->voltage);
     linalgcu_matrix_release(&self->voltageCalculation);
-    linalgcu_matrix_release(&self->connectivityMatrix);
     linalgcu_matrix_release(&self->elementalJacobianMatrix);
 
     if (self->phi != NULL) {
@@ -243,8 +239,8 @@ linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPoi
     return LINALGCU_SUCCESS;
 }
 
-// init jacobian calculation matrices
-linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwardSolver_t self,
+// init jacobian calculation matrix
+linalgcuError_t fasteit_forward_init_jacobian_calculation_matrix(fasteitForwardSolver_t self,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if ((self == NULL) || (handle == NULL)) {
@@ -253,13 +249,6 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init connectivity matrix
-    for (linalgcuSize_t i = 0; i < self->connectivityMatrix->rows; i++) {
-        for (linalgcuSize_t j = 0; j < self->connectivityMatrix->columns; j++) {
-            linalgcu_matrix_set_element(self->connectivityMatrix, -1.0f, i, j);
-        }
-    }
 
     // variables
     linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT],
@@ -286,11 +275,8 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
             fasteit_basis_create(&basis[i], &x[i], &y[i]);
         }
 
-        // fill matrices
+        // fill matrix
         for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
-            // set connectivity matrix element
-            linalgcu_matrix_set_element(self->connectivityMatrix, id[i], k, i);
-
             for (linalgcuSize_t j = 0; j < FASTEIT_NODES_PER_ELEMENT; j++) {
                 // set elementalJacobianMatrix element
                 linalgcu_matrix_set_element(self->elementalJacobianMatrix,
@@ -306,7 +292,6 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
     }
 
     // upload to device
-    linalgcu_matrix_copy_to_device(self->connectivityMatrix, stream);
     linalgcu_matrix_copy_to_device(self->elementalJacobianMatrix, stream);
 
     return LINALGCU_SUCCESS;

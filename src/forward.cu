@@ -81,7 +81,7 @@ linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self
         self->jacobian->deviceData,
         self->phi[harmonic]->deviceData,
         &self->phi[harmonic]->deviceData[self->driveCount * self->phi[harmonic]->rows],
-        self->connectivityMatrix->deviceData, self->elementalJacobianMatrix->deviceData,
+        self->model->mesh->elements->deviceData, self->elementalJacobianMatrix->deviceData,
         gamma->deviceData, self->model->sigmaRef, self->jacobian->rows, self->jacobian->columns,
         self->phi[harmonic]->rows, self->driveCount, self->measurmentCount, additiv);
 
