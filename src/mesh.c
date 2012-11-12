@@ -42,30 +42,6 @@ linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
     self->elements = elements;
     self->boundary = boundary;
 
-    // copy to host
-    linalgcu_matrix_copy_to_host(self->nodes, stream);
-    linalgcu_matrix_copy_to_host(self->elements, stream);
-    linalgcu_matrix_copy_to_host(self->boundary, stream);
-
-    // fill id matrices with -1.0f
-    for (linalgcuSize_t i = 0; i < self->elements->rows; i++) {
-        for (linalgcuSize_t j = i < self->elementCount ? FASTEIT_NODES_PER_ELEMENT : 0;
-            j < self->elements->columns; j++) {
-            linalgcu_matrix_set_element(self->elements, -1.0f, i, j);
-        }
-    }
-    for (linalgcuSize_t i = 0; i < self->boundary->rows; i++) {
-        for (linalgcuSize_t j = i < self->boundaryCount ? FASTEIT_NODES_PER_EDGE : 0;
-            j < self->boundary->columns; j++) {
-            linalgcu_matrix_set_element(self->boundary, -1.0f, i, j);
-        }
-    }
-
-    // copy to device
-    linalgcu_matrix_copy_to_device(self->nodes, stream);
-    linalgcu_matrix_copy_to_device(self->elements, stream);
-    linalgcu_matrix_copy_to_device(self->boundary, stream);
-
     // set mesh pointer
     *meshPointer = self;
 
