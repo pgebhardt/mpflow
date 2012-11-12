@@ -83,8 +83,7 @@ linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self
 
     // calc jacobian
     calc_jacobian_kernel<<<blocks, threads, 0, stream>>>(
-        self->jacobian->deviceData,
-        self->phi[harmonic]->deviceData,
+        self->jacobian->deviceData, self->phi[harmonic]->deviceData,
         &self->phi[harmonic]->deviceData[self->driveCount * self->phi[harmonic]->rows],
         self->model->mesh->elements->deviceData, self->elementalJacobianMatrix->deviceData,
         gamma->deviceData, self->model->sigmaRef, self->jacobian->rows, self->jacobian->columns,

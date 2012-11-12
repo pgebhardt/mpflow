@@ -9,7 +9,7 @@
 linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
     linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
     linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
-    linalgcuMatrixData_t radius, linalgcuMatrixData_t height, cudaStream_t stream) {
+    linalgcuMatrixData_t radius, linalgcuMatrixData_t height) {
     // check input
     if ((meshPointer == NULL) || (nodes == NULL) || (elements == NULL) ||
         (boundary == NULL) || (nodeCount > nodes->rows) ||
@@ -57,13 +57,9 @@ linalgcuError_t fasteit_mesh_release(fasteitMesh_t* meshPointer) {
     // get mesh
     fasteitMesh_t self = *meshPointer;
 
-    // cleanup nodes
+    // cleanup
     linalgcu_matrix_release(&self->nodes);
-
-    // cleanup elements
     linalgcu_matrix_release(&self->elements);
-
-    // cleanup boundary
     linalgcu_matrix_release(&self->boundary);
 
     // free struct
