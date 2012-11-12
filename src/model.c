@@ -45,12 +45,12 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
 
     // create matrices
     error  = linalgcu_matrix_create(&self->excitationMatrix,
-        self->mesh->vertexCount, self->electrodes->count, stream);
-    error |= linalgcu_matrix_create(&self->connectivityMatrix, self->mesh->vertexCount,
+        self->mesh->nodeCount, self->electrodes->count, stream);
+    error |= linalgcu_matrix_create(&self->connectivityMatrix, self->mesh->nodeCount,
         LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&self->elementalSystemMatrix, self->mesh->vertexCount,
+    error |= linalgcu_matrix_create(&self->elementalSystemMatrix, self->mesh->nodeCount,
         LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&self->elementalResidualMatrix, self->mesh->vertexCount,
+    error |= linalgcu_matrix_create(&self->elementalResidualMatrix, self->mesh->nodeCount,
         LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE, stream);
 
     // check success
@@ -73,7 +73,7 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
     error = LINALGCU_SUCCESS;
     for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
         error |= linalgcu_sparse_matrix_create_empty(&self->systemMatrices[i],
-            self->mesh->vertexCount, self->mesh->vertexCount, stream);
+            self->mesh->nodeCount, self->mesh->nodeCount, stream);
     }
 
     // check success
@@ -162,8 +162,8 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     // create intermediate matrices
     linalgcuMatrix_t elementCount, connectivityMatrix, elementalResidualMatrix,
         elementalSystemMatrix;
-    error  = linalgcu_matrix_create(&elementCount, self->mesh->vertexCount,
-        self->mesh->vertexCount, stream);
+    error  = linalgcu_matrix_create(&elementCount, self->mesh->nodeCount,
+        self->mesh->nodeCount, stream);
     error |= linalgcu_matrix_create(&connectivityMatrix, self->connectivityMatrix->rows,
         elementCount->columns * LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&elementalSystemMatrix,
@@ -193,12 +193,12 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     fasteitBasis_t basis[FASTEIT_NODES_PER_ELEMENT];
 
     for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
-        // get vertices for element
+        // get nodes for element
         for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
             linalgcu_matrix_get_element(self->mesh->elements, &id[i], k, i);
-            linalgcu_matrix_get_element(self->mesh->vertices, &x[i],
+            linalgcu_matrix_get_element(self->mesh->nodes, &x[i],
                 (linalgcuSize_t)id[i], 0);
-            linalgcu_matrix_get_element(self->mesh->vertices, &y[i],
+            linalgcu_matrix_get_element(self->mesh->nodes, &y[i],
                 (linalgcuSize_t)id[i], 1);
 
             // get coordinates once more for permutations
@@ -293,7 +293,7 @@ linalgcuError_t fasteit_model_init_sparse_matrices(fasteitModel_t self, cublasHa
     // create matrices
     linalgcuMatrix_t systemMatrix;
     error = linalgcu_matrix_create(&systemMatrix,
-        self->mesh->vertexCount, self->mesh->vertexCount, stream);
+        self->mesh->nodeCount, self->mesh->nodeCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -303,7 +303,7 @@ linalgcuError_t fasteit_model_init_sparse_matrices(fasteitModel_t self, cublasHa
     // calc generate empty system matrix
     linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT];
     for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
-        // get vertices for element
+        // get nodes for element
         for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
             linalgcu_matrix_get_element(self->mesh->elements, &id[i], k, i);
         }
@@ -517,14 +517,10 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
             linalgcu_matrix_get_element(self->mesh->boundary, &id[1], i, 1);
 
             // get coordinates
-            linalgcu_matrix_get_element(self->mesh->vertices, &node[0], (linalgcuSize_t)id[0],
-                0);
-            linalgcu_matrix_get_element(self->mesh->vertices, &node[1], (linalgcuSize_t)id[0],
-                1);
-            linalgcu_matrix_get_element(self->mesh->vertices, &end[0], (linalgcuSize_t)id[1],
-                0);
-            linalgcu_matrix_get_element(self->mesh->vertices, &end[1], (linalgcuSize_t)id[1],
-                1);
+            linalgcu_matrix_get_element(self->mesh->nodes, &node[0], (linalgcuSize_t)id[0], 0);
+            linalgcu_matrix_get_element(self->mesh->nodes, &node[1], (linalgcuSize_t)id[0], 1);
+            linalgcu_matrix_get_element(self->mesh->nodes, &end[0], (linalgcuSize_t)id[1], 0);
+            linalgcu_matrix_get_element(self->mesh->nodes, &end[1], (linalgcuSize_t)id[1], 1);
 
             // calc element
             self->excitationMatrix->hostData[(linalgcuSize_t)id[0] + j * self->excitationMatrix->rows] -=

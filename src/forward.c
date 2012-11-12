@@ -60,7 +60,7 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
 
     // create conjugate solver
     error  = fasteit_sparse_conjugate_solver_create(&self->conjugateSolver,
-        mesh->vertexCount, self->driveCount + self->measurmentCount, stream);
+        mesh->nodeCount, self->driveCount + self->measurmentCount, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -75,7 +75,7 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
         measurmentPattern->columns * drivePattern->columns, mesh->elementCount, stream);
     error |= linalgcu_matrix_create(&self->voltage, measurmentCount, driveCount, stream);
     error |= linalgcu_matrix_create(&self->voltageCalculation,
-        self->measurmentCount, mesh->vertexCount, stream);
+        self->measurmentCount, mesh->nodeCount, stream);
     error |= linalgcu_matrix_create(&self->connectivityMatrix, mesh->elementCount,
         LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&self->elementalJacobianMatrix, mesh->elementCount,
@@ -95,9 +95,9 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
 
     // create matrices
     for (linalgcuSize_t i = 0; i < numHarmonics + 1; i++) {
-        error |= linalgcu_matrix_create(&self->phi[i], mesh->vertexCount,
+        error |= linalgcu_matrix_create(&self->phi[i], mesh->nodeCount,
             self->driveCount + self->measurmentCount, stream);
-        error |= linalgcu_matrix_create(&self->excitation[i], mesh->vertexCount,
+        error |= linalgcu_matrix_create(&self->excitation[i], mesh->nodeCount,
             self->driveCount + self->measurmentCount, stream);
     }
 
@@ -268,12 +268,12 @@ linalgcuError_t fasteit_forward_init_jacobian_calculation_matrices(fasteitForwar
 
     // fill connectivity and elementalJacobianMatrix
     for (linalgcuSize_t k = 0; k < self->model->mesh->elementCount; k++) {
-        // get vertices for element
+        // get nodes for element
         for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
             linalgcu_matrix_get_element(self->model->mesh->elements, &id[i], k, i);
-            linalgcu_matrix_get_element(self->model->mesh->vertices, &x[i],
+            linalgcu_matrix_get_element(self->model->mesh->nodes, &x[i],
                 (linalgcuSize_t)id[i], 0);
-            linalgcu_matrix_get_element(self->model->mesh->vertices, &y[i],
+            linalgcu_matrix_get_element(self->model->mesh->nodes, &y[i],
                 (linalgcuSize_t)id[i], 1);
 
             // get coordinates once more for permutations

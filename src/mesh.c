@@ -7,12 +7,12 @@
 #include "../include/fasteit.h"
 
 linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
-    linalgcuMatrix_t vertices, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
-    linalgcuSize_t vertexCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
+    linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
+    linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
     linalgcuMatrixData_t radius, linalgcuMatrixData_t height) {
     // check input
-    if ((meshPointer == NULL) || (vertices == NULL) || (elements == NULL) ||
-        (boundary == NULL) || (vertexCount > vertices->rows) ||
+    if ((meshPointer == NULL) || (nodes == NULL) || (elements == NULL) ||
+        (boundary == NULL) || (nodeCount > nodes->rows) ||
         (elementCount > elements->rows) || (boundaryCount > boundary->rows) ||
         (radius <= 0.0f) || (height <= 0.0f)) {
         return LINALGCU_ERROR;
@@ -35,10 +35,10 @@ linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
     // init struct
     self->radius = radius;
     self->height = height;
-    self->vertexCount = vertexCount;
+    self->nodeCount = nodeCount;
     self->elementCount = elementCount;
     self->boundaryCount = boundaryCount;
-    self->vertices = vertices;
+    self->nodes = nodes;
     self->elements = elements;
     self->boundary = boundary;
 
@@ -57,8 +57,8 @@ linalgcuError_t fasteit_mesh_release(fasteitMesh_t* meshPointer) {
     // get mesh
     fasteitMesh_t self = *meshPointer;
 
-    // cleanup vertices
-    linalgcu_matrix_release(&self->vertices);
+    // cleanup nodes
+    linalgcu_matrix_release(&self->nodes);
 
     // cleanup elements
     linalgcu_matrix_release(&self->elements);
