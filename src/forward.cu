@@ -17,11 +17,16 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuMatrixData_t* elementalJacobianMatrix,
     linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef,
     linalgcuSize_t rows, linalgcuSize_t columns,
-    linalgcuSize_t phiRows, linalgcuSize_t driveCount,
-    linalgcuSize_t measurmentCount, linalgcuBool_t additiv) {
+    linalgcuSize_t phiRows, linalgcuSize_t elementCount,
+    linalgcuSize_t driveCount, linalgcuSize_t measurmentCount, linalgcuBool_t additiv) {
     // get id
     linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
     linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // check column
+    if (column >= elementCount) {
+        return;
+    }
 
     // calc measurment and drive id
     linalgcuSize_t roundMeasurmentCount = ((measurmentCount + LINALGCU_BLOCK_SIZE - 1) /
@@ -83,7 +88,8 @@ linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self
         &self->phi[harmonic]->deviceData[self->driveCount * self->phi[harmonic]->rows],
         self->model->mesh->elements->deviceData, self->elementalJacobianMatrix->deviceData,
         gamma->deviceData, self->model->sigmaRef, self->jacobian->rows, self->jacobian->columns,
-        self->phi[harmonic]->rows, self->driveCount, self->measurmentCount, additiv);
+        self->phi[harmonic]->rows, self->model->mesh->elementCount,
+        self->driveCount, self->measurmentCount, additiv);
 
     return LINALGCU_SUCCESS;
 }
