@@ -23,7 +23,7 @@ typedef fasteitMesh_s* fasteitMesh_t;
 linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
     linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
     linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
-    linalgcuMatrixData_t radius, linalgcuMatrixData_t height);
+    linalgcuMatrixData_t radius, linalgcuMatrixData_t height, cudaStream_t stream);
 
 // cleanup mesh
 linalgcuError_t fasteit_mesh_release(fasteitMesh_t* meshPointer);

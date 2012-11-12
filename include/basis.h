@@ -8,6 +8,7 @@
 
 // nodes per element
 #define FASTEIT_NODES_PER_ELEMENT (3)
+#define FASTEIT_NODES_PER_EDGE (2)
 
 // basis struct
 typedef struct {
