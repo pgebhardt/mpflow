@@ -58,6 +58,6 @@ linalgcuError_t fasteit_model_calc_excitaions(fasteitModel_t self, linalgcuMatri
 // reduce matrix
 LINALGCU_EXTERN_C
 linalgcuError_t fasteit_model_reduce_matrix(fasteitModel_t self, linalgcuMatrix_t matrix,
-    linalgcuMatrix_t intermediateMatrix, cudaStream_t stream);
+    linalgcuMatrix_t intermediateMatrix, linalgcuSize_t density, cudaStream_t stream);
 
 #endif

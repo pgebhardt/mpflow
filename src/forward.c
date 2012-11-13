@@ -4,7 +4,6 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include <stdlib.h>
-#include <stdio.h>
 #include "../include/fasteit.h"
 
 // create forward_solver
