@@ -314,14 +314,14 @@ linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
     // solve for ground mode
     // solve for drive phi
     error |= fasteit_sparse_conjugate_solver_solve(self->conjugateSolver,
-        self->model->systemMatrices[0], self->phi[0], self->excitation[0],
+        self->model->systemMatrix[0], self->phi[0], self->excitation[0],
         steps, LINALGCU_TRUE, stream);
 
     // solve for higher harmonics
     for (linalgcuSize_t n = 1; n < self->model->numHarmonics + 1; n++) {
         // solve for drive phi
         error |= fasteit_sparse_conjugate_solver_solve(self->conjugateSolver,
-            self->model->systemMatrices[n], self->phi[n], self->excitation[n],
+            self->model->systemMatrix[n], self->phi[n], self->excitation[n],
             steps, LINALGCU_FALSE, stream);
     }
 

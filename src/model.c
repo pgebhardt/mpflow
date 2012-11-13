@@ -33,20 +33,20 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
     self->mesh = mesh;
     self->electrodes = electrodes;
     self->sigmaRef = sigmaRef;
-    self->systemMatrices = NULL;
-    self->systemMatrix2D = NULL;
-    self->residualMatrix = NULL;
+    self->systemMatrix = NULL;
+    self->SMatrix = NULL;
+    self->RMatrix = NULL;
     self->excitationMatrix = NULL;
     self->connectivityMatrix = NULL;
-    self->elementalSystemMatrix = NULL;
-    self->elementalResidualMatrix = NULL;
+    self->elementalSMatrix = NULL;
+    self->elementalRMatrix = NULL;
     self->numHarmonics = numHarmonics;
 
     // create system matrices buffer
-    self->systemMatrices = malloc(sizeof(linalgcuSparseMatrix_t) * (self->numHarmonics + 1));
+    self->systemMatrix = malloc(sizeof(linalgcuSparseMatrix_t) * (self->numHarmonics + 1));
 
     // check success
-    if (self->systemMatrices == NULL) {
+    if (self->systemMatrix == NULL) {
         // cleanup
         fasteit_model_release(&self);
 
@@ -66,9 +66,9 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
         self->mesh->nodeCount, self->electrodes->count, stream);
     error |= linalgcu_matrix_create(&self->connectivityMatrix, self->mesh->nodeCount,
         LINALGCU_SPARSE_SIZE * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&self->elementalSystemMatrix, self->mesh->nodeCount,
+    error |= linalgcu_matrix_create(&self->elementalSMatrix, self->mesh->nodeCount,
         LINALGCU_SPARSE_SIZE * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&self->elementalResidualMatrix, self->mesh->nodeCount,
+    error |= linalgcu_matrix_create(&self->elementalRMatrix, self->mesh->nodeCount,
         LINALGCU_SPARSE_SIZE * LINALGCU_BLOCK_SIZE, stream);
 
     // check success
@@ -109,18 +109,18 @@ linalgcuError_t fasteit_model_release(fasteitModel_t* modelPointer) {
     // cleanup
     fasteit_mesh_release(&self->mesh);
     fasteit_electrodes_release(&self->electrodes);
-    linalgcu_sparse_matrix_release(&self->systemMatrix2D);
-    linalgcu_sparse_matrix_release(&self->residualMatrix);
+    linalgcu_sparse_matrix_release(&self->SMatrix);
+    linalgcu_sparse_matrix_release(&self->RMatrix);
     linalgcu_matrix_release(&self->excitationMatrix);
     linalgcu_matrix_release(&self->connectivityMatrix);
-    linalgcu_matrix_release(&self->elementalSystemMatrix);
-    linalgcu_matrix_release(&self->elementalResidualMatrix);
+    linalgcu_matrix_release(&self->elementalSMatrix);
+    linalgcu_matrix_release(&self->elementalRMatrix);
 
-    if (self->systemMatrices != NULL) {
+    if (self->systemMatrix != NULL) {
         for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
-            linalgcu_sparse_matrix_release(&self->systemMatrices[i]);
+            linalgcu_sparse_matrix_release(&self->systemMatrix[i]);
         }
-        free(self->systemMatrices);
+        free(self->systemMatrix);
     }
 
     // free struct
@@ -183,11 +183,11 @@ linalgcuError_t fasteit_model_create_sparse_matrices(fasteitModel_t self, cublas
     }
 
     // create sparse matrices
-    error  = linalgcu_sparse_matrix_create(&self->systemMatrix2D, systemMatrix, stream);
-    error |= linalgcu_sparse_matrix_create(&self->residualMatrix, systemMatrix, stream);
+    error  = linalgcu_sparse_matrix_create(&self->SMatrix, systemMatrix, stream);
+    error |= linalgcu_sparse_matrix_create(&self->RMatrix, systemMatrix, stream);
 
     for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
-        error |= linalgcu_sparse_matrix_create(&self->systemMatrices[i], systemMatrix, stream);
+        error |= linalgcu_sparse_matrix_create(&self->systemMatrix[i], systemMatrix, stream);
     }
 
     // cleanup
@@ -213,18 +213,15 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // create intermediate matrices
-    linalgcuMatrix_t elementCount, connectivityMatrix, elementalResidualMatrix,
-        elementalSystemMatrix;
+    linalgcuMatrix_t elementCount, connectivityMatrix, elementalRMatrix, elementalSMatrix;
     error  = linalgcu_matrix_create(&elementCount, self->mesh->nodeCount,
         self->mesh->nodeCount, stream);
     error |= linalgcu_matrix_create(&connectivityMatrix, self->connectivityMatrix->rows,
-        elementCount->columns * self->systemMatrix2D->density, stream);
-    error |= linalgcu_matrix_create(&elementalSystemMatrix,
-        self->elementalSystemMatrix->rows, elementCount->columns * self->systemMatrix2D->density,
-        stream);
-    error |= linalgcu_matrix_create(&elementalResidualMatrix,
-        self->elementalResidualMatrix->rows, elementCount->columns * self->systemMatrix2D->density,
-        stream);
+        elementCount->columns * self->SMatrix->density, stream);
+    error |= linalgcu_matrix_create(&elementalSMatrix,
+        self->elementalSMatrix->rows, elementCount->columns * self->SMatrix->density, stream);
+    error |= linalgcu_matrix_create(&elementalRMatrix,
+        self->elementalRMatrix->rows, elementCount->columns * self->SMatrix->density, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -282,13 +279,13 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
                     (linalgcuSize_t)(id[j] + connectivityMatrix->rows * temp));
 
                 // set elemental system element
-                linalgcu_matrix_set_element(elementalSystemMatrix,
+                linalgcu_matrix_set_element(elementalSMatrix,
                     fasteit_basis_integrate_gradient_with_basis(basis[i], basis[j]),
                     (linalgcuSize_t)id[i],
                     (linalgcuSize_t)(id[j] + connectivityMatrix->rows * temp));
 
                 // set elemental residual element
-                linalgcu_matrix_set_element(elementalResidualMatrix,
+                linalgcu_matrix_set_element(elementalRMatrix,
                     fasteit_basis_integrate_with_basis(basis[i], basis[j]),
                     (linalgcuSize_t)id[i],
                     (linalgcuSize_t)(id[j] + connectivityMatrix->rows * temp));
@@ -307,33 +304,33 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
 
     // upload intermediate matrices
     linalgcu_matrix_copy_to_device(connectivityMatrix, stream);
-    linalgcu_matrix_copy_to_device(elementalSystemMatrix, stream);
-    linalgcu_matrix_copy_to_device(elementalResidualMatrix, stream);
+    linalgcu_matrix_copy_to_device(elementalSMatrix, stream);
+    linalgcu_matrix_copy_to_device(elementalRMatrix, stream);
 
     // reduce matrices
     fasteit_model_reduce_matrix(self, self->connectivityMatrix, connectivityMatrix,
-        self->systemMatrix2D->density, stream);
-    fasteit_model_reduce_matrix(self, self->elementalSystemMatrix, elementalSystemMatrix,
-        self->systemMatrix2D->density, stream);
-    fasteit_model_reduce_matrix(self, self->elementalResidualMatrix, elementalResidualMatrix,
-        self->systemMatrix2D->density, stream);
+        self->SMatrix->density, stream);
+    fasteit_model_reduce_matrix(self, self->elementalSMatrix, elementalSMatrix,
+        self->SMatrix->density, stream);
+    fasteit_model_reduce_matrix(self, self->elementalRMatrix, elementalRMatrix,
+        self->SMatrix->density, stream);
 
     // create gamma
     linalgcuMatrix_t gamma;
     error  = linalgcu_matrix_create(&gamma, self->mesh->elementCount, 1, stream);
 
     // update matrices
-    error |= fasteit_model_update_matrix(self, self->systemMatrix2D, self->elementalSystemMatrix,
+    error |= fasteit_model_update_matrix(self, self->SMatrix, self->elementalSMatrix,
         gamma, stream);
-    error |= fasteit_model_update_matrix(self, self->residualMatrix, self->elementalResidualMatrix,
+    error |= fasteit_model_update_matrix(self, self->RMatrix, self->elementalRMatrix,
         gamma, stream);
 
     // cleanup
     linalgcu_matrix_release(&gamma);
     linalgcu_matrix_release(&elementCount);
     linalgcu_matrix_release(&connectivityMatrix);
-    linalgcu_matrix_release(&elementalSystemMatrix);
-    linalgcu_matrix_release(&elementalResidualMatrix);
+    linalgcu_matrix_release(&elementalSMatrix);
+    linalgcu_matrix_release(&elementalRMatrix);
 
     return LINALGCU_SUCCESS;
 }
@@ -351,12 +348,10 @@ linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma
     cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
 
     // update 2d systemMatrix
-    error  = fasteit_model_update_matrix(self, self->systemMatrix2D, self->elementalSystemMatrix,
-        gamma, stream);
+    error  = fasteit_model_update_matrix(self, self->SMatrix, self->elementalSMatrix, gamma, stream);
 
     // update residual matrix
-    error |= fasteit_model_update_matrix(self, self->residualMatrix, self->elementalResidualMatrix,
-        gamma, stream);
+    error |= fasteit_model_update_matrix(self, self->RMatrix, self->elementalRMatrix, gamma, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
@@ -367,8 +362,8 @@ linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma
     cublasSetStream(handle, stream);
 
     // set first system matrix to 2d system matrix
-    cublasError = cublasScopy(handle, self->systemMatrix2D->rows * LINALGCU_SPARSE_SIZE,
-        self->systemMatrix2D->values, 1, self->systemMatrices[0]->values, 1);
+    cublasError = cublasScopy(handle, self->SMatrix->rows * LINALGCU_SPARSE_SIZE,
+        self->SMatrix->values, 1, self->systemMatrix[0]->values, 1);
 
     // create harmonic system matrices
     linalgcuMatrixData_t alpha = 0.0f;
@@ -378,12 +373,12 @@ linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma
             (2.0f * n * M_PI / self->mesh->height);
 
         // init system matrix with 2d system matrix
-        cublasError |= cublasScopy(handle, self->systemMatrix2D->rows * LINALGCU_SPARSE_SIZE,
-            self->systemMatrix2D->values, 1, self->systemMatrices[n]->values, 1);
+        cublasError |= cublasScopy(handle, self->SMatrix->rows * LINALGCU_SPARSE_SIZE,
+            self->SMatrix->values, 1, self->systemMatrix[n]->values, 1);
 
         // add alpha * residualMatrix
-        cublasError |= cublasSaxpy(handle, self->systemMatrix2D->rows * LINALGCU_SPARSE_SIZE, &alpha,
-            self->residualMatrix->values, 1, self->systemMatrices[n]->values, 1);
+        cublasError |= cublasSaxpy(handle, self->SMatrix->rows * LINALGCU_SPARSE_SIZE, &alpha,
+            self->RMatrix->values, 1, self->systemMatrix[n]->values, 1);
     }
 
     // check error

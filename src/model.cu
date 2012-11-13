@@ -49,7 +49,7 @@ linalgcuError_t fasteit_model_reduce_matrix(fasteitModel_t self, linalgcuMatrix_
     // reduce matrix
     reduce_matrix_kernel<<<blocks, threads, 0, stream>>>(
         matrix->deviceData, intermediateMatrix->deviceData,
-        self->systemMatrix2D->columnIds, matrix->rows,
+        self->SMatrix->columnIds, matrix->rows,
         density);
 
     return LINALGCU_SUCCESS;
@@ -98,7 +98,7 @@ linalgcuError_t fasteit_model_update_matrix(fasteitModel_t self,
 
     // execute kernel
     update_matrix_kernel<<<blocks, threads, 0, stream>>>(
-        matrix->values, matrix->columnIds, self->systemMatrix2D->columnIds,
+        matrix->values, matrix->columnIds, self->SMatrix->columnIds,
         self->connectivityMatrix->deviceData, elementalMatrix->deviceData,
         gamma->deviceData, self->sigmaRef, self->connectivityMatrix->rows,
         matrix->density);

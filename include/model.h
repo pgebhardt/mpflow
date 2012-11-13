@@ -11,13 +11,13 @@ typedef struct {
     fasteitMesh_t mesh;
     fasteitElectrodes_t electrodes;
     linalgcuMatrixData_t sigmaRef;
-    linalgcuSparseMatrix_t* systemMatrices;
-    linalgcuSparseMatrix_t systemMatrix2D;
-    linalgcuSparseMatrix_t residualMatrix;
+    linalgcuSparseMatrix_t* systemMatrix;
+    linalgcuSparseMatrix_t SMatrix;
+    linalgcuSparseMatrix_t RMatrix;
     linalgcuMatrix_t excitationMatrix;
     linalgcuMatrix_t connectivityMatrix;
-    linalgcuMatrix_t elementalSystemMatrix;
-    linalgcuMatrix_t elementalResidualMatrix;
+    linalgcuMatrix_t elementalSMatrix;
+    linalgcuMatrix_t elementalRMatrix;
     linalgcuSize_t numHarmonics;
 } fasteitModel_s;
 typedef fasteitModel_s* fasteitModel_t;
