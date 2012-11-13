@@ -361,13 +361,9 @@ linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma
     // set cublas stream
     cublasSetStream(handle, stream);
 
-    // set first system matrix to 2d system matrix
-    cublasError = cublasScopy(handle, self->SMatrix->rows * LINALGCU_SPARSE_SIZE,
-        self->SMatrix->values, 1, self->systemMatrix[0]->values, 1);
-
-    // create harmonic system matrices
+    // create system matrices for all harmonics
     linalgcuMatrixData_t alpha = 0.0f;
-    for (linalgcuSize_t n = 1; n < self->numHarmonics + 1; n++) {
+    for (linalgcuSize_t n = 0; n < self->numHarmonics + 1; n++) {
         // calc alpha
         alpha = (2.0f * n * M_PI / self->mesh->height) *
             (2.0f * n * M_PI / self->mesh->height);
