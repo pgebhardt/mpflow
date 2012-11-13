@@ -42,6 +42,25 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
     self->elementalResidualMatrix = NULL;
     self->numHarmonics = numHarmonics;
 
+    // create system matrices buffer
+    self->systemMatrices = malloc(sizeof(linalgcuSparseMatrix_t) * (self->numHarmonics + 1));
+
+    // check success
+    if (self->systemMatrices == NULL) {
+        // cleanup
+        fasteit_model_release(&self);
+
+        return LINALGCU_ERROR;
+    }
+
+    // create sparse matrices
+    error = fasteit_model_create_sparse_matrices(self, handle, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return error;
+    }
+
     // create matrices
     error  = linalgcu_matrix_create(&self->excitationMatrix,
         self->mesh->nodeCount, self->electrodes->count, stream);
@@ -54,32 +73,6 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        return error;
-    }
-
-    // create system matrices
-    self->systemMatrices = malloc(sizeof(linalgcuSparseMatrix_t) * (self->numHarmonics + 1));
-
-    // check success
-    if (self->systemMatrices == NULL) {
-        // cleanup
-        fasteit_model_release(&self);
-
-        return LINALGCU_ERROR;
-    }
-
-    // create system matrices
-    error = LINALGCU_SUCCESS;
-    for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
-        error |= linalgcu_sparse_matrix_create_empty(&self->systemMatrices[i],
-            self->mesh->nodeCount, self->mesh->nodeCount, stream);
-    }
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fasteit_model_release(&self);
-
         return error;
     }
 
@@ -139,6 +132,75 @@ linalgcuError_t fasteit_model_release(fasteitModel_t* modelPointer) {
     return LINALGCU_SUCCESS;
 }
 
+// create sparse matrices
+linalgcuError_t fasteit_model_create_sparse_matrices(fasteitModel_t self, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // check input
+    if ((self == NULL) || (handle == NULL)) {
+        return LINALGCU_ERROR;
+    }
+
+    // error
+    linalgcuError_t error = LINALGCU_SUCCESS;
+
+    // calc initial system matrix
+    // create matrices
+    linalgcuMatrix_t systemMatrix;
+    error = linalgcu_matrix_create(&systemMatrix,
+        self->mesh->nodeCount, self->mesh->nodeCount, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return LINALGCU_ERROR;
+    }
+
+    // calc generate empty system matrix
+    linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT];
+    for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
+        // get nodes for element
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            linalgcu_matrix_get_element(self->mesh->elements, &id[i], k, i);
+        }
+
+        // set system matrix elements
+        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
+            for (linalgcuSize_t j = 0; j < FASTEIT_NODES_PER_ELEMENT; j++) {
+                linalgcu_matrix_set_element(systemMatrix, 1.0f, (linalgcuSize_t)id[i],
+                    (linalgcuSize_t)id[j]);
+            }
+        }
+    }
+
+    // copy matrices to device
+    error = linalgcu_matrix_copy_to_device(systemMatrix, stream);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        linalgcu_matrix_release(&systemMatrix);
+
+        return LINALGCU_ERROR;
+    }
+
+    // create sparse matrices
+    error  = linalgcu_sparse_matrix_create(&self->systemMatrix2D, systemMatrix, stream);
+    error |= linalgcu_sparse_matrix_create(&self->residualMatrix, systemMatrix, stream);
+
+    for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
+        error |= linalgcu_sparse_matrix_create(&self->systemMatrices[i], systemMatrix, stream);
+    }
+
+    // cleanup
+    linalgcu_matrix_release(&systemMatrix);
+
+    // check success
+    if (error != LINALGCU_SUCCESS) {
+        return LINALGCU_ERROR;
+    }
+
+    return LINALGCU_SUCCESS;
+}
+
 // init model
 linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     cudaStream_t stream) {
@@ -149,14 +211,6 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init sparse matrices
-    error = fasteit_model_init_sparse_matrices(self, handle, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return error;
-    }
 
     // create intermediate matrices
     linalgcuMatrix_t elementCount, connectivityMatrix, elementalResidualMatrix,
@@ -280,75 +334,6 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     linalgcu_matrix_release(&connectivityMatrix);
     linalgcu_matrix_release(&elementalSystemMatrix);
     linalgcu_matrix_release(&elementalResidualMatrix);
-
-    return LINALGCU_SUCCESS;
-}
-
-// init system matrix 2D
-linalgcuError_t fasteit_model_init_sparse_matrices(fasteitModel_t self, cublasHandle_t handle,
-    cudaStream_t stream) {
-    // check input
-    if ((self == NULL) || (handle == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // calc initial system matrix
-    // create matrices
-    linalgcuMatrix_t systemMatrix;
-    error = linalgcu_matrix_create(&systemMatrix,
-        self->mesh->nodeCount, self->mesh->nodeCount, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return LINALGCU_ERROR;
-    }
-
-    // calc generate empty system matrix
-    linalgcuMatrixData_t id[FASTEIT_NODES_PER_ELEMENT];
-    for (linalgcuSize_t k = 0; k < self->mesh->elementCount; k++) {
-        // get nodes for element
-        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
-            linalgcu_matrix_get_element(self->mesh->elements, &id[i], k, i);
-        }
-
-        // set system matrix elements
-        for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
-            for (linalgcuSize_t j = 0; j < FASTEIT_NODES_PER_ELEMENT; j++) {
-                linalgcu_matrix_set_element(systemMatrix, 1.0f, (linalgcuSize_t)id[i],
-                    (linalgcuSize_t)id[j]);
-            }
-        }
-    }
-
-    // copy matrices to device
-    error = linalgcu_matrix_copy_to_device(systemMatrix, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        linalgcu_matrix_release(&systemMatrix);
-
-        return LINALGCU_ERROR;
-    }
-
-    // create sparse matrices
-    error  = linalgcu_sparse_matrix_create(&self->systemMatrix2D, systemMatrix, stream);
-    error |= linalgcu_sparse_matrix_create(&self->residualMatrix, systemMatrix, stream);
-
-    for (linalgcuSize_t i = 0; i < self->numHarmonics + 1; i++) {
-        error |= linalgcu_sparse_matrix_create(&self->systemMatrices[i], systemMatrix, stream);
-    }
-
-    // cleanup
-    linalgcu_matrix_release(&systemMatrix);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return LINALGCU_ERROR;
-    }
 
     return LINALGCU_SUCCESS;
 }

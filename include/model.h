@@ -30,12 +30,12 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
 // release model
 linalgcuError_t fasteit_model_release(fasteitModel_t* modelPointer);
 
+// create sparse matrices
+linalgcuError_t fasteit_model_create_sparse_matrices(fasteitModel_t self, cublasHandle_t handle,
+    cudaStream_t stream);
+
 // init model
 linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle, cudaStream_t stream);
-
-// init system matrix 2D
-linalgcuError_t fasteit_model_init_sparse_matrices(fasteitModel_t self, cublasHandle_t handle,
-    cudaStream_t stream);
 
 // update model
 linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma,
