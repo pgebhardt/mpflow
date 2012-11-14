@@ -13,7 +13,7 @@ INSTALL_INCLUDES = /usr/local/include/fasteit
 INSTALL_LIB = /usr/local/lib
 
 # Copmiler
-CC = clang
+CC ?= clang
 NVCC = nvcc
 CFLAGS = -fPIC
 NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -lineinfo

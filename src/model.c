@@ -58,6 +58,9 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
 
     // check success
     if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fasteit_model_release(&self);
+
         return error;
     }
 
@@ -73,6 +76,9 @@ linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
 
     // check success
     if (error != LINALGCU_SUCCESS) {
+        // cleanup
+        fasteit_model_release(&self);
+
         return error;
     }
 
@@ -193,12 +199,7 @@ linalgcuError_t fasteit_model_create_sparse_matrices(fasteitModel_t self, cublas
     // cleanup
     linalgcu_matrix_release(&systemMatrix);
 
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return LINALGCU_ERROR;
-    }
-
-    return LINALGCU_SUCCESS;
+    return error;
 }
 
 // init model
@@ -332,7 +333,7 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     linalgcu_matrix_release(&elementalSMatrix);
     linalgcu_matrix_release(&elementalRMatrix);
 
-    return LINALGCU_SUCCESS;
+    return error;
 }
 
 // update system matrix
