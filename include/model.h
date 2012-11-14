@@ -51,9 +51,10 @@ linalgcuError_t fasteit_model_update_matrix(fasteitModel_t self,
 linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
     cudaStream_t stream);
 
-// calc excitaions
-linalgcuError_t fasteit_model_calc_excitaions(fasteitModel_t self, linalgcuMatrix_t* excitations,
-    linalgcuMatrix_t pattern, cublasHandle_t handle, cudaStream_t stream);
+// calc excitaion components
+linalgcuError_t fasteit_model_calc_excitaion_components(fasteitModel_t self,
+    linalgcuMatrix_t* component, linalgcuMatrix_t pattern, cublasHandle_t handle,
+    cudaStream_t stream);
 
 // reduce matrix
 LINALGCU_EXTERN_C

@@ -144,8 +144,8 @@ linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPoin
 
     linalgcu_matrix_copy_to_device(pattern, stream);
 
-    // calc excitation matrices
-    error = fasteit_model_calc_excitaions(self->model, self->excitation, pattern,
+    // calc excitation components
+    error = fasteit_model_calc_excitaion_components(self->model, self->excitation, pattern,
         handle, stream);
 
     // cleanup
