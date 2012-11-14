@@ -385,98 +385,6 @@ linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma
     return LINALGCU_SUCCESS;
 }
 
-linalgcuMatrixData_t fasteit_model_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
-    if (x > 0.0f) {
-        return atan(y / x);
-    }
-    else if ((x < 0.0f) && (y >= 0.0f)) {
-        return atan(y / x) + M_PI;
-    }
-    else if ((x < 0.0f) && (y < 0.0f)) {
-        return atan(y / x) - M_PI;
-    }
-    else if ((x == 0.0f) && (y > 0.0f)) {
-        return M_PI / 2.0f;
-    }
-    else if ((x == 0.0f) && (y < 0.0f)) {
-        return - M_PI / 2.0f;
-    }
-    else {
-        return 0.0f;
-    }
-}
-
-linalgcuMatrixData_t fasteit_model_integrate_basis(linalgcuMatrixData_t* start,
-    linalgcuMatrixData_t* end, linalgcuMatrixData_t* electrodeStart,
-    linalgcuMatrixData_t* electrodeEnd) {
-    // integral
-    linalgcuMatrixData_t integral = 0.0f;
-
-    // calc radius
-    linalgcuMatrixData_t radius = sqrt(electrodeStart[0] * electrodeStart[0]
-        + electrodeStart[1] * electrodeStart[1]);
-
-    // calc angle
-    linalgcuMatrixData_t angleStart = fasteit_model_angle(start[0], start[1]);
-    linalgcuMatrixData_t angleEnd = fasteit_model_angle(end[0], end[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeStart = fasteit_model_angle(electrodeStart[0], electrodeStart[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeEnd = fasteit_model_angle(electrodeEnd[0], electrodeEnd[1]) - angleStart;
-
-    // correct angle
-    angleEnd += (angleEnd < M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeStart += (angleElectrodeStart < M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeEnd += (angleElectrodeEnd < M_PI) ? 2.0f * M_PI : 0.0f;
-    angleEnd -= (angleEnd > M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeStart -= (angleElectrodeStart > M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeEnd -= (angleElectrodeEnd > M_PI) ? 2.0f * M_PI : 0.0f;
-
-    // calc parameter
-    linalgcuMatrixData_t sEnd = radius * angleEnd;
-    linalgcuMatrixData_t sElectrodeStart = radius * angleElectrodeStart;
-    linalgcuMatrixData_t sElectrodeEnd = radius * angleElectrodeEnd;
-
-    // integrate left triangle
-    if (sEnd < 0.0f) {
-        if ((sElectrodeStart < 0.0f) && (sElectrodeEnd > sEnd)) {
-            if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart <= sEnd)) {
-                integral = -0.5f * sEnd;
-            }
-            else if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart > sEnd)) {
-                integral = -(sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
-            }
-            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart <= sEnd)) {
-                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
-                           (sEnd - 0.5 * sEnd * sEnd / sEnd);
-            }
-            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart > sEnd)) {
-                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
-                           (sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
-            }
-        }
-    }
-    else {
-        // integrate right triangle
-        if ((sElectrodeEnd > 0.0f) && (sEnd > sElectrodeStart)) {
-            if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd >= sEnd)) {
-                integral = 0.5f * sEnd;
-            }
-            else if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd < sEnd)) {
-                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd);
-            }
-            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd >= sEnd)) {
-                integral = (sEnd - 0.5f * sEnd * sEnd / sEnd) -
-                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
-            }
-            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd < sEnd)) {
-                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd) -
-                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
-            }
-        }
-    }
-
-    return integral;
-}
-
 // init exitation matrix
 linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
     cudaStream_t stream) {
@@ -489,30 +397,35 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
     linalgcuError_t error = LINALGCU_SUCCESS;
 
     // fill exitation_matrix matrix
-    linalgcuMatrixData_t id[2];
-    linalgcuMatrixData_t node[2], end[2];
+    linalgcuMatrixData_t id[FASTEIT_NODES_PER_EDGE];
+    linalgcuMatrixData_t x[2 * FASTEIT_NODES_PER_EDGE], y[2 * FASTEIT_NODES_PER_EDGE];
 
-    for (int i = 0; i < self->mesh->boundaryCount; i++) {
-        for (int j = 0; j < self->electrodes->count; j++) {
-            // get boundary node id
-            linalgcu_matrix_get_element(self->mesh->boundary, &id[0], i, 0);
-            linalgcu_matrix_get_element(self->mesh->boundary, &id[1], i, 1);
+    for (linalgcuSize_t i = 0; i < self->mesh->boundaryCount; i++) {
+        for (linalgcuSize_t j = 0; j < self->electrodes->count; j++) {
+            for (linalgcuSize_t k = 0; k < FASTEIT_NODES_PER_EDGE; k++) {
+                // get node id
+                linalgcu_matrix_get_element(self->mesh->boundary, &id[k], i, k);
 
-            // get coordinates
-            linalgcu_matrix_get_element(self->mesh->nodes, &node[0], (linalgcuSize_t)id[0], 0);
-            linalgcu_matrix_get_element(self->mesh->nodes, &node[1], (linalgcuSize_t)id[0], 1);
-            linalgcu_matrix_get_element(self->mesh->nodes, &end[0], (linalgcuSize_t)id[1], 0);
-            linalgcu_matrix_get_element(self->mesh->nodes, &end[1], (linalgcuSize_t)id[1], 1);
+                // get coordinates
+                linalgcu_matrix_get_element(self->mesh->nodes, &x[k], (linalgcuSize_t)id[k], 0);
+                linalgcu_matrix_get_element(self->mesh->nodes, &y[k], (linalgcuSize_t)id[k], 1);
 
-            // calc element
-            self->excitationMatrix->hostData[(linalgcuSize_t)id[0] + j * self->excitationMatrix->rows] -=
-                fasteit_model_integrate_basis(node, end,
-                    &self->electrodes->electrodesStart[j * 2],
-                    &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;
-            self->excitationMatrix->hostData[(linalgcuSize_t)id[1] + j * self->excitationMatrix->rows] -=
-                fasteit_model_integrate_basis(end, node,
-                    &self->electrodes->electrodesStart[j * 2],
-                    &self->electrodes->electrodesEnd[j * 2]) / self->electrodes->width;
+                // set coordinates for permutations
+                x[k + FASTEIT_NODES_PER_EDGE] = x[k];
+                y[k + FASTEIT_NODES_PER_EDGE] = y[k];
+            }
+
+            // calc elements
+            linalgcuMatrixData_t oldValue = 0.0f;
+            for (linalgcuSize_t k = 0; k < FASTEIT_NODES_PER_EDGE; k++) {
+                // get current value
+                linalgcu_matrix_get_element(self->excitationMatrix, &oldValue, (linalgcuSize_t)id[k], j);
+
+                // add new value
+                linalgcu_matrix_set_element(self->excitationMatrix, oldValue - fasteit_basis_integrate_edge(
+                    &x[k], &y[k], &self->electrodes->electrodesStart[j * 2], &self->electrodes->electrodesEnd[j * 2]) /
+                    self->electrodes->width, (linalgcuSize_t)id[k], j);
+            }
         }
     }
 

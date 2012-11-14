@@ -8,9 +8,9 @@
 
 // create basis
 linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
-    linalgcuMatrixData_t* nodeX, linalgcuMatrixData_t* nodeY) {
+    linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
     // check input
-    if ((basisPointer == NULL) || (nodeX == NULL) || (nodeY == NULL)) {
+    if ((basisPointer == NULL) || (x == NULL) || (y == NULL)) {
         return LINALGCU_ERROR;
     }
 
@@ -30,8 +30,8 @@ linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
 
     // init struct
     for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_ELEMENT; i++) {
-        self->points[i][0] = nodeX[i];
-        self->points[i][1] = nodeY[i];
+        self->points[i][0] = x[i];
+        self->points[i][1] = y[i];
         self->coefficients[i] = 0.0;
     }
 
@@ -90,18 +90,16 @@ linalgcuError_t fasteit_basis_release(fasteitBasis_t* basisPointer) {
 }
 
 // evaluate basis function
-linalgcuError_t fasteit_basis_function(fasteitBasis_t self,
-    linalgcuMatrixData_t* resultPointer, linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+linalgcuMatrixData_t fasteit_basis_function(fasteitBasis_t self,
+    linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     // check input
-    if ((self == NULL) || (resultPointer == NULL)) {
+    if (self == NULL) {
         return LINALGCU_ERROR;
     }
 
     // calc result
-    *resultPointer = self->coefficients[0] + self->coefficients[1] * x +
+    return self->coefficients[0] + self->coefficients[1] * x +
         self->coefficients[2] * y;
-
-    return LINALGCU_SUCCESS;
 }
 
 // integrate with basis
@@ -155,3 +153,100 @@ linalgcuMatrixData_t fasteit_basis_integrate_gradient_with_basis(fasteitBasis_t 
         self->coefficients[2] * other->coefficients[2]);
 }
 
+// angle calculation for parametrisation
+linalgcuMatrixData_t fasteit_basis_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+    if (x > 0.0f) {
+        return atan(y / x);
+    }
+    else if ((x < 0.0f) && (y >= 0.0f)) {
+        return atan(y / x) + M_PI;
+    }
+    else if ((x < 0.0f) && (y < 0.0f)) {
+        return atan(y / x) - M_PI;
+    }
+    else if ((x == 0.0f) && (y > 0.0f)) {
+        return M_PI / 2.0f;
+    }
+    else if ((x == 0.0f) && (y < 0.0f)) {
+        return - M_PI / 2.0f;
+    }
+    else {
+        return 0.0f;
+    }
+}
+
+// integrate edge
+linalgcuMatrixData_t fasteit_basis_integrate_edge(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y,
+    linalgcuMatrixData_t* start, linalgcuMatrixData_t* end) {
+    // check input
+    if ((x == NULL) || (y == NULL) || (start == NULL) || (end == NULL)) {
+        return 0.0f;
+    }
+
+    // integral
+    linalgcuMatrixData_t integral = 0.0f;
+
+    // calc radius
+    linalgcuMatrixData_t radius = sqrt(start[0] * start[0]
+        + start[1] * start[1]);
+
+    // calc angle
+    linalgcuMatrixData_t angleStart = fasteit_basis_angle(x[0], y[0]);
+    linalgcuMatrixData_t angleEnd = fasteit_basis_angle(x[1], y[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeStart = fasteit_basis_angle(start[0], start[1]) - angleStart;
+    linalgcuMatrixData_t angleElectrodeEnd = fasteit_basis_angle(end[0], end[1]) - angleStart;
+
+    // correct angle
+    angleEnd += (angleEnd < M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeStart += (angleElectrodeStart < M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeEnd += (angleElectrodeEnd < M_PI) ? 2.0f * M_PI : 0.0f;
+    angleEnd -= (angleEnd > M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeStart -= (angleElectrodeStart > M_PI) ? 2.0f * M_PI : 0.0f;
+    angleElectrodeEnd -= (angleElectrodeEnd > M_PI) ? 2.0f * M_PI : 0.0f;
+
+    // calc parameter
+    linalgcuMatrixData_t sEnd = radius * angleEnd;
+    linalgcuMatrixData_t sElectrodeStart = radius * angleElectrodeStart;
+    linalgcuMatrixData_t sElectrodeEnd = radius * angleElectrodeEnd;
+
+    // integrate left triangle
+    if (sEnd < 0.0f) {
+        if ((sElectrodeStart < 0.0f) && (sElectrodeEnd > sEnd)) {
+            if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart <= sEnd)) {
+                integral = -0.5f * sEnd;
+            }
+            else if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart > sEnd)) {
+                integral = -(sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
+            }
+            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart <= sEnd)) {
+                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
+                           (sEnd - 0.5 * sEnd * sEnd / sEnd);
+            }
+            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart > sEnd)) {
+                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
+                           (sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
+            }
+        }
+    }
+    else {
+        // integrate right triangle
+        if ((sElectrodeEnd > 0.0f) && (sEnd > sElectrodeStart)) {
+            if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd >= sEnd)) {
+                integral = 0.5f * sEnd;
+            }
+            else if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd < sEnd)) {
+                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd);
+            }
+            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd >= sEnd)) {
+                integral = (sEnd - 0.5f * sEnd * sEnd / sEnd) -
+                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
+            }
+            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd < sEnd)) {
+                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd) -
+                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
+            }
+        }
+    }
+
+    return integral;
+}
