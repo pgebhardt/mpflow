@@ -217,11 +217,11 @@ linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle,
     error  = linalgcu_matrix_create(&elementCount, self->mesh->nodeCount,
         self->mesh->nodeCount, stream);
     error |= linalgcu_matrix_create(&connectivityMatrix, self->connectivityMatrix->rows,
-        elementCount->columns * self->SMatrix->density, stream);
+        elementCount->columns * LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&elementalSMatrix,
-        self->elementalSMatrix->rows, elementCount->columns * self->SMatrix->density, stream);
+        self->elementalSMatrix->rows, elementCount->columns * LINALGCU_BLOCK_SIZE, stream);
     error |= linalgcu_matrix_create(&elementalRMatrix,
-        self->elementalRMatrix->rows, elementCount->columns * self->SMatrix->density, stream);
+        self->elementalRMatrix->rows, elementCount->columns * LINALGCU_BLOCK_SIZE, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
