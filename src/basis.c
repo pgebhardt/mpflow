@@ -175,8 +175,25 @@ linalgcuMatrixData_t fasteit_basis_angle(linalgcuMatrixData_t x, linalgcuMatrixD
     }
 }
 
+// calc parametrisation
+linalgcuMatrixData_t fasteit_basis_calc_parametrisation(linalgcuMatrixData_t x, linalgcuMatrixData_t y,
+    linalgcuMatrixData_t offset) {
+    // convert to polar coordinates
+    linalgcuMatrixData_t radius = sqrt(x * x + y * y);
+    linalgcuMatrixData_t angle = fasteit_basis_angle(x, y) - offset / radius;
+
+    // correct angle
+    angle += (angle < M_PI) ? 2.0f * M_PI : 0.0f;
+    angle -= (angle > M_PI) ? 2.0f * M_PI : 0.0f;
+
+    // calc parameter
+    linalgcuMatrixData_t parameter = angle * radius;
+
+    return parameter;
+}
+
 // integrate edge
-linalgcuMatrixData_t fasteit_basis_integrate_edge(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y,
+linalgcuMatrixData_t fasteit_basis_integrate_boundary_edge(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y,
     linalgcuMatrixData_t* start, linalgcuMatrixData_t* end) {
     // check input
     if ((x == NULL) || (y == NULL) || (start == NULL) || (end == NULL)) {
@@ -186,64 +203,53 @@ linalgcuMatrixData_t fasteit_basis_integrate_edge(linalgcuMatrixData_t* x, linal
     // integral
     linalgcuMatrixData_t integral = 0.0f;
 
-    // calc radius
-    linalgcuMatrixData_t radius = sqrt(start[0] * start[0]
-        + start[1] * start[1]);
+    // calc node parameter
+    linalgcuMatrixData_t nodeParameter[FASTEIT_NODES_PER_EDGE];
+    nodeParameter[0] = 0.0f;
+    for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_EDGE; i++) {
+        nodeParameter[i] = fasteit_basis_calc_parametrisation(x[i], y[i], nodeParameter[0]);
+    }
 
-    // calc angle
-    linalgcuMatrixData_t angleStart = fasteit_basis_angle(x[0], y[0]);
-    linalgcuMatrixData_t angleEnd = fasteit_basis_angle(x[1], y[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeStart = fasteit_basis_angle(start[0], start[1]) - angleStart;
-    linalgcuMatrixData_t angleElectrodeEnd = fasteit_basis_angle(end[0], end[1]) - angleStart;
-
-    // correct angle
-    angleEnd += (angleEnd < M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeStart += (angleElectrodeStart < M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeEnd += (angleElectrodeEnd < M_PI) ? 2.0f * M_PI : 0.0f;
-    angleEnd -= (angleEnd > M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeStart -= (angleElectrodeStart > M_PI) ? 2.0f * M_PI : 0.0f;
-    angleElectrodeEnd -= (angleElectrodeEnd > M_PI) ? 2.0f * M_PI : 0.0f;
-
-    // calc parameter
-    linalgcuMatrixData_t sEnd = radius * angleEnd;
-    linalgcuMatrixData_t sElectrodeStart = radius * angleElectrodeStart;
-    linalgcuMatrixData_t sElectrodeEnd = radius * angleElectrodeEnd;
+    // calc integration boundary parameter
+    linalgcuMatrixData_t boundaryParameter[2];
+    boundaryParameter[0] = fasteit_basis_calc_parametrisation(start[0], start[1], nodeParameter[0]);
+    boundaryParameter[1] = fasteit_basis_calc_parametrisation(end[0], end[1], nodeParameter[0]);
 
     // integrate left triangle
-    if (sEnd < 0.0f) {
-        if ((sElectrodeStart < 0.0f) && (sElectrodeEnd > sEnd)) {
-            if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart <= sEnd)) {
-                integral = -0.5f * sEnd;
+    if (nodeParameter[1] < 0.0f) {
+        if ((boundaryParameter[0] < 0.0f) && (boundaryParameter[1] > nodeParameter[1])) {
+            if ((boundaryParameter[1] >= 0.0f) && (boundaryParameter[0] <= nodeParameter[1])) {
+                integral = -0.5f * nodeParameter[1];
             }
-            else if ((sElectrodeEnd >= 0.0f) && (sElectrodeStart > sEnd)) {
-                integral = -(sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
+            else if ((boundaryParameter[1] >= 0.0f) && (boundaryParameter[0] > nodeParameter[1])) {
+                integral = -(boundaryParameter[0] - 0.5 * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
             }
-            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart <= sEnd)) {
-                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
-                           (sEnd - 0.5 * sEnd * sEnd / sEnd);
+            else if ((boundaryParameter[1] < 0.0f) && (boundaryParameter[0] <= nodeParameter[1])) {
+                integral = (boundaryParameter[1] - 0.5 * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]) -
+                           (nodeParameter[1] - 0.5 * nodeParameter[1] * nodeParameter[1] / nodeParameter[1]);
             }
-            else if ((sElectrodeEnd < 0.0f) && (sElectrodeStart > sEnd)) {
-                integral = (sElectrodeEnd - 0.5 * sElectrodeEnd * sElectrodeEnd / sEnd) -
-                           (sElectrodeStart - 0.5 * sElectrodeStart * sElectrodeStart / sEnd);
+            else if ((boundaryParameter[1] < 0.0f) && (boundaryParameter[0] > nodeParameter[1])) {
+                integral = (boundaryParameter[1] - 0.5 * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]) -
+                           (boundaryParameter[0] - 0.5 * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
             }
         }
     }
     else {
         // integrate right triangle
-        if ((sElectrodeEnd > 0.0f) && (sEnd > sElectrodeStart)) {
-            if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd >= sEnd)) {
-                integral = 0.5f * sEnd;
+        if ((boundaryParameter[1] > 0.0f) && (nodeParameter[1] > boundaryParameter[0])) {
+            if ((boundaryParameter[0] <= 0.0f) && (boundaryParameter[1] >= nodeParameter[1])) {
+                integral = 0.5f * nodeParameter[1];
             }
-            else if ((sElectrodeStart <= 0.0f) && (sElectrodeEnd < sEnd)) {
-                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd);
+            else if ((boundaryParameter[0] <= 0.0f) && (boundaryParameter[1] < nodeParameter[1])) {
+                integral = (boundaryParameter[1] - 0.5f * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]);
             }
-            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd >= sEnd)) {
-                integral = (sEnd - 0.5f * sEnd * sEnd / sEnd) -
-                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
+            else if ((boundaryParameter[0] > 0.0f) && (boundaryParameter[1] >= nodeParameter[1])) {
+                integral = (nodeParameter[1] - 0.5f * nodeParameter[1] * nodeParameter[1] / nodeParameter[1]) -
+                            (boundaryParameter[0] - 0.5f * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
             }
-            else if ((sElectrodeStart > 0.0f) && (sElectrodeEnd < sEnd)) {
-                integral = (sElectrodeEnd - 0.5f * sElectrodeEnd * sElectrodeEnd / sEnd) -
-                            (sElectrodeStart - 0.5f * sElectrodeStart * sElectrodeStart / sEnd);
+            else if ((boundaryParameter[0] > 0.0f) && (boundaryParameter[1] < nodeParameter[1])) {
+                integral = (boundaryParameter[1] - 0.5f * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]) -
+                            (boundaryParameter[0] - 0.5f * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
             }
         }
     }

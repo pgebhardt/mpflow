@@ -36,7 +36,7 @@ linalgcuMatrixData_t fasteit_basis_integrate_gradient_with_basis(fasteitBasis_t 
     fasteitBasis_t other);
 
 // integrate edge
-linalgcuMatrixData_t fasteit_basis_integrate_edge(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y,
+linalgcuMatrixData_t fasteit_basis_integrate_boundary_edge(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y,
     linalgcuMatrixData_t* start, linalgcuMatrixData_t* end);
 
 #endif

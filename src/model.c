@@ -423,7 +423,7 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
                 linalgcu_matrix_get_element(self->excitationMatrix, &oldValue, (linalgcuSize_t)id[k], j);
 
                 // add new value
-                linalgcu_matrix_set_element(self->excitationMatrix, oldValue - fasteit_basis_integrate_edge(
+                linalgcu_matrix_set_element(self->excitationMatrix, oldValue - fasteit_basis_integrate_boundary_edge(
                     &x[k], &y[k], &self->electrodes->electrodesStart[j * 2], &self->electrodes->electrodesEnd[j * 2]) /
                     self->electrodes->width, (linalgcuSize_t)id[k], j);
             }
