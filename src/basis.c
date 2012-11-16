@@ -206,7 +206,7 @@ linalgcuMatrixData_t fasteit_basis_integrate_boundary_edge(linalgcuMatrixData_t*
     // calc node parameter
     linalgcuMatrixData_t nodeParameter[FASTEIT_NODES_PER_EDGE];
     nodeParameter[0] = 0.0f;
-    for (linalgcuSize_t i = 0; i < FASTEIT_NODES_PER_EDGE; i++) {
+    for (linalgcuSize_t i = 1; i < FASTEIT_NODES_PER_EDGE; i++) {
         nodeParameter[i] = fasteit_basis_calc_parametrisation(x[i], y[i], nodeParameter[0]);
     }
 

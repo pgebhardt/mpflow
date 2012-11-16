@@ -402,7 +402,7 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
     linalgcuMatrixData_t x[2 * FASTEIT_NODES_PER_EDGE], y[2 * FASTEIT_NODES_PER_EDGE];
 
     for (linalgcuSize_t i = 0; i < self->mesh->boundaryCount; i++) {
-        for (linalgcuSize_t j = 0; j < self->electrodes->count; j++) {
+        for (linalgcuSize_t l = 0; l < self->electrodes->count; l++) {
             for (linalgcuSize_t k = 0; k < FASTEIT_NODES_PER_EDGE; k++) {
                 // get node id
                 linalgcu_matrix_get_element(self->mesh->boundary, &id[k], i, k);
@@ -420,12 +420,12 @@ linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
             linalgcuMatrixData_t oldValue = 0.0f;
             for (linalgcuSize_t k = 0; k < FASTEIT_NODES_PER_EDGE; k++) {
                 // get current value
-                linalgcu_matrix_get_element(self->excitationMatrix, &oldValue, (linalgcuSize_t)id[k], j);
+                linalgcu_matrix_get_element(self->excitationMatrix, &oldValue, (linalgcuSize_t)id[k], l);
 
                 // add new value
                 linalgcu_matrix_set_element(self->excitationMatrix, oldValue - fasteit_basis_integrate_boundary_edge(
-                    &x[k], &y[k], &self->electrodes->electrodesStart[j * 2], &self->electrodes->electrodesEnd[j * 2]) /
-                    self->electrodes->width, (linalgcuSize_t)id[k], j);
+                    &x[k], &y[k], &self->electrodes->electrodesStart[l * 2], &self->electrodes->electrodesEnd[l * 2]) /
+                    self->electrodes->width, (linalgcuSize_t)id[k], l);
             }
         }
     }
