@@ -3,97 +3,75 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdlib.h>
-#include "../include/fasteit.h"
+#include "../include/fasteit.hpp"
+
+// namespaces
+using namespace fastEIT;
+using namespace std;
 
 // create conjugate solver
-linalgcuError_t fasteit_conjugate_solver_create(fasteitConjugateSolver_t* solverPointer,
-    linalgcuSize_t rows, cublasHandle_t handle, cudaStream_t stream) {
+Conjugate::Conjugate(linalgcuSize_t rows, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((solverPointer == NULL) || (rows <= 1) || (handle == NULL)) {
-        return LINALGCU_ERROR;
+    if (rows <= 1) {
+        throw invalid_argument("Conjugate::Conjugate: rows <= 1");
+    }
+    if (handle == NULL) {
+        throw invalid_argument("Conjugate::Conjugate: handle == NULL");
     }
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
 
-    // init solver pointer
-    *solverPointer = NULL;
-
-    // create solver struct
-    fasteitConjugateSolver_t self = malloc(sizeof(fasteitConjugateSolver_s));
-
-    // check success
-    if (self == NULL) {
-        return LINALGCU_ERROR;
-    }
-
     // init struct
-    self->rows = rows;
-    self->residuum = NULL;
-    self->projection = NULL;
-    self->rsold = NULL;
-    self->rsnew = NULL;
-    self->tempVector = NULL;
-    self->tempNumber = NULL;
+    this->mRows = rows;
+    this->mResiduum = NULL;
+    this->mProjection = NULL;
+    this->mRSOld = NULL;
+    this->mRSNew = NULL;
+    this->mTempVector = NULL;
+    this->mTempNumber = NULL;
 
     // create matrices
-    error  = linalgcu_matrix_create(&self->residuum, self->rows, 1, stream);
-    error |= linalgcu_matrix_create(&self->projection, self->rows, 1, stream);
-    error |= linalgcu_matrix_create(&self->rsold, self->rows, 1, stream);
-    error |= linalgcu_matrix_create(&self->rsnew, self->rows, 1, stream);
-    error |= linalgcu_matrix_create(&self->tempVector, self->rows, self->residuum->rows /
+    error  = linalgcu_matrix_create(&this->mResiduum, this->mRows, 1, stream);
+    error |= linalgcu_matrix_create(&this->mProjection, this->mRows, 1, stream);
+    error |= linalgcu_matrix_create(&this->mRSOld, this->mRows, 1, stream);
+    error |= linalgcu_matrix_create(&this->mRSNew, this->mRows, 1, stream);
+    error |= linalgcu_matrix_create(&this->mTempVector, this->mRows, this->mResiduum->rows /
         LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&self->tempNumber, self->rows, 1, stream);
+    error |= linalgcu_matrix_create(&this->mTempNumber, this->mRows, 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fasteit_conjugate_solver_release(&self);
-
-        return error;
+        throw logic_error("Conjugate::Conjugate: create matrices");
     }
-
-    // set solver pointer
-    *solverPointer = self;
-
-    return LINALGCU_SUCCESS;
 }
 
 // release solver
-linalgcuError_t fasteit_conjugate_solver_release(fasteitConjugateSolver_t* solverPointer) {
-    // check input
-    if ((solverPointer == NULL) || (*solverPointer == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // get solver
-    fasteitConjugateSolver_t self = *solverPointer;
-
+Conjugate::~Conjugate() {
     // release matrices
-    linalgcu_matrix_release(&self->residuum);
-    linalgcu_matrix_release(&self->projection);
-    linalgcu_matrix_release(&self->rsold);
-    linalgcu_matrix_release(&self->rsnew);
-    linalgcu_matrix_release(&self->tempVector);
-    linalgcu_matrix_release(&self->tempNumber);
-
-    // free struct
-    free(self);
-
-    // set solver pointer to NULL
-    *solverPointer = NULL;
-
-    return LINALGCU_SUCCESS;
+    linalgcu_matrix_release(&this->mResiduum);
+    linalgcu_matrix_release(&this->mProjection);
+    linalgcu_matrix_release(&this->mRSOld);
+    linalgcu_matrix_release(&this->mRSNew);
+    linalgcu_matrix_release(&this->mTempVector);
+    linalgcu_matrix_release(&this->mTempNumber);
 }
 
 // solve conjugate
-linalgcuError_t fasteit_conjugate_solver_solve(fasteitConjugateSolver_t self,
-    linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
+void Conjugate::solve(linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
     linalgcuSize_t iterations, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if ((self == NULL) || (A == NULL) || (x == NULL) || (f == NULL) || (handle == NULL)) {
-        return LINALGCU_ERROR;
+    if (A == NULL) {
+        throw invalid_argument("Conjugate::solve: x == NULL");
+    }
+    if (x == NULL) {
+        throw invalid_argument("Conjugate::solve: x == NULL");
+    }
+    if (f == NULL) {
+        throw invalid_argument("Conjugate::solve: f == NULL");
+    }
+    if (handle == NULL) {
+        throw invalid_argument("Conjugate::solve: handle == NULL");
     }
 
     // error
@@ -103,57 +81,56 @@ linalgcuError_t fasteit_conjugate_solver_solve(fasteitConjugateSolver_t self,
     linalgcuMatrix_t temp = NULL;
 
     // calc residuum r = f - A * x
-    error  = linalgcu_matrix_multiply(self->residuum, A, x, handle, stream);
-    error |= linalgcu_matrix_scalar_multiply(self->residuum, -1.0, stream);
-    error |= linalgcu_matrix_add(self->residuum, f, stream);
+    error  = linalgcu_matrix_multiply(this->mResiduum, A, x, handle, stream);
+    error |= linalgcu_matrix_scalar_multiply(this->mResiduum, -1.0, stream);
+    error |= linalgcu_matrix_add(this->mResiduum, f, stream);
 
     // p = r
-    error |= linalgcu_matrix_copy(self->projection, self->residuum, stream);
+    error |= linalgcu_matrix_copy(this->mProjection, this->mResiduum, stream);
 
     // calc rsold
-    error |= linalgcu_matrix_vector_dot_product(self->rsold, self->residuum,
-        self->residuum, stream);
+    error |= linalgcu_matrix_vector_dot_product(this->mRSOld, this->mResiduum,
+        this->mResiduum, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        return error;
+        throw logic_error("Conjugate::solve: setup solver");
     }
 
     // iterate
     for (linalgcuSize_t i = 0; i < iterations; i++) {
         // calc A * p
-        error  = fasteit_conjugate_gemv(self->tempVector, A, self->projection, stream);
+        Conjugate::gemv(this->mTempVector, A, this->mProjection, stream);
 
         // calc p * A * p
-        error |= linalgcu_matrix_vector_dot_product(self->tempNumber, self->projection,
-            self->tempVector, stream);
+        error  = linalgcu_matrix_vector_dot_product(this->mTempNumber, this->mProjection,
+            this->mTempVector, stream);
 
         // update residuum
-        error |= fasteit_conjugate_update_vector(self->residuum, self->residuum, -1.0f,
-            self->tempVector, self->rsold, self->tempNumber, stream);
+        Conjugate::update_vector(this->mResiduum, this->mResiduum, -1.0f,
+            this->mTempVector, this->mRSOld, this->mTempNumber, stream);
 
         // update x
-        error |= fasteit_conjugate_update_vector(x, x, 1.0f, self->projection, self->rsold,
-            self->tempNumber, stream);
+        Conjugate::update_vector(x, x, 1.0f, this->mProjection, this->mRSOld,
+            this->mTempNumber, stream);
 
         // calc rsnew
-        error |= linalgcu_matrix_vector_dot_product(self->rsnew, self->residuum,
-            self->residuum, stream);
+        error |= linalgcu_matrix_vector_dot_product(this->mRSNew, this->mResiduum,
+            this->mResiduum, stream);
 
         // update projection
-        error |= fasteit_conjugate_update_vector(self->projection, self->residuum, 1.0f,
-            self->projection, self->rsnew, self->rsold, stream);
+        Conjugate::update_vector(this->mProjection, this->mResiduum, 1.0f,
+            this->mProjection, this->mRSNew, this->mRSOld, stream);
 
         // swap rsold and rsnew
-        temp = self->rsold;
-        self->rsold = self->rsnew;
-        self->rsnew = temp;
+        temp = this->mRSOld;
+        this->mRSOld = this->mRSNew;
+        this->mRSNew = temp;
 
         // check success
         if (error != LINALGCU_SUCCESS) {
-            return error;
+            throw logic_error("Conjugate::solve: iterate");
         }
     }
-
-    return LINALGCU_SUCCESS;
 }
+

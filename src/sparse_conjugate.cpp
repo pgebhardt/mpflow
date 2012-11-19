@@ -3,99 +3,72 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdlib.h>
-#include "../include/fasteit.h"
+#include "../include/fasteit.hpp"
+
+// namespaces
+using namespace fastEIT;
+using namespace std;
 
 // create conjugate solver
-linalgcuError_t fasteit_sparse_conjugate_solver_create(
-    fasteitSparseConjugateSolver_t* solverPointer, linalgcuSize_t rows, linalgcuSize_t columns,
-    cudaStream_t stream) {
+SparseConjugate::SparseConjugate(linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
     // check input
-    if ((solverPointer == NULL) || (rows <= 1)) {
-        return LINALGCU_ERROR;
+    if (rows <= 1) {
+        throw invalid_argument("SparseConjugate::SparseConjugate: rows <= 1");
+    }
+    if (columns <= 1) {
+        throw invalid_argument("SparseConjugate::SparseConjugate: columns <= 1");
     }
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
 
-    // init solver pointer
-    *solverPointer = NULL;
-
-    // create solver struct
-    fasteitSparseConjugateSolver_t self = malloc(sizeof(fasteitSparseConjugateSolver_s));
-
-    // check success
-    if (self == NULL) {
-        return LINALGCU_ERROR;
-    }
-
-    // init struct
-    self->rows = rows;
-    self->columns = columns;
-    self->residuum = NULL;
-    self->projection = NULL;
-    self->rsold = NULL;
-    self->rsnew = NULL;
-    self->tempVector = NULL;
-    self->tempNumber = NULL;
+    // init member
+    this->mRows = rows;
+    this->mColumns = columns;
+    this->mResiduum = NULL;
+    this->mProjection = NULL;
+    this->mRSOld = NULL;
+    this->mRSNew = NULL;
+    this->mTempVector = NULL;
+    this->mTempNumber = NULL;
 
     // create matrices
-    error  = linalgcu_matrix_create(&self->residuum, self->rows, self->columns, stream);
-    error |= linalgcu_matrix_create(&self->projection, self->rows, self->columns, stream);
-    error |= linalgcu_matrix_create(&self->rsold, self->rows, self->columns, stream);
-    error |= linalgcu_matrix_create(&self->rsnew, self->rows, self->columns, stream);
-    error |= linalgcu_matrix_create(&self->tempVector, self->rows, self->columns, stream);
-    error |= linalgcu_matrix_create(&self->tempNumber, self->rows, self->columns, stream);
+    error  = linalgcu_matrix_create(&this->mResiduum, this->rows(), this->columns(), stream);
+    error |= linalgcu_matrix_create(&this->mProjection, this->rows(), this->columns(), stream);
+    error |= linalgcu_matrix_create(&this->mRSOld, this->rows(), this->columns(), stream);
+    error |= linalgcu_matrix_create(&this->mRSNew, this->rows(), this->columns(), stream);
+    error |= linalgcu_matrix_create(&this->mTempVector, this->rows(), this->columns(), stream);
+    error |= linalgcu_matrix_create(&this->mTempNumber, this->rows(), this->columns(), stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fasteit_sparse_conjugate_solver_release(&self);
-
-        return error;
+        throw logic_error("SparseConjugate::SparseConjugate: create matrices");
     }
-
-    // set solver pointer
-    *solverPointer = self;
-
-    return LINALGCU_SUCCESS;
 }
 
 // release solver
-linalgcuError_t fasteit_sparse_conjugate_solver_release(
-    fasteitSparseConjugateSolver_t* solverPointer) {
-    // check input
-    if ((solverPointer == NULL) || (*solverPointer == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // get solver
-    fasteitSparseConjugateSolver_t self = *solverPointer;
-
+SparseConjugate::~SparseConjugate() {
     // release matrices
-    linalgcu_matrix_release(&self->residuum);
-    linalgcu_matrix_release(&self->projection);
-    linalgcu_matrix_release(&self->rsold);
-    linalgcu_matrix_release(&self->rsnew);
-    linalgcu_matrix_release(&self->tempVector);
-    linalgcu_matrix_release(&self->tempNumber);
-
-    // free struct
-    free(self);
-
-    // set solver pointer to NULL
-    *solverPointer = NULL;
-
-    return LINALGCU_SUCCESS;
+    linalgcu_matrix_release(&this->mResiduum);
+    linalgcu_matrix_release(&this->mProjection);
+    linalgcu_matrix_release(&this->mRSOld);
+    linalgcu_matrix_release(&this->mRSNew);
+    linalgcu_matrix_release(&this->mTempVector);
+    linalgcu_matrix_release(&this->mTempNumber);
 }
 
 // solve conjugate sparse
-linalgcuError_t fasteit_sparse_conjugate_solver_solve(fasteitSparseConjugateSolver_t self,
-    linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f, linalgcuSize_t iterations,
-    linalgcuBool_t dcFree, cudaStream_t stream) {
+void SparseConjugate::solve(linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
+    linalgcuSize_t iterations, bool dcFree, cudaStream_t stream) {
     // check input
-    if ((self == NULL) || (A == NULL) || (x == NULL) || (f == NULL)) {
-        return LINALGCU_ERROR;
+    if (A == NULL) {
+        throw invalid_argument("SparseConjugate::solve: A == NULL");
+    }
+    if (x == NULL) {
+        throw invalid_argument("SparseConjugate::solve: x == NULL");
+    }
+    if (f == NULL) {
+        throw invalid_argument("SparseConjugate::solve: f == NULL");
     }
 
     // error
@@ -104,74 +77,72 @@ linalgcuError_t fasteit_sparse_conjugate_solver_solve(fasteitSparseConjugateSolv
     // temp for pointer swap
     linalgcuMatrix_t temp = NULL;
 
-    // calc residuum r = f - A * x
-    error  = linalgcu_sparse_matrix_multiply(self->residuum, A, x, stream);
+    // calc mResiduum r = f - A * x
+    error  = linalgcu_sparse_matrix_multiply(this->mResiduum, A, x, stream);
 
     // regularize for dc free solution
-    if (dcFree == LINALGCU_TRUE) {
-        error |= linalgcu_matrix_sum(self->tempNumber, x, stream);
-        error |= fasteit_conjugate_add_scalar(self->residuum, self->tempNumber,
-            self->rows, self->columns, stream);
+    if (dcFree == true) {
+        error |= linalgcu_matrix_sum(this->mTempNumber, x, stream);
+        Conjugate::add_scalar(this->mResiduum, this->mTempNumber, this->rows(),
+            this->columns(), stream);
     }
 
-    error |= linalgcu_matrix_scalar_multiply(self->residuum, -1.0, stream);
-    error |= linalgcu_matrix_add(self->residuum, f, stream);
+    error |= linalgcu_matrix_scalar_multiply(this->mResiduum, -1.0, stream);
+    error |= linalgcu_matrix_add(this->mResiduum, f, stream);
 
     // p = r
-    error |= linalgcu_matrix_copy(self->projection, self->residuum, stream);
+    error |= linalgcu_matrix_copy(this->mProjection, this->mResiduum, stream);
 
-    // calc rsold
-    error |= linalgcu_matrix_vector_dot_product(self->rsold, self->residuum,
-        self->residuum, stream);
+    // calc mRSOld
+    error |= linalgcu_matrix_vector_dot_product(this->mRSOld, this->mResiduum,
+        this->mResiduum, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        return error;
+        throw logic_error("SparseConjugate::solve: setup solver");
     }
 
     // iterate
     for (linalgcuSize_t i = 0; i < iterations; i++) {
         // calc A * p
-        error |= linalgcu_sparse_matrix_multiply(self->tempVector, A, self->projection,
+        error  = linalgcu_sparse_matrix_multiply(this->mTempVector, A, this->mProjection,
             stream);
 
         // regularize for dc free solution
-        if (dcFree == LINALGCU_TRUE) {
-            error |= linalgcu_matrix_sum(self->tempNumber, self->projection, stream);
-            error |= fasteit_conjugate_add_scalar(self->tempVector, self->tempNumber,
-                self->rows, self->columns, stream);
+        if (dcFree == true) {
+            error |= linalgcu_matrix_sum(this->mTempNumber, this->mProjection, stream);
+            Conjugate::add_scalar(this->mTempVector, this->mTempNumber, this->rows(),
+                this->columns(), stream);
         }
 
         // calc p * A * p
-        error |= linalgcu_matrix_vector_dot_product(self->tempNumber, self->projection,
-            self->tempVector, stream);
+        error |= linalgcu_matrix_vector_dot_product(this->mTempNumber, this->mProjection,
+            this->mTempVector, stream);
 
-        // update residuum
-        error |= fasteit_conjugate_update_vector(self->residuum, self->residuum,
-            -1.0f, self->tempVector, self->rsold, self->tempNumber, stream);
+        // update mResiduum
+        Conjugate::update_vector(this->mResiduum, this->mResiduum,
+            -1.0f, this->mTempVector, this->mRSOld, this->mTempNumber, stream);
 
         // update x
-        error |= fasteit_conjugate_update_vector(x, x, 1.0f, self->projection,
-            self->rsold, self->tempNumber, stream);
+        Conjugate::update_vector(x, x, 1.0f, this->mProjection,
+            this->mRSOld, this->mTempNumber, stream);
 
-        // calc rsnew
-        error |= linalgcu_matrix_vector_dot_product(self->rsnew, self->residuum,
-            self->residuum, stream);
+        // calc mRSNew
+        error |= linalgcu_matrix_vector_dot_product(this->mRSNew, this->mResiduum,
+            this->mResiduum, stream);
 
-        // update projection
-        error |= fasteit_conjugate_update_vector(self->projection, self->residuum,
-            1.0f, self->projection, self->rsnew, self->rsold, stream);
+        // update mProjection
+        Conjugate::update_vector(this->mProjection, this->mResiduum,
+            1.0f, this->mProjection, this->mRSNew, this->mRSOld, stream);
 
-        // swap rsold and rsnew
-        temp = self->rsold;
-        self->rsold = self->rsnew;
-        self->rsnew = temp;
+        // swap mRSOld and mRSNew
+        temp = this->mRSOld;
+        this->mRSOld = this->mRSNew;
+        this->mRSNew = temp;
 
         // check success
         if (error != LINALGCU_SUCCESS) {
-            return error;
+            throw logic_error("SparseConjugate::solve: iterate");
         }
     }
-
-    return LINALGCU_SUCCESS;
 }

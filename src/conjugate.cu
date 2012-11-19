@@ -3,11 +3,11 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-// redefine extern c
-#define LINALGCU_EXTERN_C extern "C"
+#include "../include/fasteit.hpp"
 
-#include <stdlib.h>
-#include "../include/fasteit.h"
+// namespaces
+using namespace fastEIT;
+using namespace std;
 
 // add scalar kernel
 __global__ void add_scalar_kernel(linalgcuMatrixData_t* vector,
@@ -24,12 +24,14 @@ __global__ void add_scalar_kernel(linalgcuMatrixData_t* vector,
 }
 
 // add scalar
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_conjugate_add_scalar(linalgcuMatrix_t vector,
+void Conjugate::add_scalar(linalgcuMatrix_t vector,
     linalgcuMatrix_t scalar, linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
     // check input
-    if ((vector == NULL) || (scalar == NULL)) {
-        return LINALGCU_ERROR;
+    if (vector == NULL) {
+        throw invalid_argument("Conjugate::add_scalar: vector == NULL");
+    }
+    if (scalar == NULL) {
+        throw invalid_argument("Conjugate::add_scalar: scalar == NULL");
     }
 
     // kernel dimension
@@ -40,8 +42,6 @@ linalgcuError_t fasteit_conjugate_add_scalar(linalgcuMatrix_t vector,
     // execute kernel
     add_scalar_kernel<<<global, local, 0, stream>>>(vector->deviceData, scalar->deviceData,
         vector->rows, rows, columns);
-
-    return LINALGCU_SUCCESS;
 }
 
 // update vector
@@ -59,13 +59,24 @@ __global__ void update_vector_kernel(linalgcuMatrixData_t* result,
 }
 
 // update vector
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_conjugate_update_vector(linalgcuMatrix_t result,
+void Conjugate::update_vector(linalgcuMatrix_t result,
     linalgcuMatrix_t x1, linalgcuMatrixData_t sign, linalgcuMatrix_t x2,
     linalgcuMatrix_t r1, linalgcuMatrix_t r2, cudaStream_t stream) {
     // check input
-    if ((result == NULL) || (x1 == NULL) || (x2 == NULL) || (r1 == NULL) || (r2 == NULL)) {
-        return LINALGCU_ERROR;
+    if (result == NULL) {
+        throw invalid_argument("Conjugate::update_vector: result == NULL");
+    }
+    if (x1 == NULL) {
+        throw invalid_argument("Conjugate::update_vector: x1 == NULL");
+    }
+    if (x2 == NULL) {
+        throw invalid_argument("Conjugate::update_vector: x2 == NULL");
+    }
+    if (r1 == NULL) {
+        throw invalid_argument("Conjugate::update_vector: r1 == NULL");
+    }
+    if (r2 == NULL) {
+        throw invalid_argument("Conjugate::update_vector: r2 == NULL");
     }
 
     // kernel dimension
@@ -76,9 +87,8 @@ linalgcuError_t fasteit_conjugate_update_vector(linalgcuMatrix_t result,
     // execute kernel
     update_vector_kernel<<<global, local, 0, stream>>>(result->deviceData,
         x1->deviceData, sign, x2->deviceData, r1->deviceData, r2->deviceData, result->rows);
-
-    return LINALGCU_SUCCESS;
 }
+
 // gemv kernel
 __global__ void gemv_kernel(linalgcuMatrixData_t* matrix, linalgcuMatrixData_t* vector,
     linalgcuMatrixData_t* result, linalgcuSize_t rows) {
@@ -126,12 +136,17 @@ __global__ void reduce_row_kernel(linalgcuMatrixData_t* vector, linalgcuSize_t r
 }
 
 // fast gemv
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
+void Conjugate::gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
     linalgcuMatrix_t vector, cudaStream_t stream) {
     // check input
-    if ((matrix == NULL) || (vector == NULL) || (result == NULL)) {
-        return LINALGCU_ERROR;
+    if (result == NULL) {
+        throw invalid_argument("Conjugate::gemv: result == NULL");
+    }
+    if (matrix == NULL) {
+        throw invalid_argument("Conjugate::gemv: matrix == NULL");
+    }
+    if (vector == NULL) {
+        throw invalid_argument("Conjugate::gemv: vector == NULL");
     }
 
     // dimension
@@ -147,7 +162,5 @@ linalgcuError_t fasteit_conjugate_gemv(linalgcuMatrix_t result, linalgcuMatrix_t
     reduce_row_kernel<<<(matrix->columns + LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE - 1) /
         (LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE), LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE,
         0, stream>>>(result->deviceData, result->rows);
-
-    return LINALGCU_SUCCESS;
 }
 
