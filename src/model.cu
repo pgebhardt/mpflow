@@ -118,7 +118,7 @@ void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStr
     }
 
     // calc generate empty system matrix
-    linalgcuMatrixData_t* id = new linalgcuMatrixData_t[BasisFunction::nodesPerElement];
+    linalgcuMatrixData_t id[BasisFunction::nodesPerElement];
     for (linalgcuSize_t k = 0; k < this->mesh()->elementCount(); k++) {
         // get nodes for element
         for (linalgcuSize_t i = 0; i < BasisFunction::nodesPerElement; i++) {
@@ -154,9 +154,6 @@ void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStr
     if (error != LINALGCU_SUCCESS) {
         throw logic_error("Model<BasisFunction>::create_sparse_matrices: create sparse matrces");
     }
-
-    // cleanup
-    delete [] id;
 }
 
 // init model
@@ -200,10 +197,9 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     linalgcu_matrix_copy_to_device(this->mConnectivityMatrix, stream);
 
     // fill intermediate connectivity and elemental matrices
-    linalgcuMatrixData_t* id = new linalgcuMatrixData_t[BasisFunction::nodesPerElement];
-    linalgcuMatrixData_t* x = new linalgcuMatrixData_t[BasisFunction::nodesPerElement * 2];
-    linalgcuMatrixData_t* y = new linalgcuMatrixData_t[BasisFunction::nodesPerElement * 2];
-    BasisFunction** basis = new BasisFunction*[BasisFunction::nodesPerElement];
+    linalgcuMatrixData_t id[BasisFunction::nodesPerElement],
+        x[BasisFunction::nodesPerElement * 2], y[BasisFunction::nodesPerElement * 2];
+    BasisFunction* basis[BasisFunction::nodesPerElement];
     linalgcuMatrixData_t temp;
 
     for (linalgcuSize_t k = 0; k < this->mesh()->elementCount(); k++) {
@@ -295,10 +291,6 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     linalgcu_matrix_release(&connectivityMatrix);
     linalgcu_matrix_release(&elementalSMatrix);
     linalgcu_matrix_release(&elementalRMatrix);
-    delete [] id;
-    delete [] x;
-    delete [] y;
-    delete [] basis;
 }
 
 // update system matrix
@@ -359,9 +351,8 @@ void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
 template <class BasisFunction>
 void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
-    linalgcuMatrixData_t* id = new linalgcuMatrixData_t[BasisFunction::nodesPerEdge];
-    linalgcuMatrixData_t* x = new linalgcuMatrixData_t[BasisFunction::nodesPerEdge * 2];
-    linalgcuMatrixData_t* y = new linalgcuMatrixData_t[BasisFunction::nodesPerEdge * 2];
+    linalgcuMatrixData_t id[BasisFunction::nodesPerEdge],
+        x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
 
     for (linalgcuSize_t i = 0; i < this->mesh()->boundaryCount(); i++) {
         for (linalgcuSize_t l = 0; l < this->mElectrodes->count(); l++) {
@@ -397,11 +388,6 @@ void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
 
     // upload matrix
     linalgcu_matrix_copy_to_device(this->mExcitationMatrix, stream);
-
-    // cleanup
-    delete [] id;
-    delete [] x;
-    delete [] y;
 }
 
 // calc excitaion components

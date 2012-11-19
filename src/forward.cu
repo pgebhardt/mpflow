@@ -193,10 +193,9 @@ void ForwardSolver<BasisFunction>::init_jacobian_calculation_matrix(cublasHandle
     }
 
     // variables
-    linalgcuMatrixData_t* id = new linalgcuMatrixData_t[BasisFunction::nodesPerElement];
-    linalgcuMatrixData_t* x = new linalgcuMatrixData_t[BasisFunction::nodesPerElement * 2];
-    linalgcuMatrixData_t* y = new linalgcuMatrixData_t[BasisFunction::nodesPerElement * 2];
-    BasisFunction** basis = new BasisFunction*[BasisFunction::nodesPerElement];
+    linalgcuMatrixData_t id[BasisFunction::nodesPerElement],
+        x[BasisFunction::nodesPerElement * 2], y[BasisFunction::nodesPerElement * 2];
+    BasisFunction* basis[BasisFunction::nodesPerElement];
 
     // fill connectivity and elementalJacobianMatrix
     for (linalgcuSize_t k = 0; k < this->model()->mesh()->elementCount(); k++) {
@@ -236,12 +235,6 @@ void ForwardSolver<BasisFunction>::init_jacobian_calculation_matrix(cublasHandle
 
     // upload to device
     linalgcu_matrix_copy_to_device(this->mElementalJacobianMatrix, stream);
-
-    // cleanup
-    delete [] id;
-    delete [] x;
-    delete [] y;
-    delete [] basis;
 }
 
 // forward solving
@@ -269,11 +262,11 @@ linalgcuMatrix_t ForwardSolver<BasisFunction>::solve(linalgcuMatrix_t gamma, lin
             steps, true, stream);
     }
 
-    /*// calc jacobian
+    // calc jacobian
     this->calc_jacobian(gamma, 0, false, stream);
     for (linalgcuSize_t n = 1; n < this->model()->numHarmonics() + 1; n++) {
         this->calc_jacobian(gamma, n, true, stream);
-    }*/
+    }
 
     // set stream
     cublasSetStream(handle, stream);
@@ -326,8 +319,8 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuSize_t driveId = row / roundMeasurmentCount;
 
     // variables
-    linalgcuMatrixData_t* dPhi = new linalgcuMatrixData_t[BasisFunction::nodesPerElement];
-    linalgcuMatrixData_t* mPhi = new linalgcuMatrixData_t[BasisFunction::nodesPerElement];
+    linalgcuMatrixData_t dPhi[BasisFunction::nodesPerElement];
+    linalgcuMatrixData_t mPhi[BasisFunction::nodesPerElement];
     linalgcuMatrixData_t id;
 
     // get data
@@ -357,10 +350,6 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     else {
         jacobian[row + column * rows] = -element;
     }
-
-    // cleanup
-    delete [] dPhi;
-    delete [] mPhi;
 }
 
 // calc jacobian
