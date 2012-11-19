@@ -24,8 +24,8 @@ namespace fastEIT {
         void init_jacobian_calculation_matrix(cublasHandle_t handle, cudaStream_t stream);
 
         // calc jacobian
-        linalgcuMatrix_t calc_jacobian(linalgcuMatrix_t gamma, linalgcuSize_t harmonic, bool additiv)
-            const;
+        linalgcuMatrix_t calc_jacobian(linalgcuMatrix_t gamma, linalgcuSize_t harmonic, bool additiv,
+            cudaStream_t stream) const;
 
         // forward solving
         linalgcuMatrix_t solve(linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle,
@@ -41,11 +41,11 @@ namespace fastEIT {
         linalgcuMatrix_t voltage() const { return this->mVoltage; }
 
         linalgcuMatrix_t phi(linalgcuSize_t id) const {
-            assert(id <= this->model()->numHarmonics);
+            assert(id <= this->model()->numHarmonics());
             return this->mPhi[id];
         }
         linalgcuMatrix_t excitation(linalgcuSize_t id) const {
-            assert(id <= this->model()->numHarmonics);
+            assert(id <= this->model()->numHarmonics());
             return this->mExcitation[id];
         }
 

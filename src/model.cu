@@ -550,7 +550,6 @@ void Model<BasisFunction>::update_matrix(linalgcuSparseMatrix_t matrix,
         gamma->deviceData, this->mSigmaRef, this->mConnectivityMatrix->rows,
         matrix->density);
 }
-// specialisation function
-void specialisation() {
-    Model<Basis> model(NULL, NULL, 0.0f, 0, NULL, NULL);
-}
+
+// specialisation
+template class Model<Basis>;
