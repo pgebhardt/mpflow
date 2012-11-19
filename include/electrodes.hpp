@@ -3,25 +3,35 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_ELECTRODES_H
-#define FASTEIT_ELECTRODES_H
+#ifndef FASTEIT_ELECTRODES_HPP
+#define FASTEIT_ELECTRODES_HPP
 
-// electrodes struct
-typedef struct {
-    linalgcuSize_t count;
-    linalgcuMatrixData_t* electrodesStart;
-    linalgcuMatrixData_t* electrodesEnd;
-    linalgcuMatrixData_t width;
-    linalgcuMatrixData_t height;
-} fasteitElectrodes_s;
-typedef fasteitElectrodes_s* fasteitElectrodes_t;
+// namespace fastEIT
+namespace fastEIT {
+    // Electrodes class definition
+    class Electrodes {
+    // constructer and destructor
+    public:
+        Electrodes(linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
+            linalgcuMatrixData_t meshRadius);
+        virtual ~Electrodes();
 
-// create electrodes
-linalgcuError_t fasteit_electrodes_create(fasteitElectrodes_t* electrodesPointer,
-    linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
-    linalgcuMatrixData_t meshRadius);
+    // access methods
+    public:
+        linalgcuSize_t count() const { return this->mCount; }
+        linalgcuMatrixData_t* electrodesStart() const { return this->mElectrodesStart; }
+        linalgcuMatrixData_t* electrodesEnd() const { return this->mElectrodesEnd; }
+        linalgcuMatrixData_t width() const { return this->mWidth; }
+        linalgcuMatrixData_t height() const { return this->mHeight; }
 
-// release electrodes
-linalgcuError_t fasteit_electrodes_release(fasteitElectrodes_t* electrodesPointer);
+    // member
+    private:
+        linalgcuSize_t mCount;
+        linalgcuMatrixData_t* mElectrodesStart;
+        linalgcuMatrixData_t* mElectrodesEnd;
+        linalgcuMatrixData_t mWidth;
+        linalgcuMatrixData_t mHeight;
+    };
+}
 
 #endif
