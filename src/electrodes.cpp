@@ -15,16 +15,16 @@ Electrodes::Electrodes(linalgcuSize_t count, linalgcuMatrixData_t width, linalgc
     linalgcuMatrixData_t meshRadius) {
     // check input
     if (count == 0) {
-        throw invalid_argument("count");
+        throw invalid_argument("count == 0");
     }
     if (width <= 0.0f) {
-        throw invalid_argument("width");
+        throw invalid_argument("width <= 0.0");
     }
     if (height <= 0.0f) {
-        throw invalid_argument("height");
+        throw invalid_argument("height <= 0.0");
     }
     if (meshRadius <= 0.0f) {
-        throw invalid_argument("meshRadius");
+        throw invalid_argument("meshRadius <= 0.0");
     }
 
     // init member

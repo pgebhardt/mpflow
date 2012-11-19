@@ -16,28 +16,28 @@ Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t b
     linalgcuMatrixData_t radius, linalgcuMatrixData_t height) {
     // check input
     if (nodes == NULL) {
-        throw invalid_argument("nodes");
+        throw invalid_argument("nodes == NULL");
     }
     if (elements == NULL) {
-        throw invalid_argument("elements");
+        throw invalid_argument("elements == NULL");
     }
     if (boundary == NULL) {
-        throw invalid_argument("boundary");
+        throw invalid_argument("boundary == NULL");
     }
     if (nodeCount > nodes->rows) {
-        throw invalid_argument("nodeCount");
+        throw invalid_argument("nodeCount > nodes->rows");
     }
     if (elementCount > elements->rows) {
-        throw invalid_argument("elementCount");
+        throw invalid_argument("elementCount > elements->rows");
     }
     if (boundaryCount > boundary->rows) {
-        throw invalid_argument("boundaryCount");
+        throw invalid_argument("boundaryCount > boundary->rows");
     }
     if (radius <= 0.0f) {
-        throw invalid_argument("radius");
+        throw invalid_argument("radius <= 0.0");
     }
     if (height <= 0.0f) {
-        throw invalid_argument("height");
+        throw invalid_argument("height <= 0.0");
     }
 
     // init member
