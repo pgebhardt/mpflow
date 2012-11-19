@@ -3,7 +3,6 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdexcept>
 #include "../include/fasteit.hpp"
 
 // namespaces

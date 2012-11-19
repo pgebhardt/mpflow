@@ -3,40 +3,51 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_BASIS_H
-#define FASTEIT_BASIS_H
+#ifndef FASTEIT_BASIS_HPP
+#define FASTEIT_BASIS_HPP
 
-// nodes per element
-#define FASTEIT_NODES_PER_ELEMENT (3)
-#define FASTEIT_NODES_PER_EDGE (2)
+// namespace fastEIT
+namespace fastEIT {
+    // basis class definition
+    class Basis {
+    // constructer and destructor
+    public:
+        Basis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y);
+        virtual ~Basis();
 
-// basis struct
-typedef struct {
-    linalgcuMatrixData_t points[FASTEIT_NODES_PER_ELEMENT][2];
-    linalgcuMatrixData_t coefficients[FASTEIT_NODES_PER_ELEMENT];
-} fasteitBasis_s;
-typedef fasteitBasis_s* fasteitBasis_t;
+    // mathematical evaluation of basis
+    public:
+        linalgcuMatrixData_t evaluate(linalgcuMatrixData_t x, linalgcuMatrixData_t y);
+        linalgcuMatrixData_t integrate_with_basis(Basis& other);
+        linalgcuMatrixData_t integrate_gradient_with_basis(Basis& other);
+        static linalgcuMatrixData_t integrate_boundary_edge(linalgcuMatrixData_t* x,
+            linalgcuMatrixData_t* y, linalgcuMatrixData_t* start, linalgcuMatrixData_t* end);
 
-// create basis
-linalgcuError_t fasteit_basis_create(fasteitBasis_t* basisPointer,
-    linalgcuMatrixData_t* x, linalgcuMatrixData_t* y);
+    // operator
+    public:
+        linalgcuMatrixData_t operator()(linalgcuMatrixData_t x, linalgcuMatrixData_t y);
 
-// release basis
-linalgcuError_t fasteit_basis_release(fasteitBasis_t* basisPointer);
+    // access methods
+    public:
+        inline linalgcuMatrixData_t* point(linalgcuSize_t id) const {
+            assert(id < 3);
+            return &this->mPoints[id * 2]; 
+        }
+        inline linalgcuMatrixData_t coefficient(linalgcuSize_t id) const {
+            assert(id < 3);
+            return this->mCoefficients[id];
+        }
 
-// evaluate basis function
-linalgcuMatrixData_t fasteit_basis_function(fasteitBasis_t self,
-    linalgcuMatrixData_t x, linalgcuMatrixData_t y);
+    // geometry definition
+    public:
+        static const linalgcuSize_t nodesPerEdge = 2;
+        static const linalgcuSize_t nodesPerElement = 3;
 
-// integrate with basis
-linalgcuMatrixData_t fasteit_basis_integrate_with_basis(fasteitBasis_t self, fasteitBasis_t other);
-
-// integrate gradient with basis
-linalgcuMatrixData_t fasteit_basis_integrate_gradient_with_basis(fasteitBasis_t self,
-    fasteitBasis_t other);
-
-// integrate edge
-linalgcuMatrixData_t fasteit_basis_integrate_boundary_edge(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y,
-    linalgcuMatrixData_t* start, linalgcuMatrixData_t* end);
+    // member
+    private:
+        linalgcuMatrixData_t* mPoints;
+        linalgcuMatrixData_t* mCoefficients;
+    };
+}
 
 #endif
