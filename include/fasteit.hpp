@@ -19,7 +19,7 @@
 #include "model.hpp"
 #include "conjugate.hpp"
 #include "sparse_conjugate.hpp"
-//#include "forward.hpp"
+#include "forward.hpp"
 //#include "inverse.hpp"
 //#include "solver.hpp"
 

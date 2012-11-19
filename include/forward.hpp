@@ -3,46 +3,67 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_FORWARD_SOLVER_H
-#define FASTEIT_FORWARD_SOLVER_H
+#ifndef FASTEIT_FORWARD_SOLVER_HPP
+#define FASTEIT_FORWARD_SOLVER_HPP
 
-// solver struct
-typedef struct {
-    fasteitModel_t model;
-    fasteitSparseConjugateSolver_t conjugateSolver;
-    linalgcuSize_t driveCount;
-    linalgcuSize_t measurmentCount;
-    linalgcuMatrix_t jacobian;
-    linalgcuMatrix_t voltage;
-    linalgcuMatrix_t* phi;
-    linalgcuMatrix_t* excitation;
-    linalgcuMatrix_t voltageCalculation;
-    linalgcuMatrix_t elementalJacobianMatrix;
-} fasteitForwardSolver_s;
-typedef fasteitForwardSolver_s* fasteitForwardSolver_t;
+// namespace fastEIT
+namespace fastEIT {
+    // forward solver class definition
+    template <class BasisFunction>
+    class ForwardSolver {
+    // constructor and destructor
+    public:
+        ForwardSolver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPattern,
+            linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
+            linalgcuSize_t numHarmonics, linalgcuMatrixData_t sigmaRef, cublasHandle_t handle,
+            cudaStream_t stream);
+        virtual ~ForwardSolver();
 
-// create forward_solver
-linalgcuError_t fasteit_forward_solver_create(fasteitForwardSolver_t* solverPointer,
-    fasteitMesh_t mesh, fasteitElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
-    linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
-    linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef, cublasHandle_t handle,
-    cudaStream_t stream);
+    public:
+        // init jacobian calculation matrix
+        void init_jacobian_calculation_matrix(cublasHandle_t handle, cudaStream_t stream);
 
-// release forward_solver
-linalgcuError_t fasteit_forward_solver_release(fasteitForwardSolver_t* solverPointer);
+        // calc jacobian
+        linalgcuMatrix_t calc_jacobian(linalgcuMatrix_t gamma, linalgcuSize_t harmonic, bool additiv)
+            const;
 
-// init jacobian calculation matrix
-linalgcuError_t fasteit_forward_init_jacobian_calculation_matrix(fasteitForwardSolver_t self,
-    cublasHandle_t handle, cudaStream_t stream);
+        // forward solving
+        linalgcuMatrix_t solve(linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle,
+            cudaStream_t stream) const;
 
-// calc jacobian
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_forward_solver_calc_jacobian(fasteitForwardSolver_t self,
-    linalgcuMatrix_t gamma, linalgcuSize_t harmonic, linalgcuBool_t additiv,
-    cudaStream_t stream);
+    // accessors
+    public:
+        Model<BasisFunction>* model() const { return this->mModel; }
+        SparseConjugate* conjugateSolver() const { return this->mConjugateSolver; }
+        linalgcuSize_t driveCount() const { return this->mDriveCount; }
+        linalgcuSize_t measurmentCount() const { return this->mMeasurmentCount; }
+        linalgcuMatrix_t jacobian() const { return this->mJacobian; }
+        linalgcuMatrix_t voltage() const { return this->mVoltage; }
 
-// forward solving
-linalgcuError_t fasteit_forward_solver_solve(fasteitForwardSolver_t self,
-    linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle, cudaStream_t stream);
+        linalgcuMatrix_t phi(linalgcuSize_t id) const {
+            assert(id <= this->model()->numHarmonics);
+            return this->mPhi[id];
+        }
+        linalgcuMatrix_t excitation(linalgcuSize_t id) const {
+            assert(id <= this->model()->numHarmonics);
+            return this->mExcitation[id];
+        }
+
+        linalgcuMatrix_t voltageCalculation() const { return this->mVoltageCalculation; }
+
+    // member
+    private:
+        Model<BasisFunction>* mModel;
+        SparseConjugate* mConjugateSolver;
+        linalgcuSize_t mDriveCount;
+        linalgcuSize_t mMeasurmentCount;
+        linalgcuMatrix_t mJacobian;
+        linalgcuMatrix_t mVoltage;
+        linalgcuMatrix_t* mPhi;
+        linalgcuMatrix_t* mExcitation;
+        linalgcuMatrix_t mVoltageCalculation;
+        linalgcuMatrix_t mElementalJacobianMatrix;
+    };
+}
 
 #endif
