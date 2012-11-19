@@ -28,16 +28,6 @@ namespace fastEIT {
         linalgcuMatrixData_t radius() const { return this->mRadius; }
         linalgcuMatrixData_t height() const { return this->mHeight; }
 
-    private:
-        linalgcuMatrix_t& nodes() { return this->mNodes; }
-        linalgcuMatrix_t& elements() { return this->mElements; }
-        linalgcuMatrix_t& boundary() { return this->mBoundary; }
-        linalgcuSize_t& nodeCount() { return this->mNodeCount; }
-        linalgcuSize_t& elementCount() { return this->mElementCount; }
-        linalgcuSize_t& boundaryCount() { return this->mBoundaryCount; }
-        linalgcuMatrixData_t& radius() { return this->mRadius; }
-        linalgcuMatrixData_t& height() { return this->mHeight; }
-
     // member
     private:
         linalgcuMatrix_t mNodes;

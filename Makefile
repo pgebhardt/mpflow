@@ -52,7 +52,7 @@ $(BUILD)/%.cu_o: $(SRC)/%.cu $(DEPS)
 # Install
 install:
 	mkdir -p $(INSTALL_INCLUDES)
-	install -m 0644 $(INCLUDES)/*.h $(INSTALL_INCLUDES)
+	install -m 0644 $(INCLUDES)/*.hpp $(INSTALL_INCLUDES)
 	install -m 0644 $(BUILD)/$(LIB) $(INSTALL_LIB)
 
 # Uninstall

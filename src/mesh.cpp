@@ -41,20 +41,20 @@ Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t b
     }
 
     // init member
-    this->radius() = radius;
-    this->height() = height;
-    this->nodeCount() = nodeCount;
-    this->elementCount() = elementCount;
-    this->boundaryCount() = boundaryCount;
-    this->nodes() = nodes;
-    this->elements() = elements;
-    this->boundary() = boundary;
+    this->mRadius = radius;
+    this->mHeight = height;
+    this->mNodeCount = nodeCount;
+    this->mElementCount = elementCount;
+    this->mBoundaryCount = boundaryCount;
+    this->mNodes = nodes;
+    this->mElements = elements;
+    this->mBoundary = boundary;
 }
 
 // delete mesh class
 Mesh::~Mesh() {
     // cleanup matrices
-    linalgcu_matrix_release(&this->nodes());
-    linalgcu_matrix_release(&this->elements());
-    linalgcu_matrix_release(&this->boundary());
+    linalgcu_matrix_release(&this->mNodes);
+    linalgcu_matrix_release(&this->mElements);
+    linalgcu_matrix_release(&this->mBoundary);
 }
