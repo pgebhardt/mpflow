@@ -3,70 +3,58 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdlib.h>
-#include "../include/fasteit.h"
+#include <stdexcept>
+#include "../include/fasteit.hpp"
 
-linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
-    linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
+// namespaces
+using namespace fastEIT;
+using namespace std;
+
+// create mesh class
+Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
     linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
     linalgcuMatrixData_t radius, linalgcuMatrixData_t height) {
     // check input
-    if ((meshPointer == NULL) || (nodes == NULL) || (elements == NULL) ||
-        (boundary == NULL) || (nodeCount > nodes->rows) ||
-        (elementCount > elements->rows) || (boundaryCount > boundary->rows) ||
-        (radius <= 0.0f) || (height <= 0.0f)) {
-        return LINALGCU_ERROR;
+    if (nodes == NULL) {
+        throw invalid_argument("nodes");
+    }
+    if (elements == NULL) {
+        throw invalid_argument("elements");
+    }
+    if (boundary == NULL) {
+        throw invalid_argument("boundary");
+    }
+    if (nodeCount > nodes->rows) {
+        throw invalid_argument("nodeCount");
+    }
+    if (elementCount > elements->rows) {
+        throw invalid_argument("elementCount");
+    }
+    if (boundaryCount > boundary->rows) {
+        throw invalid_argument("boundaryCount");
+    }
+    if (radius <= 0.0f) {
+        throw invalid_argument("radius");
+    }
+    if (height <= 0.0f) {
+        throw invalid_argument("height");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init mesh pointer
-    *meshPointer = NULL;
-
-    // create mesg struct
-    fasteitMesh_t self = malloc(sizeof(fasteitMesh_s));
-
-    // check success
-    if (self == NULL) {
-        return LINALGCU_ERROR;
-    }
-
-    // init struct
-    self->radius = radius;
-    self->height = height;
-    self->nodeCount = nodeCount;
-    self->elementCount = elementCount;
-    self->boundaryCount = boundaryCount;
-    self->nodes = nodes;
-    self->elements = elements;
-    self->boundary = boundary;
-
-    // set mesh pointer
-    *meshPointer = self;
-
-    return LINALGCU_SUCCESS;
+    // init member
+    this->radius() = radius;
+    this->height() = height;
+    this->nodeCount() = nodeCount;
+    this->elementCount() = elementCount;
+    this->boundaryCount() = boundaryCount;
+    this->nodes() = nodes;
+    this->elements() = elements;
+    this->boundary() = boundary;
 }
 
-linalgcuError_t fasteit_mesh_release(fasteitMesh_t* meshPointer) {
-    // check input
-    if ((meshPointer == NULL) || (*meshPointer == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // get mesh
-    fasteitMesh_t self = *meshPointer;
-
-    // cleanup
-    linalgcu_matrix_release(&self->nodes);
-    linalgcu_matrix_release(&self->elements);
-    linalgcu_matrix_release(&self->boundary);
-
-    // free struct
-    free(self);
-
-    // set mesh pointer to NULL
-    *meshPointer = NULL;
-
-    return LINALGCU_SUCCESS;
+// delete mesh class
+Mesh::~Mesh() {
+    // cleanup matrices
+    linalgcu_matrix_release(&this->nodes());
+    linalgcu_matrix_release(&this->elements());
+    linalgcu_matrix_release(&this->boundary());
 }

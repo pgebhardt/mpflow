@@ -3,29 +3,52 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_MESH_H
-#define FASTEIT_MESH_H
+#ifndef FASTEIT_MESH_HPP
+#define FASTEIT_MESH_HPP
 
-// mesh struct
-typedef struct {
-    linalgcuMatrixData_t radius;
-    linalgcuMatrixData_t height;
-    linalgcuSize_t nodeCount;
-    linalgcuSize_t elementCount;
-    linalgcuSize_t boundaryCount;
-    linalgcuMatrix_t nodes;
-    linalgcuMatrix_t elements;
-    linalgcuMatrix_t boundary;
-} fasteitMesh_s;
-typedef fasteitMesh_s* fasteitMesh_t;
+// namespace fastEIT
+namespace fastEIT {
+    // mesh class definition
+    class Mesh {
+    // constructer and destructor
+    public:
+        Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
+            linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
+            linalgcuMatrixData_t radius, linalgcuMatrixData_t height);
+        virtual ~Mesh();
 
-// create new mesh
-linalgcuError_t fasteit_mesh_create(fasteitMesh_t* meshPointer,
-    linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
-    linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
-    linalgcuMatrixData_t radius, linalgcuMatrixData_t height);
+    // access methods
+    public:
+        linalgcuMatrix_t nodes() const { return this->mNodes; }
+        linalgcuMatrix_t elements() const { return this->mElements; }
+        linalgcuMatrix_t boundary() const { return this->mBoundary; }
+        linalgcuSize_t nodeCount() const { return this->mNodeCount; }
+        linalgcuSize_t elementCount() const { return this->mElementCount; }
+        linalgcuSize_t boundaryCount() const { return this->mBoundaryCount; }
+        linalgcuMatrixData_t radius() const { return this->mRadius; }
+        linalgcuMatrixData_t height() const { return this->mHeight; }
 
-// cleanup mesh
-linalgcuError_t fasteit_mesh_release(fasteitMesh_t* meshPointer);
+    private:
+        linalgcuMatrix_t& nodes() { return this->mNodes; }
+        linalgcuMatrix_t& elements() { return this->mElements; }
+        linalgcuMatrix_t& boundary() { return this->mBoundary; }
+        linalgcuSize_t& nodeCount() { return this->mNodeCount; }
+        linalgcuSize_t& elementCount() { return this->mElementCount; }
+        linalgcuSize_t& boundaryCount() { return this->mBoundaryCount; }
+        linalgcuMatrixData_t& radius() { return this->mRadius; }
+        linalgcuMatrixData_t& height() { return this->mHeight; }
+
+    // member
+    private:
+        linalgcuMatrix_t mNodes;
+        linalgcuMatrix_t mElements;
+        linalgcuMatrix_t mBoundary;
+        linalgcuSize_t mNodeCount;
+        linalgcuSize_t mElementCount;
+        linalgcuSize_t mBoundaryCount;
+        linalgcuMatrixData_t mRadius;
+        linalgcuMatrixData_t mHeight;
+    };
+}
 
 #endif
