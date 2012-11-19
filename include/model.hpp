@@ -3,62 +3,70 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_MODEL_H
-#define FASTEIT_MODEL_H
+#ifndef FASTEIT_MODEL_HPP
+#define FASTEIT_MODEL_HPP
 
-// solver model struct
-typedef struct {
-    fasteitMesh_t mesh;
-    fasteitElectrodes_t electrodes;
-    linalgcuMatrixData_t sigmaRef;
-    linalgcuSparseMatrix_t* systemMatrix;
-    linalgcuSparseMatrix_t SMatrix;
-    linalgcuSparseMatrix_t RMatrix;
-    linalgcuMatrix_t excitationMatrix;
-    linalgcuMatrix_t connectivityMatrix;
-    linalgcuMatrix_t elementalSMatrix;
-    linalgcuMatrix_t elementalRMatrix;
-    linalgcuSize_t numHarmonics;
-} fasteitModel_s;
-typedef fasteitModel_s* fasteitModel_t;
+// namespace fastEIT
+namespace fastEIT {
+    // model class definition
+    template <class BasisFunction>
+    class Model {
+    // constructor and destructor
+    public:
+        Model(Mesh* mesh, Electrodes* electrodes, linalgcuMatrixData_t sigmaRef,
+            linalgcuSize_t numHarmonics, cublasHandle_t handle, cudaStream_t stream);
+        virtual ~Model();
 
-// create model
-linalgcuError_t fasteit_model_create(fasteitModel_t* modelPointer,
-    fasteitMesh_t mesh, fasteitElectrodes_t electrodes, linalgcuMatrixData_t sigmaRef,
-    linalgcuSize_t numHarmonics, cublasHandle_t handle, cudaStream_t stream);
+    // init methods
+    private:
+        void init(cublasHandle_t handle, cudaStream_t stream);
+        void create_sparse_matrices(cublasHandle_t handle, cudaStream_t stream);
+        void init_excitation_matrix(cudaStream_t stream);
 
-// release model
-linalgcuError_t fasteit_model_release(fasteitModel_t* modelPointer);
+    public:
+        // calc excitaion components
+        void calc_excitation_components(linalgcuMatrix_t* component, linalgcuMatrix_t pattern,
+            cublasHandle_t handle, cudaStream_t stream);
 
-// create sparse matrices
-linalgcuError_t fasteit_model_create_sparse_matrices(fasteitModel_t self, cublasHandle_t handle,
-    cudaStream_t stream);
+        // update model
+        void update(linalgcuMatrix_t gamma, cublasHandle_t handle, cudaStream_t stream);
 
-// init model
-linalgcuError_t fasteit_model_init(fasteitModel_t self, cublasHandle_t handle, cudaStream_t stream);
+    // cuda methods
+    private:
+        // update matrix
+        void update_matrix(linalgcuSparseMatrix_t matrix, linalgcuMatrix_t elements,
+            linalgcuMatrix_t gamma, cudaStream_t stream);
 
-// update model
-linalgcuError_t fasteit_model_update(fasteitModel_t self, linalgcuMatrix_t gamma,
-    cublasHandle_t handle, cudaStream_t stream);
+        // reduce matrix
+        void reduce_matrix(linalgcuMatrix_t matrix, linalgcuMatrix_t intermediateMatrix,
+            linalgcuSize_t density, cudaStream_t stream);
 
-// update matrix
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_model_update_matrix(fasteitModel_t self,
-    linalgcuSparseMatrix_t matrix, linalgcuMatrix_t elements, linalgcuMatrix_t gamma,
-    cudaStream_t stream);
+    // access methods
+    public:
+        Mesh* mesh() const { return this->mMesh; }
+        Electrodes* electrodes() const { return this->mElectrodes; }
+        linalgcuMatrixData_t sigmaRef() const { return this->mSigmaRef; }
+        inline linalgcuSparseMatrix_t systemMatrix(linalgcuSize_t id) {
+            assert(id <= this->mNumHarmonics);
+            return this->mSystemMatrix[id];
+        }
+        linalgcuMatrix_t excitationMatrix() { return this->mExcitationMatrix; }
+        linalgcuSize_t numHarmonics() { return this->mNumHarmonics; }
 
-// init exitation matrix
-linalgcuError_t fasteit_model_init_exitation_matrix(fasteitModel_t self,
-    cudaStream_t stream);
-
-// calc excitaion components
-linalgcuError_t fasteit_model_calc_excitaion_components(fasteitModel_t self,
-    linalgcuMatrix_t* component, linalgcuMatrix_t pattern, cublasHandle_t handle,
-    cudaStream_t stream);
-
-// reduce matrix
-LINALGCU_EXTERN_C
-linalgcuError_t fasteit_model_reduce_matrix(fasteitModel_t self, linalgcuMatrix_t matrix,
-    linalgcuMatrix_t intermediateMatrix, linalgcuSize_t density, cudaStream_t stream);
+    // member
+    private:
+        Mesh* mMesh;
+        Electrodes* mElectrodes;
+        linalgcuMatrixData_t mSigmaRef;
+        linalgcuSparseMatrix_t* mSystemMatrix;
+        linalgcuSparseMatrix_t mSMatrix;
+        linalgcuSparseMatrix_t mRMatrix;
+        linalgcuMatrix_t mExcitationMatrix;
+        linalgcuMatrix_t mConnectivityMatrix;
+        linalgcuMatrix_t mElementalSMatrix;
+        linalgcuMatrix_t mElementalRMatrix;
+        linalgcuSize_t mNumHarmonics;
+    };
+}
 
 #endif

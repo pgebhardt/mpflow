@@ -16,7 +16,7 @@
 #include "mesh.hpp"
 #include "basis.hpp"
 #include "electrodes.hpp"
-//#include "model.hpp"
+#include "model.hpp"
 //#include "conjugate.hpp"
 //#include "sparse_conjugate.hpp"
 //#include "forward.hpp"

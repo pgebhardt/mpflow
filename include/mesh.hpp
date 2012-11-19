@@ -10,7 +10,7 @@
 namespace fastEIT {
     // mesh class definition
     class Mesh {
-    // constructer and destructor
+    // constructor and destructor
     public:
         Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
             linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
