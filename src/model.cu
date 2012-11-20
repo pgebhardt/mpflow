@@ -38,10 +38,10 @@ void Model<BasisFunction>::reduce_matrix(linalgcuMatrix_t matrix,
     linalgcuMatrix_t intermediateMatrix, linalgcuSize_t density, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
-        throw invalid_argument("matrix == NULL");
+        throw invalid_argument("Model::reduce_matrix: matrix == NULL");
     }
     if (intermediateMatrix == NULL) {
-        throw invalid_argument("intermediateMatrix == NULL");
+        throw invalid_argument("Model::reduce_matrix: intermediateMatrix == NULL");
     }
 
     // block size
@@ -88,13 +88,13 @@ void Model<BasisFunction>::update_matrix(linalgcuSparseMatrix_t matrix,
     linalgcuMatrix_t elementalMatrix, linalgcuMatrix_t gamma, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
-        throw invalid_argument("matrix == NULL");
+        throw invalid_argument("Model::update_matrix: matrix == NULL");
     }
     if (elementalMatrix == NULL) {
-        throw invalid_argument("elementalMatrix == NULL");
+        throw invalid_argument("Model::update_matrix: elementalMatrix == NULL");
     }
     if (gamma == NULL) {
-        throw invalid_argument("gamma == NULL");
+        throw invalid_argument("Model::update_matrix: gamma == NULL");
     }
 
     // dimension

@@ -79,10 +79,10 @@ linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::calc_jacobian(lina
     linalgcuSize_t harmonic, bool additiv, cudaStream_t stream) const {
     // check input
     if (gamma == NULL) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::calc_jacobian: gamma == NULL");
+        throw invalid_argument("ForwardSolver::calc_jacobian: gamma == NULL");
     }
     if (harmonic > this->model()->numHarmonics()) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::calc_jacobian: harmonic > this->model()->numHarmonics()");
+        throw invalid_argument("ForwardSolver::calc_jacobian: harmonic > this->model()->numHarmonics()");
     }
 
     // dimension

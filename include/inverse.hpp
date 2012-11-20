@@ -3,43 +3,52 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INVERSE_SOLVER_H
-#define FASTEIT_INVERSE_SOLVER_H
+#ifndef FASTEIT_INVERSE_SOLVER_HPP
+#define FASTEIT_INVERSE_SOLVER_HPP
 
-// solver struct
-typedef struct {
-    fasteitConjugateSolver_t conjugateSolver;
-    linalgcuMatrix_t dVoltage;
-    linalgcuMatrix_t zeros;
-    linalgcuMatrix_t excitation;
-    linalgcuMatrix_t systemMatrix;
-    linalgcuMatrix_t jacobianSquare;
-    linalgcuMatrixData_t regularizationFactor;
-} fasteitInverseSolver_s;
-typedef fasteitInverseSolver_s* fasteitInverseSolver_t;
+// namespace fastEIT
+namespace fastEIT {
+    // inverse solver class definition
+    template <class NumericSolver>
+    class InverseSolver {
+    // constructor and destructor
+    public:
+        InverseSolver(linalgcuSize_t elementCount, linalgcuSize_t voltageCount,
+            linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
+        virtual ~InverseSolver();
 
-// create inverse_solver
-linalgcuError_t fasteit_inverse_solver_create(fasteitInverseSolver_t* solverPointer,
-    linalgcuSize_t elementCount, linalgcuSize_t voltageCount,
-    linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
+    public:
+        // calc system matrix
+        linalgcuMatrix_t calc_system_matrix(linalgcuMatrix_t jacobian, cublasHandle_t handle,
+            cudaStream_t stream);
 
-// release inverse_solver
-linalgcuError_t fasteit_inverse_solver_release(fasteitInverseSolver_t* solverPointer);
+        // calc excitation
+        linalgcuMatrix_t calc_excitation(linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
+            linalgcuMatrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream);
 
-// calc system matrix
-linalgcuError_t fasteit_inverse_solver_calc_system_matrix(
-    fasteitInverseSolver_t self, linalgcuMatrix_t jacobian, cublasHandle_t handle,
-    cudaStream_t stream);
+        // inverse solving
+        linalgcuMatrix_t solve(linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian,
+            linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage,
+            linalgcuSize_t steps, bool regularized, cublasHandle_t handle,
+            cudaStream_t stream);
 
-// calc excitation
-linalgcuError_t fasteit_inverse_solver_calc_excitation(fasteitInverseSolver_t self,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
-    linalgcuMatrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream);
+    // accessors
+    public:
+        NumericSolver* numericSolver() const { return this->mNumericSolver; }
+        linalgcuMatrix_t systemMatrix() const { return this->mSystemMatrix; }
+        linalgcuMatrix_t jacobianSquare() const { return this->mJacobianSquare; }
+        linalgcuMatrixData_t regularizationFactor() const { return this->mRegularizationFactor; }
 
-// inverse solving
-linalgcuError_t fasteit_inverse_solver_solve(fasteitInverseSolver_t self,
-    linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
-    linalgcuMatrix_t measuredVoltage, linalgcuSize_t steps, linalgcuBool_t regularized,
-    cublasHandle_t handle, cudaStream_t stream);
+    // member
+    private:
+        NumericSolver* mNumericSolver;
+        linalgcuMatrix_t mDVoltage;
+        linalgcuMatrix_t mZeros;
+        linalgcuMatrix_t mExcitation;
+        linalgcuMatrix_t mSystemMatrix;
+        linalgcuMatrix_t mJacobianSquare;
+        linalgcuMatrixData_t mRegularizationFactor;
+    };
+}
 
 #endif

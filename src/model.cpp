@@ -16,13 +16,13 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, linalgcuMatrixDa
     linalgcuSize_t numHarmonics, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (mesh == NULL) {
-        throw invalid_argument("Model<BasisFunction>::Model: mesh == NULL");
+        throw invalid_argument("Model::Model: mesh == NULL");
     }
     if (electrodes == NULL) {
-        throw invalid_argument("Model<BasisFunction>::Model: electrodes == NULL");
+        throw invalid_argument("Model::Model: electrodes == NULL");
     }
     if (handle == NULL) {
-        throw invalid_argument("Model<BasisFunction>::Model: handle == NULL");
+        throw invalid_argument("Model::Model: handle == NULL");
     }
 
     // error
@@ -59,7 +59,7 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, linalgcuMatrixDa
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model<BasisFunction>::Model: create matrices");
+        throw logic_error("Model::Model: create matrices");
     }
 
     // init model
@@ -100,7 +100,7 @@ template <class BasisFunction>
 void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Model<BasisFunction>::create_sparse_matrices: handle == NULL");
+        throw invalid_argument("Model::create_sparse_matrices: handle == NULL");
     }
 
     // error
@@ -114,7 +114,7 @@ void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStr
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model<BasisFunction>::create_sparse_matrices: create matrices");
+        throw logic_error("Model::create_sparse_matrices: create matrices");
     }
 
     // calc generate empty system matrix
@@ -139,7 +139,7 @@ void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStr
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model<BasisFunction>::create_sparse_matrices: copy matrix to device");
+        throw logic_error("Model::create_sparse_matrices: copy matrix to device");
     }
 
     // create sparse matrices
@@ -152,7 +152,7 @@ void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStr
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model<BasisFunction>::create_sparse_matrices: create sparse matrces");
+        throw logic_error("Model::create_sparse_matrices: create sparse matrces");
     }
 }
 
@@ -161,7 +161,7 @@ template <class BasisFunction>
 void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Model<BasisFunction>::init: handle == NULL");
+        throw invalid_argument("Model::init: handle == NULL");
     }
 
     // error
@@ -180,7 +180,7 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model<BasisFunction>::init: create intermediate matrices");
+        throw logic_error("Model::init: create intermediate matrices");
     }
 
     // init connectivityMatrix
@@ -276,7 +276,7 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model<BasisFunction>::init: create gamma");
+        throw logic_error("Model::init: create gamma");
     }
 
     // update matrices
@@ -299,10 +299,10 @@ void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (gamma == NULL) {
-        throw invalid_argument("Model<BasisFunction>::update: gamma == NULL");
+        throw invalid_argument("Model::update: gamma == NULL");
     }
     if (handle == NULL) {
-        throw invalid_argument("Model<BasisFunction>::init: handle == NULL");
+        throw invalid_argument("Model::init: handle == NULL");
     }
 
     // error
@@ -331,7 +331,7 @@ void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
         // check error
         if (cublasError != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
-                "Model<BasisFunction>::update: calc system matrices for all harmonics");
+                "Model::update: calc system matrices for all harmonics");
         }
 
         // add alpha * residualMatrix
@@ -341,7 +341,7 @@ void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
         // check error
         if (cublasError != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
-                "Model<BasisFunction>::update: calc system matrices for all harmonics");
+                "Model::update: calc system matrices for all harmonics");
         }
 
     }
@@ -397,13 +397,13 @@ void Model<BasisFunction>::calc_excitation_components(linalgcuMatrix_t* componen
     // check input
     if (component == NULL) {
         throw invalid_argument(
-            "Model<BasisFunction>::calc_excitation_components: component == NULL");
+            "Model::calc_excitation_components: component == NULL");
     }
     if (pattern == NULL) {
-        throw invalid_argument("Model<BasisFunction>::calc_excitation_components: pattern == NULL");
+        throw invalid_argument("Model::calc_excitation_components: pattern == NULL");
     }
     if (handle == NULL) {
-        throw invalid_argument("Model<BasisFunction>::calc_excitation_components: handle == NULL");
+        throw invalid_argument("Model::calc_excitation_components: handle == NULL");
     }
 
     // error
@@ -433,7 +433,7 @@ void Model<BasisFunction>::calc_excitation_components(linalgcuMatrix_t* componen
     // check error
     if (error != LINALGCU_SUCCESS) {
         throw logic_error(
-            "Model<BasisFunction>::calc_excitation_components: calc fourier coefficients");
+            "Model::calc_excitation_components: calc fourier coefficients");
     }
 }
 
