@@ -3,40 +3,53 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_SOLVER_H
-#define FASTEIT_SOLVER_H
+#ifndef FASTEIT_SOLVER_HPP
+#define FASTEIT_SOLVER_HPP
 
-// solver struct
-typedef struct {
-    fasteitForwardSolver_t forwardSolver;
-    fasteitInverseSolver_t inverseSolver;
-    linalgcuMatrix_t dGamma;
-    linalgcuMatrix_t gamma;
-    linalgcuMatrix_t measuredVoltage;
-    linalgcuMatrix_t calibrationVoltage;
-} fasteitSolver_s;
-typedef fasteitSolver_s* fasteitSolver_t;
+// namespace fastEIT
+namespace fastEIT {
+    // solver class definition
+    class Solver {
+    // constructor and destructor
+    public:
+        Solver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPattern,
+            linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
+            linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef,
+            linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
+        virtual ~Solver();
 
-// create solver
-linalgcuError_t fasteit_solver_create(fasteitSolver_t* solverPointer,
-    fasteitMesh_t mesh, fasteitElectrodes_t electrodes, linalgcuMatrix_t measurmentPattern,
-    linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
-    linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef,
-    linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
+    public:
+        // pre solve for accurate initial jacobian
+        linalgcuMatrix_t pre_solve(cublasHandle_t handle, cudaStream_t stream);
 
-// release solver
-linalgcuError_t fasteit_solver_release(fasteitSolver_t* solverPointer);
+        // calibrate
+        linalgcuMatrix_t calibrate(cublasHandle_t handle, cudaStream_t stream);
 
-// pre solve for accurate initial jacobian
-linalgcuError_t fasteit_solver_pre_solve(fasteitSolver_t self, cublasHandle_t handle,
-    cudaStream_t stream);
+        // solving
+        linalgcuMatrix_t solve(cublasHandle_t handle, cudaStream_t stream);
 
-// calibrate
-linalgcuError_t fasteit_solver_calibrate(fasteitSolver_t self, cublasHandle_t handle,
-    cudaStream_t stream);
+    // accessors
+    public:
+        ForwardSolver<LinearBasis, SparseConjugate>* forwardSolver() const {
+            return this->mForwardSolver;
+        }
+        InverseSolver<Conjugate>* inverseSolver() const { return this->mInverseSolver; }
+        linalgcuMatrix_t dGamma() const { return this->mDGamma; }
+        linalgcuMatrix_t gamma() const { return this->mGamma; }
+        linalgcuMatrix_t measuredVoltage() const { return this->mMeasuredVoltage; }
+        linalgcuMatrix_t& measuredVoltage() { return this->mMeasuredVoltage; }
+        linalgcuMatrix_t calibrationVoltage() const { return this->mCalibrationVoltage; }
+        linalgcuMatrix_t& calibrationVoltage() { return this->mCalibrationVoltage; }
 
-// solving
-linalgcuError_t fasteit_solver_solve(fasteitSolver_t self, cublasHandle_t handle,
-    cudaStream_t stream);
+    // member
+    private:
+        ForwardSolver<LinearBasis, SparseConjugate>* mForwardSolver;
+        InverseSolver<Conjugate>* mInverseSolver;
+        linalgcuMatrix_t mDGamma;
+        linalgcuMatrix_t mGamma;
+        linalgcuMatrix_t mMeasuredVoltage;
+        linalgcuMatrix_t mCalibrationVoltage;
+    };
+}
 
 #endif
