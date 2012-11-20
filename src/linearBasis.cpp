@@ -10,7 +10,7 @@ using namespace fastEIT;
 using namespace std;
 
 // create basis class
-Basis::Basis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
+LinearBasis::LinearBasis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
     // check input
     if (x == NULL) {
         throw invalid_argument("x == NULL");
@@ -20,11 +20,11 @@ Basis::Basis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
     }
 
     // create memory
-    this->mPoints = new linalgcuMatrixData_t[Basis::nodesPerElement * 2];
-    this->mCoefficients = new linalgcuMatrixData_t[Basis::nodesPerElement];
+    this->mPoints = new linalgcuMatrixData_t[LinearBasis::nodesPerElement * 2];
+    this->mCoefficients = new linalgcuMatrixData_t[LinearBasis::nodesPerElement];
 
     // init member
-    for (linalgcuSize_t i = 0; i < Basis::nodesPerElement; i++) {
+    for (linalgcuSize_t i = 0; i < LinearBasis::nodesPerElement; i++) {
         this->mPoints[i * 2 + 0] = x[i];
         this->mPoints[i * 2 + 1] = y[i];
         this->mCoefficients[i] = 0.0;
@@ -64,7 +64,7 @@ Basis::Basis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
 }
 
 // delete basis class
-Basis::~Basis() {
+LinearBasis::~LinearBasis() {
     // cleanup arrays
     if (this->mPoints != NULL) {
         delete [] this->mPoints;
@@ -75,14 +75,14 @@ Basis::~Basis() {
 }
 
 // evaluate basis function
-linalgcuMatrixData_t Basis::evaluate(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+linalgcuMatrixData_t LinearBasis::evaluate(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     // calc result
     return this->mCoefficients[0] + this->mCoefficients[1] * x +
         this->mCoefficients[2] * y;
 }
 
 // integrate with basis
-linalgcuMatrixData_t Basis::integrate_with_basis(Basis& other) {
+linalgcuMatrixData_t LinearBasis::integrate_with_basis(LinearBasis& other) {
     // shorten variables
     linalgcuMatrixData_t x1 = this->mPoints[0 * 2 + 0];
     linalgcuMatrixData_t y1 = this->mPoints[0 * 2 + 1];
@@ -119,7 +119,7 @@ linalgcuMatrixData_t Basis::integrate_with_basis(Basis& other) {
 }
 
 // integrate gradient with basis
-linalgcuMatrixData_t Basis::integrate_gradient_with_basis(Basis& other) {
+linalgcuMatrixData_t LinearBasis::integrate_gradient_with_basis(LinearBasis& other) {
     // calc area
     linalgcuMatrixData_t area = 0.5 * fabs((this->mPoints[1 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
         (this->mPoints[2 * 2 + 1] - this->mPoints[0 * 2 + 1]) -
@@ -171,7 +171,7 @@ linalgcuMatrixData_t fasteit_basis_calc_parametrisation(linalgcuMatrixData_t x, 
 }
 
 // integrate edge
-linalgcuMatrixData_t Basis::integrate_boundary_edge(linalgcuMatrixData_t* x,
+linalgcuMatrixData_t LinearBasis::integrate_boundary_edge(linalgcuMatrixData_t* x,
     linalgcuMatrixData_t* y, linalgcuMatrixData_t* start, linalgcuMatrixData_t* end) {
     // check input
     if ((x == NULL) || (y == NULL) || (start == NULL) || (end == NULL)) {
@@ -182,9 +182,9 @@ linalgcuMatrixData_t Basis::integrate_boundary_edge(linalgcuMatrixData_t* x,
     linalgcuMatrixData_t integral = 0.0f;
 
     // calc node parameter
-    linalgcuMatrixData_t* nodeParameter = new linalgcuMatrixData_t[Basis::nodesPerEdge];
+    linalgcuMatrixData_t* nodeParameter = new linalgcuMatrixData_t[LinearBasis::nodesPerEdge];
     nodeParameter[0] = 0.0f;
-    for (linalgcuSize_t i = 0; i < Basis::nodesPerEdge; i++) {
+    for (linalgcuSize_t i = 0; i < LinearBasis::nodesPerEdge; i++) {
         nodeParameter[i] = fasteit_basis_calc_parametrisation(x[i], y[i], nodeParameter[0]);
     }
 
@@ -240,6 +240,6 @@ linalgcuMatrixData_t Basis::integrate_boundary_edge(linalgcuMatrixData_t* x,
 }
 
 // operator
-linalgcuMatrixData_t Basis::operator() (linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+linalgcuMatrixData_t LinearBasis::operator() (linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
     return this->evaluate(x, y);
 }

@@ -10,7 +10,7 @@ using namespace fastEIT;
 using namespace std;
 
 // calc jacobian kernel
-template <class BasisFunction>
+template<class BasisFunction>
 __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuMatrixData_t* drivePhi,
     linalgcuMatrixData_t* measurmentPhi,
@@ -70,9 +70,13 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
 }
 
 // calc jacobian
-template <class BasisFunction>
-linalgcuMatrix_t ForwardSolver<BasisFunction>::calc_jacobian(linalgcuMatrix_t gamma, linalgcuSize_t harmonic, bool additiv,
-    cudaStream_t stream) const {
+template
+<
+    class BasisFunction,
+    class NumericSolver
+>
+linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::calc_jacobian(linalgcuMatrix_t gamma,
+    linalgcuSize_t harmonic, bool additiv, cudaStream_t stream) const {
     // check input
     if (gamma == NULL) {
         throw invalid_argument("ForwardSolver<BasisFunction>::calc_jacobian: gamma == NULL");
@@ -99,4 +103,4 @@ linalgcuMatrix_t ForwardSolver<BasisFunction>::calc_jacobian(linalgcuMatrix_t ga
 }
 
 // specialisation
-template class ForwardSolver<Basis>;
+template class ForwardSolver<LinearBasis, SparseConjugate>;

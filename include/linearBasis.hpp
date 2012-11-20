@@ -9,17 +9,17 @@
 // namespace fastEIT
 namespace fastEIT {
     // basis class definition
-    class Basis {
+    class LinearBasis {
     // constructer and destructor
     public:
-        Basis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y);
-        virtual ~Basis();
+        LinearBasis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y);
+        virtual ~LinearBasis();
 
     // mathematical evaluation of basis
     public:
         linalgcuMatrixData_t evaluate(linalgcuMatrixData_t x, linalgcuMatrixData_t y);
-        linalgcuMatrixData_t integrate_with_basis(Basis& other);
-        linalgcuMatrixData_t integrate_gradient_with_basis(Basis& other);
+        linalgcuMatrixData_t integrate_with_basis(LinearBasis& other);
+        linalgcuMatrixData_t integrate_gradient_with_basis(LinearBasis& other);
         static linalgcuMatrixData_t integrate_boundary_edge(linalgcuMatrixData_t* x,
             linalgcuMatrixData_t* y, linalgcuMatrixData_t* start, linalgcuMatrixData_t* end);
 

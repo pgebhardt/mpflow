@@ -53,6 +53,11 @@ namespace fastEIT {
         linalgcuMatrix_t excitationMatrix() { return this->mExcitationMatrix; }
         linalgcuSize_t numHarmonics() { return this->mNumHarmonics; }
 
+    // geometry definition
+    public:
+        static const linalgcuSize_t nodesPerEdge = BasisFunction::nodesPerElement;
+        static const linalgcuSize_t nodesPerElement = BasisFunction::nodesPerEdge;
+
     // member
     private:
         Mesh* mMesh;

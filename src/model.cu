@@ -110,4 +110,4 @@ void Model<BasisFunction>::update_matrix(linalgcuSparseMatrix_t matrix,
 }
 
 // specialisation
-template class Model<Basis>;
+template class Model<LinearBasis>;

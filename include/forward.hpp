@@ -9,7 +9,11 @@
 // namespace fastEIT
 namespace fastEIT {
     // forward solver class definition
-    template <class BasisFunction>
+    template
+    <
+        class BasisFunction,
+        class NumericSolver
+    >
     class ForwardSolver {
     // constructor and destructor
     public:
@@ -34,7 +38,7 @@ namespace fastEIT {
     // accessors
     public:
         Model<BasisFunction>* model() const { return this->mModel; }
-        SparseConjugate* conjugateSolver() const { return this->mConjugateSolver; }
+        NumericSolver* numericSolver() const { return this->mNumericSolver; }
         linalgcuSize_t driveCount() const { return this->mDriveCount; }
         linalgcuSize_t measurmentCount() const { return this->mMeasurmentCount; }
         linalgcuMatrix_t jacobian() const { return this->mJacobian; }
@@ -54,7 +58,7 @@ namespace fastEIT {
     // member
     private:
         Model<BasisFunction>* mModel;
-        SparseConjugate* mConjugateSolver;
+        SparseConjugate* mNumericSolver;
         linalgcuSize_t mDriveCount;
         linalgcuSize_t mMeasurmentCount;
         linalgcuMatrix_t mJacobian;

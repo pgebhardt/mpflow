@@ -10,27 +10,30 @@ using namespace fastEIT;
 using namespace std;
 
 // create forward_solver
-template <class BasisFunction>
-ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
+template
+<
+    class BasisFunction,
+    class NumericSolver
+>
+ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
     linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
     linalgcuSize_t measurmentCount, linalgcuSize_t driveCount, linalgcuSize_t numHarmonics,
     linalgcuMatrixData_t sigmaRef, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (mesh == NULL) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::ForwardSolver: mesh == NULL");
+        throw invalid_argument("ForwardSolver::ForwardSolver: mesh == NULL");
     }
     if (electrodes == NULL) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::ForwardSolver: electrodes == NULL");
+        throw invalid_argument("ForwardSolver::ForwardSolver: electrodes == NULL");
     }
     if (drivePattern == NULL) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::ForwardSolver: drivePattern == NULL");
+        throw invalid_argument("ForwardSolver::ForwardSolver: drivePattern == NULL");
     }
     if (measurmentPattern == NULL) {
-        throw invalid_argument(
-            "ForwardSolver<BasisFunction>::ForwardSolver: measurmentPattern == NULL");
+        throw invalid_argument("ForwardSolver::ForwardSolver: measurmentPattern == NULL");
     }
     if (handle == NULL) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::ForwardSolver: handle == NULL");
+        throw invalid_argument("ForwardSolver::ForwardSolver: handle == NULL");
     }
 
     // error
@@ -38,7 +41,7 @@ ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
 
     // init member
     this->mModel = NULL;
-    this->mConjugateSolver = NULL;
+    this->mNumericSolver = NULL;
     this->mDriveCount = driveCount;
     this->mMeasurmentCount = measurmentCount;
     this->mJacobian = NULL;
@@ -52,8 +55,8 @@ ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
     this->mModel = new Model<BasisFunction>(mesh, electrodes, sigmaRef, numHarmonics, handle,
         stream);
 
-    // create conjugate solver
-    this->mConjugateSolver = new SparseConjugate(mesh->nodeCount(),
+    // create NumericSolver solver
+    this->mNumericSolver = new NumericSolver(mesh->nodeCount(),
         this->mDriveCount + this->mMeasurmentCount, stream);
 
     // create matrices
@@ -67,7 +70,7 @@ ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("ForwardSolver<BasisFunction>::ForwardSolver: create matrices");
+        throw logic_error("ForwardSolver::ForwardSolver: create matrices");
     }
 
     // create matrix buffer
@@ -84,7 +87,7 @@ ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("ForwardSolver<BasisFunction>::ForwardSolver: create matrix buffer");
+        throw logic_error("ForwardSolver::ForwardSolver: create matrix buffer");
     }
 
     // create pattern matrix
@@ -94,7 +97,7 @@ ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
 
     // check success
     if (error != LINALGCU_SUCCESS) {
-        throw logic_error("ForwardSolver<BasisFunction>::ForwardSolver: create pattern matrix");
+        throw logic_error("ForwardSolver::ForwardSolver: create pattern matrix");
     }
 
     // fill pattern matrix with drive pattern
@@ -146,7 +149,7 @@ ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
         this->model()->excitationMatrix()->deviceData, this->model()->excitationMatrix()->rows,
         &beta, this->mVoltageCalculation->deviceData, this->mVoltageCalculation->rows)
         != CUBLAS_STATUS_SUCCESS) {
-        throw logic_error("ForwardSolver<BasisFunction>::ForwardSolver: calc voltage calculation");
+        throw logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
     }
 
     // init jacobian calculation matrix
@@ -154,8 +157,12 @@ ForwardSolver<BasisFunction>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
 }
 
 // release solver
-template <class BasisFunction>
-ForwardSolver<BasisFunction>::~ForwardSolver() {
+template
+<
+    class BasisFunction,
+    class NumericSolver
+>
+ForwardSolver<BasisFunction, NumericSolver>::~ForwardSolver() {
     // cleanup
     linalgcu_matrix_release(&this->mJacobian);
     linalgcu_matrix_release(&this->mVoltage);
@@ -177,19 +184,22 @@ ForwardSolver<BasisFunction>::~ForwardSolver() {
     if (this->mModel != NULL) {
         delete this->mModel;
     }
-    if (this->mConjugateSolver != NULL) {
-        delete this->mConjugateSolver;
+    if (this->mNumericSolver != NULL) {
+        delete this->mNumericSolver;
     }
 }
 
 // init jacobian calculation matrix
-template <class BasisFunction>
-void ForwardSolver<BasisFunction>::init_jacobian_calculation_matrix(cublasHandle_t handle,
+template
+<
+    class BasisFunction,
+    class NumericSolver
+>
+void ForwardSolver<BasisFunction, NumericSolver>::init_jacobian_calculation_matrix(cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument(
-            "ForwardSolver<BasisFunction>::init_jacobian_calculation_matrix: handle == NULL");
+        throw invalid_argument("ForwardSolver::init_jacobian_calculation_matrix: handle == NULL");
     }
 
     // variables
@@ -238,27 +248,31 @@ void ForwardSolver<BasisFunction>::init_jacobian_calculation_matrix(cublasHandle
 }
 
 // forward solving
-template <class BasisFunction>
-linalgcuMatrix_t ForwardSolver<BasisFunction>::solve(linalgcuMatrix_t gamma, linalgcuSize_t steps,
+template
+<
+    class BasisFunction,
+    class NumericSolver
+>
+linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatrix_t gamma, linalgcuSize_t steps,
     cublasHandle_t handle, cudaStream_t stream) const {
     // check input
     if (gamma == NULL) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::solve: gamma == NULL");
+        throw invalid_argument("ForwardSolver::solve: gamma == NULL");
     }
     if (handle == NULL) {
-        throw invalid_argument("ForwardSolver<BasisFunction>::solve: handle == NULL");
+        throw invalid_argument("ForwardSolver::solve: handle == NULL");
     }
 
     // update system matrix
     this->model()->update(gamma, handle, stream);
 
     // solve for ground mode
-    this->conjugateSolver()->solve(this->model()->systemMatrix(0), this->phi(0), this->excitation(0),
+    this->numericSolver()->solve(this->model()->systemMatrix(0), this->phi(0), this->excitation(0),
         steps, true, stream);
 
     // solve for higher harmonics
     for (linalgcuSize_t n = 1; n < this->model()->numHarmonics() + 1; n++) {
-        this->conjugateSolver()->solve(this->model()->systemMatrix(n), this->phi(n), this->excitation(n),
+        this->numericSolver()->solve(this->model()->systemMatrix(n), this->phi(n), this->excitation(n),
             steps, true, stream);
     }
 
@@ -293,4 +307,4 @@ linalgcuMatrix_t ForwardSolver<BasisFunction>::solve(linalgcuMatrix_t gamma, lin
 }
 
 // specialisation
-template class ForwardSolver<Basis>;
+template class ForwardSolver<LinearBasis, SparseConjugate>;
