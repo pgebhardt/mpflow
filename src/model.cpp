@@ -438,4 +438,4 @@ void Model<BasisFunction>::calc_excitation_components(linalgcuMatrix_t* componen
 }
 
 // specialisation
-template class Model<LinearBasis>;
+template class fastEIT::Model<fastEIT::LinearBasis>;

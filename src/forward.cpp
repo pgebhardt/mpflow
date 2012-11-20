@@ -307,4 +307,4 @@ linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatr
 }
 
 // specialisation
-template class ForwardSolver<LinearBasis, SparseConjugate>;
+template class fastEIT::ForwardSolver<fastEIT::LinearBasis, fastEIT::SparseConjugate>;

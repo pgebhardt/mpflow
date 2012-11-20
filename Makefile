@@ -15,7 +15,7 @@ INSTALL_LIB = /usr/local/lib
 # Copmiler
 CXX = clang++
 NVCC = nvcc
-CFLAGS = -fPIC
+CFLAGS = -std=c++11 -fPIC
 NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -lineinfo
 LDFLAGS = -L/usr/local/lib -llinalgcu -lcudart -lcublas
 

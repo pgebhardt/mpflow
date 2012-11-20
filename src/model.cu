@@ -110,4 +110,4 @@ void Model<BasisFunction>::update_matrix(linalgcuSparseMatrix_t matrix,
 }
 
 // specialisation
-template class Model<LinearBasis>;
+template class fastEIT::Model<fastEIT::LinearBasis>;

@@ -197,4 +197,4 @@ linalgcuMatrix_t InverseSolver<NumericSolver>::solve(linalgcuMatrix_t gamma,
 }
 
 // specialisation
-template class InverseSolver<Conjugate>;
+template class fastEIT::InverseSolver<fastEIT::Conjugate>;

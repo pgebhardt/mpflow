@@ -102,4 +102,4 @@ linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::calc_jacobian(lina
 }
 
 // specialisation
-template class ForwardSolver<LinearBasis, SparseConjugate>;
+template class fastEIT::ForwardSolver<fastEIT::LinearBasis, fastEIT::SparseConjugate>;
