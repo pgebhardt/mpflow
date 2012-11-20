@@ -355,7 +355,7 @@ void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
         x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
 
     for (linalgcuSize_t i = 0; i < this->mesh()->boundaryCount(); i++) {
-        for (linalgcuSize_t l = 0; l < this->mElectrodes->count(); l++) {
+        for (linalgcuSize_t l = 0; l < this->electrodes()->count(); l++) {
             for (linalgcuSize_t k = 0; k < BasisFunction::nodesPerEdge; k++) {
                 // get node id
                 linalgcu_matrix_get_element(this->mesh()->boundary(), &id[k], i, k);
@@ -379,9 +379,9 @@ void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
                 // add new value
                 linalgcu_matrix_set_element(this->mExcitationMatrix,
                     oldValue - BasisFunction::integrate_boundary_edge(
-                        &x[k], &y[k], &this->mElectrodes->electrodesStart()[l * 2],
-                        &this->mElectrodes->electrodesEnd()[l * 2]) /
-                    this->mElectrodes->width(), (linalgcuSize_t)id[k], l);
+                        &x[k], &y[k], &this->electrodes()->electrodesStart()[l * 2],
+                        &this->electrodes()->electrodesEnd()[l * 2]) /
+                    this->electrodes()->width(), (linalgcuSize_t)id[k], l);
             }
         }
     }

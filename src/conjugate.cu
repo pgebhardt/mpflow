@@ -13,10 +13,8 @@ using namespace std;
 __global__ void add_scalar_kernel(linalgcuMatrixData_t* vector,
     linalgcuMatrixData_t* scalar, linalgcuSize_t vector_rows,
     linalgcuSize_t rows, linalgcuSize_t columns) {
-    // get row
+    // get ids
     linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // get column
     linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // add data

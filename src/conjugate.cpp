@@ -32,13 +32,13 @@ Conjugate::Conjugate(linalgcuSize_t rows, cublasHandle_t handle, cudaStream_t st
     this->mTempNumber = NULL;
 
     // create matrices
-    error  = linalgcu_matrix_create(&this->mResiduum, this->mRows, 1, stream);
-    error |= linalgcu_matrix_create(&this->mProjection, this->mRows, 1, stream);
-    error |= linalgcu_matrix_create(&this->mRSOld, this->mRows, 1, stream);
-    error |= linalgcu_matrix_create(&this->mRSNew, this->mRows, 1, stream);
-    error |= linalgcu_matrix_create(&this->mTempVector, this->mRows, this->mResiduum->rows /
+    error  = linalgcu_matrix_create(&this->mResiduum, this->rows(), 1, stream);
+    error |= linalgcu_matrix_create(&this->mProjection, this->rows(), 1, stream);
+    error |= linalgcu_matrix_create(&this->mRSOld, this->rows(), 1, stream);
+    error |= linalgcu_matrix_create(&this->mRSNew, this->rows(), 1, stream);
+    error |= linalgcu_matrix_create(&this->mTempVector, this->rows(), this->mResiduum->rows /
         LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&this->mTempNumber, this->mRows, 1, stream);
+    error |= linalgcu_matrix_create(&this->mTempNumber, this->rows(), 1, stream);
 
     // check success
     if (error != LINALGCU_SUCCESS) {

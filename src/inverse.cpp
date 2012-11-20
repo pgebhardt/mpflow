@@ -67,8 +67,8 @@ template <class NumericSolver>
 linalgcuMatrix_t InverseSolver<NumericSolver>::calc_system_matrix(
     linalgcuMatrix_t jacobian, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (gamma == NULL) {
-        throw invalid_argument("InverseSolver::calc_system_matrix: gamma == NULL");
+    if (jacobian == NULL) {
+        throw invalid_argument("InverseSolver::calc_system_matrix: jacobian == NULL");
     }
     if (handle == NULL) {
         throw invalid_argument("InverseSolver::calc_system_matrix: handle == NULL");
@@ -165,6 +165,9 @@ linalgcuMatrix_t InverseSolver<NumericSolver>::solve(linalgcuMatrix_t gamma,
     linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage,
     linalgcuSize_t steps, bool regularized, cublasHandle_t handle, cudaStream_t stream) {
     // check input
+    if (gamma == NULL) {
+        throw invalid_argument("InverseSolver::solve: gamma == NULL");
+    }
     if (jacobian == NULL) {
         throw invalid_argument("InverseSolver::solve: jacobian == NULL");
     }

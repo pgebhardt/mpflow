@@ -57,7 +57,7 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
 
     // create NumericSolver solver
     this->mNumericSolver = new NumericSolver(mesh->nodeCount(),
-        this->mDriveCount + this->mMeasurmentCount, stream);
+        driveCount + measurmentCount, stream);
 
     // create matrices
     error  = linalgcu_matrix_create(&this->mJacobian,
@@ -141,13 +141,13 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
         this->model()->excitationMatrix()->rows, measurmentPattern->rows, &alpha,
         measurmentPattern->deviceData, measurmentPattern->rows,
         this->model()->excitationMatrix()->deviceData, this->model()->excitationMatrix()->rows,
-        &beta, this->mVoltageCalculation->deviceData, this->mVoltageCalculation->rows);
+        &beta, this->voltageCalculation()->deviceData, this->voltageCalculation()->rows);
 
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns,
         this->model()->excitationMatrix()->rows, measurmentPattern->rows, &alpha,
         measurmentPattern->deviceData, measurmentPattern->rows,
         this->model()->excitationMatrix()->deviceData, this->model()->excitationMatrix()->rows,
-        &beta, this->mVoltageCalculation->deviceData, this->mVoltageCalculation->rows)
+        &beta, this->voltageCalculation()->deviceData, this->voltageCalculation()->rows)
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
     }
@@ -273,7 +273,7 @@ linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatr
     // solve for higher harmonics
     for (linalgcuSize_t n = 1; n < this->model()->numHarmonics() + 1; n++) {
         this->numericSolver()->solve(this->model()->systemMatrix(n), this->phi(n), this->excitation(n),
-            steps, true, stream);
+            steps, false, stream);
     }
 
     // calc jacobian

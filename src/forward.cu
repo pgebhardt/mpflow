@@ -36,8 +36,7 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     linalgcuSize_t driveId = row / roundMeasurmentCount;
 
     // variables
-    linalgcuMatrixData_t dPhi[BasisFunction::nodesPerElement];
-    linalgcuMatrixData_t mPhi[BasisFunction::nodesPerElement];
+    linalgcuMatrixData_t dPhi[BasisFunction::nodesPerElement], mPhi[BasisFunction::nodesPerElement];
     linalgcuMatrixData_t id;
 
     // get data

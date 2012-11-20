@@ -236,7 +236,6 @@ linalgcuMatrixData_t LinearBasis::integrate_boundary_edge(linalgcuMatrixData_t* 
     delete [] nodeParameter;
 
     return integral;
-
 }
 
 // operator
