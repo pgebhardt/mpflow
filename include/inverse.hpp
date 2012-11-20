@@ -38,6 +38,7 @@ namespace fastEIT {
         linalgcuMatrix_t systemMatrix() const { return this->mSystemMatrix; }
         linalgcuMatrix_t jacobianSquare() const { return this->mJacobianSquare; }
         linalgcuMatrixData_t regularizationFactor() const { return this->mRegularizationFactor; }
+        linalgcuMatrixData_t& regularizationFactor() { return this->mRegularizationFactor; }
 
     // member
     private:

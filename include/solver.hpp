@@ -37,9 +37,7 @@ namespace fastEIT {
         linalgcuMatrix_t dGamma() const { return this->mDGamma; }
         linalgcuMatrix_t gamma() const { return this->mGamma; }
         linalgcuMatrix_t measuredVoltage() const { return this->mMeasuredVoltage; }
-        linalgcuMatrix_t& measuredVoltage() { return this->mMeasuredVoltage; }
         linalgcuMatrix_t calibrationVoltage() const { return this->mCalibrationVoltage; }
-        linalgcuMatrix_t& calibrationVoltage() { return this->mCalibrationVoltage; }
 
     // member
     private:
