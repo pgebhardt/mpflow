@@ -14,11 +14,11 @@
 #include <linalgcu/linalgcu.h>
 
 #include "mesh.hpp"
-#include "basis.hpp"
 #include "electrodes.hpp"
+#include "linearBasis.hpp"
 #include "model.hpp"
 #include "conjugate.hpp"
-#include "sparse_conjugate.hpp"
+#include "sparseConjugate.hpp"
 #include "forward.hpp"
 //#include "inverse.hpp"
 //#include "solver.hpp"
