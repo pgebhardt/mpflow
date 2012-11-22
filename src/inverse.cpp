@@ -65,7 +65,7 @@ Matrix<dtype::real>& InverseSolver<NumericSolver>::calcSystemMatrix(
     }
 
     // copy jacobianSquare to systemMatrix
-    this->systemMatrix().copy(&this->jacobianSquare());
+    this->systemMatrix().copy(this->jacobianSquare());
 
     // add lambda * Jt * J * Jt * J to systemMatrix
     beta = this->regularizationFactor();
@@ -135,14 +135,14 @@ Matrix<dtype::real>& InverseSolver<NumericSolver>::solve(Matrix<dtype::real>& ga
     }
 
     // reset gamma
-    gamma.copy(this->mZeros);
+    gamma.copy(*this->mZeros);
 
     // calc excitation
     this->calcExcitation(jacobian, calculatedVoltage, measuredVoltage, handle, stream);
 
     // solve system
-    this->mNumericSolver->solve(regularized ? &this->systemMatrix() : &this->jacobianSquare(),
-        &gamma, this->mExcitation, steps, handle, stream);
+    this->mNumericSolver->solve(regularized ? this->systemMatrix() : this->jacobianSquare(),
+        gamma, *this->mExcitation, steps, handle, stream);
 
     return gamma;
 }

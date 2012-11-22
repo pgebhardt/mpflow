@@ -10,14 +10,9 @@ using namespace fastEIT;
 using namespace std;
 
 // create new sparse matrix
-SparseMatrix::SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream) {
-    // check input
-    if (matrix == NULL) {
-        throw invalid_argument("SparseMatrix::SparseMatrix: matrix == NULL");
-    }
-
+SparseMatrix::SparseMatrix(Matrix<dtype::real>& matrix, cudaStream_t stream) {
     // create empty sparse matrix
-    this->init(matrix->rows(), matrix->columns(), stream);
+    this->init(matrix.rows(), matrix.columns(), stream);
 
     // convert to sparse_matrix
     this->convert(matrix, stream);
@@ -111,12 +106,7 @@ __global__ void sparseCreateKernel(dtype::real* values,
 }
 
 // convert to sparse matrix
-void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
-    // check input
-    if (matrix == NULL) {
-        throw invalid_argument("SparseMatrix::convert: matrix == NULL");
-    }
-
+void SparseMatrix::convert(Matrix<dtype::real>& matrix, cudaStream_t stream) {
     // create elementCount matrix
     Matrix<dtype::index> elementCount(this->rows(), 1, stream);
     Matrix<dtype::index> maxCount(this->rows(), 1, stream);
@@ -124,11 +114,11 @@ void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     // execute kernel
     sparseCreateKernel<<<this->rows() / SparseMatrix::blockSize,
         SparseMatrix::blockSize, 0, stream>>>(
-        this->values(), this->columnIds(), matrix->deviceData(),
-        elementCount.deviceData(), matrix->rows(), matrix->columns());
+        this->values(), this->columnIds(), matrix.deviceData(),
+        elementCount.deviceData(), matrix.rows(), matrix.columns());
 
     // get max count
-    maxCount.max(&elementCount, maxCount.rows(), stream);
+    maxCount.max(elementCount, maxCount.rows(), stream);
     maxCount.copyToHost(stream);
     cudaStreamSynchronize(stream);
 
@@ -177,28 +167,20 @@ __global__ void sparseMultiplyKernel(dtype::real* result,
 }
 
 // sparse matrix multiply
-void SparseMatrix::multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
+void SparseMatrix::multiply(Matrix<dtype::real>& result, Matrix<dtype::real>& matrix,
     cudaStream_t stream) {
-    // check input
-    if (result == NULL) {
-        throw invalid_argument("SparseMatrix::multiply: result == NULL");
-    }
-    if (matrix == NULL) {
-        throw invalid_argument("SparseMatrix::multiply: matrix == NULL");
-    }
-
     // check size
-    if ((result->rows() != this->rows()) || (this->columns() != matrix->rows()) ||
-        (result->columns() != matrix->columns())) {
+    if ((result.rows() != this->rows()) || (this->columns() != matrix.rows()) ||
+        (result.columns() != matrix.columns())) {
         throw invalid_argument("SparseMatrix::multiply: size");
     }
 
     // kernel dimension
-    dim3 global((result->rows() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize,
-        (result->columns() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize);
+    dim3 global((result.rows() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize,
+        (result.columns() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize);
     dim3 local(SparseMatrix::blockSize, SparseMatrix::blockSize);
 
     // execute kernel
-    sparseMultiplyKernel<<<global, local, 0, stream>>>(result->deviceData(), this->values(),
-        this->columnIds(), matrix->deviceData(), result->rows(), result->columns(), this->density());
+    sparseMultiplyKernel<<<global, local, 0, stream>>>(result.deviceData(), this->values(),
+        this->columnIds(), matrix.deviceData(), result.rows(), result.columns(), this->density());
 }

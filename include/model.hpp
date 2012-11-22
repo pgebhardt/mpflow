@@ -11,7 +11,7 @@ template <class BasisFunction>
 class Model {
 // constructor and destructor
 public:
-    Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigmaRef,
+    Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigmaRef,
         dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream=NULL);
     virtual ~Model();
 
@@ -23,22 +23,22 @@ private:
 
 public:
     // calc excitaion components
-    void calcExcitationComponents(Matrix<dtype::real>** component, Matrix<dtype::real>* pattern,
+    void calcExcitationComponents(Matrix<dtype::real>*& component, Matrix<dtype::real>& pattern,
         cublasHandle_t handle, cudaStream_t stream=NULL);
 
     // update model
-    void update(Matrix<dtype::real>* gamma, cublasHandle_t handle, cudaStream_t stream=NULL);
+    void update(Matrix<dtype::real>& gamma, cublasHandle_t handle, cudaStream_t stream=NULL);
 
 // cuda methods
 private:
     // update matrix
-    void updateMatrix(SparseMatrix* matrix, Matrix<dtype::real>* elements,
-        Matrix<dtype::real>* gamma, cudaStream_t stream=NULL);
+    void updateMatrix(SparseMatrix& matrix, Matrix<dtype::real>& elements,
+        Matrix<dtype::real>& gamma, cudaStream_t stream=NULL);
 
     // reduce matrix
-    void reduceMatrix(Matrix<dtype::real>* matrix, Matrix<dtype::real>* intermediateMatrix,
+    void reduceMatrix(Matrix<dtype::real>& matrix, Matrix<dtype::real>& intermediateMatrix,
         dtype::size density, cudaStream_t stream=NULL);
-    void reduceMatrix(Matrix<dtype::index>* matrix, Matrix<dtype::index>* intermediateMatrix,
+    void reduceMatrix(Matrix<dtype::index>& matrix, Matrix<dtype::index>& intermediateMatrix,
         dtype::size density, cudaStream_t stream=NULL);
 
 // access methods

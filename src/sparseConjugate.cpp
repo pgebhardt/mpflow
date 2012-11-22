@@ -42,29 +42,18 @@ SparseConjugate::~SparseConjugate() {
 }
 
 // solve conjugate sparse
-void SparseConjugate::solve(SparseMatrix* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
+void SparseConjugate::solve(SparseMatrix& A, Matrix<dtype::real>& x, Matrix<dtype::real>& f,
     dtype::size iterations, bool dcFree, cudaStream_t stream) {
-    // check input
-    if (A == NULL) {
-        throw invalid_argument("SparseConjugate::solve: A == NULL");
-    }
-    if (x == NULL) {
-        throw invalid_argument("SparseConjugate::solve: x == NULL");
-    }
-    if (f == NULL) {
-        throw invalid_argument("SparseConjugate::solve: f == NULL");
-    }
-
     // temp for pointer swap
     Matrix<dtype::real>* temp = NULL;
 
     // calc mResiduum r = f - A * x
-    A->multiply(this->mResiduum, x, stream);
+    A.multiply(*this->mResiduum, x, stream);
 
     // regularize for dc free solution
     if (dcFree == true) {
         this->mTempNumber->sum(x, stream);
-        Conjugate::addScalar(this->mResiduum, this->mTempNumber, this->rows(),
+        Conjugate::addScalar(*this->mResiduum, *this->mTempNumber, this->rows(),
             this->columns(), stream);
     }
 
@@ -72,40 +61,40 @@ void SparseConjugate::solve(SparseMatrix* A, Matrix<dtype::real>* x, Matrix<dtyp
     this->mResiduum->add(f, stream);
 
     // p = r
-    this->mProjection->add(this->mResiduum, stream);
+    this->mProjection->add(*this->mResiduum, stream);
 
     // calc mRSOld
-    this->mRSOld->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
+    this->mRSOld->vectorDotProduct(*this->mResiduum, *this->mResiduum, stream);
 
     // iterate
     for (dtype::size i = 0; i < iterations; i++) {
         // calc A * p
-        A->multiply(this->mTempVector, this->mProjection, stream);
+        A.multiply(*this->mTempVector, *this->mProjection, stream);
 
         // regularize for dc free solution
         if (dcFree == true) {
-            this->mTempNumber->sum(this->mProjection, stream);
-            Conjugate::addScalar(this->mTempVector, this->mTempNumber, this->rows(),
+            this->mTempNumber->sum(*this->mProjection, stream);
+            Conjugate::addScalar(*this->mTempVector, *this->mTempNumber, this->rows(),
                 this->columns(), stream);
         }
 
         // calc p * A * p
-        this->mTempNumber->vectorDotProduct(this->mProjection, this->mTempVector, stream);
+        this->mTempNumber->vectorDotProduct(*this->mProjection, *this->mTempVector, stream);
 
         // update mResiduum
-        Conjugate::updateVector(this->mResiduum, this->mResiduum,
-            -1.0f, this->mTempVector, this->mRSOld, this->mTempNumber, stream);
+        Conjugate::updateVector(*this->mResiduum, *this->mResiduum,
+            -1.0f, *this->mTempVector, *this->mRSOld, *this->mTempNumber, stream);
 
         // update x
-        Conjugate::updateVector(x, x, 1.0f, this->mProjection,
-            this->mRSOld, this->mTempNumber, stream);
+        Conjugate::updateVector(x, x, 1.0f, *this->mProjection,
+            *this->mRSOld, *this->mTempNumber, stream);
 
         // calc mRSNew
-        this->mRSNew->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
+        this->mRSNew->vectorDotProduct(*this->mResiduum, *this->mResiduum, stream);
 
         // update mProjection
-        Conjugate::updateVector(this->mProjection, this->mResiduum,
-            1.0f, this->mProjection, this->mRSNew, this->mRSOld, stream);
+        Conjugate::updateVector(*this->mProjection, *this->mResiduum,
+            1.0f, *this->mProjection, *this->mRSNew, *this->mRSOld, stream);
 
         // swap mRSOld and mRSNew
         temp = this->mRSOld;

@@ -11,18 +11,12 @@ using namespace std;
 
 // create solver model
 template <class BasisFunction>
-Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigmaRef,
+Model<BasisFunction>::Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigmaRef,
     dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
-    : mMesh(mesh), mElectrodes(electrodes), mSigmaRef(sigmaRef), mSystemMatrix(NULL),
+    : mMesh(&mesh), mElectrodes(&electrodes), mSigmaRef(sigmaRef), mSystemMatrix(NULL),
         mSMatrix(NULL), mRMatrix(NULL), mExcitationMatrix(NULL), mConnectivityMatrix(NULL),
         mElementalSMatrix(NULL), mElementalRMatrix(NULL), mNumHarmonics(numHarmonics) {
     // check input
-    if (mesh == NULL) {
-        throw invalid_argument("Model::Model: mesh == NULL");
-    }
-    if (electrodes == NULL) {
-        throw invalid_argument("Model::Model: electrodes == NULL");
-    }
     if (handle == NULL) {
         throw invalid_argument("Model::Model: handle == NULL");
     }
@@ -103,11 +97,11 @@ void Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStrea
     systemMatrix.copyToDevice(stream);
 
     // create sparse matrices
-    this->mSMatrix = new SparseMatrix(&systemMatrix, stream);
-    this->mRMatrix = new SparseMatrix(&systemMatrix, stream);
+    this->mSMatrix = new SparseMatrix(systemMatrix, stream);
+    this->mRMatrix = new SparseMatrix(systemMatrix, stream);
 
     for (dtype::size i = 0; i < this->numHarmonics() + 1; i++) {
-        this->mSystemMatrix[i] = new SparseMatrix(&systemMatrix, stream);
+        this->mSystemMatrix[i] = new SparseMatrix(systemMatrix, stream);
     }
 }
 
@@ -198,40 +192,37 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     elementalRMatrix.copyToDevice(stream);
 
     // reduce matrices
-    this->reduceMatrix(this->mConnectivityMatrix, &connectivityMatrix,
+    this->reduceMatrix(*this->mConnectivityMatrix, connectivityMatrix,
         this->mSMatrix->density(), stream);
-    this->reduceMatrix(this->mElementalSMatrix, &elementalSMatrix,
+    this->reduceMatrix(*this->mElementalSMatrix, elementalSMatrix,
         this->mSMatrix->density(), stream);
-    this->reduceMatrix(this->mElementalRMatrix, &elementalRMatrix,
+    this->reduceMatrix(*this->mElementalRMatrix, elementalRMatrix,
         this->mSMatrix->density(), stream);
 
     // create gamma
     Matrix<dtype::real> gamma(this->mesh().elementCount(), 1, stream);
 
     // update matrices
-    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix,
-        &gamma, stream);
-    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix,
-        &gamma, stream);
+    this->updateMatrix(*this->mSMatrix, *this->mElementalSMatrix,
+        gamma, stream);
+    this->updateMatrix(*this->mRMatrix, *this->mElementalRMatrix,
+        gamma, stream);
 }
 
 // update model
 template <class BasisFunction>
-void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t handle,
+void Model<BasisFunction>::update(Matrix<dtype::real>& gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
-    if (gamma == NULL) {
-        throw invalid_argument("Model::update: gamma == NULL");
-    }
     if (handle == NULL) {
         throw invalid_argument("Model::init: handle == NULL");
     }
 
     // update 2d systemMatrix
-    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix, gamma, stream);
+    this->updateMatrix(*this->mSMatrix, *this->mElementalSMatrix, gamma, stream);
 
     // update residual matrix
-    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix, gamma, stream);
+    this->updateMatrix(*this->mRMatrix, *this->mElementalRMatrix, gamma, stream);
 
     // set cublas stream
     cublasSetStream(handle, stream);
@@ -300,15 +291,9 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 
 // calc excitaion components
 template <class BasisFunction>
-void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>** component,
-    Matrix<dtype::real>* pattern, cublasHandle_t handle, cudaStream_t stream) {
+void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>*& component,
+    Matrix<dtype::real>& pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (component == NULL) {
-        throw invalid_argument("Model::calcExcitationComponents: component == NULL");
-    }
-    if (pattern == NULL) {
-        throw invalid_argument("Model::calcExcitationComponents: pattern == NULL");
-    }
     if (handle == NULL) {
         throw invalid_argument("Model::calcExcitationComponents: handle == NULL");
     }
@@ -317,20 +302,20 @@ void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>** compon
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // Run multiply once more to avoid cublas error
         try {
-            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
+            component[n].multiply(*this->mExcitationMatrix, pattern, handle, stream);
         }
         catch (exception& e) {
-            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
+            component[n].multiply(*this->mExcitationMatrix, pattern, handle, stream);
         }
     }
 
     // calc fourier coefficients for current pattern
     // calc ground mode
-    component[0]->scalarMultiply(1.0f / this->mesh().height(), stream);
+    component[0].scalarMultiply(1.0f / this->mesh().height(), stream);
 
     // calc harmonics
     for (dtype::size n = 1; n < this->numHarmonics() + 1; n++) {
-        component[n]->scalarMultiply(
+        component[n].scalarMultiply(
             2.0f * sin(n * M_PI * this->electrodes().height() / this->mesh().height()) /
             (n * M_PI * this->electrodes().height()), stream);
     }

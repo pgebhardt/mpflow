@@ -14,7 +14,7 @@ public:
         this->init(rows, columns, stream);
     }
 
-    SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
+    SparseMatrix(Matrix<dtype::real>& matrix, cudaStream_t stream=NULL);
     virtual ~SparseMatrix();
 
 private:
@@ -22,11 +22,11 @@ private:
     void init(dtype::size rows, dtype::size columns, cudaStream_t stream=NULL);
 
     // convert to sparse matrix
-    void convert(Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
+    void convert(Matrix<dtype::real>& matrix, cudaStream_t stream=NULL);
 
 public:
     // matrix multiply
-    void multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
+    void multiply(Matrix<dtype::real>& result, Matrix<dtype::real>& matrix, cudaStream_t stream=NULL);
 
 public:
     // block size

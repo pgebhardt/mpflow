@@ -15,8 +15,8 @@ template
 class ForwardSolver {
 // constructor and destructor
 public:
-    ForwardSolver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurmentPattern,
-        Matrix<dtype::real>* drivePattern, dtype::size measurmentCount, dtype::size driveCount,
+    ForwardSolver(Mesh& mesh, Electrodes& electrodes, Matrix<dtype::real>& measurmentPattern,
+        Matrix<dtype::real>& drivePattern, dtype::size measurmentCount, dtype::size driveCount,
         dtype::size numHarmonics, dtype::real sigmaRef, cublasHandle_t handle,
         cudaStream_t stream=NULL);
     virtual ~ForwardSolver();
@@ -26,11 +26,11 @@ public:
     void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream=NULL);
 
     // calc jacobian
-    Matrix<dtype::real>& calcJacobian(Matrix<dtype::real>* gamma, dtype::size harmonic, bool additiv,
+    Matrix<dtype::real>& calcJacobian(Matrix<dtype::real>& gamma, dtype::size harmonic, bool additiv,
         cudaStream_t stream=NULL) const;
 
     // forward solving
-    Matrix<dtype::real>& solve(Matrix<dtype::real>* gamma, dtype::size steps, cublasHandle_t handle,
+    Matrix<dtype::real>& solve(Matrix<dtype::real>& gamma, dtype::size steps, cublasHandle_t handle,
         cudaStream_t stream=NULL) const;
 
 // accessors

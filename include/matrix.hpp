@@ -16,7 +16,7 @@ public:
 
 public:
     // copy methods
-    void copy(Matrix<type>* other, cudaStream_t stream=NULL);
+    void copy(Matrix<type>& other, cudaStream_t stream=NULL);
     void copyToDevice(cudaStream_t stream=NULL);
     void copyToHost(cudaStream_t stream=NULL);
 
@@ -26,16 +26,16 @@ public:
 
 // mathematical methods
 public:
-    void add(Matrix<type>* value, cudaStream_t stream=NULL);
-    void multiply(Matrix<type>* A, Matrix<type>* B, cublasHandle_t handle, cudaStream_t stream=NULL);
+    void add(Matrix<type>& value, cudaStream_t stream=NULL);
+    void multiply(Matrix<type>& A, Matrix<type>& B, cublasHandle_t handle, cudaStream_t stream=NULL);
     void scalarMultiply(type scalar, cudaStream_t stream=NULL);
-    void vectorDotProduct(Matrix<type>* A, Matrix<type>* B, cudaStream_t stream=NULL);
+    void vectorDotProduct(Matrix<type>& A, Matrix<type>& B, cudaStream_t stream=NULL);
 
 // reduce methods
 public:
-    void sum(Matrix<type>* value, cudaStream_t stream=NULL);
-    void min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream=NULL);
-    void max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream=NULL);
+    void sum(Matrix<type>& value, cudaStream_t stream=NULL);
+    void min(Matrix<type>& value, dtype::size maxIndex, cudaStream_t stream=NULL);
+    void max(Matrix<type>& value, dtype::size maxIndex, cudaStream_t stream=NULL);
 
 // accessors
 public:

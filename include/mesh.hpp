@@ -10,8 +10,8 @@
 class Mesh {
 // constructor and destructor
 public:
-    Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
-        Matrix<dtype::index>* boundary, dtype::size nodeCount,
+    Mesh(Matrix<dtype::real>& nodes, Matrix<dtype::index>& elements,
+        Matrix<dtype::index>& boundary, dtype::size nodeCount,
         dtype::size elementCount, dtype::size boundaryCount, dtype::real radius,
         dtype::real height);
     virtual ~Mesh();

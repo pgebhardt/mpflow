@@ -43,18 +43,9 @@ Conjugate::~Conjugate() {
 }
 
 // solve conjugate
-void Conjugate::solve(Matrix<dtype::real>* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
+void Conjugate::solve(Matrix<dtype::real>& A, Matrix<dtype::real>& x, Matrix<dtype::real>& f,
     dtype::size iterations, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (A == NULL) {
-        throw invalid_argument("Conjugate::solve: x == NULL");
-    }
-    if (x == NULL) {
-        throw invalid_argument("Conjugate::solve: x == NULL");
-    }
-    if (f == NULL) {
-        throw invalid_argument("Conjugate::solve: f == NULL");
-    }
     if (handle == NULL) {
         throw invalid_argument("Conjugate::solve: handle == NULL");
     }
@@ -68,33 +59,33 @@ void Conjugate::solve(Matrix<dtype::real>* A, Matrix<dtype::real>* x, Matrix<dty
     this->mResiduum->add(f, stream);
 
     // p = r
-    this->mProjection->copy(this->mResiduum, stream);
+    this->mProjection->copy(*this->mResiduum, stream);
 
     // calc rsold
-    this->mRSOld->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
+    this->mRSOld->vectorDotProduct(*this->mResiduum, *this->mResiduum, stream);
 
     // iterate
     for (dtype::size i = 0; i < iterations; i++) {
         // calc A * p
-        Conjugate::gemv(this->mTempVector, A, this->mProjection, stream);
+        Conjugate::gemv(*this->mTempVector, A, *this->mProjection, stream);
 
         // calc p * A * p
-        this->mTempNumber->vectorDotProduct(this->mProjection, this->mTempVector, stream);
+        this->mTempNumber->vectorDotProduct(*this->mProjection, *this->mTempVector, stream);
 
         // update residuum
-        Conjugate::updateVector(this->mResiduum, this->mResiduum, -1.0f,
-            this->mTempVector, this->mRSOld, this->mTempNumber, stream);
+        Conjugate::updateVector(*this->mResiduum, *this->mResiduum, -1.0f,
+            *this->mTempVector, *this->mRSOld, *this->mTempNumber, stream);
 
         // update x
-        Conjugate::updateVector(x, x, 1.0f, this->mProjection, this->mRSOld,
-            this->mTempNumber, stream);
+        Conjugate::updateVector(x, x, 1.0f, *this->mProjection, *this->mRSOld,
+            *this->mTempNumber, stream);
 
         // calc rsnew
-        this->mRSNew->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
+        this->mRSNew->vectorDotProduct(*this->mResiduum, *this->mResiduum, stream);
 
         // update projection
-        Conjugate::updateVector(this->mProjection, this->mResiduum, 1.0f,
-            this->mProjection, this->mRSNew, this->mRSOld, stream);
+        Conjugate::updateVector(*this->mProjection, *this->mResiduum, 1.0f,
+            *this->mProjection, *this->mRSNew, *this->mRSOld, stream);
 
         // swap rsold and rsnew
         temp = this->mRSOld;

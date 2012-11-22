@@ -30,8 +30,8 @@ Solver::Solver(Mesh& mesh, Electrodes& electrodes, Matrix<dtype::real>& measurme
         stream);
 
     // create solver
-    this->mForwardSolver = new ForwardSolver<LinearBasis, SparseConjugate>(&mesh, &electrodes,
-        &measurmentPattern, &drivePattern, measurmentCount, driveCount, numHarmonics, sigmaRef,
+    this->mForwardSolver = new ForwardSolver<LinearBasis, SparseConjugate>(mesh, electrodes,
+        measurmentPattern, drivePattern, measurmentCount, driveCount, numHarmonics, sigmaRef,
         handle, stream);
 
     this->mInverseSolver = new InverseSolver<Conjugate>(mesh.elementCount(),
@@ -57,14 +57,14 @@ Matrix<dtype::real>& Solver::preSolve(cublasHandle_t handle, cudaStream_t stream
     }
 
     // forward solving a few steps
-    this->forwardSolver().solve(&this->gamma(), 1000, handle, stream);
+    this->forwardSolver().solve(this->gamma(), 1000, handle, stream);
 
     // calc system matrix
     this->inverseSolver().calcSystemMatrix(this->forwardSolver().jacobian(), handle, stream);
 
     // set measuredVoltage and calibrationVoltage to calculatedVoltage
-    this->measuredVoltage().copy(&this->forwardSolver().voltage(), stream);
-    this->calibrationVoltage().copy(&this->forwardSolver().voltage(), stream);
+    this->measuredVoltage().copy(this->forwardSolver().voltage(), stream);
+    this->calibrationVoltage().copy(this->forwardSolver().voltage(), stream);
 
     return this->forwardSolver().voltage();
 }
@@ -77,7 +77,7 @@ Matrix<dtype::real>& Solver::calibrate(cublasHandle_t handle, cudaStream_t strea
     }
 
     // solve forward
-    this->forwardSolver().solve(&this->gamma(), 20, handle, stream);
+    this->forwardSolver().solve(this->gamma(), 20, handle, stream);
 
     // calc inverse system matrix
     this->inverseSolver().calcSystemMatrix(this->forwardSolver().jacobian(), handle, stream);
@@ -87,7 +87,7 @@ Matrix<dtype::real>& Solver::calibrate(cublasHandle_t handle, cudaStream_t strea
         this->forwardSolver().voltage(), this->calibrationVoltage(), 90, true, handle, stream);
 
     // add to gamma
-    this->gamma().add(&this->dGamma(), stream);
+    this->gamma().add(this->dGamma(), stream);
 
     return this->gamma();
 }
