@@ -15,18 +15,18 @@ public:
 
 public:
     // solve system
-    void solve(Matrix<dtype::real>& A, Matrix<dtype::real>& x, Matrix<dtype::real>& f,
+    void solve(Matrix<dtype::real>* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
         dtype::size iterations, cublasHandle_t handle, cudaStream_t stream);
 
 // helper methods
 public:
-    static void addScalar(Matrix<dtype::real>& vector, Matrix<dtype::real>& scalar,
+    static void addScalar(Matrix<dtype::real>* vector, Matrix<dtype::real>* scalar,
         dtype::size rows, dtype::size columns, cudaStream_t stream);
-    static void updateVector(Matrix<dtype::real>& result, Matrix<dtype::real>& x1,
-        dtype::real sign, Matrix<dtype::real>& x2, Matrix<dtype::real>& r1,
-        Matrix<dtype::real>& r2, cudaStream_t stream);
-    static void gemv(Matrix<dtype::real>& result, Matrix<dtype::real>& matrix,
-        Matrix<dtype::real>& vector, cudaStream_t);
+    static void updateVector(Matrix<dtype::real>* result, Matrix<dtype::real>* x1,
+        dtype::real sign, Matrix<dtype::real>* x2, Matrix<dtype::real>* r1,
+        Matrix<dtype::real>* r2, cudaStream_t stream);
+    static void gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
+        Matrix<dtype::real>* vector, cudaStream_t);
 
 // accessors
 public:

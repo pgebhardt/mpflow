@@ -15,7 +15,7 @@ public:
 
 public:
     // solve system
-    void solve(SparseMatrix& A, Matrix<dtype::real>& x, Matrix<dtype::real>& f,
+    void solve(SparseMatrix* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
         dtype::size iterations, bool dcFree, cudaStream_t stream);
 
 // accessors

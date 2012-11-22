@@ -11,12 +11,18 @@ using namespace std;
 
 // create solver model
 template <class BasisFunction>
-Model<BasisFunction>::Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigmaRef,
+Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigmaRef,
     dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
-    : mMesh(&mesh), mElectrodes(&electrodes), mSigmaRef(sigmaRef), mSystemMatrix(NULL),
+    : mMesh(mesh), mElectrodes(electrodes), mSigmaRef(sigmaRef), mSystemMatrix(NULL),
         mSMatrix(NULL), mRMatrix(NULL), mExcitationMatrix(NULL), mConnectivityMatrix(NULL),
         mElementalSMatrix(NULL), mElementalRMatrix(NULL), mNumHarmonics(numHarmonics) {
     // check input
+    if (mesh == NULL) {
+        throw invalid_argument("Model::Model: mesh == NULL");
+    }
+    if (electrodes == NULL) {
+        throw invalid_argument("Model::Model: electrodes == NULL");
+    }
     if (handle == NULL) {
         throw invalid_argument("Model::Model: handle == NULL");
     }
@@ -28,12 +34,12 @@ Model<BasisFunction>::Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigm
     this->createSparseMatrices(handle, stream);
 
     // create matrices
-    this->mExcitationMatrix = new Matrix<dtype::real>(this->mesh().nodeCount(), this->electrodes().count(), stream);
-    this->mConnectivityMatrix = new Matrix<dtype::index>(this->mesh().nodeCount(),
+    this->mExcitationMatrix = new Matrix<dtype::real>(this->mesh()->nodeCount(), this->electrodes()->count(), stream);
+    this->mConnectivityMatrix = new Matrix<dtype::index>(this->mesh()->nodeCount(),
         SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
-    this->mElementalSMatrix = new Matrix<dtype::real>(this->mesh().nodeCount(),
+    this->mElementalSMatrix = new Matrix<dtype::real>(this->mesh()->nodeCount(),
         SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
-    this->mElementalRMatrix = new Matrix<dtype::real>(this->mesh().nodeCount(),
+    this->mElementalRMatrix = new Matrix<dtype::real>(this->mesh()->nodeCount(),
         SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
 
     // init model
@@ -75,14 +81,14 @@ void Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStrea
 
     // calc initial system matrix
     // create matrices
-    Matrix<dtype::real> systemMatrix(this->mesh().nodeCount(), this->mesh().nodeCount(), stream);
+    Matrix<dtype::real> systemMatrix(this->mesh()->nodeCount(), this->mesh()->nodeCount(), stream);
 
     // calc generate empty system matrix
     dtype::index id[BasisFunction::nodesPerElement];
-    for (dtype::size k = 0; k < this->mesh().elementCount(); k++) {
+    for (dtype::size k = 0; k < this->mesh()->elementCount(); k++) {
         // get nodes for element
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
-            id[i] = this->mesh().elements()(k, i);
+            id[i] = (*this->mesh()->elements())(k, i);
         }
 
         // set system matrix elements
@@ -97,11 +103,11 @@ void Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStrea
     systemMatrix.copyToDevice(stream);
 
     // create sparse matrices
-    this->mSMatrix = new SparseMatrix(systemMatrix, stream);
-    this->mRMatrix = new SparseMatrix(systemMatrix, stream);
+    this->mSMatrix = new SparseMatrix(&systemMatrix, stream);
+    this->mRMatrix = new SparseMatrix(&systemMatrix, stream);
 
     for (dtype::size i = 0; i < this->numHarmonics() + 1; i++) {
-        this->mSystemMatrix[i] = new SparseMatrix(systemMatrix, stream);
+        this->mSystemMatrix[i] = new SparseMatrix(&systemMatrix, stream);
     }
 }
 
@@ -114,7 +120,7 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     }
 
     // create intermediate matrices
-    Matrix<dtype::index> elementCount(this->mesh().nodeCount(), this->mesh().nodeCount(), stream);
+    Matrix<dtype::index> elementCount(this->mesh()->nodeCount(), this->mesh()->nodeCount(), stream);
     Matrix<dtype::index> connectivityMatrix(this->mConnectivityMatrix->rows(),
         elementCount.columns() * Matrix<dtype::index>::blockSize, stream);
     Matrix<dtype::real> elementalSMatrix(this->mElementalSMatrix->rows(),
@@ -141,12 +147,12 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     BasisFunction* basis[BasisFunction::nodesPerElement];
     dtype::real temp;
 
-    for (dtype::size k = 0; k < this->mesh().elementCount(); k++) {
+    for (dtype::size k = 0; k < this->mesh()->elementCount(); k++) {
         // get nodes for element
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
-            id[i] = this->mesh().elements()(k, i);
-            x[i] = this->mesh().nodes()(id[i], 0);
-            y[i] = this->mesh().nodes()(id[i], 1);
+            id[i] = (*this->mesh()->elements())(k, i);
+            x[i] = (*this->mesh()->nodes())(id[i], 0);
+            y[i] = (*this->mesh()->nodes())(id[i], 1);
 
             // get coordinates once more for permutations
             x[i + BasisFunction::nodesPerElement] = x[i];
@@ -192,37 +198,40 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     elementalRMatrix.copyToDevice(stream);
 
     // reduce matrices
-    this->reduceMatrix(*this->mConnectivityMatrix, connectivityMatrix,
+    this->reduceMatrix(this->mConnectivityMatrix, &connectivityMatrix,
         this->mSMatrix->density(), stream);
-    this->reduceMatrix(*this->mElementalSMatrix, elementalSMatrix,
+    this->reduceMatrix(this->mElementalSMatrix, &elementalSMatrix,
         this->mSMatrix->density(), stream);
-    this->reduceMatrix(*this->mElementalRMatrix, elementalRMatrix,
+    this->reduceMatrix(this->mElementalRMatrix, &elementalRMatrix,
         this->mSMatrix->density(), stream);
 
     // create gamma
-    Matrix<dtype::real> gamma(this->mesh().elementCount(), 1, stream);
+    Matrix<dtype::real> gamma(this->mesh()->elementCount(), 1, stream);
 
     // update matrices
-    this->updateMatrix(*this->mSMatrix, *this->mElementalSMatrix,
-        gamma, stream);
-    this->updateMatrix(*this->mRMatrix, *this->mElementalRMatrix,
-        gamma, stream);
+    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix,
+        &gamma, stream);
+    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix,
+        &gamma, stream);
 }
 
 // update model
 template <class BasisFunction>
-void Model<BasisFunction>::update(Matrix<dtype::real>& gamma, cublasHandle_t handle,
+void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
+    if (gamma == NULL) {
+        throw invalid_argument("Model::init: gamma == NULL");
+    }
     if (handle == NULL) {
         throw invalid_argument("Model::init: handle == NULL");
     }
 
     // update 2d systemMatrix
-    this->updateMatrix(*this->mSMatrix, *this->mElementalSMatrix, gamma, stream);
+    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix, gamma, stream);
 
     // update residual matrix
-    this->updateMatrix(*this->mRMatrix, *this->mElementalRMatrix, gamma, stream);
+    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix, gamma, stream);
 
     // set cublas stream
     cublasSetStream(handle, stream);
@@ -231,12 +240,12 @@ void Model<BasisFunction>::update(Matrix<dtype::real>& gamma, cublasHandle_t han
     dtype::real alpha = 0.0f;
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // calc alpha
-        alpha = (2.0f * n * M_PI / this->mesh().height()) *
-            (2.0f * n * M_PI / this->mesh().height());
+        alpha = (2.0f * n * M_PI / this->mesh()->height()) *
+            (2.0f * n * M_PI / this->mesh()->height());
 
         // init system matrix with 2d system matrix
         if (cublasScopy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize,
-            this->mSMatrix->values(), 1, this->systemMatrix(n).values(), 1)
+            this->mSMatrix->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -244,7 +253,7 @@ void Model<BasisFunction>::update(Matrix<dtype::real>& gamma, cublasHandle_t han
 
         // add alpha * residualMatrix
         if (cublasSaxpy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize, &alpha,
-            this->mRMatrix->values(), 1, this->systemMatrix(n).values(), 1)
+            this->mRMatrix->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -259,15 +268,15 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     dtype::index id[BasisFunction::nodesPerEdge];
     dtype::real x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
 
-    for (dtype::size i = 0; i < this->mesh().boundaryCount(); i++) {
-        for (dtype::size l = 0; l < this->electrodes().count(); l++) {
+    for (dtype::size i = 0; i < this->mesh()->boundaryCount(); i++) {
+        for (dtype::size l = 0; l < this->electrodes()->count(); l++) {
             for (dtype::size k = 0; k < BasisFunction::nodesPerEdge; k++) {
                 // get node id
-                id[k] = this->mesh().boundary()(i, k);
+                id[k] = (*this->mesh()->boundary())(i, k);
 
                 // get coordinates
-                x[k] = this->mesh().nodes()(id[k], 0);
-                y[k] = this->mesh().nodes()(id[k], 1);
+                x[k] = (*this->mesh()->nodes())(id[k], 0);
+                y[k] = (*this->mesh()->nodes())(id[k], 1);
 
                 // set coordinates for permutations
                 x[k + BasisFunction::nodesPerEdge] = x[k];
@@ -278,9 +287,9 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
             for (dtype::size k = 0; k < BasisFunction::nodesPerEdge; k++) {
                 // add new value
                 (*this->mExcitationMatrix)(id[k], l) -= BasisFunction::integrate_boundary_edge(&x[k], &y[k],
-                    &this->electrodes().electrodesStart()[l * 2],
-                    &this->electrodes().electrodesEnd()[l * 2]) /
-                    this->electrodes().width();
+                    &this->electrodes()->electrodesStart()[l * 2],
+                    &this->electrodes()->electrodesEnd()[l * 2]) /
+                    this->electrodes()->width();
             }
         }
     }
@@ -291,9 +300,15 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 
 // calc excitaion components
 template <class BasisFunction>
-void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>*& component,
-    Matrix<dtype::real>& pattern, cublasHandle_t handle, cudaStream_t stream) {
+void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>** component,
+    Matrix<dtype::real>* pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
+    if (component == NULL) {
+        throw invalid_argument("Model::calcExcitationComponents: component == NULL");
+    }
+    if (pattern == NULL) {
+        throw invalid_argument("Model::calcExcitationComponents: pattern == NULL");
+    }
     if (handle == NULL) {
         throw invalid_argument("Model::calcExcitationComponents: handle == NULL");
     }
@@ -302,22 +317,22 @@ void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>*& compon
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // Run multiply once more to avoid cublas error
         try {
-            component[n].multiply(*this->mExcitationMatrix, pattern, handle, stream);
+            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
         }
         catch (exception& e) {
-            component[n].multiply(*this->mExcitationMatrix, pattern, handle, stream);
+            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
         }
     }
 
     // calc fourier coefficients for current pattern
     // calc ground mode
-    component[0].scalarMultiply(1.0f / this->mesh().height(), stream);
+    component[0]->scalarMultiply(1.0f / this->mesh()->height(), stream);
 
     // calc harmonics
     for (dtype::size n = 1; n < this->numHarmonics() + 1; n++) {
-        component[n].scalarMultiply(
-            2.0f * sin(n * M_PI * this->electrodes().height() / this->mesh().height()) /
-            (n * M_PI * this->electrodes().height()), stream);
+        component[n]->scalarMultiply(
+            2.0f * sin(n * M_PI * this->electrodes()->height() / this->mesh()->height()) /
+            (n * M_PI * this->electrodes()->height()), stream);
     }
 }
 

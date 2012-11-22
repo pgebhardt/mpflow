@@ -21,16 +21,24 @@ __global__ void addScalarKernel(dtype::real* vector, dtype::real* scalar,
 }
 
 // add scalar
-void Conjugate::addScalar(Matrix<dtype::real>& vector,
-    Matrix<dtype::real>& scalar, dtype::size rows, dtype::size columns, cudaStream_t stream) {
+void Conjugate::addScalar(Matrix<dtype::real>* vector,
+    Matrix<dtype::real>* scalar, dtype::size rows, dtype::size columns, cudaStream_t stream) {
+    // check input
+    if (vector == NULL) {
+        throw invalid_argument("Conjugate::addScalar: vector == NULL");
+    }
+    if (scalar == NULL) {
+        throw invalid_argument("Conjugate::addScalar: scalar == NULL");
+    }
+
     // kernel dimension
-    dim3 global(vector.rows() / Matrix<dtype::real>::blockSize, vector.columns() == 1 ? 1 :
-        vector.columns() / Matrix<dtype::real>::blockSize);
-    dim3 local(Matrix<dtype::real>::blockSize, vector.columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
+    dim3 global(vector->rows() / Matrix<dtype::real>::blockSize, vector->columns() == 1 ? 1 :
+        vector->columns() / Matrix<dtype::real>::blockSize);
+    dim3 local(Matrix<dtype::real>::blockSize, vector->columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
 
     // execute kernel
-    addScalarKernel<<<global, local, 0, stream>>>(vector.deviceData(), scalar.deviceData(),
-        vector.rows(), rows, columns);
+    addScalarKernel<<<global, local, 0, stream>>>(vector->deviceData(), scalar->deviceData(),
+        vector->rows(), rows, columns);
 }
 
 // update vector
@@ -46,17 +54,33 @@ __global__ void updateVectorKernel(dtype::real* result, dtype::real* x1, dtype::
 }
 
 // update vector
-void Conjugate::updateVector(Matrix<dtype::real>& result,
-    Matrix<dtype::real>& x1, dtype::real sign, Matrix<dtype::real>& x2,
-    Matrix<dtype::real>& r1, Matrix<dtype::real>& r2, cudaStream_t stream) {
+void Conjugate::updateVector(Matrix<dtype::real>* result,
+    Matrix<dtype::real>* x1, dtype::real sign, Matrix<dtype::real>* x2,
+    Matrix<dtype::real>* r1, Matrix<dtype::real>* r2, cudaStream_t stream) {
+    if (result == NULL) {
+        throw invalid_argument("Conjugate::addScalar: result == NULL");
+    }
+    if (x1 == NULL) {
+        throw invalid_argument("Conjugate::addScalar: x1 == NULL");
+    }
+    if (x2 == NULL) {
+        throw invalid_argument("Conjugate::addScalar: x2 == NULL");
+    }
+    if (r1 == NULL) {
+        throw invalid_argument("Conjugate::addScalar: r1 == NULL");
+    }
+    if (r2 == NULL) {
+        throw invalid_argument("Conjugate::addScalar: r2 == NULL");
+    }
+
     // kernel dimension
-    dim3 global(result.rows() / Matrix<dtype::real>::blockSize, result.columns() == 1 ? 1 :
-        result.columns() / Matrix<dtype::real>::blockSize);
-    dim3 local(Matrix<dtype::real>::blockSize, result.columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
+    dim3 global(result->rows() / Matrix<dtype::real>::blockSize, result->columns() == 1 ? 1 :
+        result->columns() / Matrix<dtype::real>::blockSize);
+    dim3 local(Matrix<dtype::real>::blockSize, result->columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
 
     // execute kernel
-    updateVectorKernel<<<global, local, 0, stream>>>(result.deviceData(),
-        x1.deviceData(), sign, x2.deviceData(), r1.deviceData(), r2.deviceData(), result.rows());
+    updateVectorKernel<<<global, local, 0, stream>>>(result->deviceData(),
+        x1->deviceData(), sign, x2->deviceData(), r1->deviceData(), r2->deviceData(), result->rows());
 }
 
 // gemv kernel
@@ -106,20 +130,31 @@ __global__ void reduceRowKernel(dtype::real* vector, dtype::size rows) {
 }
 
 // fast gemv
-void Conjugate::gemv(Matrix<dtype::real>& result, Matrix<dtype::real>& matrix,
-    Matrix<dtype::real>& vector, cudaStream_t stream) {
+void Conjugate::gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
+    Matrix<dtype::real>* vector, cudaStream_t stream) {
+    // check input
+    if (result == NULL) {
+        throw invalid_argument("Conjugate::addScalar: result == NULL");
+    }
+    if (matrix == NULL) {
+        throw invalid_argument("Conjugate::addScalar: matrix == NULL");
+    }
+    if (vector == NULL) {
+        throw invalid_argument("Conjugate::addScalar: vector == NULL");
+    }
+
     // dimension
-    dim3 blocks((matrix.rows() + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize),
-        (matrix.rows() / (2 * Matrix<dtype::real>::blockSize) + Matrix<dtype::real>::blockSize - 1) / Matrix<dtype::real>::blockSize);
+    dim3 blocks((matrix->rows() + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize),
+        (matrix->rows() / (2 * Matrix<dtype::real>::blockSize) + Matrix<dtype::real>::blockSize - 1) / Matrix<dtype::real>::blockSize);
     dim3 threads(2 * Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // call gemv kernel
-    gemvKernel<<<blocks, threads, 0, stream>>>(matrix.deviceData(), vector.deviceData(),
-        result.deviceData(), matrix.rows());
+    gemvKernel<<<blocks, threads, 0, stream>>>(matrix->deviceData(), vector->deviceData(),
+        result->deviceData(), matrix->rows());
 
     // call reduce kernel
-    reduceRowKernel<<<(matrix.columns() + Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize - 1) /
+    reduceRowKernel<<<(matrix->columns() + Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize - 1) /
         (Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize),
-        Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize, 0, stream>>>(result.deviceData(), result.rows());
+        Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize, 0, stream>>>(result->deviceData(), result->rows());
 }
 

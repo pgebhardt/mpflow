@@ -10,20 +10,29 @@ using namespace fastEIT;
 using namespace std;
 
 // create mesh class
-Mesh::Mesh(Matrix<dtype::real>& nodes, Matrix<dtype::index>& elements,
-    Matrix<dtype::index>& boundary, dtype::size nodeCount,
+Mesh::Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
+    Matrix<dtype::index>* boundary, dtype::size nodeCount,
     dtype::size elementCount, dtype::size boundaryCount, dtype::real radius,
     dtype::real height)
     : mRadius(radius), mHeight(height), mNodeCount(nodeCount), mElementCount(elementCount),
-        mBoundaryCount(boundaryCount), mNodes(&nodes), mElements(&elements), mBoundary(&boundary) {
+        mBoundaryCount(boundaryCount), mNodes(nodes), mElements(elements), mBoundary(boundary) {
     // check input
-    if (nodeCount > nodes.rows()) {
+    if (nodes == NULL) {
+        throw invalid_argument("nodes == NULL");
+    }
+    if (elements == NULL) {
+        throw invalid_argument("elements == NULL");
+    }
+    if (boundary == NULL) {
+        throw invalid_argument("boundary == NULL");
+    }
+    if (nodeCount > nodes->rows()) {
         throw invalid_argument("nodeCount > nodes->rows");
     }
-    if (elementCount > elements.rows()) {
+    if (elementCount > elements->rows()) {
         throw invalid_argument("elementCount > elements->rows");
     }
-    if (boundaryCount > boundary.rows()) {
+    if (boundaryCount > boundary->rows()) {
         throw invalid_argument("boundaryCount > boundary->rows");
     }
     if (radius <= 0.0f) {

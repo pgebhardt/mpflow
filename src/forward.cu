@@ -74,25 +74,28 @@ template
     class BasisFunction,
     class NumericSolver
 >
-Matrix<dtype::real>& ForwardSolver<BasisFunction, NumericSolver>::calcJacobian(Matrix<dtype::real>& gamma,
+Matrix<dtype::real>* ForwardSolver<BasisFunction, NumericSolver>::calcJacobian(Matrix<dtype::real>* gamma,
     dtype::size harmonic, bool additiv, cudaStream_t stream) const {
     // check input
-    if (harmonic > this->model().numHarmonics()) {
+    if (gamma == NULL) {
+        throw invalid_argument("ForwardSolver::calcJacobian: gamma == NULL");
+    }
+    if (harmonic > this->model()->numHarmonics()) {
         throw invalid_argument("ForwardSolver::calcJacobian: harmonic > this->model()->numHarmonics()");
     }
 
     // dimension
-    dim3 blocks(this->jacobian().rows() / Matrix<dtype::real>::blockSize,
-        this->jacobian().columns() / Matrix<dtype::real>::blockSize);
+    dim3 blocks(this->jacobian()->rows() / Matrix<dtype::real>::blockSize,
+        this->jacobian()->columns() / Matrix<dtype::real>::blockSize);
     dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // calc jacobian
     calcJacobianKernel<BasisFunction><<<blocks, threads, 0, stream>>>(
-        this->jacobian().deviceData(), this->phi(harmonic).deviceData(),
-        &this->phi(harmonic).deviceData()[this->driveCount() * this->phi(harmonic).rows()],
-        this->model().mesh().elements().deviceData(), this->mElementalJacobianMatrix->deviceData(),
-        gamma.deviceData(), this->model().sigmaRef(), this->jacobian().rows(), this->jacobian().columns(),
-        this->phi(harmonic).rows(), this->model().mesh().elementCount(),
+        this->jacobian()->deviceData(), this->phi(harmonic)->deviceData(),
+        &this->phi(harmonic)->deviceData()[this->driveCount() * this->phi(harmonic)->rows()],
+        this->model()->mesh()->elements()->deviceData(), this->mElementalJacobianMatrix->deviceData(),
+        gamma->deviceData(), this->model()->sigmaRef(), this->jacobian()->rows(), this->jacobian()->columns(),
+        this->phi(harmonic)->rows(), this->model()->mesh()->elementCount(),
         this->driveCount(), this->measurmentCount(), additiv);
 
     return this->jacobian();
