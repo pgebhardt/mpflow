@@ -10,41 +10,41 @@
 class LinearBasis {
 // constructer and destructor
 public:
-    LinearBasis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y);
+    LinearBasis(dtype::real* x, dtype::real* y);
     virtual ~LinearBasis();
 
 // mathematical evaluation of basis
 public:
-    linalgcuMatrixData_t evaluate(linalgcuMatrixData_t x, linalgcuMatrixData_t y);
-    linalgcuMatrixData_t integrate_with_basis(LinearBasis& other);
-    linalgcuMatrixData_t integrate_gradient_with_basis(LinearBasis& other);
-    static linalgcuMatrixData_t integrate_boundary_edge(linalgcuMatrixData_t* x,
-        linalgcuMatrixData_t* y, linalgcuMatrixData_t* start, linalgcuMatrixData_t* end);
+    dtype::real evaluate(dtype::real x, dtype::real y);
+    dtype::real integrate_with_basis(LinearBasis& other);
+    dtype::real integrate_gradient_with_basis(LinearBasis& other);
+    static dtype::real integrate_boundary_edge(dtype::real* x,
+        dtype::real* y, dtype::real* start, dtype::real* end);
 
 // operator
 public:
-    linalgcuMatrixData_t operator()(linalgcuMatrixData_t x, linalgcuMatrixData_t y);
+    dtype::real operator()(dtype::real x, dtype::real y);
 
 // geometry definition
 public:
-    static const linalgcuSize_t nodesPerEdge = 2;
-    static const linalgcuSize_t nodesPerElement = 3;
+    static const dtype::size nodesPerEdge = 2;
+    static const dtype::size nodesPerElement = 3;
 
 // access methods
 public:
-    inline linalgcuMatrixData_t* point(linalgcuSize_t id) const {
+    inline dtype::real* point(dtype::size id) const {
         assert(id < LinearBasis::nodesPerElement);
         return &this->mPoints[id * 2]; 
     }
-    inline linalgcuMatrixData_t coefficient(linalgcuSize_t id) const {
+    inline dtype::real coefficient(dtype::size id) const {
         assert(id < LinearBasis::nodesPerElement);
         return this->mCoefficients[id];
     }
 
 // member
 private:
-    linalgcuMatrixData_t* mPoints;
-    linalgcuMatrixData_t* mCoefficients;
+    dtype::real* mPoints;
+    dtype::real* mCoefficients;
 };
 
 #endif

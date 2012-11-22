@@ -10,7 +10,7 @@ using namespace fastEIT;
 using namespace std;
 
 // create basis class
-LinearBasis::LinearBasis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
+LinearBasis::LinearBasis(dtype::real* x, dtype::real* y) {
     // check input
     if (x == NULL) {
         throw invalid_argument("x == NULL");
@@ -20,22 +20,22 @@ LinearBasis::LinearBasis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
     }
 
     // create memory
-    this->mPoints = new linalgcuMatrixData_t[LinearBasis::nodesPerElement * 2];
-    this->mCoefficients = new linalgcuMatrixData_t[LinearBasis::nodesPerElement];
+    this->mPoints = new dtype::real[LinearBasis::nodesPerElement * 2];
+    this->mCoefficients = new dtype::real[LinearBasis::nodesPerElement];
 
     // init member
-    for (linalgcuSize_t i = 0; i < LinearBasis::nodesPerElement; i++) {
+    for (dtype::size i = 0; i < LinearBasis::nodesPerElement; i++) {
         this->mPoints[i * 2 + 0] = x[i];
         this->mPoints[i * 2 + 1] = y[i];
         this->mCoefficients[i] = 0.0;
     }
 
     // calc coefficients (A * c = b)
-    linalgcuMatrixData_t Ainv[3][3];
-    linalgcuMatrixData_t B[3] = {1.0, 0.0, 0.0};
+    dtype::real Ainv[3][3];
+    dtype::real B[3] = {1.0, 0.0, 0.0};
 
     // invert matrix A directly
-    linalgcuMatrixData_t a, b, c, d, e, f, g, h, i;
+    dtype::real a, b, c, d, e, f, g, h, i;
     a = 1.0;
     b = this->mPoints[0 * 2 + 0];
     c = this->mPoints[0 * 2 + 1];
@@ -45,7 +45,7 @@ LinearBasis::LinearBasis(linalgcuMatrixData_t* x, linalgcuMatrixData_t* y) {
     g = 1.0;
     h = this->mPoints[2 * 2 + 0];
     i = this->mPoints[2 * 2 + 1];
-    linalgcuMatrixData_t det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
+    dtype::real det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
 
     Ainv[0][0] = (e * i - f * h) / det;
     Ainv[0][1] = (c * h - b * i) / det;
@@ -75,35 +75,35 @@ LinearBasis::~LinearBasis() {
 }
 
 // evaluate basis function
-linalgcuMatrixData_t LinearBasis::evaluate(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+dtype::real LinearBasis::evaluate(dtype::real x, dtype::real y) {
     // calc result
     return this->mCoefficients[0] + this->mCoefficients[1] * x +
         this->mCoefficients[2] * y;
 }
 
 // integrate with basis
-linalgcuMatrixData_t LinearBasis::integrate_with_basis(LinearBasis& other) {
+dtype::real LinearBasis::integrate_with_basis(LinearBasis& other) {
     // shorten variables
-    linalgcuMatrixData_t x1 = this->mPoints[0 * 2 + 0];
-    linalgcuMatrixData_t y1 = this->mPoints[0 * 2 + 1];
-    linalgcuMatrixData_t x2 = this->mPoints[1 * 2 + 0];
-    linalgcuMatrixData_t y2 = this->mPoints[1 * 2 + 1];
-    linalgcuMatrixData_t x3 = this->mPoints[2 * 2 + 0];
-    linalgcuMatrixData_t y3 = this->mPoints[2 * 2 + 1];
+    dtype::real x1 = this->mPoints[0 * 2 + 0];
+    dtype::real y1 = this->mPoints[0 * 2 + 1];
+    dtype::real x2 = this->mPoints[1 * 2 + 0];
+    dtype::real y2 = this->mPoints[1 * 2 + 1];
+    dtype::real x3 = this->mPoints[2 * 2 + 0];
+    dtype::real y3 = this->mPoints[2 * 2 + 1];
 
-    linalgcuMatrixData_t ai = this->mCoefficients[0];
-    linalgcuMatrixData_t bi = this->mCoefficients[1];
-    linalgcuMatrixData_t ci = this->mCoefficients[2];
-    linalgcuMatrixData_t aj = other.coefficient(0);
-    linalgcuMatrixData_t bj = other.coefficient(1);
-    linalgcuMatrixData_t cj = other.coefficient(2);
+    dtype::real ai = this->mCoefficients[0];
+    dtype::real bi = this->mCoefficients[1];
+    dtype::real ci = this->mCoefficients[2];
+    dtype::real aj = other.coefficient(0);
+    dtype::real bj = other.coefficient(1);
+    dtype::real cj = other.coefficient(2);
 
     // calc area
-    linalgcuMatrixData_t area = 0.5 * fabs((x2 - x1) * (y3 - y1) -
+    dtype::real area = 0.5 * fabs((x2 - x1) * (y3 - y1) -
         (x3 - x1) * (y2 - y1));
 
     // calc integral
-    linalgcuMatrixData_t integral = 2.0f * area *
+    dtype::real integral = 2.0f * area *
         (ai * (0.5f * aj + (1.0f / 6.0f) * bj * (x1 + x2 + x3) +
         (1.0f / 6.0f) * cj * (y1 + y2 + y3)) +
         bi * ((1.0f/ 6.0f) * aj * (x1 + x2 + x3) +
@@ -119,9 +119,9 @@ linalgcuMatrixData_t LinearBasis::integrate_with_basis(LinearBasis& other) {
 }
 
 // integrate gradient with basis
-linalgcuMatrixData_t LinearBasis::integrate_gradient_with_basis(LinearBasis& other) {
+dtype::real LinearBasis::integrate_gradient_with_basis(LinearBasis& other) {
     // calc area
-    linalgcuMatrixData_t area = 0.5 * fabs((this->mPoints[1 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
+    dtype::real area = 0.5 * fabs((this->mPoints[1 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
         (this->mPoints[2 * 2 + 1] - this->mPoints[0 * 2 + 1]) -
         (this->mPoints[2 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
         (this->mPoints[1 * 2 + 1] - this->mPoints[0 * 2 + 1]));
@@ -132,7 +132,7 @@ linalgcuMatrixData_t LinearBasis::integrate_gradient_with_basis(LinearBasis& oth
 }
 
 // angle calculation for parametrisation
-linalgcuMatrixData_t fasteit_basis_angle(linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+dtype::real fasteit_basis_angle(dtype::real x, dtype::real y) {
     if (x > 0.0f) {
         return atan(y / x);
     }
@@ -154,42 +154,42 @@ linalgcuMatrixData_t fasteit_basis_angle(linalgcuMatrixData_t x, linalgcuMatrixD
 }
 
 // calc parametrisation
-linalgcuMatrixData_t fasteit_basis_calc_parametrisation(linalgcuMatrixData_t x, linalgcuMatrixData_t y,
-    linalgcuMatrixData_t offset) {
+dtype::real fasteit_basis_calc_parametrisation(dtype::real x, dtype::real y,
+    dtype::real offset) {
     // convert to polar coordinates
-    linalgcuMatrixData_t radius = sqrt(x * x + y * y);
-    linalgcuMatrixData_t angle = fasteit_basis_angle(x, y) - offset / radius;
+    dtype::real radius = sqrt(x * x + y * y);
+    dtype::real angle = fasteit_basis_angle(x, y) - offset / radius;
 
     // correct angle
     angle += (angle < M_PI) ? 2.0f * M_PI : 0.0f;
     angle -= (angle > M_PI) ? 2.0f * M_PI : 0.0f;
 
     // calc parameter
-    linalgcuMatrixData_t parameter = angle * radius;
+    dtype::real parameter = angle * radius;
 
     return parameter;
 }
 
 // integrate edge
-linalgcuMatrixData_t LinearBasis::integrate_boundary_edge(linalgcuMatrixData_t* x,
-    linalgcuMatrixData_t* y, linalgcuMatrixData_t* start, linalgcuMatrixData_t* end) {
+dtype::real LinearBasis::integrate_boundary_edge(dtype::real* x,
+    dtype::real* y, dtype::real* start, dtype::real* end) {
     // check input
     if ((x == NULL) || (y == NULL) || (start == NULL) || (end == NULL)) {
         return 0.0f;
     }
 
     // integral
-    linalgcuMatrixData_t integral = 0.0f;
+    dtype::real integral = 0.0f;
 
     // calc node parameter
-    linalgcuMatrixData_t* nodeParameter = new linalgcuMatrixData_t[LinearBasis::nodesPerEdge];
+    dtype::real* nodeParameter = new dtype::real[LinearBasis::nodesPerEdge];
     nodeParameter[0] = 0.0f;
-    for (linalgcuSize_t i = 0; i < LinearBasis::nodesPerEdge; i++) {
+    for (dtype::size i = 0; i < LinearBasis::nodesPerEdge; i++) {
         nodeParameter[i] = fasteit_basis_calc_parametrisation(x[i], y[i], nodeParameter[0]);
     }
 
     // calc integration boundary parameter
-    linalgcuMatrixData_t boundaryParameter[2];
+    dtype::real boundaryParameter[2];
     boundaryParameter[0] = fasteit_basis_calc_parametrisation(start[0], start[1], nodeParameter[0]);
     boundaryParameter[1] = fasteit_basis_calc_parametrisation(end[0], end[1], nodeParameter[0]);
 
@@ -239,6 +239,6 @@ linalgcuMatrixData_t LinearBasis::integrate_boundary_edge(linalgcuMatrixData_t* 
 }
 
 // operator
-linalgcuMatrixData_t LinearBasis::operator() (linalgcuMatrixData_t x, linalgcuMatrixData_t y) {
+dtype::real LinearBasis::operator() (dtype::real x, dtype::real y) {
     return this->evaluate(x, y);
 }

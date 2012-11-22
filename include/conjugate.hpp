@@ -10,31 +10,31 @@
 class Conjugate {
 // constructor and destructor
 public:
-    Conjugate(linalgcuSize_t rows, cublasHandle_t handle, cudaStream_t stream);
+    Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t stream);
     virtual ~Conjugate();
 
 public:
     // solve system
     void solve(linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
-        linalgcuSize_t iterations, cublasHandle_t handle, cudaStream_t stream);
+        dtype::size iterations, cublasHandle_t handle, cudaStream_t stream);
 
 // helper methods
 public:
     static void add_scalar(linalgcuMatrix_t vector, linalgcuMatrix_t scalar,
-        linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream);
+        dtype::size rows, dtype::size columns, cudaStream_t stream);
     static void update_vector(linalgcuMatrix_t result, linalgcuMatrix_t x1,
-        linalgcuMatrixData_t sign, linalgcuMatrix_t x2, linalgcuMatrix_t r1,
+        dtype::real sign, linalgcuMatrix_t x2, linalgcuMatrix_t r1,
         linalgcuMatrix_t r2, cudaStream_t stream);
     static void gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
         linalgcuMatrix_t vector, cudaStream_t);
 
 // accessors
 public:
-    linalgcuSize_t rows() const { return this->mRows; }
+    dtype::size rows() const { return this->mRows; }
 
 // member
 private:
-    linalgcuSize_t mRows;
+    dtype::size mRows;
     linalgcuMatrix_t mResiduum;
     linalgcuMatrix_t mProjection;
     linalgcuMatrix_t mRSOld;

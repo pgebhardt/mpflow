@@ -11,8 +11,8 @@ using namespace std;
 
 // create inverse_solver
 template <class NumericSolver>
-InverseSolver<NumericSolver>::InverseSolver(linalgcuSize_t elementCount, linalgcuSize_t voltageCount,
-    linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
+InverseSolver<NumericSolver>::InverseSolver(dtype::size elementCount, dtype::size voltageCount,
+    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
         throw invalid_argument("InverseSolver::InverseSolver: handle == NULL");
@@ -75,7 +75,7 @@ linalgcuMatrix_t InverseSolver<NumericSolver>::calc_system_matrix(
     }
 
     // cublas coeficients
-    linalgcuMatrixData_t alpha = 1.0f, beta = 0.0f;
+    dtype::real alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare()->rows,
@@ -143,7 +143,7 @@ linalgcuMatrix_t InverseSolver<NumericSolver>::calc_excitation(linalgcuMatrix_t 
     cublasSetStream(handle, stream);
 
     // calc excitation
-    linalgcuMatrixData_t alpha = 1.0f, beta = 0.0f;
+    dtype::real alpha = 1.0f, beta = 0.0f;
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
         jacobian->deviceData, jacobian->rows, this->mDVoltage->deviceData, 1, &beta,
         this->mExcitation->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
@@ -163,7 +163,7 @@ linalgcuMatrix_t InverseSolver<NumericSolver>::calc_excitation(linalgcuMatrix_t 
 template <class NumericSolver>
 linalgcuMatrix_t InverseSolver<NumericSolver>::solve(linalgcuMatrix_t gamma,
     linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage,
-    linalgcuSize_t steps, bool regularized, cublasHandle_t handle, cudaStream_t stream) {
+    dtype::size steps, bool regularized, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (gamma == NULL) {
         throw invalid_argument("InverseSolver::solve: gamma == NULL");

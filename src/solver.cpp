@@ -11,9 +11,9 @@ using namespace std;
 
 // create solver
 Solver::Solver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPattern,
-    linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
-    linalgcuMatrixData_t numHarmonics, linalgcuMatrixData_t sigmaRef,
-    linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
+    linalgcuMatrix_t drivePattern, dtype::size measurmentCount, dtype::size driveCount,
+    dtype::real numHarmonics, dtype::real sigmaRef,
+    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (mesh == NULL) {
         throw invalid_argument("Solver::Solver: mesh == NULL");

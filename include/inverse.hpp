@@ -11,8 +11,8 @@ template <class NumericSolver>
 class InverseSolver {
 // constructor and destructor
 public:
-    InverseSolver(linalgcuSize_t elementCount, linalgcuSize_t voltageCount,
-        linalgcuMatrixData_t regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
+    InverseSolver(dtype::size elementCount, dtype::size voltageCount,
+        dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
     virtual ~InverseSolver();
 
 public:
@@ -27,7 +27,7 @@ public:
     // inverse solving
     linalgcuMatrix_t solve(linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian,
         linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage,
-        linalgcuSize_t steps, bool regularized, cublasHandle_t handle,
+        dtype::size steps, bool regularized, cublasHandle_t handle,
         cudaStream_t stream);
 
 // accessors
@@ -35,8 +35,8 @@ public:
     NumericSolver* numericSolver() const { return this->mNumericSolver; }
     linalgcuMatrix_t systemMatrix() const { return this->mSystemMatrix; }
     linalgcuMatrix_t jacobianSquare() const { return this->mJacobianSquare; }
-    linalgcuMatrixData_t regularizationFactor() const { return this->mRegularizationFactor; }
-    linalgcuMatrixData_t& regularizationFactor() { return this->mRegularizationFactor; }
+    dtype::real regularizationFactor() const { return this->mRegularizationFactor; }
+    dtype::real& regularizationFactor() { return this->mRegularizationFactor; }
 
 // member
 private:
@@ -46,7 +46,7 @@ private:
     linalgcuMatrix_t mExcitation;
     linalgcuMatrix_t mSystemMatrix;
     linalgcuMatrix_t mJacobianSquare;
-    linalgcuMatrixData_t mRegularizationFactor;
+    dtype::real mRegularizationFactor;
 };
 
 #endif

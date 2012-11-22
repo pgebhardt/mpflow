@@ -10,12 +10,12 @@ using namespace fastEIT;
 using namespace std;
 
 // reduce connectivity and elementalResidual matrix
-__global__ void reduce_matrix_kernel(linalgcuMatrixData_t* matrix,
-    linalgcuMatrixData_t* intermediateMatrix, linalgcuColumnId_t* systemMatrixColumnIds,
-    linalgcuSize_t rows, linalgcuSize_t density) {
+__global__ void reduce_matrix_kernel(dtype::real* matrix,
+    dtype::real* intermediateMatrix, linalgcuColumnId_t* systemMatrixColumnIds,
+    dtype::size rows, dtype::size density) {
     // get ids
-    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::size row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::size column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // get column id
     linalgcuColumnId_t columnId = systemMatrixColumnIds[row * LINALGCU_SPARSE_SIZE + column];
@@ -35,7 +35,7 @@ __global__ void reduce_matrix_kernel(linalgcuMatrixData_t* matrix,
 // reduce matrix
 template <class BasisFunction>
 void Model<BasisFunction>::reduce_matrix(linalgcuMatrix_t matrix,
-    linalgcuMatrix_t intermediateMatrix, linalgcuSize_t density, cudaStream_t stream) {
+    linalgcuMatrix_t intermediateMatrix, dtype::size density, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
         throw invalid_argument("Model::reduce_matrix: matrix == NULL");
@@ -56,16 +56,16 @@ void Model<BasisFunction>::reduce_matrix(linalgcuMatrix_t matrix,
 }
 
 // update matrix kernel
-__global__ void update_matrix_kernel(linalgcuMatrixData_t* matrixValues,
-    linalgcuMatrixData_t* connectivityMatrix, linalgcuMatrixData_t* elementalMatrix,
-    linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef, linalgcuSize_t rows,
-    linalgcuSize_t density) {
+__global__ void update_matrix_kernel(dtype::real* matrixValues,
+    dtype::real* connectivityMatrix, dtype::real* elementalMatrix,
+    dtype::real* gamma, dtype::real sigmaRef, dtype::size rows,
+    dtype::size density) {
     // get ids
-    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::size row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::size column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc residual matrix element
-    linalgcuMatrixData_t value = 0.0f;
+    dtype::real value = 0.0f;
     linalgcuColumnId_t elementId = -1;
     for (int k = 0; k < density; k++) {
         // get element id

@@ -10,7 +10,7 @@ using namespace fastEIT;
 using namespace std;
 
 // create conjugate solver
-SparseConjugate::SparseConjugate(linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
+SparseConjugate::SparseConjugate(dtype::size rows, dtype::size columns, cudaStream_t stream) {
     // check input
     if (rows <= 1) {
         throw invalid_argument("SparseConjugate::SparseConjugate: rows <= 1");
@@ -59,7 +59,7 @@ SparseConjugate::~SparseConjugate() {
 
 // solve conjugate sparse
 void SparseConjugate::solve(linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
-    linalgcuSize_t iterations, bool dcFree, cudaStream_t stream) {
+    dtype::size iterations, bool dcFree, cudaStream_t stream) {
     // check input
     if (A == NULL) {
         throw invalid_argument("SparseConjugate::solve: A == NULL");
@@ -103,7 +103,7 @@ void SparseConjugate::solve(linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalg
     }
 
     // iterate
-    for (linalgcuSize_t i = 0; i < iterations; i++) {
+    for (dtype::size i = 0; i < iterations; i++) {
         // calc A * p
         error  = linalgcu_sparse_matrix_multiply(this->mTempVector, A, this->mProjection,
             stream);

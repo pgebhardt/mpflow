@@ -11,18 +11,18 @@ using namespace std;
 
 // calc jacobian kernel
 template<class BasisFunction>
-__global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
-    linalgcuMatrixData_t* drivePhi,
-    linalgcuMatrixData_t* measurmentPhi,
-    linalgcuMatrixData_t* connectivityMatrix,
-    linalgcuMatrixData_t* elementalJacobianMatrix,
-    linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef,
-    linalgcuSize_t rows, linalgcuSize_t columns,
-    linalgcuSize_t phiRows, linalgcuSize_t elementCount,
-    linalgcuSize_t driveCount, linalgcuSize_t measurmentCount, bool additiv) {
+__global__ void calc_jacobian_kernel(dtype::real* jacobian,
+    dtype::real* drivePhi,
+    dtype::real* measurmentPhi,
+    dtype::real* connectivityMatrix,
+    dtype::real* elementalJacobianMatrix,
+    dtype::real* gamma, dtype::real sigmaRef,
+    dtype::size rows, dtype::size columns,
+    dtype::size phiRows, dtype::size elementCount,
+    dtype::size driveCount, dtype::size measurmentCount, bool additiv) {
     // get id
-    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::size row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::size column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // check column
     if (column >= elementCount) {
@@ -30,25 +30,25 @@ __global__ void calc_jacobian_kernel(linalgcuMatrixData_t* jacobian,
     }
 
     // calc measurment and drive id
-    linalgcuSize_t roundMeasurmentCount = ((measurmentCount + LINALGCU_BLOCK_SIZE - 1) /
+    dtype::size roundMeasurmentCount = ((measurmentCount + LINALGCU_BLOCK_SIZE - 1) /
         LINALGCU_BLOCK_SIZE) * LINALGCU_BLOCK_SIZE;
-    linalgcuSize_t measurmentId = row % roundMeasurmentCount;
-    linalgcuSize_t driveId = row / roundMeasurmentCount;
+    dtype::size measurmentId = row % roundMeasurmentCount;
+    dtype::size driveId = row / roundMeasurmentCount;
 
     // variables
-    linalgcuMatrixData_t dPhi[BasisFunction::nodesPerElement], mPhi[BasisFunction::nodesPerElement];
-    linalgcuMatrixData_t id;
+    dtype::real dPhi[BasisFunction::nodesPerElement], mPhi[BasisFunction::nodesPerElement];
+    dtype::real id;
 
     // get data
     for (int i = 0; i < BasisFunction::nodesPerElement; i++) {
         id = connectivityMatrix[column + i * columns];
-        dPhi[i] = driveId < driveCount ? drivePhi[(linalgcuSize_t)id + driveId * phiRows] : 0.0f;
-        mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[(linalgcuSize_t)id +
+        dPhi[i] = driveId < driveCount ? drivePhi[(dtype::size)id + driveId * phiRows] : 0.0f;
+        mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[(dtype::size)id +
             measurmentId * phiRows] : 0.0f;
     }
 
     // calc matrix element
-    linalgcuMatrixData_t element = 0.0f;
+    dtype::real element = 0.0f;
     for (int i = 0; i < BasisFunction::nodesPerElement; i++) {
         for (int j = 0; j < BasisFunction::nodesPerElement; j++) {
             element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column +
@@ -75,7 +75,7 @@ template
     class NumericSolver
 >
 linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::calc_jacobian(linalgcuMatrix_t gamma,
-    linalgcuSize_t harmonic, bool additiv, cudaStream_t stream) const {
+    dtype::size harmonic, bool additiv, cudaStream_t stream) const {
     // check input
     if (gamma == NULL) {
         throw invalid_argument("ForwardSolver::calc_jacobian: gamma == NULL");

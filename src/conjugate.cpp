@@ -10,7 +10,7 @@ using namespace fastEIT;
 using namespace std;
 
 // create conjugate solver
-Conjugate::Conjugate(linalgcuSize_t rows, cublasHandle_t handle, cudaStream_t stream) {
+Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (rows <= 1) {
         throw invalid_argument("Conjugate::Conjugate: rows <= 1");
@@ -59,7 +59,7 @@ Conjugate::~Conjugate() {
 
 // solve conjugate
 void Conjugate::solve(linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
-    linalgcuSize_t iterations, cublasHandle_t handle, cudaStream_t stream) {
+    dtype::size iterations, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (A == NULL) {
         throw invalid_argument("Conjugate::solve: x == NULL");
@@ -98,7 +98,7 @@ void Conjugate::solve(linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f
     }
 
     // iterate
-    for (linalgcuSize_t i = 0; i < iterations; i++) {
+    for (dtype::size i = 0; i < iterations; i++) {
         // calc A * p
         Conjugate::gemv(this->mTempVector, A, this->mProjection, stream);
 

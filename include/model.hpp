@@ -11,8 +11,8 @@ template <class BasisFunction>
 class Model {
 // constructor and destructor
 public:
-    Model(Mesh* mesh, Electrodes* electrodes, linalgcuMatrixData_t sigmaRef,
-        linalgcuSize_t numHarmonics, cublasHandle_t handle, cudaStream_t stream);
+    Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigmaRef,
+        dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
     virtual ~Model();
 
 // init methods
@@ -37,30 +37,30 @@ private:
 
     // reduce matrix
     void reduce_matrix(linalgcuMatrix_t matrix, linalgcuMatrix_t intermediateMatrix,
-        linalgcuSize_t density, cudaStream_t stream);
+        dtype::size density, cudaStream_t stream);
 
 // access methods
 public:
     Mesh* mesh() const { return this->mMesh; }
     Electrodes* electrodes() const { return this->mElectrodes; }
-    linalgcuMatrixData_t sigmaRef() const { return this->mSigmaRef; }
-    inline linalgcuSparseMatrix_t systemMatrix(linalgcuSize_t id) {
+    dtype::real sigmaRef() const { return this->mSigmaRef; }
+    inline linalgcuSparseMatrix_t systemMatrix(dtype::size id) {
         assert(id <= this->mNumHarmonics);
         return this->mSystemMatrix[id];
     }
     linalgcuMatrix_t excitationMatrix() { return this->mExcitationMatrix; }
-    linalgcuSize_t numHarmonics() { return this->mNumHarmonics; }
+    dtype::size numHarmonics() { return this->mNumHarmonics; }
 
 // geometry definition
 public:
-    static const linalgcuSize_t nodesPerEdge = BasisFunction::nodesPerElement;
-    static const linalgcuSize_t nodesPerElement = BasisFunction::nodesPerEdge;
+    static const dtype::size nodesPerEdge = BasisFunction::nodesPerElement;
+    static const dtype::size nodesPerElement = BasisFunction::nodesPerEdge;
 
 // member
 private:
     Mesh* mMesh;
     Electrodes* mElectrodes;
-    linalgcuMatrixData_t mSigmaRef;
+    dtype::real mSigmaRef;
     linalgcuSparseMatrix_t* mSystemMatrix;
     linalgcuSparseMatrix_t mSMatrix;
     linalgcuSparseMatrix_t mRMatrix;
@@ -68,7 +68,7 @@ private:
     linalgcuMatrix_t mConnectivityMatrix;
     linalgcuMatrix_t mElementalSMatrix;
     linalgcuMatrix_t mElementalRMatrix;
-    linalgcuSize_t mNumHarmonics;
+    dtype::size mNumHarmonics;
 };
 
 #endif

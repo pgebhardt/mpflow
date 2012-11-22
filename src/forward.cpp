@@ -17,8 +17,8 @@ template
 >
 ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
     linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
-    linalgcuSize_t measurmentCount, linalgcuSize_t driveCount, linalgcuSize_t numHarmonics,
-    linalgcuMatrixData_t sigmaRef, cublasHandle_t handle, cudaStream_t stream) {
+    dtype::size measurmentCount, dtype::size driveCount, dtype::size numHarmonics,
+    dtype::real sigmaRef, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (mesh == NULL) {
         throw invalid_argument("ForwardSolver::ForwardSolver: mesh == NULL");
@@ -78,7 +78,7 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
     this->mExcitation = new linalgcuMatrix_t[numHarmonics + 1];
 
     // create matrices
-    for (linalgcuSize_t i = 0; i < numHarmonics + 1; i++) {
+    for (dtype::size i = 0; i < numHarmonics + 1; i++) {
         error |= linalgcu_matrix_create(&this->mPhi[i], mesh->nodeCount(),
             driveCount + measurmentCount, stream);
         error |= linalgcu_matrix_create(&this->mExcitation[i], mesh->nodeCount(),
@@ -101,9 +101,9 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
     }
 
     // fill pattern matrix with drive pattern
-    linalgcuMatrixData_t value = 0.0f;
-    for (linalgcuSize_t i = 0; i < pattern->rows; i++) {
-        for (linalgcuSize_t j = 0; j < driveCount; j++) {
+    dtype::real value = 0.0f;
+    for (dtype::size i = 0; i < pattern->rows; i++) {
+        for (dtype::size j = 0; j < driveCount; j++) {
             // get value
             linalgcu_matrix_get_element(drivePattern, &value, i, j);
 
@@ -114,8 +114,8 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (linalgcuSize_t i = 0; i < pattern->rows; i++) {
-        for (linalgcuSize_t j = 0; j < measurmentCount; j++) {
+    for (dtype::size i = 0; i < pattern->rows; i++) {
+        for (dtype::size j = 0; j < measurmentCount; j++) {
             // get value
             linalgcu_matrix_get_element(measurmentPattern, &value, i, j);
 
@@ -133,7 +133,7 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
     linalgcu_matrix_release(&pattern);
 
     // calc voltage calculation matrix
-    linalgcuMatrixData_t alpha = -1.0f, beta = 0.0f;
+    dtype::real alpha = -1.0f, beta = 0.0f;
 
     // one prerun for cublas
     cublasSetStream(handle, stream);
@@ -170,13 +170,13 @@ ForwardSolver<BasisFunction, NumericSolver>::~ForwardSolver() {
     linalgcu_matrix_release(&this->mElementalJacobianMatrix);
 
     if (this->mPhi != NULL) {
-        for (linalgcuSize_t i = 0; i < this->model()->numHarmonics() + 1; i++) {
+        for (dtype::size i = 0; i < this->model()->numHarmonics() + 1; i++) {
             linalgcu_matrix_release(&this->mPhi[i]);
         }
         delete [] this->mPhi;
     }
     if (this->mExcitation != NULL) {
-        for (linalgcuSize_t i = 0; i < this->model()->numHarmonics() + 1; i++) {
+        for (dtype::size i = 0; i < this->model()->numHarmonics() + 1; i++) {
             linalgcu_matrix_release(&this->mExcitation[i]);
         }
         delete [] this->mExcitation;
@@ -203,19 +203,19 @@ void ForwardSolver<BasisFunction, NumericSolver>::init_jacobian_calculation_matr
     }
 
     // variables
-    linalgcuMatrixData_t id[BasisFunction::nodesPerElement],
+    dtype::real id[BasisFunction::nodesPerElement],
         x[BasisFunction::nodesPerElement * 2], y[BasisFunction::nodesPerElement * 2];
     BasisFunction* basis[BasisFunction::nodesPerElement];
 
     // fill connectivity and elementalJacobianMatrix
-    for (linalgcuSize_t k = 0; k < this->model()->mesh()->elementCount(); k++) {
+    for (dtype::size k = 0; k < this->model()->mesh()->elementCount(); k++) {
         // get nodes for element
-        for (linalgcuSize_t i = 0; i < BasisFunction::nodesPerElement; i++) {
+        for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             linalgcu_matrix_get_element(this->model()->mesh()->elements(), &id[i], k, i);
             linalgcu_matrix_get_element(this->model()->mesh()->nodes(), &x[i],
-                (linalgcuSize_t)id[i], 0);
+                (dtype::size)id[i], 0);
             linalgcu_matrix_get_element(this->model()->mesh()->nodes(), &y[i],
-                (linalgcuSize_t)id[i], 1);
+                (dtype::size)id[i], 1);
 
             // get coordinates once more for permutations
             x[i + BasisFunction::nodesPerElement] = x[i];
@@ -223,13 +223,13 @@ void ForwardSolver<BasisFunction, NumericSolver>::init_jacobian_calculation_matr
         }
 
         // calc basis functions
-        for (linalgcuSize_t i = 0; i < BasisFunction::nodesPerElement; i++) {
+        for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             basis[i] = new BasisFunction(&x[i], &y[i]);
         }
 
         // fill matrix
-        for (linalgcuSize_t i = 0; i < BasisFunction::nodesPerElement; i++) {
-            for (linalgcuSize_t j = 0; j < BasisFunction::nodesPerElement; j++) {
+        for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
+            for (dtype::size j = 0; j < BasisFunction::nodesPerElement; j++) {
                 // set elementalJacobianMatrix element
                 linalgcu_matrix_set_element(this->mElementalJacobianMatrix,
                     basis[i]->integrate_gradient_with_basis(*basis[j]),
@@ -238,7 +238,7 @@ void ForwardSolver<BasisFunction, NumericSolver>::init_jacobian_calculation_matr
         }
 
         // cleanup
-        for (linalgcuSize_t i = 0; i < BasisFunction::nodesPerElement; i++) {
+        for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             delete basis[i];
         }
     }
@@ -253,7 +253,7 @@ template
     class BasisFunction,
     class NumericSolver
 >
-linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatrix_t gamma, linalgcuSize_t steps,
+linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatrix_t gamma, dtype::size steps,
     cublasHandle_t handle, cudaStream_t stream) const {
     // check input
     if (gamma == NULL) {
@@ -271,14 +271,14 @@ linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatr
         steps, true, stream);
 
     // solve for higher harmonics
-    for (linalgcuSize_t n = 1; n < this->model()->numHarmonics() + 1; n++) {
+    for (dtype::size n = 1; n < this->model()->numHarmonics() + 1; n++) {
         this->numericSolver()->solve(this->model()->systemMatrix(n), this->phi(n), this->excitation(n),
             steps, false, stream);
     }
 
     // calc jacobian
     this->calc_jacobian(gamma, 0, false, stream);
-    for (linalgcuSize_t n = 1; n < this->model()->numHarmonics() + 1; n++) {
+    for (dtype::size n = 1; n < this->model()->numHarmonics() + 1; n++) {
         this->calc_jacobian(gamma, n, true, stream);
     }
 
@@ -286,7 +286,7 @@ linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatr
     cublasSetStream(handle, stream);
 
     // add voltage
-    linalgcuMatrixData_t alpha = 1.0f, beta = 0.0f;
+    dtype::real alpha = 1.0f, beta = 0.0f;
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltageCalculation()->rows,
         this->driveCount(), this->voltageCalculation()->columns, &alpha,
         this->voltageCalculation()->deviceData, this->voltageCalculation()->rows,
@@ -295,7 +295,7 @@ linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::solve(linalgcuMatr
 
     // add harmonic voltages
     beta = 1.0f;
-    for (linalgcuSize_t n = 1; n < this->model()->numHarmonics() + 1; n++) {
+    for (dtype::size n = 1; n < this->model()->numHarmonics() + 1; n++) {
         cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltageCalculation()->rows,
             this->driveCount(), this->voltageCalculation()->columns, &alpha,
             this->voltageCalculation()->deviceData, this->voltageCalculation()->rows,

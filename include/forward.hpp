@@ -16,8 +16,8 @@ class ForwardSolver {
 // constructor and destructor
 public:
     ForwardSolver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPattern,
-        linalgcuMatrix_t drivePattern, linalgcuSize_t measurmentCount, linalgcuSize_t driveCount,
-        linalgcuSize_t numHarmonics, linalgcuMatrixData_t sigmaRef, cublasHandle_t handle,
+        linalgcuMatrix_t drivePattern, dtype::size measurmentCount, dtype::size driveCount,
+        dtype::size numHarmonics, dtype::real sigmaRef, cublasHandle_t handle,
         cudaStream_t stream);
     virtual ~ForwardSolver();
 
@@ -26,27 +26,27 @@ public:
     void init_jacobian_calculation_matrix(cublasHandle_t handle, cudaStream_t stream);
 
     // calc jacobian
-    linalgcuMatrix_t calc_jacobian(linalgcuMatrix_t gamma, linalgcuSize_t harmonic, bool additiv,
+    linalgcuMatrix_t calc_jacobian(linalgcuMatrix_t gamma, dtype::size harmonic, bool additiv,
         cudaStream_t stream) const;
 
     // forward solving
-    linalgcuMatrix_t solve(linalgcuMatrix_t gamma, linalgcuSize_t steps, cublasHandle_t handle,
+    linalgcuMatrix_t solve(linalgcuMatrix_t gamma, dtype::size steps, cublasHandle_t handle,
         cudaStream_t stream) const;
 
 // accessors
 public:
     Model<BasisFunction>* model() const { return this->mModel; }
     NumericSolver* numericSolver() const { return this->mNumericSolver; }
-    linalgcuSize_t driveCount() const { return this->mDriveCount; }
-    linalgcuSize_t measurmentCount() const { return this->mMeasurmentCount; }
+    dtype::size driveCount() const { return this->mDriveCount; }
+    dtype::size measurmentCount() const { return this->mMeasurmentCount; }
     linalgcuMatrix_t jacobian() const { return this->mJacobian; }
     linalgcuMatrix_t voltage() const { return this->mVoltage; }
 
-    linalgcuMatrix_t phi(linalgcuSize_t id) const {
+    linalgcuMatrix_t phi(dtype::size id) const {
         assert(id <= this->model()->numHarmonics());
         return this->mPhi[id];
     }
-    linalgcuMatrix_t excitation(linalgcuSize_t id) const {
+    linalgcuMatrix_t excitation(dtype::size id) const {
         assert(id <= this->model()->numHarmonics());
         return this->mExcitation[id];
     }
@@ -57,8 +57,8 @@ public:
 private:
     Model<BasisFunction>* mModel;
     SparseConjugate* mNumericSolver;
-    linalgcuSize_t mDriveCount;
-    linalgcuSize_t mMeasurmentCount;
+    dtype::size mDriveCount;
+    dtype::size mMeasurmentCount;
     linalgcuMatrix_t mJacobian;
     linalgcuMatrix_t mVoltage;
     linalgcuMatrix_t* mPhi;
