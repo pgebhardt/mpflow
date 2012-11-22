@@ -3,10 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-// redefine extern c
-#define LINALGCU_EXTERN_C extern "C"
-
-#include <locale.h>
+#include <iostream>
 #include "../include/fasteit.hpp"
 
 // namespaces
@@ -86,53 +83,28 @@ void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
         throw invalid_argument("Matrix::copy: size");
     }
 
-    // error
-    cudaError_t error = cudaSuccess;
-
     // copy data
-    error = cudaMemcpyAsync(other->deviceData(), this->deviceData(),
+    cudaMemcpyAsync(other->deviceData(), this->deviceData(),
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyDeviceToDevice, stream);
-
-    // check success
-    if (error != cudaSuccess) {
-        throw logic_error("Matrix::copy: copy data");
-    }
 }
 
 // copy to device
 template <class type>
 void Matrix<type>::copyToDevice(cudaStream_t stream) {
-    // check input
-    // error
-    cudaError_t error = cudaSuccess;
-
-    // copy host buffer to device
-    error = cudaMemcpyAsync(this->deviceData(), this->hostData(),
+    // check inpu    // copy host buffer to device
+    cudaMemcpyAsync(this->deviceData(), this->hostData(),
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyHostToDevice, stream);
-
-    // check success
-    if (error != cudaSuccess) {
-        throw logic_error("Matrix::copyToDevice: copy data");
-    }
 }
 
 // copy to host
 template <class type>
 void Matrix<type>::copyToHost(cudaStream_t stream) {
-    // error
-    cudaError_t error = cudaSuccess;
-
     // copy host buffer to device
-    error = cudaMemcpyAsync(this->hostData(), this->deviceData(),
+    cudaMemcpyAsync(this->hostData(), this->deviceData(),
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyDeviceToHost, stream);
-
-    // check success
-    if (error != cudaSuccess) {
-        throw logic_error("Matrix::copyToHost: copy data");
-    }
 }
 
 // add kernel

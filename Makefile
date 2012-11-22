@@ -20,11 +20,11 @@ NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-alias
 LDFLAGS = -L/usr/local/lib -lcudart -lcublas
 
 # Object files
-_OBJ = mesh.o electrodes.o linearBasis.o model.o conjugate.o sparseConjugate.o #forward.o inverse.o solver.o
+_OBJ = mesh.o electrodes.o linearBasis.o model.o conjugate.o sparseConjugate.o forward.o #inverse.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
-_CUOBJ = matrix.cu_o sparse.cu_o model.cu_o conjugate.cu_o #forward.cu_o
+_CUOBJ = matrix.cu_o sparse.cu_o model.cu_o conjugate.cu_o forward.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies

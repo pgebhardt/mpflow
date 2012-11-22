@@ -11,18 +11,18 @@ using namespace std;
 
 // calc jacobian kernel
 template<class BasisFunction>
-__global__ void calc_jacobian_kernel(dtype::real* jacobian,
+__global__ void calcJacobianKernel(dtype::real* jacobian,
     dtype::real* drivePhi,
     dtype::real* measurmentPhi,
-    dtype::real* connectivityMatrix,
+    dtype::index* connectivityMatrix,
     dtype::real* elementalJacobianMatrix,
     dtype::real* gamma, dtype::real sigmaRef,
     dtype::size rows, dtype::size columns,
     dtype::size phiRows, dtype::size elementCount,
     dtype::size driveCount, dtype::size measurmentCount, bool additiv) {
     // get id
-    dtype::size row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::size column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // check column
     if (column >= elementCount) {
@@ -30,14 +30,14 @@ __global__ void calc_jacobian_kernel(dtype::real* jacobian,
     }
 
     // calc measurment and drive id
-    dtype::size roundMeasurmentCount = ((measurmentCount + LINALGCU_BLOCK_SIZE - 1) /
-        LINALGCU_BLOCK_SIZE) * LINALGCU_BLOCK_SIZE;
+    dtype::size roundMeasurmentCount = ((measurmentCount + Matrix<dtype::real>::blockSize - 1) /
+        Matrix<dtype::real>::blockSize) * Matrix<dtype::real>::blockSize;
     dtype::size measurmentId = row % roundMeasurmentCount;
     dtype::size driveId = row / roundMeasurmentCount;
 
     // variables
     dtype::real dPhi[BasisFunction::nodesPerElement], mPhi[BasisFunction::nodesPerElement];
-    dtype::real id;
+    dtype::index id;
 
     // get data
     for (int i = 0; i < BasisFunction::nodesPerElement; i++) {
@@ -74,31 +74,31 @@ template
     class BasisFunction,
     class NumericSolver
 >
-linalgcuMatrix_t ForwardSolver<BasisFunction, NumericSolver>::calc_jacobian(linalgcuMatrix_t gamma,
+Matrix<dtype::real>& ForwardSolver<BasisFunction, NumericSolver>::calcJacobian(Matrix<dtype::real>* gamma,
     dtype::size harmonic, bool additiv, cudaStream_t stream) const {
     // check input
     if (gamma == NULL) {
-        throw invalid_argument("ForwardSolver::calc_jacobian: gamma == NULL");
+        throw invalid_argument("ForwardSolver::calcJacobian: gamma == NULL");
     }
-    if (harmonic > this->model()->numHarmonics()) {
-        throw invalid_argument("ForwardSolver::calc_jacobian: harmonic > this->model()->numHarmonics()");
+    if (harmonic > this->model().numHarmonics()) {
+        throw invalid_argument("ForwardSolver::calcJacobian: harmonic > this->model()->numHarmonics()");
     }
 
     // dimension
-    dim3 blocks(this->jacobian()->rows / LINALGCU_BLOCK_SIZE,
-        this->jacobian()->columns / LINALGCU_BLOCK_SIZE);
-    dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
+    dim3 blocks(this->jacobian().rows() / Matrix<dtype::real>::blockSize,
+        this->jacobian().columns() / Matrix<dtype::real>::blockSize);
+    dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // calc jacobian
-    calc_jacobian_kernel<BasisFunction><<<blocks, threads, 0, stream>>>(
-        this->jacobian()->deviceData, this->phi(harmonic)->deviceData,
-        &this->phi(harmonic)->deviceData[this->driveCount() * this->phi(harmonic)->rows],
-        this->model()->mesh()->elements()->deviceData, this->mElementalJacobianMatrix->deviceData,
-        gamma->deviceData, this->model()->sigmaRef(), this->jacobian()->rows, this->jacobian()->columns,
-        this->phi(harmonic)->rows, this->model()->mesh()->elementCount(),
+    calcJacobianKernel<BasisFunction><<<blocks, threads, 0, stream>>>(
+        this->jacobian().deviceData(), this->phi(harmonic).deviceData(),
+        &this->phi(harmonic).deviceData()[this->driveCount() * this->phi(harmonic).rows()],
+        this->model().mesh().elements().deviceData(), this->mElementalJacobianMatrix->deviceData(),
+        gamma->deviceData(), this->model().sigmaRef(), this->jacobian().rows(), this->jacobian().columns(),
+        this->phi(harmonic).rows(), this->model().mesh().elementCount(),
         this->driveCount(), this->measurmentCount(), additiv);
 
-    return LINALGCU_SUCCESS;
+    return this->jacobian();
 }
 
 // specialisation
