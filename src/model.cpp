@@ -27,29 +27,20 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
         throw invalid_argument("Model::Model: handle == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // create system matrices buffer
-    this->mSystemMatrix = new linalgcuSparseMatrix_t[this->mNumHarmonics + 1];
+    this->mSystemMatrix = new SparseMatrix*[this->mNumHarmonics + 1];
 
     // create sparse matrices
     this->create_sparse_matrices(handle, stream);
 
     // create matrices
-    error  = linalgcu_matrix_create(&this->mExcitationMatrix,
-        this->mesh()->nodeCount(), this->mElectrodes->count(), stream);
-    error |= linalgcu_matrix_create(&this->mConnectivityMatrix, this->mesh()->nodeCount(),
-        LINALGCU_SPARSE_SIZE * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&this->mElementalSMatrix, this->mesh()->nodeCount(),
-        LINALGCU_SPARSE_SIZE * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&this->mElementalRMatrix, this->mesh()->nodeCount(),
-        LINALGCU_SPARSE_SIZE * LINALGCU_BLOCK_SIZE, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model::Model: create matrices");
-    }
+    this->mExcitationMatrix = new Matrix<dtype::real>(this->mesh().nodeCount(), this->electrodes().count(), stream);
+    this->mConnectivityMatrix = new Matrix<dtype::index>(this->mesh().nodeCount(),
+        SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
+    this->mElementalSMatrix = new Matrix<dtype::real>(this->mesh().nodeCount(),
+        SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
+    this->mElementalRMatrix = new Matrix<dtype::real>(this->mesh().nodeCount(),
+        SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
 
     // init model
     this->init(handle, stream);
@@ -62,22 +53,18 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
 template <class BasisFunction>
 Model<BasisFunction>::~Model() {
     // cleanup
-    if (this->mMesh != NULL) {
-        delete this->mMesh;
-    }
-    if (this->mElectrodes != NULL) {
-        delete this->mElectrodes;
-    }
-    linalgcu_sparse_matrix_release(&this->mSMatrix);
-    linalgcu_sparse_matrix_release(&this->mRMatrix);
-    linalgcu_matrix_release(&this->mExcitationMatrix);
-    linalgcu_matrix_release(&this->mConnectivityMatrix);
-    linalgcu_matrix_release(&this->mElementalSMatrix);
-    linalgcu_matrix_release(&this->mElementalRMatrix);
+    delete this->mMesh;
+    delete this->mElectrodes;
+    delete this->mSMatrix;
+    delete this->mRMatrix;
+    delete this->mExcitationMatrix;
+    delete this->mConnectivityMatrix;
+    delete this->mElementalSMatrix;
+    delete this->mElementalRMatrix;
 
     if (this->mSystemMatrix != NULL) {
         for (dtype::size i = 0; i < this->mNumHarmonics + 1; i++) {
-            linalgcu_sparse_matrix_release(&this->mSystemMatrix[i]);
+            delete this->mSystemMatrix[i];
         }
         delete [] this->mSystemMatrix;
     }
@@ -92,56 +79,35 @@ void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStr
         throw invalid_argument("Model::create_sparse_matrices: handle == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // calc initial system matrix
     // create matrices
-    linalgcuMatrix_t systemMatrix;
-    error = linalgcu_matrix_create(&systemMatrix,
-        this->mesh()->nodeCount(), this->mesh()->nodeCount(), stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model::create_sparse_matrices: create matrices");
-    }
+    Matrix<dtype::real> systemMatrix(this->mesh().nodeCount(), this->mesh().nodeCount(), stream);
 
     // calc generate empty system matrix
-    dtype::real id[BasisFunction::nodesPerElement];
-    for (dtype::size k = 0; k < this->mesh()->elementCount(); k++) {
+    dtype::index id[BasisFunction::nodesPerElement];
+    for (dtype::size k = 0; k < this->mesh().elementCount(); k++) {
         // get nodes for element
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
-            linalgcu_matrix_get_element(this->mesh()->elements(), &id[i], k, i);
+            id[i] = this->mesh().elements()(k, i);
         }
 
         // set system matrix elements
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             for (dtype::size j = 0; j < BasisFunction::nodesPerElement; j++) {
-                linalgcu_matrix_set_element(systemMatrix, 1.0f, (dtype::size)id[i],
-                    (dtype::size)id[j]);
+                systemMatrix(id[i], id[j]) = 1.0f;
             }
         }
     }
 
     // copy matrix to device
-    error = linalgcu_matrix_copy_to_device(systemMatrix, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model::create_sparse_matrices: copy matrix to device");
-    }
+    systemMatrix.copyToDevice(stream);
 
     // create sparse matrices
-    error  = linalgcu_sparse_matrix_create(&this->mSMatrix, systemMatrix, stream);
-    error |= linalgcu_sparse_matrix_create(&this->mRMatrix, systemMatrix, stream);
+    this->mSMatrix = new SparseMatrix(&systemMatrix, stream);
+    this->mRMatrix = new SparseMatrix(&systemMatrix, stream);
 
     for (dtype::size i = 0; i < this->numHarmonics() + 1; i++) {
-        error |= linalgcu_sparse_matrix_create(&this->mSystemMatrix[i], systemMatrix, stream);
-    }
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model::create_sparse_matrices: create sparse matrces");
+        this->mSystemMatrix[i] = new SparseMatrix(&systemMatrix, stream);
     }
 }
 
@@ -153,52 +119,40 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
         throw invalid_argument("Model::init: handle == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // create intermediate matrices
-    linalgcuMatrix_t elementCount, connectivityMatrix, elementalRMatrix, elementalSMatrix;
-    error  = linalgcu_matrix_create(&elementCount, this->mesh()->nodeCount(),
-        this->mesh()->nodeCount(), stream);
-    error |= linalgcu_matrix_create(&connectivityMatrix, this->mConnectivityMatrix->rows,
-        elementCount->columns * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&elementalSMatrix,
-        this->mElementalSMatrix->rows, elementCount->columns * LINALGCU_BLOCK_SIZE, stream);
-    error |= linalgcu_matrix_create(&elementalRMatrix,
-        this->mElementalRMatrix->rows, elementCount->columns * LINALGCU_BLOCK_SIZE, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model::init: create intermediate matrices");
-    }
+    Matrix<dtype::index> elementCount(this->mesh().nodeCount(), this->mesh().nodeCount(), stream);
+    Matrix<dtype::index> connectivityMatrix(this->mConnectivityMatrix->rows(),
+        elementCount.columns() * Matrix<dtype::index>::blockSize, stream);
+    Matrix<dtype::real> elementalSMatrix(this->mElementalSMatrix->rows(),
+        elementCount.columns() * Matrix<dtype::real>::blockSize, stream);
+    Matrix<dtype::real> elementalRMatrix(this->mElementalRMatrix->rows(),
+        elementCount.columns() * Matrix<dtype::real>::blockSize, stream);
 
     // init connectivityMatrix
-    for (dtype::size i = 0; i < connectivityMatrix->rows; i++) {
-        for (dtype::size j = 0; j < connectivityMatrix->columns; j++) {
-            linalgcu_matrix_set_element(connectivityMatrix, -1.0f, i, j);
+    for (dtype::size i = 0; i < connectivityMatrix.rows(); i++) {
+        for (dtype::size j = 0; j < connectivityMatrix.columns(); j++) {
+            connectivityMatrix(i, j) = -1;
         }
     }
-    for (dtype::size i = 0; i < this->mConnectivityMatrix->rows; i++) {
-        for (dtype::size j = 0; j < this->mConnectivityMatrix->columns; j++) {
-            linalgcu_matrix_set_element(this->mConnectivityMatrix, -1.0f, i, j);
+    for (dtype::size i = 0; i < this->mConnectivityMatrix->rows(); i++) {
+        for (dtype::size j = 0; j < this->mConnectivityMatrix->columns(); j++) {
+            (*this->mConnectivityMatrix)(i, j) =  -1;
         }
     }
-    linalgcu_matrix_copy_to_device(this->mConnectivityMatrix, stream);
+    this->mConnectivityMatrix->copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
-    dtype::real id[BasisFunction::nodesPerElement],
-        x[BasisFunction::nodesPerElement * 2], y[BasisFunction::nodesPerElement * 2];
+    dtype::index id[BasisFunction::nodesPerElement];
+    dtype::real x[BasisFunction::nodesPerElement * 2], y[BasisFunction::nodesPerElement * 2];
     BasisFunction* basis[BasisFunction::nodesPerElement];
     dtype::real temp;
 
-    for (dtype::size k = 0; k < this->mesh()->elementCount(); k++) {
+    for (dtype::size k = 0; k < this->mesh().elementCount(); k++) {
         // get nodes for element
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
-            linalgcu_matrix_get_element(this->mesh()->elements(), &id[i], k, i);
-            linalgcu_matrix_get_element(this->mesh()->nodes(), &x[i],
-                (dtype::size)id[i], 0);
-            linalgcu_matrix_get_element(this->mesh()->nodes(), &y[i],
-                (dtype::size)id[i], 1);
+            id[i] = this->mesh().elements()(k, i);
+            x[i] = this->mesh().nodes()(id[i], 0);
+            y[i] = this->mesh().nodes()(id[i], 1);
 
             // get coordinates once more for permutations
             x[i + BasisFunction::nodesPerElement] = x[i];
@@ -214,29 +168,21 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             for (dtype::size j = 0; j < BasisFunction::nodesPerElement; j++) {
                 // get current element count
-                linalgcu_matrix_get_element(elementCount, &temp,
-                    (dtype::size)id[i], (dtype::size)id[j]);
+                temp = elementCount(id[i], id[j]);
 
                 // set connectivity element
-                linalgcu_matrix_set_element(connectivityMatrix,
-                    (dtype::real)k, (dtype::size)id[i],
-                    (dtype::size)(id[j] + connectivityMatrix->rows * temp));
+                connectivityMatrix(id[i], id[j] + connectivityMatrix.rows() * temp) = k;
 
                 // set elemental system element
-                linalgcu_matrix_set_element(elementalSMatrix,
-                    basis[i]->integrate_gradient_with_basis(*basis[j]),
-                    (dtype::size)id[i],
-                    (dtype::size)(id[j] + connectivityMatrix->rows * temp));
+                elementalSMatrix(id[i], id[j] + connectivityMatrix.rows() * temp) =
+                    basis[i]->integrate_gradient_with_basis(*basis[j]);
 
                 // set elemental residual element
-                linalgcu_matrix_set_element(elementalRMatrix,
-                    basis[i]->integrate_with_basis(*basis[j]),
-                    (dtype::size)id[i],
-                    (dtype::size)(id[j] + connectivityMatrix->rows * temp));
+                elementalRMatrix(id[i], id[j] + connectivityMatrix.rows() * temp) =
+                    basis[i]->integrate_with_basis(*basis[j]);
 
                 // increment element count
-                elementCount->hostData[(dtype::size)id[i] + (dtype::size)id[j] *
-                    elementCount->rows] += 1.0f;
+                elementCount(id[i], id[j])++;
             }
         }
 
@@ -247,44 +193,31 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     }
 
     // upload intermediate matrices
-    linalgcu_matrix_copy_to_device(connectivityMatrix, stream);
-    linalgcu_matrix_copy_to_device(elementalSMatrix, stream);
-    linalgcu_matrix_copy_to_device(elementalRMatrix, stream);
+    connectivityMatrix.copyToDevice(stream);
+    elementalSMatrix.copyToDevice(stream);
+    elementalRMatrix.copyToDevice(stream);
 
     // reduce matrices
-    this->reduce_matrix(this->mConnectivityMatrix, connectivityMatrix,
-        this->mSMatrix->density, stream);
-    this->reduce_matrix(this->mElementalSMatrix, elementalSMatrix,
-        this->mSMatrix->density, stream);
-    this->reduce_matrix(this->mElementalRMatrix, elementalRMatrix,
-        this->mSMatrix->density, stream);
+    this->reduce_matrix(this->mConnectivityMatrix, &connectivityMatrix,
+        this->mSMatrix->density(), stream);
+    this->reduce_matrix(this->mElementalSMatrix, &elementalSMatrix,
+        this->mSMatrix->density(), stream);
+    this->reduce_matrix(this->mElementalRMatrix, &elementalRMatrix,
+        this->mSMatrix->density(), stream);
 
     // create gamma
-    linalgcuMatrix_t gamma;
-    error  = linalgcu_matrix_create(&gamma, this->mesh()->elementCount(), 1, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Model::init: create gamma");
-    }
+    Matrix<dtype::real> gamma(this->mesh().elementCount(), 1, stream);
 
     // update matrices
     this->update_matrix(this->mSMatrix, this->mElementalSMatrix,
-        gamma, stream);
+        &gamma, stream);
     this->update_matrix(this->mRMatrix, this->mElementalRMatrix,
-        gamma, stream);
-
-    // cleanup
-    linalgcu_matrix_release(&gamma);
-    linalgcu_matrix_release(&elementCount);
-    linalgcu_matrix_release(&connectivityMatrix);
-    linalgcu_matrix_release(&elementalSMatrix);
-    linalgcu_matrix_release(&elementalRMatrix);
+        &gamma, stream);
 }
 
 // update model
 template <class BasisFunction>
-void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
+void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (gamma == NULL) {
@@ -310,12 +243,12 @@ void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
     dtype::real alpha = 0.0f;
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // calc alpha
-        alpha = (2.0f * n * M_PI / this->mesh()->height()) *
-            (2.0f * n * M_PI / this->mesh()->height());
+        alpha = (2.0f * n * M_PI / this->mesh().height()) *
+            (2.0f * n * M_PI / this->mesh().height());
 
         // init system matrix with 2d system matrix
-        cublasError = cublasScopy(handle, this->mSMatrix->rows * LINALGCU_SPARSE_SIZE,
-            this->mSMatrix->values, 1, this->systemMatrix(n)->values, 1);
+        cublasError = cublasScopy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize,
+            this->mSMatrix->values(), 1, this->systemMatrix(n).values(), 1);
 
         // check error
         if (cublasError != CUBLAS_STATUS_SUCCESS) {
@@ -324,8 +257,8 @@ void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
         }
 
         // add alpha * residualMatrix
-        cublasError = cublasSaxpy(handle, this->mSMatrix->rows * LINALGCU_SPARSE_SIZE, &alpha,
-            this->mRMatrix->values, 1, this->systemMatrix(n)->values, 1);
+        cublasError = cublasSaxpy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize, &alpha,
+            this->mRMatrix->values(), 1, this->systemMatrix(n).values(), 1);
 
         // check error
         if (cublasError != CUBLAS_STATUS_SUCCESS) {
@@ -340,18 +273,18 @@ void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
 template <class BasisFunction>
 void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
-    dtype::real id[BasisFunction::nodesPerEdge],
-        x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
+    dtype::index id[BasisFunction::nodesPerEdge];
+    dtype::real x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
 
-    for (dtype::size i = 0; i < this->mesh()->boundaryCount(); i++) {
-        for (dtype::size l = 0; l < this->electrodes()->count(); l++) {
+    for (dtype::size i = 0; i < this->mesh().boundaryCount(); i++) {
+        for (dtype::size l = 0; l < this->electrodes().count(); l++) {
             for (dtype::size k = 0; k < BasisFunction::nodesPerEdge; k++) {
                 // get node id
-                linalgcu_matrix_get_element(this->mesh()->boundary(), &id[k], i, k);
+                id[k] = this->mesh().boundary()(i, k);
 
                 // get coordinates
-                linalgcu_matrix_get_element(this->mesh()->nodes(), &x[k], (dtype::size)id[k], 0);
-                linalgcu_matrix_get_element(this->mesh()->nodes(), &y[k], (dtype::size)id[k], 1);
+                x[k] = this->mesh().nodes()(id[k], 0);
+                y[k] = this->mesh().nodes()(id[k], 1);
 
                 // set coordinates for permutations
                 x[k + BasisFunction::nodesPerEdge] = x[k];
@@ -359,30 +292,24 @@ void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
             }
 
             // calc elements
-            dtype::real oldValue = 0.0f;
             for (dtype::size k = 0; k < BasisFunction::nodesPerEdge; k++) {
-                // get current value
-                linalgcu_matrix_get_element(this->mExcitationMatrix, &oldValue,
-                    (dtype::size)id[k], l);
-
                 // add new value
-                linalgcu_matrix_set_element(this->mExcitationMatrix,
-                    oldValue - BasisFunction::integrate_boundary_edge(
-                        &x[k], &y[k], &this->electrodes()->electrodesStart()[l * 2],
-                        &this->electrodes()->electrodesEnd()[l * 2]) /
-                    this->electrodes()->width(), (dtype::size)id[k], l);
+                (*this->mExcitationMatrix)(id[k], l) -= BasisFunction::integrate_boundary_edge(&x[k], &y[k],
+                    &this->electrodes().electrodesStart()[l * 2],
+                    &this->electrodes().electrodesEnd()[l * 2]) /
+                    this->electrodes().width();
             }
         }
     }
 
     // upload matrix
-    linalgcu_matrix_copy_to_device(this->mExcitationMatrix, stream);
+    this->mExcitationMatrix->copyToDevice(stream);
 }
 
 // calc excitaion components
 template <class BasisFunction>
-void Model<BasisFunction>::calc_excitation_components(linalgcuMatrix_t* component,
-    linalgcuMatrix_t pattern, cublasHandle_t handle, cudaStream_t stream) {
+void Model<BasisFunction>::calc_excitation_components(Matrix<dtype::real>** component,
+    Matrix<dtype::real>* pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (component == NULL) {
         throw invalid_argument(
@@ -395,34 +322,26 @@ void Model<BasisFunction>::calc_excitation_components(linalgcuMatrix_t* componen
         throw invalid_argument("Model::calc_excitation_components: handle == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // calc excitation matrices
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // Run multiply once more to avoid cublas error
-        linalgcu_matrix_multiply(component[n], this->mExcitationMatrix,
-            pattern, handle, stream);
-        error |= linalgcu_matrix_multiply(component[n], this->mExcitationMatrix,
-            pattern, handle, stream);
+        try {
+            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
+        }
+        catch (exception& e) {
+            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
+        }
     }
 
     // calc fourier coefficients for current pattern
     // calc ground mode
-    error |= linalgcu_matrix_scalar_multiply(component[0],
-        1.0f / this->mesh()->height(), stream);
+    component[0]->scalarMultiply(1.0f / this->mesh().height(), stream);
 
     // calc harmonics
     for (dtype::size n = 1; n < this->numHarmonics() + 1; n++) {
-        error |= linalgcu_matrix_scalar_multiply(component[n],
-            2.0f * sin(n * M_PI * this->electrodes()->height() / this->mesh()->height()) /
-            (n * M_PI * this->electrodes()->height()), stream);
-    }
-
-    // check error
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error(
-            "Model::calc_excitation_components: calc fourier coefficients");
+        component[n]->scalarMultiply(
+            2.0f * sin(n * M_PI * this->electrodes().height() / this->mesh().height()) /
+            (n * M_PI * this->electrodes().height()), stream);
     }
 }
 

@@ -10,15 +10,16 @@ using namespace fastEIT;
 using namespace std;
 
 // reduce connectivity and elementalResidual matrix
-__global__ void reduce_matrix_kernel(dtype::real* matrix,
-    dtype::real* intermediateMatrix, linalgcuColumnId_t* systemMatrixColumnIds,
+template <class type>
+__global__ void reduce_matrix_kernel(type* matrix,
+    type* intermediateMatrix, dtype::index* systemMatrixColumnIds,
     dtype::size rows, dtype::size density) {
     // get ids
-    dtype::size row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::size column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // get column id
-    linalgcuColumnId_t columnId = systemMatrixColumnIds[row * LINALGCU_SPARSE_SIZE + column];
+    dtype::index columnId = systemMatrixColumnIds[row * SparseMatrix::blockSize + column];
 
     // check column id
     if (columnId == -1) {
@@ -26,16 +27,16 @@ __global__ void reduce_matrix_kernel(dtype::real* matrix,
     }
 
     // reduce matrices
-    for (int k = 0; k < density; k++) {
-        matrix[row + (column + k * LINALGCU_SPARSE_SIZE) * rows] =
+    for (dtype::index k = 0; k < density; k++) {
+        matrix[row + (column + k * SparseMatrix::blockSize) * rows] =
             intermediateMatrix[row + (columnId + k * rows) * rows];
     }
 }
 
 // reduce matrix
 template <class BasisFunction>
-void Model<BasisFunction>::reduce_matrix(linalgcuMatrix_t matrix,
-    linalgcuMatrix_t intermediateMatrix, dtype::size density, cudaStream_t stream) {
+void Model<BasisFunction>::reduce_matrix(Matrix<dtype::real>* matrix,
+    Matrix<dtype::real>* intermediateMatrix, dtype::size density, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
         throw invalid_argument("Model::reduce_matrix: matrix == NULL");
@@ -45,46 +46,67 @@ void Model<BasisFunction>::reduce_matrix(linalgcuMatrix_t matrix,
     }
 
     // block size
-    dim3 blocks(matrix->rows / LINALGCU_BLOCK_SIZE, 1);
-    dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
+    dim3 blocks(matrix->rows() / Matrix<dtype::real>::blockSize, 1);
+    dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // reduce matrix
-    reduce_matrix_kernel<<<blocks, threads, 0, stream>>>(
-        matrix->deviceData, intermediateMatrix->deviceData,
-        this->mSMatrix->columnIds, matrix->rows,
+    reduce_matrix_kernel<dtype::real><<<blocks, threads, 0, stream>>>(
+        matrix->deviceData(), intermediateMatrix->deviceData(),
+        this->mSMatrix->columnIds(), matrix->rows(),
+        density);
+}
+template <class BasisFunction>
+void Model<BasisFunction>::reduce_matrix(Matrix<dtype::index>* matrix,
+    Matrix<dtype::index>* intermediateMatrix, dtype::size density, cudaStream_t stream) {
+    // check input
+    if (matrix == NULL) {
+        throw invalid_argument("Model::reduce_matrix: matrix == NULL");
+    }
+    if (intermediateMatrix == NULL) {
+        throw invalid_argument("Model::reduce_matrix: intermediateMatrix == NULL");
+    }
+
+    // block size
+    dim3 blocks(matrix->rows() / Matrix<dtype::index>::blockSize, 1);
+    dim3 threads(Matrix<dtype::index>::blockSize, Matrix<dtype::index>::blockSize);
+
+    // reduce matrix
+    reduce_matrix_kernel<dtype::index><<<blocks, threads, 0, stream>>>(
+        matrix->deviceData(), intermediateMatrix->deviceData(),
+        this->mSMatrix->columnIds(), matrix->rows(),
         density);
 }
 
 // update matrix kernel
 __global__ void update_matrix_kernel(dtype::real* matrixValues,
-    dtype::real* connectivityMatrix, dtype::real* elementalMatrix,
+    dtype::index* connectivityMatrix, dtype::real* elementalMatrix,
     dtype::real* gamma, dtype::real sigmaRef, dtype::size rows,
     dtype::size density) {
     // get ids
-    dtype::size row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::size column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc residual matrix element
     dtype::real value = 0.0f;
-    linalgcuColumnId_t elementId = -1;
-    for (int k = 0; k < density; k++) {
+    dtype::index elementId = -1;
+    for (dtype::index k = 0; k < density; k++) {
         // get element id
-        elementId = (linalgcuColumnId_t)connectivityMatrix[row +
-            (column + k * LINALGCU_SPARSE_SIZE) * rows];
+        elementId = connectivityMatrix[row +
+            (column + k * SparseMatrix::blockSize) * rows];
 
         value += elementId != -1 ? elementalMatrix[row +
-            (column + k * LINALGCU_SPARSE_SIZE) * rows] *
+            (column + k * SparseMatrix::blockSize) * rows] *
             sigmaRef * exp10f(gamma[elementId] / 10.0f) : 0.0f;
     }
 
     // set residual matrix element
-    matrixValues[row * LINALGCU_SPARSE_SIZE + column] = value;
+    matrixValues[row * SparseMatrix::blockSize + column] = value;
 }
 
 // update matrix
 template <class BasisFunction>
-void Model<BasisFunction>::update_matrix(linalgcuSparseMatrix_t matrix,
-    linalgcuMatrix_t elementalMatrix, linalgcuMatrix_t gamma, cudaStream_t stream) {
+void Model<BasisFunction>::update_matrix(SparseMatrix* matrix,
+    Matrix<dtype::real>* elementalMatrix, Matrix<dtype::real>* gamma, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
         throw invalid_argument("Model::update_matrix: matrix == NULL");
@@ -97,14 +119,14 @@ void Model<BasisFunction>::update_matrix(linalgcuSparseMatrix_t matrix,
     }
 
     // dimension
-    dim3 threads(LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
-    dim3 blocks(matrix->rows / LINALGCU_BLOCK_SIZE, 1);
+    dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
+    dim3 blocks(matrix->rows() / Matrix<dtype::real>::blockSize, 1);
 
     // execute kernel
     update_matrix_kernel<<<blocks, threads, 0, stream>>>(
-        matrix->values, this->mConnectivityMatrix->deviceData,
-        elementalMatrix->deviceData, gamma->deviceData, this->mSigmaRef,
-        this->mConnectivityMatrix->rows, matrix->density);
+        matrix->values(), this->mConnectivityMatrix->deviceData(),
+        elementalMatrix->deviceData(), gamma->deviceData(), this->sigmaRef(),
+        this->mConnectivityMatrix->rows(), matrix->density());
 }
 
 // specialisation

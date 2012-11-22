@@ -18,9 +18,9 @@ public:
 
 // access methods
 public:
-    Matrix<dtype::real>* nodes() const { return this->mNodes; }
-    Matrix<dtype::index>* elements() const { return this->mElements; }
-    Matrix<dtype::index>* boundary() const { return this->mBoundary; }
+    Matrix<dtype::real>& nodes() const { return *this->mNodes; }
+    Matrix<dtype::index>& elements() const { return *this->mElements; }
+    Matrix<dtype::index>& boundary() const { return *this->mBoundary; }
     dtype::size nodeCount() const { return this->mNodeCount; }
     dtype::size elementCount() const { return this->mElementCount; }
     dtype::size boundaryCount() const { return this->mBoundaryCount; }
