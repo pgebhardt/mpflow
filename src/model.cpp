@@ -3,7 +3,6 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <iostream>
 #include "../include/fasteit.hpp"
 
 // namespaces
@@ -293,7 +292,7 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     linalgcu_matrix_release(&elementalRMatrix);
 }
 
-// update system matrix
+// update model
 template <class BasisFunction>
 void Model<BasisFunction>::update(linalgcuMatrix_t gamma, cublasHandle_t handle,
     cudaStream_t stream) {

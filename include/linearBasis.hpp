@@ -27,21 +27,22 @@ namespace fastEIT {
     public:
         linalgcuMatrixData_t operator()(linalgcuMatrixData_t x, linalgcuMatrixData_t y);
 
-    // access methods
-    public:
-        inline linalgcuMatrixData_t* point(linalgcuSize_t id) const {
-            assert(id < 3);
-            return &this->mPoints[id * 2]; 
-        }
-        inline linalgcuMatrixData_t coefficient(linalgcuSize_t id) const {
-            assert(id < 3);
-            return this->mCoefficients[id];
-        }
-
     // geometry definition
     public:
         static const linalgcuSize_t nodesPerEdge = 2;
         static const linalgcuSize_t nodesPerElement = 3;
+
+    // access methods
+    public:
+        inline linalgcuMatrixData_t* point(linalgcuSize_t id) const {
+            assert(id < LinearBasis::nodesPerElement);
+            return &this->mPoints[id * 2]; 
+        }
+        inline linalgcuMatrixData_t coefficient(linalgcuSize_t id) const {
+            assert(id < LinearBasis::nodesPerElement);
+            return this->mCoefficients[id];
+        }
+
 
     // member
     private:

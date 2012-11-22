@@ -57,10 +57,9 @@ void Model<BasisFunction>::reduce_matrix(linalgcuMatrix_t matrix,
 
 // update matrix kernel
 __global__ void update_matrix_kernel(linalgcuMatrixData_t* matrixValues,
-    linalgcuColumnId_t* matrixColumnIds, linalgcuColumnId_t* columnIds,
     linalgcuMatrixData_t* connectivityMatrix, linalgcuMatrixData_t* elementalMatrix,
-    linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef,
-    linalgcuSize_t rows, linalgcuSize_t density) {
+    linalgcuMatrixData_t* gamma, linalgcuMatrixData_t sigmaRef, linalgcuSize_t rows,
+    linalgcuSize_t density) {
     // get ids
     linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
     linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
@@ -103,10 +102,9 @@ void Model<BasisFunction>::update_matrix(linalgcuSparseMatrix_t matrix,
 
     // execute kernel
     update_matrix_kernel<<<blocks, threads, 0, stream>>>(
-        matrix->values, matrix->columnIds, this->mSMatrix->columnIds,
-        this->mConnectivityMatrix->deviceData, elementalMatrix->deviceData,
-        gamma->deviceData, this->mSigmaRef, this->mConnectivityMatrix->rows,
-        matrix->density);
+        matrix->values, this->mConnectivityMatrix->deviceData,
+        elementalMatrix->deviceData, gamma->deviceData, this->mSigmaRef,
+        this->mConnectivityMatrix->rows, matrix->density);
 }
 
 // specialisation
