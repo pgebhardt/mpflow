@@ -83,28 +83,52 @@ void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
         throw invalid_argument("Matrix::copy: size");
     }
 
+    // error
+    cudaError_t error = cudaSuccess;
+
     // copy data
-    cudaMemcpyAsync(other->deviceData(), this->deviceData(),
+    error = cudaMemcpyAsync(other->deviceData(), this->deviceData(),
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyDeviceToDevice, stream);
+
+    // check success
+    if (error != cudaSuccess) {
+        throw logic_error("Matrix::copyToDevice: copy error");
+    }
 }
 
 // copy to device
 template <class type>
 void Matrix<type>::copyToDevice(cudaStream_t stream) {
-    // check inpu    // copy host buffer to device
-    cudaMemcpyAsync(this->deviceData(), this->hostData(),
+    // error
+    cudaError_t error = cudaSuccess;
+
+    // copy host buffer to device
+    error = cudaMemcpyAsync(this->deviceData(), this->hostData(),
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyHostToDevice, stream);
+
+    // check success
+    if (error != cudaSuccess) {
+        throw logic_error("Matrix::copyToDevice: copy error");
+    }
 }
 
 // copy to host
 template <class type>
 void Matrix<type>::copyToHost(cudaStream_t stream) {
+    // error
+    cudaError_t error = cudaSuccess;
+
     // copy host buffer to device
-    cudaMemcpyAsync(this->hostData(), this->deviceData(),
+    error = cudaMemcpyAsync(this->hostData(), this->deviceData(),
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyDeviceToHost, stream);
+
+    // check success
+    if (error != cudaSuccess) {
+        throw logic_error("Matrix::copyToDevice: copy error");
+    }
 }
 
 // add kernel
