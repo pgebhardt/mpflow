@@ -15,7 +15,7 @@ public:
 
 public:
     // solve system
-    void solve(linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
+    void solve(SparseMatrix* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
         dtype::size iterations, bool dcFree, cudaStream_t stream);
 
 // accessors
@@ -27,12 +27,12 @@ public:
 private:
     dtype::size mRows;
     dtype::size mColumns;
-    linalgcuMatrix_t mResiduum;
-    linalgcuMatrix_t mProjection;
-    linalgcuMatrix_t mRSOld;
-    linalgcuMatrix_t mRSNew;
-    linalgcuMatrix_t mTempVector;
-    linalgcuMatrix_t mTempNumber;
+    Matrix<dtype::real>* mResiduum;
+    Matrix<dtype::real>* mProjection;
+    Matrix<dtype::real>* mRSOld;
+    Matrix<dtype::real>* mRSNew;
+    Matrix<dtype::real>* mTempVector;
+    Matrix<dtype::real>* mTempNumber;
 };
 
 #endif

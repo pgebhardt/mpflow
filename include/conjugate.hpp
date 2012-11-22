@@ -15,18 +15,18 @@ public:
 
 public:
     // solve system
-    void solve(linalgcuMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
+    void solve(Matrix<dtype::real>* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
         dtype::size iterations, cublasHandle_t handle, cudaStream_t stream);
 
 // helper methods
 public:
-    static void add_scalar(linalgcuMatrix_t vector, linalgcuMatrix_t scalar,
+    static void add_scalar(Matrix<dtype::real>* vector, Matrix<dtype::real>* scalar,
         dtype::size rows, dtype::size columns, cudaStream_t stream);
-    static void update_vector(linalgcuMatrix_t result, linalgcuMatrix_t x1,
-        dtype::real sign, linalgcuMatrix_t x2, linalgcuMatrix_t r1,
-        linalgcuMatrix_t r2, cudaStream_t stream);
-    static void gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
-        linalgcuMatrix_t vector, cudaStream_t);
+    static void update_vector(Matrix<dtype::real>* result, Matrix<dtype::real>* x1,
+        dtype::real sign, Matrix<dtype::real>* x2, Matrix<dtype::real>* r1,
+        Matrix<dtype::real>* r2, cudaStream_t stream);
+    static void gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
+        Matrix<dtype::real>* vector, cudaStream_t);
 
 // accessors
 public:
@@ -35,12 +35,12 @@ public:
 // member
 private:
     dtype::size mRows;
-    linalgcuMatrix_t mResiduum;
-    linalgcuMatrix_t mProjection;
-    linalgcuMatrix_t mRSOld;
-    linalgcuMatrix_t mRSNew;
-    linalgcuMatrix_t mTempVector;
-    linalgcuMatrix_t mTempNumber;
+    Matrix<dtype::real>* mResiduum;
+    Matrix<dtype::real>* mProjection;
+    Matrix<dtype::real>* mRSOld;
+    Matrix<dtype::real>* mRSNew;
+    Matrix<dtype::real>* mTempVector;
+    Matrix<dtype::real>* mTempNumber;
 };
 
 #endif

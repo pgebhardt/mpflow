@@ -10,9 +10,10 @@ using namespace fastEIT;
 using namespace std;
 
 // create mesh class
-Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
-    dtype::size nodeCount, dtype::size elementCount, dtype::size boundaryCount,
-    dtype::real radius, dtype::real height)
+Mesh::Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
+    Matrix<dtype::index>* boundary, dtype::size nodeCount,
+    dtype::size elementCount, dtype::size boundaryCount, dtype::real radius,
+    dtype::real height)
     : mRadius(radius), mHeight(height), mNodeCount(nodeCount), mElementCount(elementCount),
         mBoundaryCount(boundaryCount), mNodes(nodes), mElements(elements), mBoundary(boundary) {
     // check input
@@ -25,13 +26,13 @@ Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t b
     if (boundary == NULL) {
         throw invalid_argument("boundary == NULL");
     }
-    if (nodeCount > nodes->rows) {
+    if (nodeCount > nodes->rows()) {
         throw invalid_argument("nodeCount > nodes->rows");
     }
-    if (elementCount > elements->rows) {
+    if (elementCount > elements->rows()) {
         throw invalid_argument("elementCount > elements->rows");
     }
-    if (boundaryCount > boundary->rows) {
+    if (boundaryCount > boundary->rows()) {
         throw invalid_argument("boundaryCount > boundary->rows");
     }
     if (radius <= 0.0f) {
@@ -45,7 +46,7 @@ Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t b
 // delete mesh class
 Mesh::~Mesh() {
     // cleanup matrices
-    linalgcu_matrix_release(&this->mNodes);
-    linalgcu_matrix_release(&this->mElements);
-    linalgcu_matrix_release(&this->mBoundary);
+    delete this->mNodes;
+    delete this->mElements;
+    delete this->mBoundary;
 }

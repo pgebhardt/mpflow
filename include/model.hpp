@@ -23,20 +23,20 @@ private:
 
 public:
     // calc excitaion components
-    void calc_excitation_components(linalgcuMatrix_t* component, linalgcuMatrix_t pattern,
+    void calc_excitation_components(Matrix<dtype::real>** component, Matrix<dtype::real>* pattern,
         cublasHandle_t handle, cudaStream_t stream);
 
     // update model
-    void update(linalgcuMatrix_t gamma, cublasHandle_t handle, cudaStream_t stream);
+    void update(Matrix<dtype::real>* gamma, cublasHandle_t handle, cudaStream_t stream);
 
 // cuda methods
 private:
     // update matrix
-    void update_matrix(linalgcuSparseMatrix_t matrix, linalgcuMatrix_t elements,
-        linalgcuMatrix_t gamma, cudaStream_t stream);
+    void update_matrix(SparseMatrix* matrix, Matrix<dtype::real>* elements,
+        Matrix<dtype::real>* gamma, cudaStream_t stream);
 
     // reduce matrix
-    void reduce_matrix(linalgcuMatrix_t matrix, linalgcuMatrix_t intermediateMatrix,
+    void reduce_matrix(Matrix<dtype::real>* matrix, Matrix<dtype::real>* intermediateMatrix,
         dtype::size density, cudaStream_t stream);
 
 // access methods
@@ -44,11 +44,11 @@ public:
     Mesh* mesh() const { return this->mMesh; }
     Electrodes* electrodes() const { return this->mElectrodes; }
     dtype::real sigmaRef() const { return this->mSigmaRef; }
-    inline linalgcuSparseMatrix_t systemMatrix(dtype::size id) {
+    inline SparseMatrix* systemMatrix(dtype::size id) {
         assert(id <= this->mNumHarmonics);
         return this->mSystemMatrix[id];
     }
-    linalgcuMatrix_t excitationMatrix() { return this->mExcitationMatrix; }
+    Matrix<dtype::real>* excitationMatrix() { return this->mExcitationMatrix; }
     dtype::size numHarmonics() { return this->mNumHarmonics; }
 
 // geometry definition
@@ -61,13 +61,13 @@ private:
     Mesh* mMesh;
     Electrodes* mElectrodes;
     dtype::real mSigmaRef;
-    linalgcuSparseMatrix_t* mSystemMatrix;
-    linalgcuSparseMatrix_t mSMatrix;
-    linalgcuSparseMatrix_t mRMatrix;
-    linalgcuMatrix_t mExcitationMatrix;
-    linalgcuMatrix_t mConnectivityMatrix;
-    linalgcuMatrix_t mElementalSMatrix;
-    linalgcuMatrix_t mElementalRMatrix;
+    SparseMatrix** mSystemMatrix;
+    SparseMatrix* mSMatrix;
+    SparseMatrix* mRMatrix;
+    Matrix<dtype::real>* mExcitationMatrix;
+    Matrix<dtype::real>* mConnectivityMatrix;
+    Matrix<dtype::real>* mElementalSMatrix;
+    Matrix<dtype::real>* mElementalRMatrix;
     dtype::size mNumHarmonics;
 };
 

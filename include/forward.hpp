@@ -15,8 +15,8 @@ template
 class ForwardSolver {
 // constructor and destructor
 public:
-    ForwardSolver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPattern,
-        linalgcuMatrix_t drivePattern, dtype::size measurmentCount, dtype::size driveCount,
+    ForwardSolver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurmentPattern,
+        Matrix<dtype::real>* drivePattern, dtype::size measurmentCount, dtype::size driveCount,
         dtype::size numHarmonics, dtype::real sigmaRef, cublasHandle_t handle,
         cudaStream_t stream);
     virtual ~ForwardSolver();
@@ -26,11 +26,11 @@ public:
     void init_jacobian_calculation_matrix(cublasHandle_t handle, cudaStream_t stream);
 
     // calc jacobian
-    linalgcuMatrix_t calc_jacobian(linalgcuMatrix_t gamma, dtype::size harmonic, bool additiv,
+    Matrix<dtype::real>* calc_jacobian(Matrix<dtype::real>* gamma, dtype::size harmonic, bool additiv,
         cudaStream_t stream) const;
 
     // forward solving
-    linalgcuMatrix_t solve(linalgcuMatrix_t gamma, dtype::size steps, cublasHandle_t handle,
+    Matrix<dtype::real>* solve(Matrix<dtype::real>* gamma, dtype::size steps, cublasHandle_t handle,
         cudaStream_t stream) const;
 
 // accessors
@@ -39,19 +39,19 @@ public:
     NumericSolver* numericSolver() const { return this->mNumericSolver; }
     dtype::size driveCount() const { return this->mDriveCount; }
     dtype::size measurmentCount() const { return this->mMeasurmentCount; }
-    linalgcuMatrix_t jacobian() const { return this->mJacobian; }
-    linalgcuMatrix_t voltage() const { return this->mVoltage; }
+    Matrix<dtype::real>* jacobian() const { return this->mJacobian; }
+    Matrix<dtype::real>* voltage() const { return this->mVoltage; }
 
-    linalgcuMatrix_t phi(dtype::size id) const {
+    Matrix<dtype::real>* phi(dtype::size id) const {
         assert(id <= this->model()->numHarmonics());
         return this->mPhi[id];
     }
-    linalgcuMatrix_t excitation(dtype::size id) const {
+    Matrix<dtype::real>* excitation(dtype::size id) const {
         assert(id <= this->model()->numHarmonics());
         return this->mExcitation[id];
     }
 
-    linalgcuMatrix_t voltageCalculation() const { return this->mVoltageCalculation; }
+    Matrix<dtype::real>* voltageCalculation() const { return this->mVoltageCalculation; }
 
 // member
 private:
@@ -59,12 +59,12 @@ private:
     SparseConjugate* mNumericSolver;
     dtype::size mDriveCount;
     dtype::size mMeasurmentCount;
-    linalgcuMatrix_t mJacobian;
-    linalgcuMatrix_t mVoltage;
-    linalgcuMatrix_t* mPhi;
-    linalgcuMatrix_t* mExcitation;
-    linalgcuMatrix_t mVoltageCalculation;
-    linalgcuMatrix_t mElementalJacobianMatrix;
+    Matrix<dtype::real>* mJacobian;
+    Matrix<dtype::real>* mVoltage;
+    Matrix<dtype::real>** mPhi;
+    Matrix<dtype::real>** mExcitation;
+    Matrix<dtype::real>* mVoltageCalculation;
+    Matrix<dtype::real>* mElementalJacobianMatrix;
 };
 
 #endif

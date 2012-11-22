@@ -17,35 +17,35 @@ public:
 
 public:
     // calc system matrix
-    linalgcuMatrix_t calc_system_matrix(linalgcuMatrix_t jacobian, cublasHandle_t handle,
+    Matrix<dtype::real>* calc_system_matrix(Matrix<dtype::real>* jacobian, cublasHandle_t handle,
         cudaStream_t stream);
 
     // calc excitation
-    linalgcuMatrix_t calc_excitation(linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage,
-        linalgcuMatrix_t measuredVoltage, cublasHandle_t handle, cudaStream_t stream);
+    Matrix<dtype::real>* calc_excitation(Matrix<dtype::real>* jacobian, Matrix<dtype::real>* calculatedVoltage,
+        Matrix<dtype::real>* measuredVoltage, cublasHandle_t handle, cudaStream_t stream);
 
     // inverse solving
-    linalgcuMatrix_t solve(linalgcuMatrix_t gamma, linalgcuMatrix_t jacobian,
-        linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage,
+    Matrix<dtype::real>* solve(Matrix<dtype::real>* gamma, Matrix<dtype::real>* jacobian,
+        Matrix<dtype::real>* calculatedVoltage, Matrix<dtype::real>* measuredVoltage,
         dtype::size steps, bool regularized, cublasHandle_t handle,
         cudaStream_t stream);
 
 // accessors
 public:
     NumericSolver* numericSolver() const { return this->mNumericSolver; }
-    linalgcuMatrix_t systemMatrix() const { return this->mSystemMatrix; }
-    linalgcuMatrix_t jacobianSquare() const { return this->mJacobianSquare; }
+    Matrix<dtype::real>* systemMatrix() const { return this->mSystemMatrix; }
+    Matrix<dtype::real>* jacobianSquare() const { return this->mJacobianSquare; }
     dtype::real regularizationFactor() const { return this->mRegularizationFactor; }
     dtype::real& regularizationFactor() { return this->mRegularizationFactor; }
 
 // member
 private:
     NumericSolver* mNumericSolver;
-    linalgcuMatrix_t mDVoltage;
-    linalgcuMatrix_t mZeros;
-    linalgcuMatrix_t mExcitation;
-    linalgcuMatrix_t mSystemMatrix;
-    linalgcuMatrix_t mJacobianSquare;
+    Matrix<dtype::real>* mDVoltage;
+    Matrix<dtype::real>* mZeros;
+    Matrix<dtype::real>* mExcitation;
+    Matrix<dtype::real>* mSystemMatrix;
+    Matrix<dtype::real>* mJacobianSquare;
     dtype::real mRegularizationFactor;
 };
 
