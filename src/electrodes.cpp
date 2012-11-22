@@ -10,8 +10,8 @@ using namespace fastEIT;
 using namespace std;
 
 // create electrodes class
-Electrodes::Electrodes(linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
-    linalgcuMatrixData_t meshRadius) {
+Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real meshRadius)
+    : mCount(count), mElectrodesStart(NULL), mElectrodesEnd(NULL), mWidth(width), mHeight(height) {
     // check input
     if (count == 0) {
         throw invalid_argument("count == 0");
@@ -26,23 +26,16 @@ Electrodes::Electrodes(linalgcuSize_t count, linalgcuMatrixData_t width, linalgc
         throw invalid_argument("meshRadius <= 0.0");
     }
 
-    // init member
-    this->mCount = count;
-    this->mElectrodesStart = NULL;
-    this->mElectrodesEnd = NULL;
-    this->mWidth = width;
-    this->mHeight = height;
-
     // create electrode vectors
-    this->mElectrodesStart = new linalgcuMatrixData_t[this->mCount * 2];
-    this->mElectrodesEnd = new linalgcuMatrixData_t[this->mCount * 2];
+    this->mElectrodesStart = new dtype::real[this->mCount * 2];
+    this->mElectrodesEnd = new dtype::real[this->mCount * 2];
 
     // fill electrode vectors
-    linalgcuMatrixData_t angle = 0.0f;
-    linalgcuMatrixData_t delta_angle = M_PI / (linalgcuMatrixData_t)this->mCount;
-    for (linalgcuSize_t i = 0; i < this->mCount; i++) {
+    dtype::real angle = 0.0f;
+    dtype::real delta_angle = M_PI / (dtype::real)this->mCount;
+    for (dtype::size i = 0; i < this->mCount; i++) {
         // calc start angle
-        angle = (linalgcuMatrixData_t)i * 2.0f * delta_angle;
+        angle = (dtype::real)i * 2.0f * delta_angle;
 
         // calc start coordinates
         this->mElectrodesStart[i * 2 + 0] = meshRadius * cos(angle);

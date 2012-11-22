@@ -6,32 +6,28 @@
 #ifndef FASTEIT_ELECTRODES_HPP
 #define FASTEIT_ELECTRODES_HPP
 
-// namespace fastEIT
-namespace fastEIT {
-    // Electrodes class definition
-    class Electrodes {
-    // constructer and destructor
-    public:
-        Electrodes(linalgcuSize_t count, linalgcuMatrixData_t width, linalgcuMatrixData_t height,
-            linalgcuMatrixData_t meshRadius);
-        virtual ~Electrodes();
+// Electrodes class definition
+class Electrodes {
+// constructer and destructor
+public:
+    Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real meshRadius);
+    virtual ~Electrodes();
 
-    // access methods
-    public:
-        linalgcuSize_t count() const { return this->mCount; }
-        linalgcuMatrixData_t* electrodesStart() const { return this->mElectrodesStart; }
-        linalgcuMatrixData_t* electrodesEnd() const { return this->mElectrodesEnd; }
-        linalgcuMatrixData_t width() const { return this->mWidth; }
-        linalgcuMatrixData_t height() const { return this->mHeight; }
+// access methods
+public:
+    dtype::size count() const { return this->mCount; }
+    dtype::real* electrodesStart() const { return this->mElectrodesStart; }
+    dtype::real* electrodesEnd() const { return this->mElectrodesEnd; }
+    dtype::real width() const { return this->mWidth; }
+    dtype::real height() const { return this->mHeight; }
 
-    // member
-    private:
-        linalgcuSize_t mCount;
-        linalgcuMatrixData_t* mElectrodesStart;
-        linalgcuMatrixData_t* mElectrodesEnd;
-        linalgcuMatrixData_t mWidth;
-        linalgcuMatrixData_t mHeight;
-    };
-}
+// member
+private:
+    dtype::size mCount;
+    dtype::real* mElectrodesStart;
+    dtype::real* mElectrodesEnd;
+    dtype::real mWidth;
+    dtype::real mHeight;
+};
 
 #endif

@@ -11,8 +11,10 @@ using namespace std;
 
 // create mesh class
 Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
-    linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
-    linalgcuMatrixData_t radius, linalgcuMatrixData_t height) {
+    dtype::size nodeCount, dtype::size elementCount, dtype::size boundaryCount,
+    dtype::real radius, dtype::real height)
+    : mRadius(radius), mHeight(height), mNodeCount(nodeCount), mElementCount(elementCount),
+        mBoundaryCount(boundaryCount), mNodes(nodes), mElements(elements), mBoundary(boundary) {
     // check input
     if (nodes == NULL) {
         throw invalid_argument("nodes == NULL");
@@ -38,16 +40,6 @@ Mesh::Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t b
     if (height <= 0.0f) {
         throw invalid_argument("height <= 0.0");
     }
-
-    // init member
-    this->mRadius = radius;
-    this->mHeight = height;
-    this->mNodeCount = nodeCount;
-    this->mElementCount = elementCount;
-    this->mBoundaryCount = boundaryCount;
-    this->mNodes = nodes;
-    this->mElements = elements;
-    this->mBoundary = boundary;
 }
 
 // delete mesh class

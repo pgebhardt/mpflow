@@ -6,39 +6,36 @@
 #ifndef FASTEIT_MESH_HPP
 #define FASTEIT_MESH_HPP
 
-// namespace fastEIT
-namespace fastEIT {
-    // mesh class definition
-    class Mesh {
-    // constructor and destructor
-    public:
-        Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
-            linalgcuSize_t nodeCount, linalgcuSize_t elementCount, linalgcuSize_t boundaryCount,
-            linalgcuMatrixData_t radius, linalgcuMatrixData_t height);
-        virtual ~Mesh();
+// mesh class definition
+class Mesh {
+// constructor and destructor
+public:
+    Mesh(linalgcuMatrix_t nodes, linalgcuMatrix_t elements, linalgcuMatrix_t boundary,
+        dtype::size nodeCount, dtype::size elementCount, dtype::size boundaryCount,
+        dtype::real radius, dtype::real height);
+    virtual ~Mesh();
 
-    // access methods
-    public:
-        linalgcuMatrix_t nodes() const { return this->mNodes; }
-        linalgcuMatrix_t elements() const { return this->mElements; }
-        linalgcuMatrix_t boundary() const { return this->mBoundary; }
-        linalgcuSize_t nodeCount() const { return this->mNodeCount; }
-        linalgcuSize_t elementCount() const { return this->mElementCount; }
-        linalgcuSize_t boundaryCount() const { return this->mBoundaryCount; }
-        linalgcuMatrixData_t radius() const { return this->mRadius; }
-        linalgcuMatrixData_t height() const { return this->mHeight; }
+// access methods
+public:
+    linalgcuMatrix_t nodes() const { return this->mNodes; }
+    linalgcuMatrix_t elements() const { return this->mElements; }
+    linalgcuMatrix_t boundary() const { return this->mBoundary; }
+    dtype::size nodeCount() const { return this->mNodeCount; }
+    dtype::size elementCount() const { return this->mElementCount; }
+    dtype::size boundaryCount() const { return this->mBoundaryCount; }
+    dtype::real radius() const { return this->mRadius; }
+    dtype::real height() const { return this->mHeight; }
 
-    // member
-    private:
-        linalgcuMatrix_t mNodes;
-        linalgcuMatrix_t mElements;
-        linalgcuMatrix_t mBoundary;
-        linalgcuSize_t mNodeCount;
-        linalgcuSize_t mElementCount;
-        linalgcuSize_t mBoundaryCount;
-        linalgcuMatrixData_t mRadius;
-        linalgcuMatrixData_t mHeight;
-    };
-}
+// member
+private:
+    linalgcuMatrix_t mNodes;
+    linalgcuMatrix_t mElements;
+    linalgcuMatrix_t mBoundary;
+    dtype::size mNodeCount;
+    dtype::size mElementCount;
+    dtype::size mBoundaryCount;
+    dtype::real mRadius;
+    dtype::real mHeight;
+};
 
 #endif

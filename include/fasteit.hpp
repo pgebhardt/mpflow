@@ -13,6 +13,10 @@
 #include <cublas_v2.h>
 #include <linalgcu/linalgcu.h>
 
+// namespace fastEIT
+namespace fastEIT {
+
+#include "dtype.hpp"
 #include "mesh.hpp"
 #include "electrodes.hpp"
 #include "linearBasis.hpp"
@@ -22,5 +26,7 @@
 #include "forward.hpp"
 #include "inverse.hpp"
 #include "solver.hpp"
+
+};
 
 #endif
