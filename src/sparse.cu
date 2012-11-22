@@ -51,7 +51,7 @@ void SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stre
         throw logic_error("SparseMatrix::init: create memory");
     }
 
-    if (cudaMalloc((void**)&this->mColumnIds, sizeof(dtype::real) *
+    if (cudaMalloc((void**)&this->mColumnIds, sizeof(dtype::index) *
         this->rows() * SparseMatrix::blockSize) != cudaSuccess) {
         throw logic_error("SparseMatrix::init: create memory");
     }
