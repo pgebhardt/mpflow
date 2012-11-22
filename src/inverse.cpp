@@ -20,22 +20,12 @@ InverseSolver<NumericSolver>::InverseSolver(dtype::size elementCount, dtype::siz
         throw invalid_argument("InverseSolver::InverseSolver: handle == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // create matrices
-    error  = linalgcu_matrix_create(&this->mDVoltage, voltageCount, 1, stream);
-    error |= linalgcu_matrix_create(&this->mZeros, elementCount, 1, stream);
-    error |= linalgcu_matrix_create(&this->mExcitation, elementCount, 1, stream);
-    error |= linalgcu_matrix_create(&this->mSystemMatrix, elementCount,
-        elementCount, stream);
-    error |= linalgcu_matrix_create(&this->mJacobianSquare, elementCount,
-        elementCount, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("InverseSolver::InverseSolver: create matrices");
-    }
+    this->mDVoltage = new Matrix<dtype::real>(voltageCount, 1, stream);
+    this->mZeros = new Matrix<dtype::real>(elementCount, 1, stream);
+    this->mExcitation = new Matrix<dtype::real>(elementCount, 1, stream);
+    this->mSystemMatrix = new Matrix<dtype::real>(elementCount, elementCount, stream);
+    this->mJacobianSquare = new Matrix<dtype::real>(elementCount, elementCount, stream);
 
     // create numeric solver
     this->mNumericSolver = new NumericSolver(elementCount, handle, stream);
@@ -45,55 +35,48 @@ InverseSolver<NumericSolver>::InverseSolver(dtype::size elementCount, dtype::siz
 template <class NumericSolver>
 InverseSolver<NumericSolver>::~InverseSolver() {
     // cleanup
-    if (this->mNumericSolver != NULL) {
-        delete this->mNumericSolver;
-    }
-    linalgcu_matrix_release(&this->mDVoltage);
-    linalgcu_matrix_release(&this->mZeros);
-    linalgcu_matrix_release(&this->mExcitation);
-    linalgcu_matrix_release(&this->mSystemMatrix);
-    linalgcu_matrix_release(&this->mJacobianSquare);
+    delete this->mNumericSolver;
+    delete this->mDVoltage;
+    delete this->mZeros;
+    delete this->mExcitation;
+    delete this->mSystemMatrix;
+    delete this->mJacobianSquare;
 }
 
 // calc system matrix
 template <class NumericSolver>
-linalgcuMatrix_t InverseSolver<NumericSolver>::calc_system_matrix(
-    linalgcuMatrix_t jacobian, cublasHandle_t handle, cudaStream_t stream) {
+Matrix<dtype::real>& InverseSolver<NumericSolver>::calcSystemMatrix(
+    Matrix<dtype::real>& jacobian, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (jacobian == NULL) {
-        throw invalid_argument("InverseSolver::calc_system_matrix: jacobian == NULL");
-    }
     if (handle == NULL) {
-        throw invalid_argument("InverseSolver::calc_system_matrix: handle == NULL");
+        throw invalid_argument("InverseSolver::calcSystemMatrix: handle == NULL");
     }
 
     // cublas coeficients
     dtype::real alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare()->rows,
-        this->jacobianSquare()->columns, jacobian->rows, &alpha, jacobian->deviceData,
-        jacobian->rows, jacobian->deviceData, jacobian->rows, &beta,
-        this->jacobianSquare()->deviceData, this->jacobianSquare()->rows)
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare().rows(),
+        this->jacobianSquare().columns(), jacobian.rows(), &alpha, jacobian.deviceData(),
+        jacobian.rows(), jacobian.deviceData(), jacobian.rows(), &beta,
+        this->jacobianSquare().deviceData(), this->jacobianSquare().rows())
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error("InverseSolver::calc_system_matrix: calc Jt * J");
     }
 
     // copy jacobianSquare to systemMatrix
-    if (linalgcu_matrix_copy(this->systemMatrix(), this->jacobianSquare(), stream)
-        != LINALGCU_SUCCESS) {
-        throw logic_error("InverseSolver::calc_system_matrix: copy jacobianSquare to systemMatrix");
-    }
+    this->systemMatrix().copy(&this->jacobianSquare());
 
     // add lambda * Jt * J * Jt * J to systemMatrix
-    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare()->columns,
-        this->jacobianSquare()->rows, this->jacobianSquare()->columns,
-        &this->mRegularizationFactor, this->jacobianSquare()->deviceData,
-        this->jacobianSquare()->rows, this->jacobianSquare()->deviceData,
-        this->jacobianSquare()->rows, &alpha, this->systemMatrix()->deviceData,
-        this->systemMatrix()->rows) != CUBLAS_STATUS_SUCCESS) {
+    beta = this->regularizationFactor();
+    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare().columns(),
+        this->jacobianSquare().rows(), this->jacobianSquare().columns(),
+        &beta, this->jacobianSquare().deviceData(),
+        this->jacobianSquare().rows(), this->jacobianSquare().deviceData(),
+        this->jacobianSquare().rows(), &alpha, this->systemMatrix().deviceData(),
+        this->systemMatrix().rows()) != CUBLAS_STATUS_SUCCESS) {
         throw logic_error(
-            "InverseSolver::calc_system_matrix: add lambda * Jt * J * Jt * J to systemMatrix");
+            "InverseSolver::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
     }
 
     return this->systemMatrix();
@@ -101,90 +84,65 @@ linalgcuMatrix_t InverseSolver<NumericSolver>::calc_system_matrix(
 
 // calc excitation
 template <class NumericSolver>
-linalgcuMatrix_t InverseSolver<NumericSolver>::calc_excitation(linalgcuMatrix_t jacobian,
-    linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage, cublasHandle_t handle,
+Matrix<dtype::real>& InverseSolver<NumericSolver>::calcExcitation(Matrix<dtype::real>& jacobian,
+    Matrix<dtype::real>& calculatedVoltage, Matrix<dtype::real>& measuredVoltage, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
-    if (jacobian == NULL) {
-        throw invalid_argument("InverseSolver::calc_excitation: jacobian == NULL");
-    }
-    if (calculatedVoltage == NULL) {
-        throw invalid_argument("InverseSolver::calc_excitation: calculatedVoltage == NULL");
-    }
-    if (measuredVoltage == NULL) {
-        throw invalid_argument("InverseSolver::calc_excitation: measuredVoltage == NULL");
-    }
     if (handle == NULL) {
-        throw invalid_argument("InverseSolver::calc_excitation: handle == NULL");
+        throw invalid_argument("InverseSolver::calcExcitation: handle == NULL");
     }
-
-    // dummy matrix to turn matrix to column vector
-    linalgcuMatrix_s dummy_matrix;
-    dummy_matrix.rows = this->mDVoltage->rows;
-    dummy_matrix.columns = this->mDVoltage->columns;
-    dummy_matrix.hostData = NULL;
-
-    // calc deltaVoltage = mv - cv
-    dummy_matrix.deviceData = calculatedVoltage->deviceData;
-    linalgcu_matrix_copy(this->mDVoltage, &dummy_matrix, stream);
-    linalgcu_matrix_scalar_multiply(this->mDVoltage, -1.0f, stream);
-
-    dummy_matrix.deviceData = measuredVoltage->deviceData;
-    linalgcu_matrix_add(this->mDVoltage, &dummy_matrix, stream);
 
     // set cublas stream
     cublasSetStream(handle, stream);
 
-    // calc excitation
-    dtype::real alpha = 1.0f, beta = 0.0f;
-    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
-        jacobian->deviceData, jacobian->rows, this->mDVoltage->deviceData, 1, &beta,
-        this->mExcitation->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
-
-        // try once again
-        if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows, jacobian->columns, &alpha,
-            jacobian->deviceData, jacobian->rows, this->mDVoltage->deviceData, 1, &beta,
-            this->mExcitation->deviceData, 1) != CUBLAS_STATUS_SUCCESS) {
-            throw logic_error("InverseSolver::calc_excitation: calc excitation");
-        }
+    // copy measuredVoltage to dVoltage
+    if (cublasScopy(handle, this->mDVoltage->rows(),
+        measuredVoltage.deviceData(), 1, this->mDVoltage->deviceData(), 1)
+        != CUBLAS_STATUS_SUCCESS) {
+        throw logic_error(
+            "InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
     }
 
-    return this->mExcitation;
+    // substract calculatedVoltage
+    dtype::real alpha = -1.0f;
+    if (cublasSaxpy(handle, this->mDVoltage->rows(), &alpha,
+        calculatedVoltage.deviceData(), 1, this->mDVoltage->deviceData(), 1)
+        != CUBLAS_STATUS_SUCCESS) {
+        throw logic_error(
+            "Model::update: calc system matrices for all harmonics");
+    }
+
+    // calc excitation
+    alpha = 1.0f;
+    dtype::real beta = 0.0f;
+    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian.rows(), jacobian.columns(), &alpha,
+        jacobian.deviceData(), jacobian.rows(), this->mDVoltage->deviceData(), 1, &beta,
+        this->mExcitation->deviceData(), 1) != CUBLAS_STATUS_SUCCESS) {
+        throw logic_error("InverseSolver::calc_excitation: calc excitation");
+    }
+
+    return *this->mExcitation;
 }
 
 // inverse solving
 template <class NumericSolver>
-linalgcuMatrix_t InverseSolver<NumericSolver>::solve(linalgcuMatrix_t gamma,
-    linalgcuMatrix_t jacobian, linalgcuMatrix_t calculatedVoltage, linalgcuMatrix_t measuredVoltage,
+Matrix<dtype::real>& InverseSolver<NumericSolver>::solve(Matrix<dtype::real>& gamma,
+    Matrix<dtype::real>& jacobian, Matrix<dtype::real>& calculatedVoltage, Matrix<dtype::real>& measuredVoltage,
     dtype::size steps, bool regularized, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (gamma == NULL) {
-        throw invalid_argument("InverseSolver::solve: gamma == NULL");
-    }
-    if (jacobian == NULL) {
-        throw invalid_argument("InverseSolver::solve: jacobian == NULL");
-    }
-    if (calculatedVoltage == NULL) {
-        throw invalid_argument("InverseSolver::solve: calculatedVoltage == NULL");
-    }
-    if (measuredVoltage == NULL) {
-        throw invalid_argument("InverseSolver::solve: measuredVoltage == NULL");
-    }
     if (handle == NULL) {
         throw invalid_argument("InverseSolver::solve: handle == NULL");
     }
 
     // reset gamma
-    if (linalgcu_matrix_copy(gamma, this->mZeros, stream) != LINALGCU_SUCCESS) {
-        throw logic_error("InverseSolver::solve: reset gamma");
-    }
+    gamma.copy(this->mZeros);
 
     // calc excitation
-    this->calc_excitation(jacobian, calculatedVoltage, measuredVoltage, handle, stream);
+    this->calcExcitation(jacobian, calculatedVoltage, measuredVoltage, handle, stream);
 
     // solve system
-    this->mNumericSolver->solve(regularized ? this->systemMatrix() : this->jacobianSquare(),
-        gamma, this->mExcitation, steps, handle, stream);
+    this->mNumericSolver->solve(regularized ? &this->systemMatrix() : &this->jacobianSquare(),
+        &gamma, this->mExcitation, steps, handle, stream);
 
     return gamma;
 }

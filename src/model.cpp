@@ -227,9 +227,6 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
         throw invalid_argument("Model::init: handle == NULL");
     }
 
-    // error
-    cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
-
     // update 2d systemMatrix
     this->updateMatrix(this->mSMatrix, this->mElementalSMatrix, gamma, stream);
 
@@ -247,25 +244,20 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
             (2.0f * n * M_PI / this->mesh().height());
 
         // init system matrix with 2d system matrix
-        cublasError = cublasScopy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize,
-            this->mSMatrix->values(), 1, this->systemMatrix(n).values(), 1);
-
-        // check error
-        if (cublasError != CUBLAS_STATUS_SUCCESS) {
+        if (cublasScopy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize,
+            this->mSMatrix->values(), 1, this->systemMatrix(n).values(), 1)
+            != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
                 "Model::update: calc system matrices for all harmonics");
         }
 
         // add alpha * residualMatrix
-        cublasError = cublasSaxpy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize, &alpha,
-            this->mRMatrix->values(), 1, this->systemMatrix(n).values(), 1);
-
-        // check error
-        if (cublasError != CUBLAS_STATUS_SUCCESS) {
+        if (cublasSaxpy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize, &alpha,
+            this->mRMatrix->values(), 1, this->systemMatrix(n).values(), 1)
+            != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
                 "Model::update: calc system matrices for all harmonics");
         }
-
     }
 }
 
