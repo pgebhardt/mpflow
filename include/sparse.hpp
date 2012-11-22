@@ -10,25 +10,38 @@
 class SparseMatrix {
 public:
     // constructor and destructor
-    SparseMatrix(dtype::size rows, dtype::size columns, cudaStream_t stream = NULL);
+    SparseMatrix(dtype::size rows, dtype::size columns, cudaStream_t stream=NULL) {
+        this->init(rows, columns, stream);
+    }
+
+    SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
     virtual ~SparseMatrix();
+
+private:
+    // init empty sparse matrix
+    void init(dtype::size rows, dtype::size columns, cudaStream_t stream=NULL);
+
+    // convert to sparse matrix
+    void convert(Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
 
 public:
     // block size
-    static const dtype::size blockSize = 16;
+    static const dtype::size blockSize = 32;
 
 // accessors
 public:
-    dtype::real* hostData() const { return this->mHostData; }
-    dtype::real* deviceData() const { return this->mDeviceData; }
     dtype::size rows() const { return this->mRows; }
     dtype::size columns() const { return this->mColumns; }
+    dtype::size density() const { return this->mDensity; }
+    dtype::real* values() const { return this->mValues; }
+    dtype::index* columnIds() const { return this->mColumnIds; }
 
 // member
 private:
-    dtype::real* mHostData;
-    dtype::real* mDeviceData;
     dtype::size mRows;
     dtype::size mColumns;
+    dtype::size mDensity;
+    dtype::real* mValues;
+    dtype::index* mColumnIds;
 };
 #endif

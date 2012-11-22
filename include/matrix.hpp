@@ -24,17 +24,31 @@ public:
     // block size
     static const dtype::size blockSize = 16;
 
+// mathematical methods
+public:
+    void add(Matrix<type>* value, cudaStream_t stream=NULL);
+    void multiply(Matrix<type>* A, Matrix<type>* B, cublasHandle_t handle, cudaStream_t stream=NULL);
+    void scalarMultiply(type scalar, cudaStream_t stream=NULL);
+    void vectorDotProduct(Matrix<type>* A, Matrix<type>* B, cudaStream_t stream=NULL);
+
+// reduce methods
+public:
+    void sum(Matrix<type>* value, cudaStream_t stream=NULL);
+    void min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream=NULL);
+    void max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream=NULL);
+
 // accessors
 public:
-    dtype::real* hostData() const { return this->mHostData; }
-    dtype::real* deviceData() const { return this->mDeviceData; }
+    type* hostData() const { return this->mHostData; }
+    type* deviceData() const { return this->mDeviceData; }
     dtype::size rows() const { return this->mRows; }
     dtype::size columns() const { return this->mColumns; }
+    type& operator() (dtype::index i, dtype::index j) { return this->mHostData[i + j * this->rows()]; }
 
 // member
 private:
-    dtype::real* mHostData;
-    dtype::real* mDeviceData;
+    type* mHostData;
+    type* mDeviceData;
     dtype::size mRows;
     dtype::size mColumns;
 };

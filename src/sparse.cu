@@ -1,237 +1,141 @@
-// liblinalgcu
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// redefine extern c
-#define LINALGCU_EXTERN_C extern "C"
+#include "../include/fasteit.hpp"
 
-#include <stdlib.h>
-#include "../include/linalgcu.h"
+// namespaces
+using namespace fastEIT;
+using namespace std;
 
 // create new sparse matrix
-extern "C"
-linalgcuError_t linalgcu_sparse_matrix_create(linalgcuSparseMatrix_t* matrixPointer,
-    linalgcuMatrix_t matrix, cudaStream_t stream) {
+SparseMatrix::SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     // check input
-    if ((matrixPointer == NULL) || (matrix == NULL)) {
-        return LINALGCU_ERROR;
+    if (matrix == NULL) {
+        throw invalid_argument("SparseMatrix::SparseMatrix: matrix == NULL");
     }
-
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init matrix pointer
-    *matrixPointer = NULL;
 
     // create empty sparse matrix
-    linalgcuSparseMatrix_t sparseMatrix;
-    error = linalgcu_sparse_matrix_create_empty(&sparseMatrix, matrix->rows, matrix->columns,
-        stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        return error;
-    }
+    this->init(matrix->rows(), matrix->columns(), stream);
 
     // convert to sparse_matrix
-    error = linalgcu_sparse_matrix_convert(sparseMatrix, matrix, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        linalgcu_sparse_matrix_release(&sparseMatrix);
-
-        return LINALGCU_ERROR;
-    }
-
-    // set matrix pointer
-    *matrixPointer = sparseMatrix;
-
-    return LINALGCU_SUCCESS;
+    this->convert(matrix, stream);
 }
 
 // create empty sparse matrix
-extern "C"
-linalgcuError_t linalgcu_sparse_matrix_create_empty(linalgcuSparseMatrix_t* matrixPointer,
-    linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
+void SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stream) {
     // check input
-    if ((matrixPointer == NULL) || (rows == 0) || (columns == 0)) {
-        return LINALGCU_ERROR;
+    if (rows == 0) {
+        throw invalid_argument("SparseMatrix::init: rows == 0");
     }
-
-    // init matrix pointer
-    *matrixPointer = NULL;
-
-    // create struct
-    linalgcuSparseMatrix_t sparseMatrix = (linalgcuSparseMatrix_t)malloc(
-        sizeof(linalgcuSparseMatrix_s));
-
-    // check success
-    if (sparseMatrix == NULL) {
-        return LINALGCU_ERROR;
+    if (columns == 0) {
+        throw invalid_argument("SparseMatrix::init: columns == 0");
     }
 
     // init struct
-    sparseMatrix->rows = rows;
-    sparseMatrix->columns = columns;
-    sparseMatrix->density = 0;
-    sparseMatrix->values = NULL;
-    sparseMatrix->columnIds = NULL;
+    this->mRows = rows;
+    this->mColumns = columns;
+    this->mDensity = 0;
+    this->mValues = NULL;
+    this->mColumnIds = NULL;
 
     // correct size to block size
-    if ((sparseMatrix->rows % LINALGCU_BLOCK_SIZE != 0) && (sparseMatrix->rows != 1)) {
-        sparseMatrix->rows = (sparseMatrix->rows / LINALGCU_BLOCK_SIZE + 1) *
-            LINALGCU_BLOCK_SIZE;
+    if ((this->rows() % Matrix<dtype::real>::blockSize != 0) && (this->rows() != 1)) {
+        this->mRows = (this->rows() / Matrix<dtype::real>::blockSize + 1) *
+            Matrix<dtype::real>::blockSize;
     }
-    if ((sparseMatrix->columns % LINALGCU_BLOCK_SIZE != 0) && (sparseMatrix->columns != 1)) {
-        sparseMatrix->columns = (sparseMatrix->columns / LINALGCU_BLOCK_SIZE + 1) *
-            LINALGCU_BLOCK_SIZE;
+    if ((this->columns() % Matrix<dtype::real>::blockSize != 0) && (this->columns() != 1)) {
+        this->mColumns = (this->columns() / Matrix<dtype::real>::blockSize + 1) *
+            Matrix<dtype::real>::blockSize;
     }
 
     // create matrices
-    if (cudaMalloc((void**)&sparseMatrix->values, sizeof(linalgcuMatrixData_t) *
-        sparseMatrix->rows * LINALGCU_SPARSE_SIZE) != cudaSuccess) {
-        // cleanup
-        linalgcu_sparse_matrix_release(&sparseMatrix);
-
-        return LINALGCU_ERROR;
+    if (cudaMalloc((void**)&this->mValues, sizeof(dtype::real) *
+        this->rows() * SparseMatrix::blockSize) != cudaSuccess) {
+        throw logic_error("SparseMatrix::init: create memory");
     }
 
-    if (cudaMalloc((void**)&sparseMatrix->columnIds, sizeof(linalgcuColumnId_t) *
-        sparseMatrix->rows * LINALGCU_SPARSE_SIZE) != cudaSuccess) {
-        // cleanup
-        linalgcu_sparse_matrix_release(&sparseMatrix);
-
-        return LINALGCU_ERROR;
+    if (cudaMalloc((void**)&this->mColumnIds, sizeof(dtype::real) *
+        this->rows() * SparseMatrix::blockSize) != cudaSuccess) {
+        throw logic_error("SparseMatrix::init: create memory");
     }
-
-    // set matrix pointer
-    *matrixPointer = sparseMatrix;
-
-    return LINALGCU_SUCCESS;
 }
 
 // release sparse matrix
-extern "C"
-linalgcuError_t linalgcu_sparse_matrix_release(linalgcuSparseMatrix_t* matrixPointer) {
-    // check input
-    if ((matrixPointer == NULL) || (*matrixPointer == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // get matrix
-    linalgcuSparseMatrix_t matrix = *matrixPointer;
-
+SparseMatrix::~SparseMatrix() {
     // release matrices
-    if (matrix->values != NULL) {
-        cudaFree(matrix->values);
-    }
-
-    if (matrix->columnIds != NULL) {
-        cudaFree(matrix->columnIds);
-    }
-
-    // free struct
-    free(matrix);
-
-    // set matrix pointer to NULL
-    *matrixPointer = NULL;
-
-    return LINALGCU_SUCCESS;
+    cudaFree(this->values());
+    cudaFree(this->columnIds());
 }
 
 // convert to sparse matrix kernel
-__global__ void sparse_create_kernel(linalgcuMatrixData_t* values,
-    linalgcuColumnId_t* columnIds, linalgcuMatrixData_t* matrix,
-    linalgcuMatrixData_t* elementCount, linalgcuSize_t rows, linalgcuSize_t columns) {
+__global__ void sparse_create_kernel(dtype::real* values,
+    dtype::index* columnIds, dtype::real* matrix,
+    dtype::index* elementCount, dtype::size rows, dtype::size columns) {
     // get id
-    linalgcuSize_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index i = blockIdx.x * blockDim.x + threadIdx.x;
 
     // element count
-    linalgcuSize_t count = 0;
+    dtype::size count = 0;
 
     // init values and columnIds
-    for (linalgcuSize_t j = 0; j < LINALGCU_SPARSE_SIZE; j++) {
-        values[i * LINALGCU_SPARSE_SIZE + j] = 0.0f;
-        columnIds[i * LINALGCU_SPARSE_SIZE + j] = -1;
+    for (dtype::index j = 0; j < SparseMatrix::blockSize; j++) {
+        values[i * SparseMatrix::blockSize + j] = 0.0f;
+        columnIds[i * SparseMatrix::blockSize + j] = -1;
     }
 
     // search non-zero elements
-    linalgcuMatrixData_t element = 0.0f;
-    for (linalgcuSize_t j = 0; j < columns; j++) {
+    dtype::real element = 0.0f;
+    for (dtype::index j = 0; j < columns; j++) {
         // get element
         element = matrix[i + j * rows];
 
         // check for non-zero
         if (element != 0.0f) {
-            values[i * LINALGCU_SPARSE_SIZE + count] = element;
-            columnIds[i * LINALGCU_SPARSE_SIZE + count] = j;
+            values[i * SparseMatrix::blockSize + count] = element;
+            columnIds[i * SparseMatrix::blockSize + count] = j;
 
             // increment count
             count++;
 
             // check count
-            if (count >= LINALGCU_SPARSE_SIZE) {
+            if (count >= SparseMatrix::blockSize) {
                 break;
             }
         }
     }
 
     // save element count
-    elementCount[i] = (linalgcuMatrixData_t)count;
+    elementCount[i] = count;
 }
 
 // convert to sparse matrix
-extern "C"
-linalgcuError_t linalgcu_sparse_matrix_convert(linalgcuSparseMatrix_t sparse,
-    linalgcuMatrix_t matrix, cudaStream_t stream) {
+void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     // check input
-    if ((sparse == NULL) || (matrix == NULL)) {
-        return LINALGCU_ERROR;
+    if (matrix == NULL) {
+        throw invalid_argument("SparseMatrix::convert: matrix == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // create elementCount matrix
-    linalgcuMatrix_t elementCount, maxCount;
-    error  = linalgcu_matrix_create(&elementCount, sparse->rows, 1, stream);
-    error |= linalgcu_matrix_create(&maxCount, sparse->rows, 1, stream);
+    Matrix<dtype::index> elementCount(this->rows(), 1, stream);
+    Matrix<dtype::index> maxCount(this->rows(), 1, stream);
 
     // execute kernel
-    sparse_create_kernel<<<matrix->rows / LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE,
-        0, stream>>>(sparse->values, sparse->columnIds, matrix->deviceData,
-        elementCount->deviceData, matrix->rows, matrix->columns);
+    sparse_create_kernel<<<this->rows() / SparseMatrix::blockSize,
+        SparseMatrix::blockSize, 0, stream>>>(
+        this->values(), this->columnIds(), matrix->deviceData(),
+        elementCount.deviceData(), matrix->rows(), matrix->columns());
 
     // get max count
-    error |= linalgcu_matrix_max(maxCount, elementCount, maxCount->rows, stream);
-    error |= linalgcu_matrix_copy_to_host(maxCount, stream);
+    maxCount.max(&elementCount, maxCount.rows(), stream);
+    maxCount.copyToHost(stream);
     cudaStreamSynchronize(stream);
 
     // save density
-    sparse->density = (linalgcuSize_t)maxCount->hostData[0];
-
-    // cleanup
-    linalgcu_matrix_release(&elementCount);
-    linalgcu_matrix_release(&maxCount);
-
-    return error;
+    this->mDensity = maxCount.hostData()[0];
 }
-
+/*
 // sparse matrix multiply kernel
 __global__ void sparse_multiply_kernel(linalgcuMatrixData_t* result,
     linalgcuMatrixData_t* values, linalgcuColumnId_t* columnIds,
@@ -297,4 +201,4 @@ linalgcuError_t linalgcu_sparse_matrix_multiply(linalgcuMatrix_t result,
         sparse->columnIds, matrix->deviceData, result->rows, result->columns, sparse->density);
 
     return LINALGCU_SUCCESS;
-}
+}*/
