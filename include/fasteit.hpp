@@ -6,12 +6,13 @@
 #ifndef FASTEIT_FASTEIT_HPP
 #define FASTEIT_FASTEIT_HPP
 
+// std lib includes
 #include <stdexcept>
 #include <assert.h>
 
+// cuda includes
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-#include <linalgcu/linalgcu.h>
 
 // namespace fastEIT
 namespace fastEIT {
