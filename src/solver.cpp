@@ -10,124 +10,97 @@ using namespace fastEIT;
 using namespace std;
 
 // create solver
-Solver::Solver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPattern,
-    linalgcuMatrix_t drivePattern, dtype::size measurmentCount, dtype::size driveCount,
+Solver::Solver(Mesh& mesh, Electrodes& electrodes, Matrix<dtype::real>& measurmentPattern,
+    Matrix<dtype::real>& drivePattern, dtype::size measurmentCount, dtype::size driveCount,
     dtype::real numHarmonics, dtype::real sigmaRef, dtype::real regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream)
     : mForwardSolver(NULL), mInverseSolver(NULL), mDGamma(NULL), mGamma(NULL),
         mMeasuredVoltage(NULL), mCalibrationVoltage(NULL) {
     // check input
-    if (mesh == NULL) {
-        throw invalid_argument("Solver::Solver: mesh == NULL");
-    }
     if (handle == NULL) {
         throw invalid_argument("Solver::Solver: handle == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // create matrices
-    error  = linalgcu_matrix_create(&this->mDGamma, mesh->elementCount(), 1, stream);
-    error |= linalgcu_matrix_create(&this->mGamma, mesh->elementCount(), 1, stream);
-    error |= linalgcu_matrix_create(&this->mMeasuredVoltage, measurmentCount, driveCount,
+    this->mDGamma = new Matrix<dtype::real>(mesh.elementCount(), 1, stream);
+    this->mGamma = new Matrix<dtype::real>(mesh.elementCount(), 1, stream);
+    this->mMeasuredVoltage = new Matrix<dtype::real>(measurmentCount, driveCount,
         stream);
-    error |= linalgcu_matrix_create(&this->mCalibrationVoltage, measurmentCount, driveCount,
+    this->mCalibrationVoltage = new Matrix<dtype::real>(measurmentCount, driveCount,
         stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("Solver::Solver: create matrices");
-    }
 
     // create solver
-    this->mForwardSolver = new ForwardSolver<LinearBasis, SparseConjugate>(mesh, electrodes,
-        measurmentPattern, drivePattern, measurmentCount, driveCount, numHarmonics, sigmaRef,
+    this->mForwardSolver = new ForwardSolver<LinearBasis, SparseConjugate>(&mesh, &electrodes,
+        &measurmentPattern, &drivePattern, measurmentCount, driveCount, numHarmonics, sigmaRef,
         handle, stream);
 
-    this->mInverseSolver = new InverseSolver<Conjugate>(mesh->elementCount(),
-        measurmentPattern->columns * drivePattern->columns, regularizationFactor, handle, stream);
+    this->mInverseSolver = new InverseSolver<Conjugate>(mesh.elementCount(),
+        measurmentPattern.columns() * drivePattern.columns(), regularizationFactor, handle, stream);
 }
 
 // release solver
 Solver::~Solver() {
     // cleanup
-    if (this->mForwardSolver != NULL) {
-        delete this->mForwardSolver;
-    }
-    if (this->mInverseSolver != NULL) {
-        delete this->mInverseSolver;
-    }
-    linalgcu_matrix_release(&this->mDGamma);
-    linalgcu_matrix_release(&this->mGamma);
-    linalgcu_matrix_release(&this->mMeasuredVoltage);
-    linalgcu_matrix_release(&this->mCalibrationVoltage);
+    delete this->mForwardSolver;
+    delete this->mInverseSolver;
+    delete this->mDGamma;
+    delete this->mGamma;
+    delete this->mMeasuredVoltage;
+    delete this->mCalibrationVoltage;
 }
 
 // pre solve for accurate initial jacobian
-linalgcuMatrix_t Solver::pre_solve(cublasHandle_t handle, cudaStream_t stream) {
+Matrix<dtype::real>& Solver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
         throw invalid_argument("Solver::pre_solve: handle == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // forward solving a few steps
-    this->forwardSolver()->solve(this->gamma(), 1000, handle, stream);
+    this->forwardSolver().solve(&this->gamma(), 1000, handle, stream);
 
     // calc system matrix
-    this->inverseSolver()->calc_system_matrix(this->forwardSolver()->jacobian(), handle, stream);
+    this->inverseSolver().calcSystemMatrix(this->forwardSolver().jacobian(), handle, stream);
 
     // set measuredVoltage and calibrationVoltage to calculatedVoltage
-    error  = linalgcu_matrix_copy(this->measuredVoltage(), this->forwardSolver()->voltage(), stream);
-    error |= linalgcu_matrix_copy(this->calibrationVoltage(), this->forwardSolver()->voltage(),
-        stream);
+    this->measuredVoltage().copy(&this->forwardSolver().voltage(), stream);
+    this->calibrationVoltage().copy(&this->forwardSolver().voltage(), stream);
 
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error(
-            "Solver::pre_solve: set measuredVoltage and calibrationVoltage to calculatedVoltage");
-    }
-
-    return this->forwardSolver()->voltage();
+    return this->forwardSolver().voltage();
 }
 
 // calibrate
-linalgcuMatrix_t Solver::calibrate(cublasHandle_t handle, cudaStream_t stream) {
+Matrix<dtype::real>& Solver::calibrate(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
         throw invalid_argument("Solver::calibrate: handle == NULL");
     }
 
     // solve forward
-    this->forwardSolver()->solve(this->gamma(), 20, handle, stream);
+    this->forwardSolver().solve(&this->gamma(), 20, handle, stream);
 
     // calc inverse system matrix
-    this->inverseSolver()->calc_system_matrix(this->forwardSolver()->jacobian(), handle, stream);
+    this->inverseSolver().calcSystemMatrix(this->forwardSolver().jacobian(), handle, stream);
 
     // solve inverse
-    this->inverseSolver()->solve(this->dGamma(), this->forwardSolver()->jacobian(),
-        this->forwardSolver()->voltage(), this->calibrationVoltage(), 90, true, handle, stream);
+    this->inverseSolver().solve(this->dGamma(), this->forwardSolver().jacobian(),
+        this->forwardSolver().voltage(), this->calibrationVoltage(), 90, true, handle, stream);
 
     // add to gamma
-    if (linalgcu_matrix_add(this->gamma(), this->dGamma(), stream) != LINALGCU_SUCCESS) {
-        throw logic_error("Solver::calibrate: add to gamma");
-    }
+    this->gamma().add(&this->dGamma(), stream);
 
     return this->gamma();
 }
 
 // solving
-linalgcuMatrix_t Solver::solve(cublasHandle_t handle, cudaStream_t stream) {
+Matrix<dtype::real>& Solver::solve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
         throw invalid_argument("Solver::solve: handle == NULL");
     }
 
     // solve
-    this->inverseSolver()->solve(this->dGamma(), this->forwardSolver()->jacobian(),
+    this->inverseSolver().solve(this->dGamma(), this->forwardSolver().jacobian(),
         this->calibrationVoltage(), this->measuredVoltage(), 90, false, handle, stream);
 
     return this->dGamma();
