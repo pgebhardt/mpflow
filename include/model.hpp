@@ -18,12 +18,12 @@ public:
 // init methods
 private:
     void init(cublasHandle_t handle, cudaStream_t stream=NULL);
-    void create_sparse_matrices(cublasHandle_t handle, cudaStream_t stream=NULL);
-    void init_excitation_matrix(cudaStream_t stream=NULL);
+    void createSparseMatrices(cublasHandle_t handle, cudaStream_t stream=NULL);
+    void initExcitationMatrix(cudaStream_t stream=NULL);
 
 public:
     // calc excitaion components
-    void calc_excitation_components(Matrix<dtype::real>** component, Matrix<dtype::real>* pattern,
+    void calcExcitationComponents(Matrix<dtype::real>** component, Matrix<dtype::real>* pattern,
         cublasHandle_t handle, cudaStream_t stream=NULL);
 
     // update model
@@ -32,13 +32,13 @@ public:
 // cuda methods
 private:
     // update matrix
-    void update_matrix(SparseMatrix* matrix, Matrix<dtype::real>* elements,
+    void updateMatrix(SparseMatrix* matrix, Matrix<dtype::real>* elements,
         Matrix<dtype::real>* gamma, cudaStream_t stream=NULL);
 
     // reduce matrix
-    void reduce_matrix(Matrix<dtype::real>* matrix, Matrix<dtype::real>* intermediateMatrix,
+    void reduceMatrix(Matrix<dtype::real>* matrix, Matrix<dtype::real>* intermediateMatrix,
         dtype::size density, cudaStream_t stream=NULL);
-    void reduce_matrix(Matrix<dtype::index>* matrix, Matrix<dtype::index>* intermediateMatrix,
+    void reduceMatrix(Matrix<dtype::index>* matrix, Matrix<dtype::index>* intermediateMatrix,
         dtype::size density, cudaStream_t stream=NULL);
 
 // access methods

@@ -20,9 +20,9 @@ public:
 
 // helper methods
 public:
-    static void add_scalar(Matrix<dtype::real>* vector, Matrix<dtype::real>* scalar,
+    static void addScalar(Matrix<dtype::real>* vector, Matrix<dtype::real>* scalar,
         dtype::size rows, dtype::size columns, cudaStream_t stream);
-    static void update_vector(Matrix<dtype::real>* result, Matrix<dtype::real>* x1,
+    static void updateVector(Matrix<dtype::real>* result, Matrix<dtype::real>* x1,
         dtype::real sign, Matrix<dtype::real>* x2, Matrix<dtype::real>* r1,
         Matrix<dtype::real>* r2, cudaStream_t stream);
     static void gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,

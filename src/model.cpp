@@ -31,7 +31,7 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
     this->mSystemMatrix = new SparseMatrix*[this->mNumHarmonics + 1];
 
     // create sparse matrices
-    this->create_sparse_matrices(handle, stream);
+    this->createSparseMatrices(handle, stream);
 
     // create matrices
     this->mExcitationMatrix = new Matrix<dtype::real>(this->mesh().nodeCount(), this->electrodes().count(), stream);
@@ -46,7 +46,7 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
     this->init(handle, stream);
 
     // init excitaion matrix
-    this->init_excitation_matrix(stream);
+    this->initExcitationMatrix(stream);
 }
 
 // release solver model
@@ -73,10 +73,10 @@ Model<BasisFunction>::~Model() {
 
 // create sparse matrices
 template <class BasisFunction>
-void Model<BasisFunction>::create_sparse_matrices(cublasHandle_t handle, cudaStream_t stream) {
+void Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Model::create_sparse_matrices: handle == NULL");
+        throw invalid_argument("Model::createSparseMatrices: handle == NULL");
     }
 
     // calc initial system matrix
@@ -198,20 +198,20 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     elementalRMatrix.copyToDevice(stream);
 
     // reduce matrices
-    this->reduce_matrix(this->mConnectivityMatrix, &connectivityMatrix,
+    this->reduceMatrix(this->mConnectivityMatrix, &connectivityMatrix,
         this->mSMatrix->density(), stream);
-    this->reduce_matrix(this->mElementalSMatrix, &elementalSMatrix,
+    this->reduceMatrix(this->mElementalSMatrix, &elementalSMatrix,
         this->mSMatrix->density(), stream);
-    this->reduce_matrix(this->mElementalRMatrix, &elementalRMatrix,
+    this->reduceMatrix(this->mElementalRMatrix, &elementalRMatrix,
         this->mSMatrix->density(), stream);
 
     // create gamma
     Matrix<dtype::real> gamma(this->mesh().elementCount(), 1, stream);
 
     // update matrices
-    this->update_matrix(this->mSMatrix, this->mElementalSMatrix,
+    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix,
         &gamma, stream);
-    this->update_matrix(this->mRMatrix, this->mElementalRMatrix,
+    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix,
         &gamma, stream);
 }
 
@@ -231,10 +231,10 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
     cublasStatus_t cublasError = CUBLAS_STATUS_SUCCESS;
 
     // update 2d systemMatrix
-    this->update_matrix(this->mSMatrix, this->mElementalSMatrix, gamma, stream);
+    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix, gamma, stream);
 
     // update residual matrix
-    this->update_matrix(this->mRMatrix, this->mElementalRMatrix, gamma, stream);
+    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix, gamma, stream);
 
     // set cublas stream
     cublasSetStream(handle, stream);
@@ -271,7 +271,7 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
 
 // init exitation matrix
 template <class BasisFunction>
-void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
+void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
     dtype::index id[BasisFunction::nodesPerEdge];
     dtype::real x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
@@ -308,18 +308,17 @@ void Model<BasisFunction>::init_excitation_matrix(cudaStream_t stream) {
 
 // calc excitaion components
 template <class BasisFunction>
-void Model<BasisFunction>::calc_excitation_components(Matrix<dtype::real>** component,
+void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>** component,
     Matrix<dtype::real>* pattern, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (component == NULL) {
-        throw invalid_argument(
-            "Model::calc_excitation_components: component == NULL");
+        throw invalid_argument("Model::calcExcitationComponents: component == NULL");
     }
     if (pattern == NULL) {
-        throw invalid_argument("Model::calc_excitation_components: pattern == NULL");
+        throw invalid_argument("Model::calcExcitationComponents: pattern == NULL");
     }
     if (handle == NULL) {
-        throw invalid_argument("Model::calc_excitation_components: handle == NULL");
+        throw invalid_argument("Model::calcExcitationComponents: handle == NULL");
     }
 
     // calc excitation matrices

@@ -21,36 +21,28 @@ SparseConjugate::SparseConjugate(dtype::size rows, dtype::size columns, cudaStre
         throw invalid_argument("SparseConjugate::SparseConjugate: columns <= 1");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // create matrices
-    error  = linalgcu_matrix_create(&this->mResiduum, this->rows(), this->columns(), stream);
-    error |= linalgcu_matrix_create(&this->mProjection, this->rows(), this->columns(), stream);
-    error |= linalgcu_matrix_create(&this->mRSOld, this->rows(), this->columns(), stream);
-    error |= linalgcu_matrix_create(&this->mRSNew, this->rows(), this->columns(), stream);
-    error |= linalgcu_matrix_create(&this->mTempVector, this->rows(), this->columns(), stream);
-    error |= linalgcu_matrix_create(&this->mTempNumber, this->rows(), this->columns(), stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("SparseConjugate::SparseConjugate: create matrices");
-    }
+    this->mResiduum = new Matrix<dtype::real>(this->rows(), this->columns(), stream);
+    this->mProjection = new Matrix<dtype::real>(this->rows(), this->columns(), stream);
+    this->mRSOld = new Matrix<dtype::real>(this->rows(), this->columns(), stream);
+    this->mRSNew = new Matrix<dtype::real>(this->rows(), this->columns(), stream);
+    this->mTempVector = new Matrix<dtype::real>(this->rows(), this->columns(), stream);
+    this->mTempNumber = new Matrix<dtype::real>(this->rows(), this->columns(), stream);
 }
 
 // release solver
 SparseConjugate::~SparseConjugate() {
     // release matrices
-    linalgcu_matrix_release(&this->mResiduum);
-    linalgcu_matrix_release(&this->mProjection);
-    linalgcu_matrix_release(&this->mRSOld);
-    linalgcu_matrix_release(&this->mRSNew);
-    linalgcu_matrix_release(&this->mTempVector);
-    linalgcu_matrix_release(&this->mTempNumber);
+    delete this->mResiduum;
+    delete this->mProjection;
+    delete this->mRSOld;
+    delete this->mRSNew;
+    delete this->mTempVector;
+    delete this->mTempNumber;
 }
 
 // solve conjugate sparse
-void SparseConjugate::solve(linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalgcuMatrix_t f,
+void SparseConjugate::solve(SparseMatrix* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
     dtype::size iterations, bool dcFree, cudaStream_t stream) {
     // check input
     if (A == NULL) {
@@ -63,78 +55,61 @@ void SparseConjugate::solve(linalgcuSparseMatrix_t A, linalgcuMatrix_t x, linalg
         throw invalid_argument("SparseConjugate::solve: f == NULL");
     }
 
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
     // temp for pointer swap
-    linalgcuMatrix_t temp = NULL;
+    Matrix<dtype::real>* temp = NULL;
 
     // calc mResiduum r = f - A * x
-    error  = linalgcu_sparse_matrix_multiply(this->mResiduum, A, x, stream);
+    A->multiply(this->mResiduum, x, stream);
 
     // regularize for dc free solution
     if (dcFree == true) {
-        error |= linalgcu_matrix_sum(this->mTempNumber, x, stream);
-        Conjugate::add_scalar(this->mResiduum, this->mTempNumber, this->rows(),
+        this->mTempNumber->sum(x, stream);
+        Conjugate::addScalar(this->mResiduum, this->mTempNumber, this->rows(),
             this->columns(), stream);
     }
 
-    error |= linalgcu_matrix_scalar_multiply(this->mResiduum, -1.0, stream);
-    error |= linalgcu_matrix_add(this->mResiduum, f, stream);
+    this->mResiduum->scalarMultiply(-1.0, stream);
+    this->mResiduum->add(f, stream);
 
     // p = r
-    error |= linalgcu_matrix_copy(this->mProjection, this->mResiduum, stream);
+    this->mProjection->add(this->mResiduum, stream);
 
     // calc mRSOld
-    error |= linalgcu_matrix_vector_dot_product(this->mRSOld, this->mResiduum,
-        this->mResiduum, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        throw logic_error("SparseConjugate::solve: setup solver");
-    }
+    this->mRSOld->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
 
     // iterate
     for (dtype::size i = 0; i < iterations; i++) {
         // calc A * p
-        error  = linalgcu_sparse_matrix_multiply(this->mTempVector, A, this->mProjection,
-            stream);
+        A->multiply(this->mTempVector, this->mProjection, stream);
 
         // regularize for dc free solution
         if (dcFree == true) {
-            error |= linalgcu_matrix_sum(this->mTempNumber, this->mProjection, stream);
-            Conjugate::add_scalar(this->mTempVector, this->mTempNumber, this->rows(),
+            this->mTempNumber->sum(this->mProjection, stream);
+            Conjugate::addScalar(this->mTempVector, this->mTempNumber, this->rows(),
                 this->columns(), stream);
         }
 
         // calc p * A * p
-        error |= linalgcu_matrix_vector_dot_product(this->mTempNumber, this->mProjection,
-            this->mTempVector, stream);
+        this->mTempNumber->vectorDotProduct(this->mProjection, this->mTempVector, stream);
 
         // update mResiduum
-        Conjugate::update_vector(this->mResiduum, this->mResiduum,
+        Conjugate::updateVector(this->mResiduum, this->mResiduum,
             -1.0f, this->mTempVector, this->mRSOld, this->mTempNumber, stream);
 
         // update x
-        Conjugate::update_vector(x, x, 1.0f, this->mProjection,
+        Conjugate::updateVector(x, x, 1.0f, this->mProjection,
             this->mRSOld, this->mTempNumber, stream);
 
         // calc mRSNew
-        error |= linalgcu_matrix_vector_dot_product(this->mRSNew, this->mResiduum,
-            this->mResiduum, stream);
+        this->mRSNew->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
 
         // update mProjection
-        Conjugate::update_vector(this->mProjection, this->mResiduum,
+        Conjugate::updateVector(this->mProjection, this->mResiduum,
             1.0f, this->mProjection, this->mRSNew, this->mRSOld, stream);
 
         // swap mRSOld and mRSNew
         temp = this->mRSOld;
         this->mRSOld = this->mRSNew;
         this->mRSNew = temp;
-
-        // check success
-        if (error != LINALGCU_SUCCESS) {
-            throw logic_error("SparseConjugate::solve: iterate");
-        }
     }
 }

@@ -10,20 +10,19 @@ using namespace fastEIT;
 using namespace std;
 
 // add scalar kernel
-__global__ void add_scalar_kernel(dtype::real* vector,
-    dtype::real* scalar, linalgcuSize_t vector_rows,
-    linalgcuSize_t rows, linalgcuSize_t columns) {
+__global__ void addScalarKernel(dtype::real* vector, dtype::real* scalar,
+    dtype::size vectorRows, dtype::size rows, dtype::size columns) {
     // get ids
-    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // add data
-    vector[row + column * vector_rows] += row < rows && column < columns ? scalar[column * vector_rows] : 0.0f;
+    vector[row + column * vectorRows] += row < rows && column < columns ? scalar[column * vectorRows] : 0.0f;
 }
 
 // add scalar
-void Conjugate::add_scalar(linalgcuMatrix_t vector,
-    linalgcuMatrix_t scalar, linalgcuSize_t rows, linalgcuSize_t columns, cudaStream_t stream) {
+void Conjugate::addScalar(Matrix<dtype::real>* vector,
+    Matrix<dtype::real>* scalar, dtype::size rows, dtype::size columns, cudaStream_t stream) {
     // check input
     if (vector == NULL) {
         throw invalid_argument("Conjugate::add_scalar: vector == NULL");
@@ -33,23 +32,21 @@ void Conjugate::add_scalar(linalgcuMatrix_t vector,
     }
 
     // kernel dimension
-    dim3 global(vector->rows / LINALGCU_BLOCK_SIZE, vector->columns == 1 ? 1 :
-        vector->columns / LINALGCU_BLOCK_SIZE);
-    dim3 local(LINALGCU_BLOCK_SIZE, vector->columns == 1 ? 1 : LINALGCU_BLOCK_SIZE);
+    dim3 global(vector->rows() / Matrix<dtype::real>::blockSize, vector->columns() == 1 ? 1 :
+        vector->columns() / Matrix<dtype::real>::blockSize);
+    dim3 local(Matrix<dtype::real>::blockSize, vector->columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
 
     // execute kernel
-    add_scalar_kernel<<<global, local, 0, stream>>>(vector->deviceData, scalar->deviceData,
-        vector->rows, rows, columns);
+    addScalarKernel<<<global, local, 0, stream>>>(vector->deviceData(), scalar->deviceData(),
+        vector->rows(), rows, columns);
 }
 
 // update vector
-__global__ void update_vector_kernel(dtype::real* result,
-    dtype::real* x1, dtype::real sign,
-    dtype::real* x2, dtype::real* r1, dtype::real* r2,
-    linalgcuSize_t rows) {
+__global__ void updateVectorKernel(dtype::real* result, dtype::real* x1, dtype::real sign,
+    dtype::real* x2, dtype::real* r1, dtype::real* r2, dtype::size rows) {
     // get ids
-    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
     result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] + sign * x2[row + column * rows] *
@@ -57,9 +54,9 @@ __global__ void update_vector_kernel(dtype::real* result,
 }
 
 // update vector
-void Conjugate::update_vector(linalgcuMatrix_t result,
-    linalgcuMatrix_t x1, dtype::real sign, linalgcuMatrix_t x2,
-    linalgcuMatrix_t r1, linalgcuMatrix_t r2, cudaStream_t stream) {
+void Conjugate::updateVector(Matrix<dtype::real>* result,
+    Matrix<dtype::real>* x1, dtype::real sign, Matrix<dtype::real>* x2,
+    Matrix<dtype::real>* r1, Matrix<dtype::real>* r2, cudaStream_t stream) {
     // check input
     if (result == NULL) {
         throw invalid_argument("Conjugate::update_vector: result == NULL");
@@ -78,32 +75,32 @@ void Conjugate::update_vector(linalgcuMatrix_t result,
     }
 
     // kernel dimension
-    dim3 global(result->rows / LINALGCU_BLOCK_SIZE, result->columns == 1 ? 1 :
-        result->columns / LINALGCU_BLOCK_SIZE);
-    dim3 local(LINALGCU_BLOCK_SIZE, result->columns == 1 ? 1 : LINALGCU_BLOCK_SIZE);
+    dim3 global(result->rows() / Matrix<dtype::real>::blockSize, result->columns() == 1 ? 1 :
+        result->columns() / Matrix<dtype::real>::blockSize);
+    dim3 local(Matrix<dtype::real>::blockSize, result->columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
 
     // execute kernel
-    update_vector_kernel<<<global, local, 0, stream>>>(result->deviceData,
-        x1->deviceData, sign, x2->deviceData, r1->deviceData, r2->deviceData, result->rows);
+    updateVectorKernel<<<global, local, 0, stream>>>(result->deviceData(),
+        x1->deviceData(), sign, x2->deviceData(), r1->deviceData(), r2->deviceData(), result->rows());
 }
 
 // gemv kernel
-__global__ void gemv_kernel(dtype::real* matrix, dtype::real* vector,
-    dtype::real* result, linalgcuSize_t rows) {
+__global__ void gemvKernel(dtype::real* matrix, dtype::real* vector,
+    dtype::real* result, dtype::size rows) {
     // get ids
-    linalgcuSize_t row = threadIdx.x + blockIdx.x * blockDim.x;
-    linalgcuSize_t column = (threadIdx.y + blockIdx.y * blockDim.y) * 2 * LINALGCU_BLOCK_SIZE;
+    dtype::index row = threadIdx.x + blockIdx.x * blockDim.x;
+    dtype::index column = (threadIdx.y + blockIdx.y * blockDim.y) * 2 * Matrix<dtype::real>::blockSize;
 
     // load vector to shared memory
-    __shared__ dtype::real work[2 * LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE];
-    work[threadIdx.x + threadIdx.y * 2 * LINALGCU_BLOCK_SIZE] = column + threadIdx.x < rows ?
+    __shared__ dtype::real work[2 * Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize];
+    work[threadIdx.x + threadIdx.y * 2 * Matrix<dtype::real>::blockSize] = column + threadIdx.x < rows ?
         vector[column + threadIdx.x] : 0.0f;
     __syncthreads();
 
     // compute partial vector product
     dtype::real product = 0.0f;
-    for (int i = 0; i < 2 * LINALGCU_BLOCK_SIZE; i++) {
-        product += row < rows && column + i < rows ? matrix[row + (column + i) * rows] * work[i + threadIdx.y * 2 * LINALGCU_BLOCK_SIZE] : 0.0f;
+    for (dtype::index i = 0; i < 2 * Matrix<dtype::real>::blockSize; i++) {
+        product += row < rows && column + i < rows ? matrix[row + (column + i) * rows] * work[i + threadIdx.y * 2 * Matrix<dtype::real>::blockSize] : 0.0f;
     }
 
     // set result
@@ -113,9 +110,9 @@ __global__ void gemv_kernel(dtype::real* matrix, dtype::real* vector,
 }
 
 // row reduce kernel
-__global__ void reduce_row_kernel(dtype::real* vector, linalgcuSize_t rows) {
+__global__ void reduceRowKernel(dtype::real* vector, dtype::size rows) {
     // get id
-    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // check row
     if (row >= rows) {
@@ -124,8 +121,8 @@ __global__ void reduce_row_kernel(dtype::real* vector, linalgcuSize_t rows) {
 
     // sum row
     dtype::real sum = 0.0f;
-    linalgcuSize_t count = (rows + 2 * LINALGCU_BLOCK_SIZE - 1) / (2 * LINALGCU_BLOCK_SIZE);
-    for (int i = 0; i < count; i++) {
+    dtype::size count = (rows + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize);
+    for (dtype::index i = 0; i < count; i++) {
         sum += vector[row + i * rows];
     }
 
@@ -134,8 +131,8 @@ __global__ void reduce_row_kernel(dtype::real* vector, linalgcuSize_t rows) {
 }
 
 // fast gemv
-void Conjugate::gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
-    linalgcuMatrix_t vector, cudaStream_t stream) {
+void Conjugate::gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
+    Matrix<dtype::real>* vector, cudaStream_t stream) {
     // check input
     if (result == NULL) {
         throw invalid_argument("Conjugate::gemv: result == NULL");
@@ -148,17 +145,17 @@ void Conjugate::gemv(linalgcuMatrix_t result, linalgcuMatrix_t matrix,
     }
 
     // dimension
-    dim3 blocks((matrix->rows + 2 * LINALGCU_BLOCK_SIZE - 1) / (2 * LINALGCU_BLOCK_SIZE),
-        (matrix->rows / (2 * LINALGCU_BLOCK_SIZE) + LINALGCU_BLOCK_SIZE - 1) / LINALGCU_BLOCK_SIZE);
-    dim3 threads(2 * LINALGCU_BLOCK_SIZE, LINALGCU_BLOCK_SIZE);
+    dim3 blocks((matrix->rows() + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize),
+        (matrix->rows() / (2 * Matrix<dtype::real>::blockSize) + Matrix<dtype::real>::blockSize - 1) / Matrix<dtype::real>::blockSize);
+    dim3 threads(2 * Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // call gemv kernel
-    gemv_kernel<<<blocks, threads, 0, stream>>>(matrix->deviceData, vector->deviceData,
-        result->deviceData, matrix->rows);
+    gemvKernel<<<blocks, threads, 0, stream>>>(matrix->deviceData(), vector->deviceData(),
+        result->deviceData(), matrix->rows());
 
     // call reduce kernel
-    reduce_row_kernel<<<(matrix->columns + LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE - 1) /
-        (LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE), LINALGCU_BLOCK_SIZE * LINALGCU_BLOCK_SIZE,
-        0, stream>>>(result->deviceData, result->rows);
+    reduceRowKernel<<<(matrix->columns() + Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize - 1) /
+        (Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize),
+        Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize, 0, stream>>>(result->deviceData(), result->rows());
 }
 

@@ -11,7 +11,7 @@ using namespace std;
 
 // reduce connectivity and elementalResidual matrix
 template <class type>
-__global__ void reduce_matrix_kernel(type* matrix,
+__global__ void reduceMatrixKernel(type* matrix,
     type* intermediateMatrix, dtype::index* systemMatrixColumnIds,
     dtype::size rows, dtype::size density) {
     // get ids
@@ -35,14 +35,14 @@ __global__ void reduce_matrix_kernel(type* matrix,
 
 // reduce matrix
 template <class BasisFunction>
-void Model<BasisFunction>::reduce_matrix(Matrix<dtype::real>* matrix,
+void Model<BasisFunction>::reduceMatrix(Matrix<dtype::real>* matrix,
     Matrix<dtype::real>* intermediateMatrix, dtype::size density, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
-        throw invalid_argument("Model::reduce_matrix: matrix == NULL");
+        throw invalid_argument("Model::reduceMatrix: matrix == NULL");
     }
     if (intermediateMatrix == NULL) {
-        throw invalid_argument("Model::reduce_matrix: intermediateMatrix == NULL");
+        throw invalid_argument("Model::reduceMatrix: intermediateMatrix == NULL");
     }
 
     // block size
@@ -50,20 +50,20 @@ void Model<BasisFunction>::reduce_matrix(Matrix<dtype::real>* matrix,
     dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // reduce matrix
-    reduce_matrix_kernel<dtype::real><<<blocks, threads, 0, stream>>>(
+    reduceMatrixKernel<dtype::real><<<blocks, threads, 0, stream>>>(
         matrix->deviceData(), intermediateMatrix->deviceData(),
         this->mSMatrix->columnIds(), matrix->rows(),
         density);
 }
 template <class BasisFunction>
-void Model<BasisFunction>::reduce_matrix(Matrix<dtype::index>* matrix,
+void Model<BasisFunction>::reduceMatrix(Matrix<dtype::index>* matrix,
     Matrix<dtype::index>* intermediateMatrix, dtype::size density, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
-        throw invalid_argument("Model::reduce_matrix: matrix == NULL");
+        throw invalid_argument("Model::reduceMatrix: matrix == NULL");
     }
     if (intermediateMatrix == NULL) {
-        throw invalid_argument("Model::reduce_matrix: intermediateMatrix == NULL");
+        throw invalid_argument("Model::reduceMatrix: intermediateMatrix == NULL");
     }
 
     // block size
@@ -71,14 +71,14 @@ void Model<BasisFunction>::reduce_matrix(Matrix<dtype::index>* matrix,
     dim3 threads(Matrix<dtype::index>::blockSize, Matrix<dtype::index>::blockSize);
 
     // reduce matrix
-    reduce_matrix_kernel<dtype::index><<<blocks, threads, 0, stream>>>(
+    reduceMatrixKernel<dtype::index><<<blocks, threads, 0, stream>>>(
         matrix->deviceData(), intermediateMatrix->deviceData(),
         this->mSMatrix->columnIds(), matrix->rows(),
         density);
 }
 
 // update matrix kernel
-__global__ void update_matrix_kernel(dtype::real* matrixValues,
+__global__ void updateMatrixKernel(dtype::real* matrixValues,
     dtype::index* connectivityMatrix, dtype::real* elementalMatrix,
     dtype::real* gamma, dtype::real sigmaRef, dtype::size rows,
     dtype::size density) {
@@ -105,17 +105,17 @@ __global__ void update_matrix_kernel(dtype::real* matrixValues,
 
 // update matrix
 template <class BasisFunction>
-void Model<BasisFunction>::update_matrix(SparseMatrix* matrix,
+void Model<BasisFunction>::updateMatrix(SparseMatrix* matrix,
     Matrix<dtype::real>* elementalMatrix, Matrix<dtype::real>* gamma, cudaStream_t stream) {
     // check input
     if (matrix == NULL) {
-        throw invalid_argument("Model::update_matrix: matrix == NULL");
+        throw invalid_argument("Model::updateMatrix: matrix == NULL");
     }
     if (elementalMatrix == NULL) {
-        throw invalid_argument("Model::update_matrix: elementalMatrix == NULL");
+        throw invalid_argument("Model::updateMatrix: elementalMatrix == NULL");
     }
     if (gamma == NULL) {
-        throw invalid_argument("Model::update_matrix: gamma == NULL");
+        throw invalid_argument("Model::updateMatrix: gamma == NULL");
     }
 
     // dimension
@@ -123,7 +123,7 @@ void Model<BasisFunction>::update_matrix(SparseMatrix* matrix,
     dim3 blocks(matrix->rows() / Matrix<dtype::real>::blockSize, 1);
 
     // execute kernel
-    update_matrix_kernel<<<blocks, threads, 0, stream>>>(
+    updateMatrixKernel<<<blocks, threads, 0, stream>>>(
         matrix->values(), this->mConnectivityMatrix->deviceData(),
         elementalMatrix->deviceData(), gamma->deviceData(), this->sigmaRef(),
         this->mConnectivityMatrix->rows(), matrix->density());

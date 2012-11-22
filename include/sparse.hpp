@@ -25,6 +25,10 @@ private:
     void convert(Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
 
 public:
+    // matrix multiply
+    void multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
+
+public:
     // block size
     static const dtype::size blockSize = 32;
 

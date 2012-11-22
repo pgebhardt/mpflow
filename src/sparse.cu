@@ -70,7 +70,7 @@ SparseMatrix::~SparseMatrix() {
 }
 
 // convert to sparse matrix kernel
-__global__ void sparse_create_kernel(dtype::real* values,
+__global__ void sparseCreateKernel(dtype::real* values,
     dtype::index* columnIds, dtype::real* matrix,
     dtype::index* elementCount, dtype::size rows, dtype::size columns) {
     // get id
@@ -122,7 +122,7 @@ void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     Matrix<dtype::index> maxCount(this->rows(), 1, stream);
 
     // execute kernel
-    sparse_create_kernel<<<this->rows() / SparseMatrix::blockSize,
+    sparseCreateKernel<<<this->rows() / SparseMatrix::blockSize,
         SparseMatrix::blockSize, 0, stream>>>(
         this->values(), this->columnIds(), matrix->deviceData(),
         elementCount.deviceData(), matrix->rows(), matrix->columns());
@@ -135,27 +135,27 @@ void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     // save density
     this->mDensity = maxCount.hostData()[0];
 }
-/*
+
 // sparse matrix multiply kernel
-__global__ void sparse_multiply_kernel(linalgcuMatrixData_t* result,
-    linalgcuMatrixData_t* values, linalgcuColumnId_t* columnIds,
-    linalgcuMatrixData_t* matrix, linalgcuSize_t rows, linalgcuSize_t columns,
-    linalgcuSize_t density) {
+__global__ void sparseMultiplyKernel(dtype::real* result,
+    dtype::real* values, dtype::index* columnIds,
+    dtype::real* matrix, dtype::size rows, dtype::size columns,
+    dtype::size density) {
     // get ids
-    linalgcuSize_t row = blockIdx.x * blockDim.x + threadIdx.x;
-    linalgcuSize_t column = blockIdx.y * blockDim.y + threadIdx.y;
+    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc result
-    linalgcuMatrixData_t res = 0.0f;
-    linalgcuColumnId_t id = -1;
+    dtype::real res = 0.0f;
+    dtype::index id = -1;
 
     // read column ids to local memory
-    __shared__ linalgcuColumnId_t columnId[LINALGCU_SPARSE_SIZE * LINALGCU_SPARSE_SIZE];
-    __shared__ linalgcuMatrixData_t value[LINALGCU_SPARSE_SIZE * LINALGCU_SPARSE_SIZE];
-    columnId[threadIdx.x * LINALGCU_SPARSE_SIZE + threadIdx.y] = row < rows ?
-        columnIds[row * LINALGCU_SPARSE_SIZE + threadIdx.y] : -1;
-    value[threadIdx.x * LINALGCU_SPARSE_SIZE + threadIdx.y] = row < rows ?
-        values[row * LINALGCU_SPARSE_SIZE + threadIdx.y] : 0.0f;
+    __shared__ dtype::index columnId[SparseMatrix::blockSize * SparseMatrix::blockSize];
+    __shared__ dtype::real value[SparseMatrix::blockSize * SparseMatrix::blockSize];
+    columnId[threadIdx.x * SparseMatrix::blockSize + threadIdx.y] = row < rows ?
+        columnIds[row * SparseMatrix::blockSize + threadIdx.y] : -1;
+    value[threadIdx.x * SparseMatrix::blockSize + threadIdx.y] = row < rows ?
+        values[row * SparseMatrix::blockSize + threadIdx.y] : 0.0f;
     __syncthreads();
 
     // check ids
@@ -164,12 +164,12 @@ __global__ void sparse_multiply_kernel(linalgcuMatrixData_t* result,
     }
 
     // read matrix to local memory
-    for (linalgcuSize_t j = 0; j < density; j++) {
+    for (dtype::index j = 0; j < density; j++) {
         // get column id
-        id = columnId[threadIdx.x * LINALGCU_SPARSE_SIZE + j];
+        id = columnId[threadIdx.x * SparseMatrix::blockSize + j];
 
          res += id != -1 ? matrix[id + column * rows] *
-            value[threadIdx.x * LINALGCU_SPARSE_SIZE + j] : 0.0f;
+            value[threadIdx.x * SparseMatrix::blockSize + j] : 0.0f;
     }
 
     // set result
@@ -177,28 +177,28 @@ __global__ void sparse_multiply_kernel(linalgcuMatrixData_t* result,
 }
 
 // sparse matrix multiply
-extern "C"
-linalgcuError_t linalgcu_sparse_matrix_multiply(linalgcuMatrix_t result,
-    linalgcuSparseMatrix_t sparse, linalgcuMatrix_t matrix, cudaStream_t stream) {
+void SparseMatrix::multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
+    cudaStream_t stream) {
     // check input
-    if ((result == NULL) || (sparse == NULL) || (matrix == NULL)) {
-        return LINALGCU_ERROR;
+    if (result == NULL) {
+        throw invalid_argument("SparseMatrix::multiply: result == NULL");
+    }
+    if (matrix == NULL) {
+        throw invalid_argument("SparseMatrix::multiply: matrix == NULL");
     }
 
     // check size
-    if ((result->rows != sparse->rows) || (sparse->columns != matrix->rows) ||
-        (result->columns != matrix->columns)) {
-        return LINALGCU_ERROR;
+    if ((result->rows() != this->rows()) || (this->columns() != matrix->rows()) ||
+        (result->columns() != matrix->columns())) {
+        throw invalid_argument("SparseMatrix::multiply: size");
     }
 
     // kernel dimension
-    dim3 global((result->rows + LINALGCU_SPARSE_SIZE - 1) / LINALGCU_SPARSE_SIZE,
-        (result->columns + LINALGCU_SPARSE_SIZE - 1) / LINALGCU_SPARSE_SIZE);
-    dim3 local(LINALGCU_SPARSE_SIZE, LINALGCU_SPARSE_SIZE);
+    dim3 global((result->rows() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize,
+        (result->columns() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize);
+    dim3 local(SparseMatrix::blockSize, SparseMatrix::blockSize);
 
     // execute kernel
-    sparse_multiply_kernel<<<global, local, 0, stream>>>(result->deviceData, sparse->values,
-        sparse->columnIds, matrix->deviceData, result->rows, result->columns, sparse->density);
-
-    return LINALGCU_SUCCESS;
-}*/
+    sparseMultiplyKernel<<<global, local, 0, stream>>>(result->deviceData(), this->values(),
+        this->columnIds(), matrix->deviceData(), result->rows(), result->columns(), this->density());
+}
