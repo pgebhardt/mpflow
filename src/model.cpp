@@ -12,7 +12,10 @@ using namespace std;
 // create solver model
 template <class BasisFunction>
 Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigmaRef,
-    dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream) {
+    dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
+    : mMesh(mesh), mElectrodes(electrodes), mSigmaRef(sigmaRef), mSystemMatrix(NULL),
+        mSMatrix(NULL), mRMatrix(NULL), mExcitationMatrix(NULL), mConnectivityMatrix(NULL),
+        mElementalSMatrix(NULL), mElementalRMatrix(NULL), mNumHarmonics(numHarmonics) {
     // check input
     if (mesh == NULL) {
         throw invalid_argument("Model::Model: mesh == NULL");
@@ -26,19 +29,6 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init member
-    this->mMesh = mesh;
-    this->mElectrodes = electrodes;
-    this->mSigmaRef = sigmaRef;
-    this->mSystemMatrix = NULL;
-    this->mSMatrix = NULL;
-    this->mRMatrix = NULL;
-    this->mExcitationMatrix = NULL;
-    this->mConnectivityMatrix = NULL;
-    this->mElementalSMatrix = NULL;
-    this->mElementalRMatrix = NULL;
-    this->mNumHarmonics = numHarmonics;
 
     // create system matrices buffer
     this->mSystemMatrix = new linalgcuSparseMatrix_t[this->mNumHarmonics + 1];

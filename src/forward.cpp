@@ -18,7 +18,10 @@ template
 ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
     linalgcuMatrix_t measurmentPattern, linalgcuMatrix_t drivePattern,
     dtype::size measurmentCount, dtype::size driveCount, dtype::size numHarmonics,
-    dtype::real sigmaRef, cublasHandle_t handle, cudaStream_t stream) {
+    dtype::real sigmaRef, cublasHandle_t handle, cudaStream_t stream)
+    : mModel(NULL), mNumericSolver(NULL), mDriveCount(driveCount), mMeasurmentCount(measurmentCount),
+        mJacobian(NULL), mVoltage(NULL), mPhi(NULL), mExcitation(NULL), mVoltageCalculation(NULL),
+        mElementalJacobianMatrix(NULL) {
     // check input
     if (mesh == NULL) {
         throw invalid_argument("ForwardSolver::ForwardSolver: mesh == NULL");
@@ -38,18 +41,6 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init member
-    this->mModel = NULL;
-    this->mNumericSolver = NULL;
-    this->mDriveCount = driveCount;
-    this->mMeasurmentCount = measurmentCount;
-    this->mJacobian = NULL;
-    this->mVoltage = NULL;
-    this->mPhi = NULL;
-    this->mExcitation = NULL;
-    this->mVoltageCalculation = NULL;
-    this->mElementalJacobianMatrix = NULL;
 
     // create model
     this->mModel = new Model<BasisFunction>(mesh, electrodes, sigmaRef, numHarmonics, handle,

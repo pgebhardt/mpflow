@@ -12,7 +12,9 @@ using namespace std;
 // create inverse_solver
 template <class NumericSolver>
 InverseSolver<NumericSolver>::InverseSolver(dtype::size elementCount, dtype::size voltageCount,
-    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
+    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream)
+    : mNumericSolver(NULL), mDVoltage(NULL), mZeros(NULL), mExcitation(NULL), mSystemMatrix(NULL),
+        mJacobianSquare(NULL), mRegularizationFactor(regularizationFactor) {
     // check input
     if (handle == NULL) {
         throw invalid_argument("InverseSolver::InverseSolver: handle == NULL");
@@ -20,15 +22,6 @@ InverseSolver<NumericSolver>::InverseSolver(dtype::size elementCount, dtype::siz
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init member
-    this->mNumericSolver = NULL;
-    this->mDVoltage = NULL;
-    this->mZeros = NULL;
-    this->mExcitation = NULL;
-    this->mSystemMatrix = NULL;
-    this->mJacobianSquare = NULL;
-    this->mRegularizationFactor = regularizationFactor;
 
     // create matrices
     error  = linalgcu_matrix_create(&this->mDVoltage, voltageCount, 1, stream);

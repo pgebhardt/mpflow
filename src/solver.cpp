@@ -12,8 +12,10 @@ using namespace std;
 // create solver
 Solver::Solver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPattern,
     linalgcuMatrix_t drivePattern, dtype::size measurmentCount, dtype::size driveCount,
-    dtype::real numHarmonics, dtype::real sigmaRef,
-    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream) {
+    dtype::real numHarmonics, dtype::real sigmaRef, dtype::real regularizationFactor,
+    cublasHandle_t handle, cudaStream_t stream)
+    : mForwardSolver(NULL), mInverseSolver(NULL), mDGamma(NULL), mGamma(NULL),
+        mMeasuredVoltage(NULL), mCalibrationVoltage(NULL) {
     // check input
     if (mesh == NULL) {
         throw invalid_argument("Solver::Solver: mesh == NULL");
@@ -24,14 +26,6 @@ Solver::Solver(Mesh* mesh, Electrodes* electrodes, linalgcuMatrix_t measurmentPa
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init member
-    this->mForwardSolver = NULL;
-    this->mInverseSolver = NULL;
-    this->mDGamma = NULL;
-    this->mGamma = NULL;
-    this->mMeasuredVoltage = NULL;
-    this->mCalibrationVoltage = NULL;
 
     // create matrices
     error  = linalgcu_matrix_create(&this->mDGamma, mesh->elementCount(), 1, stream);

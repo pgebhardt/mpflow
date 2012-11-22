@@ -10,7 +10,9 @@ using namespace fastEIT;
 using namespace std;
 
 // create conjugate solver
-Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t stream) {
+Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t stream)
+    : mRows(rows), mResiduum(NULL), mProjection(NULL), mRSOld(NULL), mRSNew(NULL),
+        mTempVector(NULL), mTempNumber(NULL) {
     // check input
     if (rows <= 1) {
         throw invalid_argument("Conjugate::Conjugate: rows <= 1");
@@ -21,15 +23,6 @@ Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t strea
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init struct
-    this->mRows = rows;
-    this->mResiduum = NULL;
-    this->mProjection = NULL;
-    this->mRSOld = NULL;
-    this->mRSNew = NULL;
-    this->mTempVector = NULL;
-    this->mTempNumber = NULL;
 
     // create matrices
     error  = linalgcu_matrix_create(&this->mResiduum, this->rows(), 1, stream);

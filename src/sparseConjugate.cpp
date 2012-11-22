@@ -10,7 +10,9 @@ using namespace fastEIT;
 using namespace std;
 
 // create conjugate solver
-SparseConjugate::SparseConjugate(dtype::size rows, dtype::size columns, cudaStream_t stream) {
+SparseConjugate::SparseConjugate(dtype::size rows, dtype::size columns, cudaStream_t stream)
+    : mRows(rows), mColumns(columns), mResiduum(NULL), mProjection(NULL), mRSOld(NULL),
+        mRSNew(NULL), mTempVector(NULL), mTempNumber(NULL) {
     // check input
     if (rows <= 1) {
         throw invalid_argument("SparseConjugate::SparseConjugate: rows <= 1");
@@ -21,16 +23,6 @@ SparseConjugate::SparseConjugate(dtype::size rows, dtype::size columns, cudaStre
 
     // error
     linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // init member
-    this->mRows = rows;
-    this->mColumns = columns;
-    this->mResiduum = NULL;
-    this->mProjection = NULL;
-    this->mRSOld = NULL;
-    this->mRSNew = NULL;
-    this->mTempVector = NULL;
-    this->mTempNumber = NULL;
 
     // create matrices
     error  = linalgcu_matrix_create(&this->mResiduum, this->rows(), this->columns(), stream);
