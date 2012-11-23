@@ -91,10 +91,11 @@ void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyDeviceToDevice, stream);
 
-    // check success
+    // TODO
+    /*// check success
     if (error != cudaSuccess) {
         throw logic_error("Matrix::copyToDevice: copy error");
-    }
+    }*/
 }
 
 // copy to device
@@ -108,10 +109,11 @@ void Matrix<type>::copyToDevice(cudaStream_t stream) {
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyHostToDevice, stream);
 
-    // check success
+    // TODO
+    /*// check success
     if (error != cudaSuccess) {
         throw logic_error("Matrix::copyToDevice: copy error");
-    }
+    }*/
 }
 
 // copy to host
@@ -125,10 +127,11 @@ void Matrix<type>::copyToHost(cudaStream_t stream) {
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyDeviceToHost, stream);
 
-    // check success
+    // TODO
+    /*// check success
     if (error != cudaSuccess) {
         throw logic_error("Matrix::copyToDevice: copy error");
-    }
+    }*/
 }
 
 // add kernel

@@ -117,8 +117,8 @@ void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     Matrix<dtype::index> maxCount(this->rows(), 1, stream);
 
     // execute kernel
-    sparseCreateKernel<<<this->rows() / SparseMatrix::blockSize,
-        SparseMatrix::blockSize, 0, stream>>>(
+    sparseCreateKernel<<<this->rows() / Matrix<dtype::real>::blockSize,
+        Matrix<dtype::real>::blockSize, 0, stream>>>(
         this->values(), this->columnIds(), matrix->deviceData(),
         elementCount.deviceData(), matrix->rows(), matrix->columns());
 
