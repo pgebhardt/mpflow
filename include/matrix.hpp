@@ -39,11 +39,15 @@ public:
 
 // accessors
 public:
-    type* hostData() const { return this->mHostData; }
-    type* deviceData() const { return this->mDeviceData; }
-    dtype::size rows() const { return this->mRows; }
-    dtype::size columns() const { return this->mColumns; }
-    type& operator() (dtype::index i, dtype::index j) { return this->mHostData[i + j * this->rows()]; }
+    type* hostData() { return this->mHostData; }
+    type* deviceData() { return this->mDeviceData; }
+    dtype::size rows() { return this->mRows; }
+    dtype::size columns() { return this->mColumns; }
+    type& operator() (dtype::index i, dtype::index j) {
+        assert(i < this->rows());
+        assert(j < this->columns());
+        return this->mHostData[i + j * this->rows()];
+    }
 
 // member
 private:
