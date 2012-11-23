@@ -34,16 +34,16 @@ public:
 
 // accessors
 public:
-    dtype::size rows() const { return this->mRows; }
-    dtype::size columns() const { return this->mColumns; }
+    dtype::size dataRows() const { return this->mDataRows; }
+    dtype::size dataColumns() const { return this->mDataColumns; }
     dtype::size density() const { return this->mDensity; }
     dtype::real* values() const { return this->mValues; }
     dtype::index* columnIds() const { return this->mColumnIds; }
 
 // member
 private:
-    dtype::size mRows;
-    dtype::size mColumns;
+    dtype::size mDataRows;
+    dtype::size mDataColumns;
     dtype::size mDensity;
     dtype::real* mValues;
     dtype::index* mColumnIds;

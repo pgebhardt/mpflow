@@ -47,7 +47,7 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
     this->mNumericSolver = new NumericSolver(mesh->nodeCount(), driveCount + measurmentCount, stream);
 
     // create matrices
-    this->mJacobian = new Matrix<dtype::real>(measurmentPattern->columns() * drivePattern->columns(),
+    this->mJacobian = new Matrix<dtype::real>(measurmentPattern->dataColumns() * drivePattern->dataColumns(),
         mesh->elementCount(), stream);
     this->mVoltage  = new Matrix<dtype::real>(measurmentCount, driveCount, stream);
     this->mVoltageCalculation  = new Matrix<dtype::real>(measurmentCount, mesh->nodeCount(), stream);
@@ -67,11 +67,11 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
     }
 
     // create pattern matrix
-    Matrix<dtype::real> pattern(drivePattern->rows(), driveCount + measurmentCount, stream);
+    Matrix<dtype::real> pattern(drivePattern->dataRows(), driveCount + measurmentCount, stream);
 
     // fill pattern matrix with drive pattern
     dtype::real value = 0.0f;
-    for (dtype::index i = 0; i < pattern.rows(); i++) {
+    for (dtype::index i = 0; i < pattern.dataRows(); i++) {
         for (dtype::index j = 0; j < driveCount; j++) {
             pattern(i, j) = (*drivePattern)(i, j);
         }
@@ -79,7 +79,7 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index i = 0; i < pattern.rows(); i++) {
+    for (dtype::index i = 0; i < pattern.dataRows(); i++) {
         for (dtype::index j = 0; j < measurmentCount; j++) {
             pattern(i, j + driveCount) = (*measurmentPattern)(i, j);
         }
@@ -94,17 +94,17 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
 
     // one prerun for cublas
     cublasSetStream(handle, stream);
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns(),
-        this->model()->excitationMatrix()->rows(), measurmentPattern->rows(), &alpha,
-        measurmentPattern->deviceData(), measurmentPattern->rows(),
-        this->model()->excitationMatrix()->deviceData(), this->model()->excitationMatrix()->rows(),
-        &beta, this->voltageCalculation()->deviceData(), this->voltageCalculation()->rows());
+    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->dataColumns(),
+        this->model()->excitationMatrix()->dataRows(), measurmentPattern->dataRows(), &alpha,
+        measurmentPattern->deviceData(), measurmentPattern->dataRows(),
+        this->model()->excitationMatrix()->deviceData(), this->model()->excitationMatrix()->dataRows(),
+        &beta, this->voltageCalculation()->deviceData(), this->voltageCalculation()->dataRows());
 
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->columns(),
-        this->model()->excitationMatrix()->rows(), measurmentPattern->rows(), &alpha,
-        measurmentPattern->deviceData(), measurmentPattern->rows(),
-        this->model()->excitationMatrix()->deviceData(), this->model()->excitationMatrix()->rows(),
-        &beta, this->voltageCalculation()->deviceData(), this->voltageCalculation()->rows())
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurmentPattern->dataColumns(),
+        this->model()->excitationMatrix()->dataRows(), measurmentPattern->dataRows(), &alpha,
+        measurmentPattern->deviceData(), measurmentPattern->dataRows(),
+        this->model()->excitationMatrix()->deviceData(), this->model()->excitationMatrix()->dataRows(),
+        &beta, this->voltageCalculation()->deviceData(), this->voltageCalculation()->dataRows())
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
     }
@@ -241,20 +241,20 @@ Matrix<dtype::real>* ForwardSolver<BasisFunction, NumericSolver>::solve(Matrix<d
 
     // add voltage
     dtype::real alpha = 1.0f, beta = 0.0f;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltageCalculation()->rows(),
-        this->driveCount(), this->voltageCalculation()->columns(), &alpha,
-        this->voltageCalculation()->deviceData(), this->voltageCalculation()->rows(),
-        this->phi(0)->deviceData(), this->phi(0)->rows(), &beta,
-        this->voltage()->deviceData(), this->voltage()->rows());
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltageCalculation()->dataRows(),
+        this->driveCount(), this->voltageCalculation()->dataColumns(), &alpha,
+        this->voltageCalculation()->deviceData(), this->voltageCalculation()->dataRows(),
+        this->phi(0)->deviceData(), this->phi(0)->dataRows(), &beta,
+        this->voltage()->deviceData(), this->voltage()->dataRows());
 
     // add harmonic voltages
     beta = 1.0f;
     for (dtype::index n = 1; n < this->model()->numHarmonics() + 1; n++) {
-        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltageCalculation()->rows(),
-            this->driveCount(), this->voltageCalculation()->columns(), &alpha,
-            this->voltageCalculation()->deviceData(), this->voltageCalculation()->rows(),
-            this->phi(n)->deviceData(), this->phi(n)->rows(), &beta,
-            this->voltage()->deviceData(), this->voltage()->rows());
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltageCalculation()->dataRows(),
+            this->driveCount(), this->voltageCalculation()->dataColumns(), &alpha,
+            this->voltageCalculation()->deviceData(), this->voltageCalculation()->dataRows(),
+            this->phi(n)->deviceData(), this->phi(n)->dataRows(), &beta,
+            this->voltage()->deviceData(), this->voltage()->dataRows());
     }
 
     return this->voltage();

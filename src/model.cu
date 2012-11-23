@@ -46,13 +46,13 @@ void Model<BasisFunction>::reduceMatrix(Matrix<dtype::real>* matrix,
     }
 
     // block size
-    dim3 blocks(matrix->rows() / Matrix<dtype::real>::blockSize, 1);
+    dim3 blocks(matrix->dataRows() / Matrix<dtype::real>::blockSize, 1);
     dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // reduce matrix
     reduceMatrixKernel<dtype::real><<<blocks, threads, 0, stream>>>(
         matrix->deviceData(), intermediateMatrix->deviceData(),
-        this->mSMatrix->columnIds(), matrix->rows(),
+        this->mSMatrix->columnIds(), matrix->dataRows(),
         density);
 }
 template <class BasisFunction>
@@ -67,13 +67,13 @@ void Model<BasisFunction>::reduceMatrix(Matrix<dtype::index>* matrix,
     }
 
     // block size
-    dim3 blocks(matrix->rows() / Matrix<dtype::index>::blockSize, 1);
+    dim3 blocks(matrix->dataRows() / Matrix<dtype::index>::blockSize, 1);
     dim3 threads(Matrix<dtype::index>::blockSize, Matrix<dtype::index>::blockSize);
 
     // reduce matrix
     reduceMatrixKernel<dtype::index><<<blocks, threads, 0, stream>>>(
         matrix->deviceData(), intermediateMatrix->deviceData(),
-        this->mSMatrix->columnIds(), matrix->rows(),
+        this->mSMatrix->columnIds(), matrix->dataRows(),
         density);
 }
 
@@ -120,13 +120,13 @@ void Model<BasisFunction>::updateMatrix(SparseMatrix* matrix,
 
     // dimension
     dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
-    dim3 blocks(matrix->rows() / Matrix<dtype::real>::blockSize, 1);
+    dim3 blocks(matrix->dataRows() / Matrix<dtype::real>::blockSize, 1);
 
     // execute kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(
         matrix->values(), this->mConnectivityMatrix->deviceData(),
         elementalMatrix->deviceData(), gamma->deviceData(), this->sigmaRef(),
-        this->mConnectivityMatrix->rows(), matrix->density());
+        this->mConnectivityMatrix->dataRows(), matrix->density());
 }
 
 // specialisation

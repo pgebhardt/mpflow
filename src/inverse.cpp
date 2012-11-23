@@ -12,8 +12,8 @@ using namespace std;
 
 template <class type>
 void printMatrix(fastEIT::Matrix<type>& matrix) {
-    for (dtype::index i = 0; i < matrix.rows(); i++) {
-        for (dtype::index j = 0; j < matrix.columns(); j++) {
+    for (dtype::index i = 0; i < matrix.dataRows(); i++) {
+        for (dtype::index j = 0; j < matrix.dataColumns(); j++) {
             cout << matrix(i, j) << ", ";
         }
         cout << endl;
@@ -70,10 +70,10 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcSystemMatrix(
     dtype::real alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare()->rows(),
-        this->jacobianSquare()->columns(), jacobian->rows(), &alpha, jacobian->deviceData(),
-        jacobian->rows(), jacobian->deviceData(), jacobian->rows(), &beta,
-        this->jacobianSquare()->deviceData(), this->jacobianSquare()->rows())
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare()->dataRows(),
+        this->jacobianSquare()->dataColumns(), jacobian->dataRows(), &alpha, jacobian->deviceData(),
+        jacobian->dataRows(), jacobian->deviceData(), jacobian->dataRows(), &beta,
+        this->jacobianSquare()->deviceData(), this->jacobianSquare()->dataRows())
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error("InverseSolver::calcSystemMatrix: calc Jt * J");
     }
@@ -83,12 +83,12 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcSystemMatrix(
 
     // add lambda * Jt * J * Jt * J to systemMatrix
     beta = this->regularizationFactor();
-    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare()->columns(),
-        this->jacobianSquare()->rows(), this->jacobianSquare()->columns(),
+    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare()->dataColumns(),
+        this->jacobianSquare()->dataRows(), this->jacobianSquare()->dataColumns(),
         &beta, this->jacobianSquare()->deviceData(),
-        this->jacobianSquare()->rows(), this->jacobianSquare()->deviceData(),
-        this->jacobianSquare()->rows(), &alpha, this->systemMatrix()->deviceData(),
-        this->systemMatrix()->rows()) != CUBLAS_STATUS_SUCCESS) {
+        this->jacobianSquare()->dataRows(), this->jacobianSquare()->deviceData(),
+        this->jacobianSquare()->dataRows(), &alpha, this->systemMatrix()->deviceData(),
+        this->systemMatrix()->dataRows()) != CUBLAS_STATUS_SUCCESS) {
         throw logic_error(
             "InverseSolver::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
     }
@@ -119,7 +119,7 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcExcitation(Matrix<dtype::
     cublasSetStream(handle, stream);
 
     // copy measuredVoltage to dVoltage
-    if (cublasScopy(handle, this->mDVoltage->rows(),
+    if (cublasScopy(handle, this->mDVoltage->dataRows(),
         calculatedVoltage->deviceData(), 1, this->mDVoltage->deviceData(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error(
@@ -128,7 +128,7 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcExcitation(Matrix<dtype::
 
     // substract calculatedVoltage
     dtype::real alpha = -1.0f;
-    if (cublasSaxpy(handle, this->mDVoltage->rows(), &alpha,
+    if (cublasSaxpy(handle, this->mDVoltage->dataRows(), &alpha,
         measuredVoltage->deviceData(), 1, this->mDVoltage->deviceData(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error(
@@ -138,8 +138,8 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcExcitation(Matrix<dtype::
     // calc excitation
     alpha = 1.0f;
     dtype::real beta = 0.0f;
-    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->rows(), jacobian->columns(), &alpha,
-        jacobian->deviceData(), jacobian->rows(), this->mDVoltage->deviceData(), 1, &beta,
+    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->dataRows(), jacobian->dataColumns(), &alpha,
+        jacobian->deviceData(), jacobian->dataRows(), this->mDVoltage->deviceData(), 1, &beta,
         this->mExcitation->deviceData(), 1) != CUBLAS_STATUS_SUCCESS) {
         throw logic_error("InverseSolver::calcExcitation: calc excitation");
     }

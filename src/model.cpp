@@ -121,21 +121,21 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
 
     // create intermediate matrices
     Matrix<dtype::index> elementCount(this->mesh()->nodeCount(), this->mesh()->nodeCount(), stream);
-    Matrix<dtype::index> connectivityMatrix(this->mConnectivityMatrix->rows(),
-        elementCount.columns() * Matrix<dtype::index>::blockSize, stream);
-    Matrix<dtype::real> elementalSMatrix(this->mElementalSMatrix->rows(),
-        elementCount.columns() * Matrix<dtype::real>::blockSize, stream);
-    Matrix<dtype::real> elementalRMatrix(this->mElementalRMatrix->rows(),
-        elementCount.columns() * Matrix<dtype::real>::blockSize, stream);
+    Matrix<dtype::index> connectivityMatrix(this->mConnectivityMatrix->dataRows(),
+        elementCount.dataColumns() * Matrix<dtype::index>::blockSize, stream);
+    Matrix<dtype::real> elementalSMatrix(this->mElementalSMatrix->dataRows(),
+        elementCount.dataColumns() * Matrix<dtype::real>::blockSize, stream);
+    Matrix<dtype::real> elementalRMatrix(this->mElementalRMatrix->dataRows(),
+        elementCount.dataColumns() * Matrix<dtype::real>::blockSize, stream);
 
     // init connectivityMatrix
-    for (dtype::size i = 0; i < connectivityMatrix.rows(); i++) {
-        for (dtype::size j = 0; j < connectivityMatrix.columns(); j++) {
+    for (dtype::size i = 0; i < connectivityMatrix.dataRows(); i++) {
+        for (dtype::size j = 0; j < connectivityMatrix.dataColumns(); j++) {
             connectivityMatrix(i, j) = -1;
         }
     }
-    for (dtype::size i = 0; i < this->mConnectivityMatrix->rows(); i++) {
-        for (dtype::size j = 0; j < this->mConnectivityMatrix->columns(); j++) {
+    for (dtype::size i = 0; i < this->mConnectivityMatrix->dataRows(); i++) {
+        for (dtype::size j = 0; j < this->mConnectivityMatrix->dataColumns(); j++) {
             (*this->mConnectivityMatrix)(i, j) =  -1;
         }
     }
@@ -171,14 +171,14 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
                 temp = elementCount(id[i], id[j]);
 
                 // set connectivity element
-                connectivityMatrix(id[i], id[j] + connectivityMatrix.rows() * temp) = k;
+                connectivityMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) = k;
 
                 // set elemental system element
-                elementalSMatrix(id[i], id[j] + connectivityMatrix.rows() * temp) =
+                elementalSMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) =
                     basis[i]->integrate_gradient_with_basis(*basis[j]);
 
                 // set elemental residual element
-                elementalRMatrix(id[i], id[j] + connectivityMatrix.rows() * temp) =
+                elementalRMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) =
                     basis[i]->integrate_with_basis(*basis[j]);
 
                 // increment element count
@@ -244,7 +244,7 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
             (2.0f * n * M_PI / this->mesh()->height());
 
         // init system matrix with 2d system matrix
-        if (cublasScopy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize,
+        if (cublasScopy(handle, this->mSMatrix->dataRows() * SparseMatrix::blockSize,
             this->mSMatrix->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
@@ -252,7 +252,7 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
         }
 
         // add alpha * residualMatrix
-        if (cublasSaxpy(handle, this->mSMatrix->rows() * SparseMatrix::blockSize, &alpha,
+        if (cublasSaxpy(handle, this->mSMatrix->dataRows() * SparseMatrix::blockSize, &alpha,
             this->mRMatrix->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(

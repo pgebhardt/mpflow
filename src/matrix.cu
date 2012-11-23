@@ -3,7 +3,6 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <iostream>
 #include "../include/fasteit.hpp"
 
 // namespaces
@@ -13,7 +12,7 @@ using namespace std;
 // create new matrix
 template<class type>
 Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
-    : mHostData(NULL), mDeviceData(NULL), mRows(rows), mColumns(columns) {
+    : mHostData(NULL), mDeviceData(NULL), mDataRows(rows), mDataColumns(columns) {
     // check input
     if (rows == 0) {
         throw invalid_argument("Matrix::Matrix: rows == 0");
@@ -26,16 +25,16 @@ Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
     cudaError_t error = cudaSuccess;
 
     // correct size to block size
-    if ((this->rows() % Matrix<type>::blockSize != 0) && (this->rows() != 1)) {
-        this->mRows = (this->rows() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
+    if ((this->dataRows() % Matrix<type>::blockSize != 0) && (this->dataRows() != 1)) {
+        this->mDataRows = (this->dataRows() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
     }
-    if ((this->columns() % Matrix<type>::blockSize != 0) && (this->columns() != 1)) {
-        this->mColumns = (this->columns() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
+    if ((this->dataColumns() % Matrix<type>::blockSize != 0) && (this->dataColumns() != 1)) {
+        this->mDataColumns = (this->dataColumns() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
     }
 
     // create matrix host data memory
     error = cudaHostAlloc((void**)&this->mHostData, sizeof(type) *
-        this->rows() * this->columns(), cudaHostAllocDefault);
+        this->dataRows() * this->dataColumns(), cudaHostAllocDefault);
 
     // check success
     if (error != cudaSuccess) {
@@ -44,7 +43,7 @@ Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
 
     // create matrix device data memory
     error = cudaMalloc((void**)&this->mDeviceData,
-        sizeof(type) * this->rows() * this->columns());
+        sizeof(type) * this->dataRows() * this->dataColumns());
 
     // check success
     if (error != cudaSuccess) {
@@ -52,9 +51,9 @@ Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
     }
 
     // init data with 0.0
-    for (dtype::size i = 0; i < this->rows(); i++) {
-        for (dtype::size j = 0; j < this->columns(); j++) {
-            this->mHostData[i + this->rows() * j] = 0.0;
+    for (dtype::size i = 0; i < this->dataRows(); i++) {
+        for (dtype::size j = 0; j < this->dataColumns(); j++) {
+            this->mHostData[i + this->dataRows() * j] = 0.0;
         }
     }
     this->copyToDevice(stream);
@@ -79,16 +78,13 @@ void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
     }
 
     // check size
-    if ((other->rows() != this->rows()) || (other->columns() != this->columns())) {
+    if ((other->dataRows() != this->dataRows()) || (other->dataColumns() != this->dataColumns())) {
         throw invalid_argument("Matrix::copy: size");
     }
 
-    // error
-    cudaError_t error = cudaSuccess;
-
     // copy data
-    error = cudaMemcpyAsync(this->deviceData(), other->deviceData(),
-        sizeof(type) * this->rows() * this->columns(),
+    cudaMemcpyAsync(this->deviceData(), other->deviceData(),
+        sizeof(type) * this->dataRows() * this->dataColumns(),
         cudaMemcpyDeviceToDevice, stream);
 
     // TODO
@@ -101,12 +97,9 @@ void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
 // copy to device
 template <class type>
 void Matrix<type>::copyToDevice(cudaStream_t stream) {
-    // error
-    cudaError_t error = cudaSuccess;
-
     // copy host buffer to device
-    error = cudaMemcpyAsync(this->deviceData(), this->hostData(),
-        sizeof(type) * this->rows() * this->columns(),
+    cudaMemcpyAsync(this->deviceData(), this->hostData(),
+        sizeof(type) * this->dataRows() * this->dataColumns(),
         cudaMemcpyHostToDevice, stream);
 
     // TODO
@@ -119,12 +112,9 @@ void Matrix<type>::copyToDevice(cudaStream_t stream) {
 // copy to host
 template <class type>
 void Matrix<type>::copyToHost(cudaStream_t stream) {
-    // error
-    cudaError_t error = cudaSuccess;
-
     // copy host buffer to device
-    error = cudaMemcpyAsync(this->hostData(), this->deviceData(),
-        sizeof(type) * this->rows() * this->columns(),
+    cudaMemcpyAsync(this->hostData(), this->deviceData(),
+        sizeof(type) * this->dataRows() * this->dataColumns(),
         cudaMemcpyDeviceToHost, stream);
 
     // TODO
@@ -155,19 +145,19 @@ void Matrix<type>::add(Matrix<type>* value, cudaStream_t stream) {
     }
 
     // check size
-    if ((this->rows() != value->rows()) || (this->columns() != value->columns())) {
+    if ((this->dataRows() != value->dataRows()) || (this->dataColumns() != value->dataColumns())) {
         throw invalid_argument("Matrix::add: size");
     }
 
     // dimension
-    dim3 blocks(this->rows() == 1 ? 1 : this->rows() / Matrix<type>::blockSize,
-        this->columns() == 1 ? 1 : this->columns() / Matrix<type>::blockSize);
-    dim3 threads(this->rows() == 1 ? 1 : Matrix<type>::blockSize,
-        this->columns() == 1 ? 1 : Matrix<type>::blockSize);
+    dim3 blocks(this->dataRows() == 1 ? 1 : this->dataRows() / Matrix<type>::blockSize,
+        this->dataColumns() == 1 ? 1 : this->dataColumns() / Matrix<type>::blockSize);
+    dim3 threads(this->dataRows() == 1 ? 1 : Matrix<type>::blockSize,
+        this->dataColumns() == 1 ? 1 : Matrix<type>::blockSize);
 
     // call kernel
     addKernel<type><<<blocks, threads, 0, stream>>>(this->deviceData(), value->deviceData(),
-        this->rows());
+        this->dataRows());
 }
 
 // matrix multiply
@@ -182,8 +172,8 @@ void Matrix<dtype::real>::multiply(Matrix<dtype::real>* A, Matrix<dtype::real>* 
     }
 
     // check size
-    if ((A->columns() != B->rows()) || (this->rows() != A->rows()) ||
-        (this->columns() != B->columns())) {
+    if ((A->dataColumns() != B->dataRows()) || (this->dataRows() != A->dataRows()) ||
+        (this->dataColumns() != B->dataColumns())) {
         throw invalid_argument("Matrix::multiply: size");
     }
 
@@ -194,17 +184,17 @@ void Matrix<dtype::real>::multiply(Matrix<dtype::real>* A, Matrix<dtype::real>* 
     dtype::real alpha = 1.0f;
     dtype::real beta = 0.0f;
 
-    if (B->columns() == 1) {
-        if (cublasSgemv(handle, CUBLAS_OP_N, A->rows(), A->columns(), &alpha, A->deviceData(),
-            A->rows(), B->deviceData(), 1, &beta, this->deviceData(), 1)
+    if (B->dataColumns() == 1) {
+        if (cublasSgemv(handle, CUBLAS_OP_N, A->dataRows(), A->dataColumns(), &alpha, A->deviceData(),
+            A->dataRows(), B->deviceData(), 1, &beta, this->deviceData(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw logic_error("Matrix::multiply: cublasSgemv");
         }
     }
     else {
-        if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->rows(), B->columns(), A->columns(),
-            &alpha, A->deviceData(), A->rows(), B->deviceData(), B->rows(), &beta,
-            this->deviceData(), this->rows()) != CUBLAS_STATUS_SUCCESS) {
+        if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows(), B->dataColumns(), A->dataColumns(),
+            &alpha, A->deviceData(), A->dataRows(), B->deviceData(), B->dataRows(), &beta,
+            this->deviceData(), this->dataRows()) != CUBLAS_STATUS_SUCCESS) {
             throw logic_error("Matrix::multiply: cublasSgemm");
         }
     }
@@ -230,13 +220,13 @@ __global__ void scale_kernel(type* matrix, type scalar, dtype::size rows) {
 template <class type>
 void Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
     // dimension
-    dim3 blocks(this->rows() == 1 ? 1 : this->rows() / Matrix<type>::blockSize,
-        this->columns() == 1 ? 1 : this->columns() / Matrix<type>::blockSize);
-    dim3 threads(this->rows() == 1 ? 1 : Matrix<type>::blockSize,
-        this->columns() == 1 ? 1 : Matrix<type>::blockSize);
+    dim3 blocks(this->dataRows() == 1 ? 1 : this->dataRows() / Matrix<type>::blockSize,
+        this->dataColumns() == 1 ? 1 : this->dataColumns() / Matrix<type>::blockSize);
+    dim3 threads(this->dataRows() == 1 ? 1 : Matrix<type>::blockSize,
+        this->dataColumns() == 1 ? 1 : Matrix<type>::blockSize);
 
     // call kernel
-    scale_kernel<type><<<blocks, threads, 0, stream>>>(this->deviceData(), scalar, this->rows());
+    scale_kernel<type><<<blocks, threads, 0, stream>>>(this->deviceData(), scalar, this->dataRows());
 }
 
 // vector dot product kernel
@@ -263,20 +253,20 @@ void Matrix<type>::vectorDotProduct(Matrix<type>* A, Matrix<type>* B, cudaStream
     }
 
     // check size
-    if ((this->rows() != A->rows()) || (this->rows() != B->rows())) {
+    if ((this->dataRows() != A->dataRows()) || (this->dataRows() != B->dataRows())) {
         throw invalid_argument("Matrix::vectorDotProduct: size");
     }
 
     // get minimum colums
-    dtype::size columns = std::min(std::min(this->columns(), A->columns()), B->columns());
+    dtype::size columns = std::min(std::min(this->dataColumns(), A->dataColumns()), B->dataColumns());
 
     // kernel dimension
-    dim3 global(this->rows() / Matrix<type>::blockSize, columns == 1 ? 1 : columns / Matrix<type>::blockSize);
+    dim3 global(this->dataRows() / Matrix<type>::blockSize, columns == 1 ? 1 : columns / Matrix<type>::blockSize);
     dim3 local(Matrix<type>::blockSize, columns == 1 ? 1 : Matrix<type>::blockSize);
 
     // call dot kernel
     vectorDotProductKernel<type><<<global, local, 0, stream>>>(this->deviceData(), A->deviceData(), B->deviceData(),
-        this->rows());
+        this->dataRows());
 
     // sum
     this->sum(this, stream);
@@ -322,21 +312,21 @@ void Matrix<type>::sum(Matrix<type>* value, cudaStream_t stream) {
     }
 
     // check size
-    if (this->rows() != value->rows()) {
+    if (this->dataRows() != value->dataRows()) {
         throw invalid_argument("Matrix::sum: size");
     }
 
     // get minimum columns
-    dtype::size columns = std::min(this->columns(), value->columns());
+    dtype::size columns = std::min(this->dataColumns(), value->dataColumns());
 
     // kernel settings
-    dim3 global(this->rows() / Matrix<type>::blockSize, columns == 1 ? 1 : columns / Matrix<type>::blockSize);
+    dim3 global(this->dataRows() / Matrix<type>::blockSize, columns == 1 ? 1 : columns / Matrix<type>::blockSize);
     dim3 local(Matrix<type>::blockSize, columns == 1 ? 1 : Matrix<type>::blockSize);
     dtype::size offset = 1;
 
     // start kernel once
     sumKernel<type><<<global, local, 0, stream>>>(
-        this->deviceData(), value->deviceData(), this->rows(), offset);
+        this->deviceData(), value->deviceData(), this->dataRows(), offset);
 
     // start kernel
     do {
@@ -345,10 +335,10 @@ void Matrix<type>::sum(Matrix<type>* value, cudaStream_t stream) {
         global.x = (global.x + Matrix<type>::blockSize - 1) /  Matrix<type>::blockSize;
 
         sumKernel<<<global, local, 0, stream>>>(
-            this->deviceData(), this->deviceData(), this->rows(), offset);
+            this->deviceData(), this->deviceData(), this->dataRows(), offset);
 
     }
-    while (offset * Matrix<type>::blockSize < this->rows());
+    while (offset * Matrix<type>::blockSize < this->dataRows());
 }
 
 // min kernel
@@ -387,17 +377,17 @@ void Matrix<type>::min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t s
     }
 
     // check size
-    if (this->rows() != value->rows()) {
+    if (this->dataRows() != value->dataRows()) {
         throw invalid_argument("Matrix::min: size");
     }
 
     // kernel settings
-    dtype::size global = this->rows() / Matrix<type>::blockSize;
+    dtype::size global = this->dataRows() / Matrix<type>::blockSize;
     dtype::size offset = 1;
 
     // start kernel once
     minKernel<type><<<global, Matrix<type>::blockSize, 0, stream>>>(
-        this->deviceData(), value->deviceData(), this->rows(), maxIndex,
+        this->deviceData(), value->deviceData(), this->dataRows(), maxIndex,
         offset);
 
     // start kernel
@@ -407,11 +397,11 @@ void Matrix<type>::min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t s
         global = (global + Matrix<type>::blockSize - 1) / Matrix<type>::blockSize;
 
         minKernel<type><<<global, Matrix<type>::blockSize, 0, stream>>>(
-            this->deviceData(), this->deviceData(), this->rows(), maxIndex,
+            this->deviceData(), this->deviceData(), this->dataRows(), maxIndex,
             offset);
 
     }
-    while (offset * Matrix<type>::blockSize < this->rows());
+    while (offset * Matrix<type>::blockSize < this->dataRows());
 }
 
 // max kernel
@@ -450,17 +440,17 @@ void Matrix<type>::max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t s
     }
 
     // check size
-    if (this->rows() != value->rows()) {
+    if (this->dataRows() != value->dataRows()) {
         throw invalid_argument("Matrix::max: size");
     }
 
     // kernel settings
-    dtype::size global = this->rows() / Matrix<type>::blockSize;
+    dtype::size global = this->dataRows() / Matrix<type>::blockSize;
     dtype::size offset = 1;
 
     // start kernel once
     maxKernel<type><<<global, Matrix<type>::blockSize, 0, stream>>>(
-        this->deviceData(), value->deviceData(), this->rows(), maxIndex,
+        this->deviceData(), value->deviceData(), this->dataRows(), maxIndex,
         offset);
 
     // start kernel
@@ -470,11 +460,11 @@ void Matrix<type>::max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t s
         global = (global + Matrix<type>::blockSize - 1) / Matrix<type>::blockSize;
 
         maxKernel<type><<<global, Matrix<type>::blockSize, 0, stream>>>(
-            this->deviceData(), this->deviceData(), this->rows(), maxIndex,
+            this->deviceData(), this->deviceData(), this->dataRows(), maxIndex,
             offset);
 
     }
-    while (offset * Matrix<type>::blockSize < this->rows());
+    while (offset * Matrix<type>::blockSize < this->dataRows());
 }
 /*
 // save matrix to file

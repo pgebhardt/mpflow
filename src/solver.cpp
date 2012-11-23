@@ -47,7 +47,7 @@ Solver::Solver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurme
         handle, stream);
 
     this->mInverseSolver = new InverseSolver<Conjugate>(mesh->elementCount(),
-        measurmentPattern->columns() * drivePattern->columns(), regularizationFactor, handle, stream);
+        measurmentPattern->dataColumns() * drivePattern->dataColumns(), regularizationFactor, handle, stream);
 }
 
 // release solver

@@ -85,17 +85,17 @@ Matrix<dtype::real>* ForwardSolver<BasisFunction, NumericSolver>::calcJacobian(M
     }
 
     // dimension
-    dim3 blocks(this->jacobian()->rows() / Matrix<dtype::real>::blockSize,
-        this->jacobian()->columns() / Matrix<dtype::real>::blockSize);
+    dim3 blocks(this->jacobian()->dataRows() / Matrix<dtype::real>::blockSize,
+        this->jacobian()->dataColumns() / Matrix<dtype::real>::blockSize);
     dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // calc jacobian
     calcJacobianKernel<BasisFunction><<<blocks, threads, 0, stream>>>(
         this->jacobian()->deviceData(), this->phi(harmonic)->deviceData(),
-        &this->phi(harmonic)->deviceData()[this->driveCount() * this->phi(harmonic)->rows()],
+        &this->phi(harmonic)->deviceData()[this->driveCount() * this->phi(harmonic)->dataRows()],
         this->model()->mesh()->elements()->deviceData(), this->mElementalJacobianMatrix->deviceData(),
-        gamma->deviceData(), this->model()->sigmaRef(), this->jacobian()->rows(), this->jacobian()->columns(),
-        this->phi(harmonic)->rows(), this->model()->mesh()->elementCount(),
+        gamma->deviceData(), this->model()->sigmaRef(), this->jacobian()->dataRows(), this->jacobian()->dataColumns(),
+        this->phi(harmonic)->dataRows(), this->model()->mesh()->elementCount(),
         this->driveCount(), this->measurmentCount(), additiv);
 
     return this->jacobian();

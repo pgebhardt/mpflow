@@ -26,13 +26,13 @@ Mesh::Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
     if (boundary == NULL) {
         throw invalid_argument("boundary == NULL");
     }
-    if (nodeCount > nodes->rows()) {
+    if (nodeCount > nodes->dataRows()) {
         throw invalid_argument("nodeCount > nodes->rows");
     }
-    if (elementCount > elements->rows()) {
+    if (elementCount > elements->dataRows()) {
         throw invalid_argument("elementCount > elements->rows");
     }
-    if (boundaryCount > boundary->rows()) {
+    if (boundaryCount > boundary->dataRows()) {
         throw invalid_argument("boundaryCount > boundary->rows");
     }
     if (radius <= 0.0f) {

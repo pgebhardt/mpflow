@@ -32,13 +32,13 @@ void Conjugate::addScalar(Matrix<dtype::real>* vector,
     }
 
     // kernel dimension
-    dim3 global(vector->rows() / Matrix<dtype::real>::blockSize, vector->columns() == 1 ? 1 :
-        vector->columns() / Matrix<dtype::real>::blockSize);
-    dim3 local(Matrix<dtype::real>::blockSize, vector->columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
+    dim3 global(vector->dataRows() / Matrix<dtype::real>::blockSize, vector->dataColumns() == 1 ? 1 :
+        vector->dataColumns() / Matrix<dtype::real>::blockSize);
+    dim3 local(Matrix<dtype::real>::blockSize, vector->dataColumns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
 
     // execute kernel
     addScalarKernel<<<global, local, 0, stream>>>(vector->deviceData(), scalar->deviceData(),
-        vector->rows(), rows, columns);
+        vector->dataRows(), rows, columns);
 }
 
 // update vector
@@ -74,13 +74,13 @@ void Conjugate::updateVector(Matrix<dtype::real>* result,
     }
 
     // kernel dimension
-    dim3 global(result->rows() / Matrix<dtype::real>::blockSize, result->columns() == 1 ? 1 :
-        result->columns() / Matrix<dtype::real>::blockSize);
-    dim3 local(Matrix<dtype::real>::blockSize, result->columns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
+    dim3 global(result->dataRows() / Matrix<dtype::real>::blockSize, result->dataColumns() == 1 ? 1 :
+        result->dataColumns() / Matrix<dtype::real>::blockSize);
+    dim3 local(Matrix<dtype::real>::blockSize, result->dataColumns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
 
     // execute kernel
     updateVectorKernel<<<global, local, 0, stream>>>(result->deviceData(),
-        x1->deviceData(), sign, x2->deviceData(), r1->deviceData(), r2->deviceData(), result->rows());
+        x1->deviceData(), sign, x2->deviceData(), r1->deviceData(), r2->deviceData(), result->dataRows());
 }
 
 // gemv kernel
@@ -144,17 +144,17 @@ void Conjugate::gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
     }
 
     // dimension
-    dim3 blocks((matrix->rows() + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize),
-        (matrix->rows() / (2 * Matrix<dtype::real>::blockSize) + Matrix<dtype::real>::blockSize - 1) / Matrix<dtype::real>::blockSize);
+    dim3 blocks((matrix->dataRows() + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize),
+        (matrix->dataRows() / (2 * Matrix<dtype::real>::blockSize) + Matrix<dtype::real>::blockSize - 1) / Matrix<dtype::real>::blockSize);
     dim3 threads(2 * Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
 
     // call gemv kernel
     gemvKernel<<<blocks, threads, 0, stream>>>(matrix->deviceData(), vector->deviceData(),
-        result->deviceData(), matrix->rows());
+        result->deviceData(), matrix->dataRows());
 
     // call reduce kernel
-    reduceRowKernel<<<(matrix->columns() + Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize - 1) /
+    reduceRowKernel<<<(matrix->dataColumns() + Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize - 1) /
         (Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize),
-        Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize, 0, stream>>>(result->deviceData(), result->rows());
+        Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize, 0, stream>>>(result->deviceData(), result->dataRows());
 }
 

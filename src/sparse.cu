@@ -12,7 +12,7 @@ using namespace std;
 // create new sparse matrix
 SparseMatrix::SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     // create empty sparse matrix
-    this->init(matrix->rows(), matrix->columns(), stream);
+    this->init(matrix->dataRows(), matrix->dataColumns(), stream);
 
     // convert to sparse_matrix
     this->convert(matrix, stream);
@@ -29,30 +29,30 @@ void SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stre
     }
 
     // init struct
-    this->mRows = rows;
-    this->mColumns = columns;
+    this->mDataRows = rows;
+    this->mDataColumns = columns;
     this->mDensity = 0;
     this->mValues = NULL;
     this->mColumnIds = NULL;
 
     // correct size to block size
-    if ((this->rows() % Matrix<dtype::real>::blockSize != 0) && (this->rows() != 1)) {
-        this->mRows = (this->rows() / Matrix<dtype::real>::blockSize + 1) *
+    if ((this->dataRows() % Matrix<dtype::real>::blockSize != 0) && (this->dataRows() != 1)) {
+        this->mDataRows = (this->dataRows() / Matrix<dtype::real>::blockSize + 1) *
             Matrix<dtype::real>::blockSize;
     }
-    if ((this->columns() % Matrix<dtype::real>::blockSize != 0) && (this->columns() != 1)) {
-        this->mColumns = (this->columns() / Matrix<dtype::real>::blockSize + 1) *
+    if ((this->dataColumns() % Matrix<dtype::real>::blockSize != 0) && (this->dataColumns() != 1)) {
+        this->mDataColumns = (this->dataColumns() / Matrix<dtype::real>::blockSize + 1) *
             Matrix<dtype::real>::blockSize;
     }
 
     // create matrices
     if (cudaMalloc((void**)&this->mValues, sizeof(dtype::real) *
-        this->rows() * SparseMatrix::blockSize) != cudaSuccess) {
+        this->dataRows() * SparseMatrix::blockSize) != cudaSuccess) {
         throw logic_error("SparseMatrix::init: create memory");
     }
 
     if (cudaMalloc((void**)&this->mColumnIds, sizeof(dtype::index) *
-        this->rows() * SparseMatrix::blockSize) != cudaSuccess) {
+        this->dataRows() * SparseMatrix::blockSize) != cudaSuccess) {
         throw logic_error("SparseMatrix::init: create memory");
     }
 }
@@ -113,17 +113,17 @@ void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     }
 
     // create elementCount matrix
-    Matrix<dtype::index> elementCount(this->rows(), 1, stream);
-    Matrix<dtype::index> maxCount(this->rows(), 1, stream);
+    Matrix<dtype::index> elementCount(this->dataRows(), 1, stream);
+    Matrix<dtype::index> maxCount(this->dataRows(), 1, stream);
 
     // execute kernel
-    sparseCreateKernel<<<this->rows() / Matrix<dtype::real>::blockSize,
+    sparseCreateKernel<<<this->dataRows() / Matrix<dtype::real>::blockSize,
         Matrix<dtype::real>::blockSize, 0, stream>>>(
         this->values(), this->columnIds(), matrix->deviceData(),
-        elementCount.deviceData(), matrix->rows(), matrix->columns());
+        elementCount.deviceData(), matrix->dataRows(), matrix->dataColumns());
 
     // get max count
-    maxCount.max(&elementCount, maxCount.rows(), stream);
+    maxCount.max(&elementCount, maxCount.dataRows(), stream);
     maxCount.copyToHost(stream);
     cudaStreamSynchronize(stream);
 
@@ -183,17 +183,17 @@ void SparseMatrix::multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* ma
     }
 
     // check size
-    if ((result->rows() != this->rows()) || (this->columns() != matrix->rows()) ||
-        (result->columns() != matrix->columns())) {
+    if ((result->dataRows() != this->dataRows()) || (this->dataColumns() != matrix->dataRows()) ||
+        (result->dataColumns() != matrix->dataColumns())) {
         throw invalid_argument("SparseMatrix::multiply: size");
     }
 
     // kernel dimension
-    dim3 global((result->rows() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize,
-        (result->columns() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize);
+    dim3 global((result->dataRows() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize,
+        (result->dataColumns() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize);
     dim3 local(SparseMatrix::blockSize, SparseMatrix::blockSize);
 
     // execute kernel
     sparseMultiplyKernel<<<global, local, 0, stream>>>(result->deviceData(), this->values(),
-        this->columnIds(), matrix->deviceData(), result->rows(), result->columns(), this->density());
+        this->columnIds(), matrix->deviceData(), result->dataRows(), result->dataColumns(), this->density());
 }

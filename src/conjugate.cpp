@@ -26,7 +26,7 @@ Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t strea
     this->mProjection = new Matrix<dtype::real>(this->rows(), 1, stream);
     this->mRSOld = new Matrix<dtype::real>(this->rows(), 1, stream);
     this->mRSNew = new Matrix<dtype::real>(this->rows(), 1, stream);
-    this->mTempVector = new Matrix<dtype::real>(this->rows(), this->mResiduum->rows() /
+    this->mTempVector = new Matrix<dtype::real>(this->rows(), this->mResiduum->dataRows() /
         Matrix<dtype::real>::blockSize, stream);
     this->mTempNumber = new Matrix<dtype::real>(this->rows(), 1, stream);
 }
