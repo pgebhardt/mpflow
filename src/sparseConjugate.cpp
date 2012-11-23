@@ -72,7 +72,7 @@ void SparseConjugate::solve(SparseMatrix* A, Matrix<dtype::real>* x, Matrix<dtyp
     this->mResiduum->add(f, stream);
 
     // p = r
-    this->mProjection->add(this->mResiduum, stream);
+    this->mProjection->copy(this->mResiduum, stream);
 
     // calc mRSOld
     this->mRSOld->vectorDotProduct(this->mResiduum, this->mResiduum, stream);

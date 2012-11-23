@@ -87,7 +87,7 @@ void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
     cudaError_t error = cudaSuccess;
 
     // copy data
-    error = cudaMemcpyAsync(other->deviceData(), this->deviceData(),
+    error = cudaMemcpyAsync(this->deviceData(), other->deviceData(),
         sizeof(type) * this->rows() * this->columns(),
         cudaMemcpyDeviceToDevice, stream);
 
