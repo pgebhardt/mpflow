@@ -11,9 +11,8 @@ using namespace std;
 
 // create solver
 Solver::Solver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurmentPattern,
-    Matrix<dtype::real>* drivePattern, dtype::size measurmentCount, dtype::size driveCount,
-    dtype::real numHarmonics, dtype::real sigmaRef, dtype::real regularizationFactor,
-    cublasHandle_t handle, cudaStream_t stream)
+    Matrix<dtype::real>* drivePattern, dtype::real numHarmonics, dtype::real sigmaRef,
+    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream)
     : mForwardSolver(NULL), mInverseSolver(NULL), mDGamma(NULL), mGamma(NULL),
         mMeasuredVoltage(NULL), mCalibrationVoltage(NULL) {
     // check input
@@ -33,21 +32,20 @@ Solver::Solver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurme
         throw invalid_argument("Solver::Solver: handle == NULL");
     }
 
-    // create matrices
-    this->mDGamma = new Matrix<dtype::real>(mesh->elementCount(), 1, stream);
-    this->mGamma = new Matrix<dtype::real>(mesh->elementCount(), 1, stream);
-    this->mMeasuredVoltage = new Matrix<dtype::real>(measurmentCount, driveCount,
-        stream);
-    this->mCalibrationVoltage = new Matrix<dtype::real>(measurmentCount, driveCount,
-        stream);
-
     // create solver
     this->mForwardSolver = new ForwardSolver<LinearBasis, SparseConjugate>(mesh, electrodes,
-        measurmentPattern, drivePattern, measurmentCount, driveCount, numHarmonics, sigmaRef,
-        handle, stream);
+        measurmentPattern, drivePattern, numHarmonics, sigmaRef, handle, stream);
 
-    this->mInverseSolver = new InverseSolver<Conjugate>(mesh->elementCount(),
+    this->mInverseSolver = new InverseSolver<Conjugate>(mesh->elements()->rows(),
         measurmentPattern->dataColumns() * drivePattern->dataColumns(), regularizationFactor, handle, stream);
+
+    // create matrices
+    this->mDGamma = new Matrix<dtype::real>(mesh->elements()->rows(), 1, stream);
+    this->mGamma = new Matrix<dtype::real>(mesh->elements()->rows(), 1, stream);
+    this->mMeasuredVoltage = new Matrix<dtype::real>(this->forwardSolver()->measurmentCount(),
+        this->forwardSolver()->driveCount(), stream);
+    this->mCalibrationVoltage = new Matrix<dtype::real>(this->forwardSolver()->measurmentCount(),
+        this->forwardSolver()->driveCount(), stream);
 }
 
 // release solver

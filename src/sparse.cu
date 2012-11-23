@@ -12,7 +12,7 @@ using namespace std;
 // create new sparse matrix
 SparseMatrix::SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream) {
     // create empty sparse matrix
-    this->init(matrix->dataRows(), matrix->dataColumns(), stream);
+    this->init(matrix->rows(), matrix->columns(), stream);
 
     // convert to sparse_matrix
     this->convert(matrix, stream);
@@ -29,6 +29,8 @@ void SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stre
     }
 
     // init struct
+    this->mRows = rows;
+    this->mColumns = columns;
     this->mDataRows = rows;
     this->mDataColumns = columns;
     this->mDensity = 0;
@@ -36,12 +38,12 @@ void SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stre
     this->mColumnIds = NULL;
 
     // correct size to block size
-    if ((this->dataRows() % Matrix<dtype::real>::blockSize != 0) && (this->dataRows() != 1)) {
-        this->mDataRows = (this->dataRows() / Matrix<dtype::real>::blockSize + 1) *
+    if ((this->rows() % Matrix<dtype::real>::blockSize != 0) && (this->rows() != 1)) {
+        this->mDataRows = (this->rows() / Matrix<dtype::real>::blockSize + 1) *
             Matrix<dtype::real>::blockSize;
     }
-    if ((this->dataColumns() % Matrix<dtype::real>::blockSize != 0) && (this->dataColumns() != 1)) {
-        this->mDataColumns = (this->dataColumns() / Matrix<dtype::real>::blockSize + 1) *
+    if ((this->columns() % Matrix<dtype::real>::blockSize != 0) && (this->columns() != 1)) {
+        this->mDataColumns = (this->columns() / Matrix<dtype::real>::blockSize + 1) *
             Matrix<dtype::real>::blockSize;
     }
 

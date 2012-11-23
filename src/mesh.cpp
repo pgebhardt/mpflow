@@ -11,11 +11,10 @@ using namespace std;
 
 // create mesh class
 Mesh::Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
-    Matrix<dtype::index>* boundary, dtype::size nodeCount,
-    dtype::size elementCount, dtype::size boundaryCount, dtype::real radius,
+    Matrix<dtype::index>* boundary, dtype::real radius,
     dtype::real height)
-    : mRadius(radius), mHeight(height), mNodeCount(nodeCount), mElementCount(elementCount),
-        mBoundaryCount(boundaryCount), mNodes(nodes), mElements(elements), mBoundary(boundary) {
+    : mRadius(radius), mHeight(height), mNodes(nodes), mElements(elements),
+        mBoundary(boundary) {
     // check input
     if (nodes == NULL) {
         throw invalid_argument("nodes == NULL");
@@ -25,15 +24,6 @@ Mesh::Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
     }
     if (boundary == NULL) {
         throw invalid_argument("boundary == NULL");
-    }
-    if (nodeCount > nodes->dataRows()) {
-        throw invalid_argument("nodeCount > nodes->rows");
-    }
-    if (elementCount > elements->dataRows()) {
-        throw invalid_argument("elementCount > elements->rows");
-    }
-    if (boundaryCount > boundary->dataRows()) {
-        throw invalid_argument("boundaryCount > boundary->rows");
     }
     if (radius <= 0.0f) {
         throw invalid_argument("radius <= 0.0");

@@ -34,12 +34,13 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
     this->createSparseMatrices(handle, stream);
 
     // create matrices
-    this->mExcitationMatrix = new Matrix<dtype::real>(this->mesh()->nodeCount(), this->electrodes()->count(), stream);
-    this->mConnectivityMatrix = new Matrix<dtype::index>(this->mesh()->nodeCount(),
+    this->mExcitationMatrix = new Matrix<dtype::real>(this->mesh()->nodes()->rows(),
+        this->electrodes()->count(), stream);
+    this->mConnectivityMatrix = new Matrix<dtype::index>(this->mesh()->nodes()->rows(),
         SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
-    this->mElementalSMatrix = new Matrix<dtype::real>(this->mesh()->nodeCount(),
+    this->mElementalSMatrix = new Matrix<dtype::real>(this->mesh()->nodes()->rows(),
         SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
-    this->mElementalRMatrix = new Matrix<dtype::real>(this->mesh()->nodeCount(),
+    this->mElementalRMatrix = new Matrix<dtype::real>(this->mesh()->nodes()->rows(),
         SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
 
     // init model
@@ -81,11 +82,11 @@ void Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStrea
 
     // calc initial system matrix
     // create matrices
-    Matrix<dtype::real> systemMatrix(this->mesh()->nodeCount(), this->mesh()->nodeCount(), stream);
+    Matrix<dtype::real> systemMatrix(this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
 
     // calc generate empty system matrix
     dtype::index id[BasisFunction::nodesPerElement];
-    for (dtype::size k = 0; k < this->mesh()->elementCount(); k++) {
+    for (dtype::size k = 0; k < this->mesh()->elements()->rows(); k++) {
         // get nodes for element
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             id[i] = (*this->mesh()->elements())(k, i);
@@ -120,7 +121,7 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     }
 
     // create intermediate matrices
-    Matrix<dtype::index> elementCount(this->mesh()->nodeCount(), this->mesh()->nodeCount(), stream);
+    Matrix<dtype::index> elementCount(this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     Matrix<dtype::index> connectivityMatrix(this->mConnectivityMatrix->dataRows(),
         elementCount.dataColumns() * Matrix<dtype::index>::blockSize, stream);
     Matrix<dtype::real> elementalSMatrix(this->mElementalSMatrix->dataRows(),
@@ -147,7 +148,7 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     BasisFunction* basis[BasisFunction::nodesPerElement];
     dtype::real temp;
 
-    for (dtype::size k = 0; k < this->mesh()->elementCount(); k++) {
+    for (dtype::size k = 0; k < this->mesh()->elements()->rows(); k++) {
         // get nodes for element
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             id[i] = (*this->mesh()->elements())(k, i);
@@ -206,7 +207,7 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
         this->mSMatrix->density(), stream);
 
     // create gamma
-    Matrix<dtype::real> gamma(this->mesh()->elementCount(), 1, stream);
+    Matrix<dtype::real> gamma(this->mesh()->elements()->rows(), 1, stream);
 
     // update matrices
     this->updateMatrix(this->mSMatrix, this->mElementalSMatrix,
@@ -268,7 +269,7 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     dtype::index id[BasisFunction::nodesPerEdge];
     dtype::real x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
 
-    for (dtype::size i = 0; i < this->mesh()->boundaryCount(); i++) {
+    for (dtype::size i = 0; i < this->mesh()->boundary()->rows(); i++) {
         for (dtype::size l = 0; l < this->electrodes()->count(); l++) {
             for (dtype::size k = 0; k < BasisFunction::nodesPerEdge; k++) {
                 // get node id

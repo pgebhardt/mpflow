@@ -41,6 +41,8 @@ public:
 public:
     type* hostData() { return this->mHostData; }
     type* deviceData() { return this->mDeviceData; }
+    dtype::size rows() { return this->mRows; }
+    dtype::size columns() { return this->mColumns; }
     dtype::size dataRows() { return this->mDataRows; }
     dtype::size dataColumns() { return this->mDataColumns; }
     type& operator() (dtype::index i, dtype::index j) {
@@ -53,6 +55,8 @@ public:
 private:
     type* mHostData;
     type* mDeviceData;
+    dtype::size mRows;
+    dtype::size mColumns;
     dtype::size mDataRows;
     dtype::size mDataColumns;
 };

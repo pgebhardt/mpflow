@@ -16,9 +16,8 @@ class ForwardSolver {
 // constructor and destructor
 public:
     ForwardSolver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurmentPattern,
-        Matrix<dtype::real>* drivePattern, dtype::size measurmentCount, dtype::size driveCount,
-        dtype::size numHarmonics, dtype::real sigmaRef, cublasHandle_t handle,
-        cudaStream_t stream=NULL);
+        Matrix<dtype::real>* drivePattern, dtype::size numHarmonics, dtype::real sigmaRef,
+        cublasHandle_t handle, cudaStream_t stream=NULL);
     virtual ~ForwardSolver();
 
 public:

@@ -11,9 +11,8 @@ class Solver {
 // constructor and destructor
 public:
     Solver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurmentPattern,
-        Matrix<dtype::real>* drivePattern, dtype::size measurmentCount, dtype::size driveCount,
-        dtype::real numHarmonics, dtype::real sigmaRef, dtype::real regularizationFactor,
-        cublasHandle_t handle, cudaStream_t stream=NULL);
+        Matrix<dtype::real>* drivePattern, dtype::real numHarmonics, dtype::real sigmaRef,
+        dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream=NULL);
     virtual ~Solver();
 
 public:

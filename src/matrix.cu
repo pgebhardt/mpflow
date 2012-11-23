@@ -12,7 +12,8 @@ using namespace std;
 // create new matrix
 template<class type>
 Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
-    : mHostData(NULL), mDeviceData(NULL), mDataRows(rows), mDataColumns(columns) {
+    : mHostData(NULL), mDeviceData(NULL), mRows(rows), mDataRows(rows),
+        mColumns(columns), mDataColumns(columns) {
     // check input
     if (rows == 0) {
         throw invalid_argument("Matrix::Matrix: rows == 0");
@@ -25,11 +26,11 @@ Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
     cudaError_t error = cudaSuccess;
 
     // correct size to block size
-    if ((this->dataRows() % Matrix<type>::blockSize != 0) && (this->dataRows() != 1)) {
-        this->mDataRows = (this->dataRows() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
+    if ((this->rows() % Matrix<type>::blockSize != 0) && (this->rows() != 1)) {
+        this->mDataRows = (this->rows() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
     }
-    if ((this->dataColumns() % Matrix<type>::blockSize != 0) && (this->dataColumns() != 1)) {
-        this->mDataColumns = (this->dataColumns() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
+    if ((this->columns() % Matrix<type>::blockSize != 0) && (this->columns() != 1)) {
+        this->mDataColumns = (this->columns() / Matrix<type>::blockSize + 1) * Matrix<type>::blockSize;
     }
 
     // create matrix host data memory

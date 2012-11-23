@@ -17,11 +17,9 @@ template
 >
 ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrodes* electrodes,
     Matrix<dtype::real>* measurmentPattern, Matrix<dtype::real>* drivePattern,
-    dtype::size measurmentCount, dtype::size driveCount, dtype::size numHarmonics,
-    dtype::real sigmaRef, cublasHandle_t handle, cudaStream_t stream)
-    : mModel(NULL), mNumericSolver(NULL), mDriveCount(driveCount), mMeasurmentCount(measurmentCount),
-        mJacobian(NULL), mVoltage(NULL), mPhi(NULL), mExcitation(NULL), mVoltageCalculation(NULL),
-        mElementalJacobianMatrix(NULL) {
+    dtype::size numHarmonics, dtype::real sigmaRef, cublasHandle_t handle, cudaStream_t stream)
+    : mModel(NULL), mNumericSolver(NULL), mJacobian(NULL), mVoltage(NULL), mPhi(NULL),
+        mExcitation(NULL), mVoltageCalculation(NULL), mElementalJacobianMatrix(NULL) {
     // check input
     if (mesh == NULL) {
         throw invalid_argument("ForwardSolver::ForwardSolver: mesh == NULL");
@@ -39,19 +37,25 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
         throw invalid_argument("ForwardSolver::ForwardSolver: handle == NULL");
     }
 
+    // set counts
+    this->mMeasurmentCount = measurmentPattern->columns();
+    this->mDriveCount = drivePattern->columns();
+
     // create model
     this->mModel = new Model<BasisFunction>(mesh, electrodes, sigmaRef, numHarmonics, handle,
         stream);
 
     // create NumericSolver solver
-    this->mNumericSolver = new NumericSolver(mesh->nodeCount(), driveCount + measurmentCount, stream);
+    this->mNumericSolver = new NumericSolver(mesh->nodes()->rows(),
+        this->driveCount() + this->measurmentCount(), stream);
 
     // create matrices
     this->mJacobian = new Matrix<dtype::real>(measurmentPattern->dataColumns() * drivePattern->dataColumns(),
-        mesh->elementCount(), stream);
-    this->mVoltage  = new Matrix<dtype::real>(measurmentCount, driveCount, stream);
-    this->mVoltageCalculation  = new Matrix<dtype::real>(measurmentCount, mesh->nodeCount(), stream);
-    this->mElementalJacobianMatrix  = new Matrix<dtype::real>(mesh->elementCount(),
+        mesh->elements()->rows(), stream);
+    this->mVoltage  = new Matrix<dtype::real>(this->measurmentCount(), this->driveCount(), stream);
+    this->mVoltageCalculation  = new Matrix<dtype::real>(this->measurmentCount(),
+        mesh->nodes()->rows(), stream);
+    this->mElementalJacobianMatrix  = new Matrix<dtype::real>(mesh->elements()->rows(),
         Matrix<dtype::real>::blockSize, stream);
 
     // create matrix buffer
@@ -60,28 +64,29 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
 
     // create matrices
     for (dtype::index i = 0; i < numHarmonics + 1; i++) {
-        this->mPhi[i] = new Matrix<dtype::real>(mesh->nodeCount(),
-            driveCount + measurmentCount, stream);
-        this->mExcitation[i] = new Matrix<dtype::real>(mesh->nodeCount(),
-            driveCount + measurmentCount, stream);
+        this->mPhi[i] = new Matrix<dtype::real>(mesh->nodes()->rows(),
+            this->driveCount() + this->measurmentCount(), stream);
+        this->mExcitation[i] = new Matrix<dtype::real>(mesh->nodes()->rows(),
+            this->driveCount() + this->measurmentCount(), stream);
     }
 
     // create pattern matrix
-    Matrix<dtype::real> pattern(drivePattern->dataRows(), driveCount + measurmentCount, stream);
+    Matrix<dtype::real> pattern(drivePattern->dataRows(),
+        this->driveCount() + this->measurmentCount(), stream);
 
     // fill pattern matrix with drive pattern
     dtype::real value = 0.0f;
-    for (dtype::index i = 0; i < pattern.dataRows(); i++) {
-        for (dtype::index j = 0; j < driveCount; j++) {
+    for (dtype::index i = 0; i < pattern.rows(); i++) {
+        for (dtype::index j = 0; j < this->driveCount(); j++) {
             pattern(i, j) = (*drivePattern)(i, j);
         }
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index i = 0; i < pattern.dataRows(); i++) {
-        for (dtype::index j = 0; j < measurmentCount; j++) {
-            pattern(i, j + driveCount) = (*measurmentPattern)(i, j);
+    for (dtype::index i = 0; i < pattern.rows(); i++) {
+        for (dtype::index j = 0; j < this->measurmentCount(); j++) {
+            pattern(i, j + this->driveCount()) = (*measurmentPattern)(i, j);
         }
     }
     pattern.copyToDevice(stream);
@@ -165,7 +170,7 @@ void ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculationMatrix(
     BasisFunction* basis[BasisFunction::nodesPerElement];
 
     // fill connectivity and elementalJacobianMatrix
-    for (dtype::index k = 0; k < this->model()->mesh()->elementCount(); k++) {
+    for (dtype::index k = 0; k < this->model()->mesh()->elements()->rows(); k++) {
         // get nodes for element
         for (dtype::index i = 0; i < BasisFunction::nodesPerElement; i++) {
             id[i] = (*this->model()->mesh()->elements())(k, i);
