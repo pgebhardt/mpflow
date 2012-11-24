@@ -45,9 +45,9 @@ public:
     dtype::size columns() { return this->mColumns; }
     dtype::size dataRows() { return this->mDataRows; }
     dtype::size dataColumns() { return this->mDataColumns; }
-    type& operator() (dtype::index i, dtype::index j) {
-        assert(i < this->dataRows());
-        assert(j < this->dataColumns());
+    inline type& operator() (dtype::index i, dtype::index j) {
+        assert(i < this->rows());
+        assert(j < this->columns());
         return this->mHostData[i + j * this->dataRows()];
     }
 

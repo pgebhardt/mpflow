@@ -130,13 +130,13 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
         elementCount.dataColumns() * Matrix<dtype::real>::blockSize, stream);
 
     // init connectivityMatrix
-    for (dtype::size i = 0; i < connectivityMatrix.dataRows(); i++) {
-        for (dtype::size j = 0; j < connectivityMatrix.dataColumns(); j++) {
+    for (dtype::size i = 0; i < connectivityMatrix.rows(); i++) {
+        for (dtype::size j = 0; j < connectivityMatrix.columns(); j++) {
             connectivityMatrix(i, j) = -1;
         }
     }
-    for (dtype::size i = 0; i < this->mConnectivityMatrix->dataRows(); i++) {
-        for (dtype::size j = 0; j < this->mConnectivityMatrix->dataColumns(); j++) {
+    for (dtype::size i = 0; i < this->mConnectivityMatrix->rows(); i++) {
+        for (dtype::size j = 0; j < this->mConnectivityMatrix->columns(); j++) {
             (*this->mConnectivityMatrix)(i, j) =  -1;
         }
     }
