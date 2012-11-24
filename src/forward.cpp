@@ -71,7 +71,7 @@ ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(Mesh* mesh, Electrode
     }
 
     // create pattern matrix
-    Matrix<dtype::real> pattern(drivePattern->dataRows(),
+    Matrix<dtype::real> pattern(drivePattern->rows(),
         this->driveCount() + this->measurmentCount(), stream);
 
     // fill pattern matrix with drive pattern
