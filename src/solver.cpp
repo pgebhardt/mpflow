@@ -33,7 +33,7 @@ Solver::Solver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurme
     }
 
     // create solver
-    this->mForwardSolver = new ForwardSolver<LinearBasis, SparseConjugate>(mesh, electrodes,
+    this->mForwardSolver = new ForwardSolver<Basis::Linear, SparseConjugate>(mesh, electrodes,
         measurmentPattern, drivePattern, numHarmonics, sigmaRef, handle, stream);
 
     this->mInverseSolver = new InverseSolver<Conjugate>(mesh->elements()->rows(),

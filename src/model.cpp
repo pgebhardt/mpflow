@@ -337,4 +337,4 @@ void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>** compon
 }
 
 // specialisation
-template class fastEIT::Model<fastEIT::LinearBasis>;
+template class fastEIT::Model<fastEIT::Basis::Linear>;

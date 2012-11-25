@@ -7,10 +7,11 @@
 
 // namespaces
 using namespace fastEIT;
+using namespace fastEIT::Basis;
 using namespace std;
 
 // create basis class
-LinearBasis::LinearBasis(dtype::real* x, dtype::real* y) {
+Linear::Linear(dtype::real* x, dtype::real* y) {
     // check input
     if (x == NULL) {
         throw invalid_argument("x == NULL");
@@ -20,11 +21,11 @@ LinearBasis::LinearBasis(dtype::real* x, dtype::real* y) {
     }
 
     // create memory
-    this->mPoints = new dtype::real[LinearBasis::nodesPerElement * 2];
-    this->mCoefficients = new dtype::real[LinearBasis::nodesPerElement];
+    this->mPoints = new dtype::real[Linear::nodesPerElement * 2];
+    this->mCoefficients = new dtype::real[Linear::nodesPerElement];
 
     // init member
-    for (dtype::size i = 0; i < LinearBasis::nodesPerElement; i++) {
+    for (dtype::size i = 0; i < Linear::nodesPerElement; i++) {
         this->mPoints[i * 2 + 0] = x[i];
         this->mPoints[i * 2 + 1] = y[i];
         this->mCoefficients[i] = 0.0;
@@ -64,21 +65,21 @@ LinearBasis::LinearBasis(dtype::real* x, dtype::real* y) {
 }
 
 // delete basis class
-LinearBasis::~LinearBasis() {
+Linear::~Linear() {
     // cleanup arrays
     delete [] this->mPoints;
     delete [] this->mCoefficients;
 }
 
 // evaluate basis function
-dtype::real LinearBasis::operator() (dtype::real x, dtype::real y) {
+dtype::real Linear::operator() (dtype::real x, dtype::real y) {
     // calc result
     return this->mCoefficients[0] + this->mCoefficients[1] * x +
         this->mCoefficients[2] * y;
 }
 
 // integrate with basis
-dtype::real LinearBasis::integrateWithBasis(LinearBasis& other) {
+dtype::real Linear::integrateWithBasis(Linear& other) {
     // shorten variables
     dtype::real x1 = this->mPoints[0 * 2 + 0];
     dtype::real y1 = this->mPoints[0 * 2 + 1];
@@ -115,7 +116,7 @@ dtype::real LinearBasis::integrateWithBasis(LinearBasis& other) {
 }
 
 // integrate gradient with basis
-dtype::real LinearBasis::integrateGradientWithBasis(LinearBasis& other) {
+dtype::real Linear::integrateGradientWithBasis(Linear& other) {
     // calc area
     dtype::real area = 0.5 * fabs((this->mPoints[1 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
         (this->mPoints[2 * 2 + 1] - this->mPoints[0 * 2 + 1]) -
@@ -167,7 +168,7 @@ dtype::real fasteit_basis_calc_parametrisation(dtype::real x, dtype::real y,
 }
 
 // integrate edge
-dtype::real LinearBasis::integrateBoundaryEdge(dtype::real* x,
+dtype::real Linear::integrateBoundaryEdge(dtype::real* x,
     dtype::real* y, dtype::real* start, dtype::real* end) {
     // check input
     if ((x == NULL) || (y == NULL) || (start == NULL) || (end == NULL)) {
@@ -178,9 +179,9 @@ dtype::real LinearBasis::integrateBoundaryEdge(dtype::real* x,
     dtype::real integral = 0.0f;
 
     // calc node parameter
-    dtype::real* nodeParameter = new dtype::real[LinearBasis::nodesPerEdge];
+    dtype::real* nodeParameter = new dtype::real[Linear::nodesPerEdge];
     nodeParameter[0] = 0.0f;
-    for (dtype::size i = 0; i < LinearBasis::nodesPerEdge; i++) {
+    for (dtype::size i = 0; i < Linear::nodesPerEdge; i++) {
         nodeParameter[i] = fasteit_basis_calc_parametrisation(x[i], y[i], nodeParameter[0]);
     }
 
