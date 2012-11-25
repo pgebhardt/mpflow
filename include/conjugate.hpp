@@ -6,50 +6,56 @@
 #ifndef FASTEIT_CONJUGATE_HPP
 #define FASTEIT_CONJUGATE_HPP
 
-// conjugate class definition
-class Conjugate {
-// constructor and destructor
-public:
-    Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t stream);
-    virtual ~Conjugate();
+// namespace numeric
+namespace Numeric {
+    // conjugate class definition
+    class Conjugate {
+    // constructor and destructor
+    public:
+        Conjugate(fastEIT::dtype::size rows, cublasHandle_t handle, cudaStream_t stream);
+        virtual ~Conjugate();
 
-public:
-    // solve system
-    void solve(Matrix<dtype::real>* A, Matrix<dtype::real>* x,
-        Matrix<dtype::real>* f, dtype::size iterations, cublasHandle_t handle,
-        cudaStream_t stream=NULL);
+    public:
+        // solve system
+        void solve(fastEIT::Matrix<fastEIT::dtype::real>* A, fastEIT::Matrix<fastEIT::dtype::real>* x,
+            fastEIT::Matrix<fastEIT::dtype::real>* f, fastEIT::dtype::size iterations, cublasHandle_t handle,
+            cudaStream_t stream=NULL);
 
-// helper methods
-public:
-    static void addScalar(Matrix<dtype::real>* vector, Matrix<dtype::real>* scalar,
-        dtype::size rows, dtype::size columns, cudaStream_t stream=NULL);
-    static void updateVector(Matrix<dtype::real>* result, Matrix<dtype::real>* x1,
-        dtype::real sign, Matrix<dtype::real>* x2, Matrix<dtype::real>* r1,
-        Matrix<dtype::real>* r2, cudaStream_t stream=NULL);
-    static void gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
-        Matrix<dtype::real>* vector, cudaStream_t stream=NULL);
+    // helper methods
+    public:
+        static void addScalar(fastEIT::Matrix<fastEIT::dtype::real>* vector,
+            fastEIT::Matrix<fastEIT::dtype::real>* scalar, fastEIT::dtype::size rows,
+            fastEIT::dtype::size columns, cudaStream_t stream=NULL);
+        static void updateVector(fastEIT::Matrix<fastEIT::dtype::real>* result,
+            fastEIT::Matrix<fastEIT::dtype::real>* x1, fastEIT::dtype::real sign,
+            fastEIT::Matrix<fastEIT::dtype::real>* x2, fastEIT::Matrix<fastEIT::dtype::real>* r1,
+            fastEIT::Matrix<fastEIT::dtype::real>* r2, cudaStream_t stream=NULL);
+        static void gemv(fastEIT::Matrix<fastEIT::dtype::real>* result,
+            fastEIT::Matrix<fastEIT::dtype::real>* matrix, fastEIT::Matrix<fastEIT::dtype::real>* vector,
+            cudaStream_t stream=NULL);
 
-// accessors
-public:
-    dtype::size rows() const { return this->mRows; }
+    // accessors
+    public:
+        fastEIT::dtype::size rows() const { return this->mRows; }
 
-protected:
-    Matrix<dtype::real>* residuum() const { return this->mResiduum; }
-    Matrix<dtype::real>* projection() const { return this->mProjection; }
-    Matrix<dtype::real>* rsold() const { return this->mRSOld; }
-    Matrix<dtype::real>* rsnew() const { return this->mRSNew; }
-    Matrix<dtype::real>* tempVector() const { return this->mTempVector; }
-    Matrix<dtype::real>* tempNumber() const { return this->mTempNumber; }
+    protected:
+        fastEIT::Matrix<fastEIT::dtype::real>* residuum() const { return this->mResiduum; }
+        fastEIT::Matrix<fastEIT::dtype::real>* projection() const { return this->mProjection; }
+        fastEIT::Matrix<fastEIT::dtype::real>* rsold() const { return this->mRSOld; }
+        fastEIT::Matrix<fastEIT::dtype::real>* rsnew() const { return this->mRSNew; }
+        fastEIT::Matrix<fastEIT::dtype::real>* tempVector() const { return this->mTempVector; }
+        fastEIT::Matrix<fastEIT::dtype::real>* tempNumber() const { return this->mTempNumber; }
 
-// member
-private:
-    dtype::size mRows;
-    Matrix<dtype::real>* mResiduum;
-    Matrix<dtype::real>* mProjection;
-    Matrix<dtype::real>* mRSOld;
-    Matrix<dtype::real>* mRSNew;
-    Matrix<dtype::real>* mTempVector;
-    Matrix<dtype::real>* mTempNumber;
-};
+    // member
+    private:
+        fastEIT::dtype::size mRows;
+        fastEIT::Matrix<fastEIT::dtype::real>* mResiduum;
+        fastEIT::Matrix<fastEIT::dtype::real>* mProjection;
+        fastEIT::Matrix<fastEIT::dtype::real>* mRSOld;
+        fastEIT::Matrix<fastEIT::dtype::real>* mRSNew;
+        fastEIT::Matrix<fastEIT::dtype::real>* mTempVector;
+        fastEIT::Matrix<fastEIT::dtype::real>* mTempNumber;
+    };
+}
 
 #endif

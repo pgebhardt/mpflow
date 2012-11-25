@@ -58,7 +58,7 @@ protected:
 // member
 private:
     Model<BasisFunction>* mModel;
-    SparseConjugate* mNumericSolver;
+    NumericSolver* mNumericSolver;
     dtype::size mDriveCount;
     dtype::size mMeasurmentCount;
     Matrix<dtype::real>* mJacobian;

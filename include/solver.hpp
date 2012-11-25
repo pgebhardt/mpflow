@@ -29,10 +29,10 @@ public:
 
 // accessors
 public:
-    fastEIT::ForwardSolver<fastEIT::Basis::Linear, fastEIT::SparseConjugate>* forwardSolver() const {
+    fastEIT::ForwardSolver<fastEIT::Basis::Linear, fastEIT::Numeric::SparseConjugate>* forwardSolver() const {
         return this->mForwardSolver;
     }
-    fastEIT::InverseSolver<fastEIT::Conjugate>* inverseSolver() const { return this->mInverseSolver; }
+    fastEIT::InverseSolver<fastEIT::Numeric::Conjugate>* inverseSolver() const { return this->mInverseSolver; }
     fastEIT::Matrix<fastEIT::dtype::real>* dGamma() const { return this->mDGamma; }
     fastEIT::Matrix<fastEIT::dtype::real>* gamma() const { return this->mGamma; }
     fastEIT::Matrix<fastEIT::dtype::real>* measuredVoltage() const { return this->mMeasuredVoltage; }
@@ -40,8 +40,8 @@ public:
 
 // member
 private:
-    fastEIT::ForwardSolver<fastEIT::Basis::Linear, fastEIT::SparseConjugate>* mForwardSolver;
-    fastEIT::InverseSolver<fastEIT::Conjugate>* mInverseSolver;
+    fastEIT::ForwardSolver<fastEIT::Basis::Linear, fastEIT::Numeric::SparseConjugate>* mForwardSolver;
+    fastEIT::InverseSolver<fastEIT::Numeric::Conjugate>* mInverseSolver;
     fastEIT::Matrix<fastEIT::dtype::real>* mDGamma;
     fastEIT::Matrix<fastEIT::dtype::real>* mGamma;
     fastEIT::Matrix<fastEIT::dtype::real>* mMeasuredVoltage;
