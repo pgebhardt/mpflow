@@ -72,7 +72,7 @@ Matrix<type>::~Matrix() {
 
 // copy matrix
 template <class type>
-void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
     // check input
     if (other == NULL) {
         throw invalid_argument("Matrix::copy: other == NULL");
@@ -93,11 +93,13 @@ void Matrix<type>::copy(Matrix<type>* other, cudaStream_t stream) {
     if (error != cudaSuccess) {
         throw logic_error("Matrix::copyToDevice: copy error");
     }*/
+
+    return this;
 }
 
 // copy to device
 template <class type>
-void Matrix<type>::copyToDevice(cudaStream_t stream) {
+Matrix<type>* Matrix<type>::copyToDevice(cudaStream_t stream) {
     // copy host buffer to device
     cudaMemcpyAsync(this->deviceData(), this->hostData(),
         sizeof(type) * this->dataRows() * this->dataColumns(),
@@ -108,11 +110,13 @@ void Matrix<type>::copyToDevice(cudaStream_t stream) {
     if (error != cudaSuccess) {
         throw logic_error("Matrix::copyToDevice: copy error");
     }*/
+
+    return this;
 }
 
 // copy to host
 template <class type>
-void Matrix<type>::copyToHost(cudaStream_t stream) {
+Matrix<type>* Matrix<type>::copyToHost(cudaStream_t stream) {
     // copy host buffer to device
     cudaMemcpyAsync(this->hostData(), this->deviceData(),
         sizeof(type) * this->dataRows() * this->dataColumns(),
@@ -123,6 +127,8 @@ void Matrix<type>::copyToHost(cudaStream_t stream) {
     if (error != cudaSuccess) {
         throw logic_error("Matrix::copyToDevice: copy error");
     }*/
+
+    return this;
 }
 
 // add kernel
@@ -139,7 +145,7 @@ __global__ void addKernel(type* A, type* B,
 
 // add matrix
 template <class type>
-void Matrix<type>::add(Matrix<type>* value, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::add(Matrix<type>* value, cudaStream_t stream) {
     // check input
     if (value == NULL) {
         throw invalid_argument("Matrix::add: other == NULL");
@@ -159,11 +165,13 @@ void Matrix<type>::add(Matrix<type>* value, cudaStream_t stream) {
     // call kernel
     addKernel<type><<<blocks, threads, 0, stream>>>(this->deviceData(), value->deviceData(),
         this->dataRows());
+
+    return this;
 }
 
 // matrix multiply
 template <>
-void Matrix<dtype::real>::multiply(Matrix<dtype::real>* A, Matrix<dtype::real>* B, cublasHandle_t handle, cudaStream_t stream) {
+Matrix<dtype::real>* Matrix<dtype::real>::multiply(Matrix<dtype::real>* A, Matrix<dtype::real>* B, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (A == NULL) {
         throw invalid_argument("Matrix::multiply: A == NULL");
@@ -199,16 +207,18 @@ void Matrix<dtype::real>::multiply(Matrix<dtype::real>* A, Matrix<dtype::real>* 
             throw logic_error("Matrix::multiply: cublasSgemm");
         }
     }
+
+    return this;
 }
 // matrix multiply
 template <class type>
-void Matrix<type>::multiply(Matrix<type>* A, Matrix<type>* B, cublasHandle_t handle, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::multiply(Matrix<type>* A, Matrix<type>* B, cublasHandle_t handle, cudaStream_t stream) {
     throw logic_error("Matrix::multiply: not supported dtype");
 }
 
 // scale kernel
 template <class type>
-__global__ void scale_kernel(type* matrix, type scalar, dtype::size rows) {
+__global__ void scaleKernel(type* matrix, type scalar, dtype::size rows) {
     // get ids
     dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
@@ -219,7 +229,7 @@ __global__ void scale_kernel(type* matrix, type scalar, dtype::size rows) {
 
 // scalar multiply matrix
 template <class type>
-void Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
     // dimension
     dim3 blocks(this->dataRows() == 1 ? 1 : this->dataRows() / Matrix<type>::blockSize,
         this->dataColumns() == 1 ? 1 : this->dataColumns() / Matrix<type>::blockSize);
@@ -227,7 +237,9 @@ void Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
         this->dataColumns() == 1 ? 1 : Matrix<type>::blockSize);
 
     // call kernel
-    scale_kernel<type><<<blocks, threads, 0, stream>>>(this->deviceData(), scalar, this->dataRows());
+    scaleKernel<type><<<blocks, threads, 0, stream>>>(this->deviceData(), scalar, this->dataRows());
+
+    return this;
 }
 
 // vector dot product kernel
@@ -244,7 +256,7 @@ __global__ void vectorDotProductKernel(type* result, type* a, type* b,
 
 // vector dot product
 template <class type>
-void Matrix<type>::vectorDotProduct(Matrix<type>* A, Matrix<type>* B, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::vectorDotProduct(Matrix<type>* A, Matrix<type>* B, cudaStream_t stream) {
     // check input
     if (A == NULL) {
         throw invalid_argument("Matrix::vectorDotProduct: A == NULL");
@@ -271,6 +283,8 @@ void Matrix<type>::vectorDotProduct(Matrix<type>* A, Matrix<type>* B, cudaStream
 
     // sum
     this->sum(this, stream);
+
+    return this;
 }
 
 // sum kernel
@@ -306,7 +320,7 @@ __global__ void sumKernel(type* result, type* vector, dtype::size rows,
 
 // sum
 template <class type>
-void Matrix<type>::sum(Matrix<type>* value, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::sum(Matrix<type>* value, cudaStream_t stream) {
     // check input
     if (value == NULL) {
         throw invalid_argument("Matrix::sum: value == NULL");
@@ -340,6 +354,8 @@ void Matrix<type>::sum(Matrix<type>* value, cudaStream_t stream) {
 
     }
     while (offset * Matrix<type>::blockSize < this->dataRows());
+
+    return this;
 }
 
 // min kernel
@@ -371,7 +387,7 @@ __global__ void minKernel(type* result, type* vector, dtype::size rows, dtype::s
 
 // min
 template <class type>
-void Matrix<type>::min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream) {
     // check input
     if (value == NULL) {
         throw invalid_argument("Matrix::min: value == NULL");
@@ -403,6 +419,8 @@ void Matrix<type>::min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t s
 
     }
     while (offset * Matrix<type>::blockSize < this->dataRows());
+
+    return this;
 }
 
 // max kernel
@@ -434,7 +452,7 @@ __global__ void maxKernel(type* result, type* vector, dtype::size rows, dtype::s
 
 // max
 template <class type>
-void Matrix<type>::max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream) {
+Matrix<type>* Matrix<type>::max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream) {
     // check input
     if (value == NULL) {
         throw invalid_argument("Matrix::max: value == NULL");
@@ -466,6 +484,8 @@ void Matrix<type>::max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t s
 
     }
     while (offset * Matrix<type>::blockSize < this->dataRows());
+
+    return this;
 }
 /*
 // save matrix to file

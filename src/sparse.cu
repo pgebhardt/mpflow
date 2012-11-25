@@ -174,7 +174,7 @@ __global__ void sparseMultiplyKernel(dtype::real* result,
 }
 
 // sparse matrix multiply
-void SparseMatrix::multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
+Matrix<dtype::real>* SparseMatrix::multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
     cudaStream_t stream) {
     // check input
     if (result == NULL) {
@@ -198,4 +198,6 @@ void SparseMatrix::multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* ma
     // execute kernel
     sparseMultiplyKernel<<<global, local, 0, stream>>>(result->deviceData(), this->values(),
         this->columnIds(), matrix->deviceData(), result->dataRows(), result->dataColumns(), this->density());
+
+    return result;
 }

@@ -3,22 +3,11 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <iostream>
 #include "../include/fasteit.hpp"
 
 // namespaces
 using namespace fastEIT;
 using namespace std;
-
-template <class type>
-void printMatrix(fastEIT::Matrix<type>& matrix) {
-    for (dtype::index i = 0; i < matrix.dataRows(); i++) {
-        for (dtype::index j = 0; j < matrix.dataColumns(); j++) {
-            cout << matrix(i, j) << ", ";
-        }
-        cout << endl;
-    }
-}
 
 // create inverse_solver
 template <class NumericSolver>
@@ -119,8 +108,8 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcExcitation(Matrix<dtype::
     cublasSetStream(handle, stream);
 
     // copy measuredVoltage to dVoltage
-    if (cublasScopy(handle, this->mDVoltage->dataRows(),
-        calculatedVoltage->deviceData(), 1, this->mDVoltage->deviceData(), 1)
+    if (cublasScopy(handle, this->dVoltage()->dataRows(),
+        calculatedVoltage->deviceData(), 1, this->dVoltage()->deviceData(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error(
             "InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
@@ -128,8 +117,8 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcExcitation(Matrix<dtype::
 
     // substract calculatedVoltage
     dtype::real alpha = -1.0f;
-    if (cublasSaxpy(handle, this->mDVoltage->dataRows(), &alpha,
-        measuredVoltage->deviceData(), 1, this->mDVoltage->deviceData(), 1)
+    if (cublasSaxpy(handle, this->dVoltage()->dataRows(), &alpha,
+        measuredVoltage->deviceData(), 1, this->dVoltage()->deviceData(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw logic_error(
             "Model::calcExcitation: substract calculatedVoltage");
@@ -139,12 +128,12 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::calcExcitation(Matrix<dtype::
     alpha = 1.0f;
     dtype::real beta = 0.0f;
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->dataRows(), jacobian->dataColumns(), &alpha,
-        jacobian->deviceData(), jacobian->dataRows(), this->mDVoltage->deviceData(), 1, &beta,
-        this->mExcitation->deviceData(), 1) != CUBLAS_STATUS_SUCCESS) {
+        jacobian->deviceData(), jacobian->dataRows(), this->dVoltage()->deviceData(), 1, &beta,
+        this->excitation()->deviceData(), 1) != CUBLAS_STATUS_SUCCESS) {
         throw logic_error("InverseSolver::calcExcitation: calc excitation");
     }
 
-    return this->mExcitation;
+    return this->excitation();
 }
 
 // inverse solving
@@ -170,14 +159,14 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::solve(Matrix<dtype::real>* ga
     }
 
     // reset gamma
-    gamma->copy(this->mZeros);
+    gamma->copy(this->zeros());
 
     // calc excitation
     this->calcExcitation(jacobian, calculatedVoltage, measuredVoltage, handle, stream);
 
     // solve system
-    this->mNumericSolver->solve(regularized ? this->systemMatrix() : this->jacobianSquare(),
-        gamma, this->mExcitation, steps, handle, stream);
+    this->numericSolver()->solve(regularized ? this->systemMatrix() : this->jacobianSquare(),
+        gamma, this->excitation(), steps, handle, stream);
 
     return gamma;
 }

@@ -131,24 +131,14 @@ ForwardSolver<BasisFunction, NumericSolver>::~ForwardSolver() {
     delete this->mVoltageCalculation;
     delete this->mElementalJacobianMatrix;
 
-    if (this->mPhi != NULL) {
-        for (dtype::index i = 0; i < this->model()->numHarmonics() + 1; i++) {
-            delete this->mPhi[i];
-        }
-        delete [] this->mPhi;
+    for (dtype::index i = 0; i < this->model()->numHarmonics() + 1; i++) {
+        delete this->mExcitation[i];
+        delete this->mPhi[i];
     }
-    if (this->mExcitation != NULL) {
-        for (dtype::index i = 0; i < this->model()->numHarmonics() + 1; i++) {
-            delete this->mExcitation[i];
-        }
-        delete [] this->mExcitation;
-    }
-    if (this->mModel != NULL) {
-        delete this->mModel;
-    }
-    if (this->mNumericSolver != NULL) {
-        delete this->mNumericSolver;
-    }
+    delete [] this->mPhi;
+    delete [] this->mExcitation;
+    delete this->mModel;
+    delete this->mNumericSolver;
 }
 
 // init jacobian calculation matrix
@@ -191,8 +181,8 @@ void ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculationMatrix(
         for (dtype::size i = 0; i < BasisFunction::nodesPerElement; i++) {
             for (dtype::size j = 0; j < BasisFunction::nodesPerElement; j++) {
                 // set elementalJacobianMatrix element
-                (*this->mElementalJacobianMatrix)(k, i + j * BasisFunction::nodesPerElement) =
-                    basis[i]->integrate_gradient_with_basis(*basis[j]);
+                (*this->elementalJacobianMatrix())(k, i + j * BasisFunction::nodesPerElement) =
+                    basis[i]->integrateGradientWithBasis(*basis[j]);
             }
         }
 
@@ -203,7 +193,7 @@ void ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculationMatrix(
     }
 
     // upload to device
-    this->mElementalJacobianMatrix->copyToDevice(stream);
+    this->elementalJacobianMatrix()->copyToDevice(stream);
 }
 
 // forward solving

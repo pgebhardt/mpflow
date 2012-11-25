@@ -32,11 +32,16 @@ public:
 
 // accessors
 public:
-    NumericSolver* numericSolver() const { return this->mNumericSolver; }
+    Matrix<dtype::real>* excitation() const { return this->mExcitation; }
     Matrix<dtype::real>* systemMatrix() const { return this->mSystemMatrix; }
     Matrix<dtype::real>* jacobianSquare() const { return this->mJacobianSquare; }
     dtype::real regularizationFactor() const { return this->mRegularizationFactor; }
-    dtype::real& regularizationFactor() { return this->mRegularizationFactor; }
+    dtype::real& setRegularizationFactor() { return this->mRegularizationFactor; }
+
+protected:
+    NumericSolver* numericSolver() const { return this->mNumericSolver; }
+    Matrix<dtype::real>* dVoltage() const { return this->mDVoltage; }
+    Matrix<dtype::real>* zeros() const { return this->mZeros; }
 
 // member
 private:

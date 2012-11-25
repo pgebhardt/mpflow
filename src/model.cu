@@ -52,7 +52,7 @@ void Model<BasisFunction>::reduceMatrix(Matrix<dtype::real>* matrix,
     // reduce matrix
     reduceMatrixKernel<dtype::real><<<blocks, threads, 0, stream>>>(
         matrix->deviceData(), intermediateMatrix->deviceData(),
-        this->mSMatrix->columnIds(), matrix->dataRows(),
+        this->SMatrix()->columnIds(), matrix->dataRows(),
         density);
 }
 template <class BasisFunction>
@@ -73,7 +73,7 @@ void Model<BasisFunction>::reduceMatrix(Matrix<dtype::index>* matrix,
     // reduce matrix
     reduceMatrixKernel<dtype::index><<<blocks, threads, 0, stream>>>(
         matrix->deviceData(), intermediateMatrix->deviceData(),
-        this->mSMatrix->columnIds(), matrix->dataRows(),
+        this->SMatrix()->columnIds(), matrix->dataRows(),
         density);
 }
 
@@ -124,9 +124,9 @@ void Model<BasisFunction>::updateMatrix(SparseMatrix* matrix,
 
     // execute kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(
-        matrix->values(), this->mConnectivityMatrix->deviceData(),
+        matrix->values(), this->connectivityMatrix()->deviceData(),
         elementalMatrix->deviceData(), gamma->deviceData(), this->sigmaRef(),
-        this->mConnectivityMatrix->dataRows(), matrix->density());
+        this->connectivityMatrix()->dataRows(), matrix->density());
 }
 
 // specialisation

@@ -93,7 +93,7 @@ Matrix<dtype::real>* ForwardSolver<BasisFunction, NumericSolver>::calcJacobian(M
     calcJacobianKernel<BasisFunction><<<blocks, threads, 0, stream>>>(
         this->jacobian()->deviceData(), this->phi(harmonic)->deviceData(),
         &this->phi(harmonic)->deviceData()[this->driveCount() * this->phi(harmonic)->dataRows()],
-        this->model()->mesh()->elements()->deviceData(), this->mElementalJacobianMatrix->deviceData(),
+        this->model()->mesh()->elements()->deviceData(), this->elementalJacobianMatrix()->deviceData(),
         gamma->deviceData(), this->model()->sigmaRef(), this->jacobian()->dataRows(), this->jacobian()->dataColumns(),
         this->phi(harmonic)->dataRows(), this->model()->mesh()->elements()->rows(),
         this->driveCount(), this->measurmentCount(), additiv);

@@ -66,23 +66,19 @@ LinearBasis::LinearBasis(dtype::real* x, dtype::real* y) {
 // delete basis class
 LinearBasis::~LinearBasis() {
     // cleanup arrays
-    if (this->mPoints != NULL) {
-        delete [] this->mPoints;
-    }
-    if (this->mCoefficients != NULL) {
-        delete [] this->mCoefficients;
-    }
+    delete [] this->mPoints;
+    delete [] this->mCoefficients;
 }
 
 // evaluate basis function
-dtype::real LinearBasis::evaluate(dtype::real x, dtype::real y) {
+dtype::real LinearBasis::operator() (dtype::real x, dtype::real y) {
     // calc result
     return this->mCoefficients[0] + this->mCoefficients[1] * x +
         this->mCoefficients[2] * y;
 }
 
 // integrate with basis
-dtype::real LinearBasis::integrate_with_basis(LinearBasis& other) {
+dtype::real LinearBasis::integrateWithBasis(LinearBasis& other) {
     // shorten variables
     dtype::real x1 = this->mPoints[0 * 2 + 0];
     dtype::real y1 = this->mPoints[0 * 2 + 1];
@@ -119,7 +115,7 @@ dtype::real LinearBasis::integrate_with_basis(LinearBasis& other) {
 }
 
 // integrate gradient with basis
-dtype::real LinearBasis::integrate_gradient_with_basis(LinearBasis& other) {
+dtype::real LinearBasis::integrateGradientWithBasis(LinearBasis& other) {
     // calc area
     dtype::real area = 0.5 * fabs((this->mPoints[1 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
         (this->mPoints[2 * 2 + 1] - this->mPoints[0 * 2 + 1]) -
@@ -171,7 +167,7 @@ dtype::real fasteit_basis_calc_parametrisation(dtype::real x, dtype::real y,
 }
 
 // integrate edge
-dtype::real LinearBasis::integrate_boundary_edge(dtype::real* x,
+dtype::real LinearBasis::integrateBoundaryEdge(dtype::real* x,
     dtype::real* y, dtype::real* start, dtype::real* end) {
     // check input
     if ((x == NULL) || (y == NULL) || (start == NULL) || (end == NULL)) {
@@ -236,9 +232,4 @@ dtype::real LinearBasis::integrate_boundary_edge(dtype::real* x,
     delete [] nodeParameter;
 
     return integral;
-}
-
-// operator
-dtype::real LinearBasis::operator() (dtype::real x, dtype::real y) {
-    return this->evaluate(x, y);
 }

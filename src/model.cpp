@@ -122,11 +122,11 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
 
     // create intermediate matrices
     Matrix<dtype::index> elementCount(this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-    Matrix<dtype::index> connectivityMatrix(this->mConnectivityMatrix->dataRows(),
+    Matrix<dtype::index> connectivityMatrix(this->connectivityMatrix()->dataRows(),
         elementCount.dataColumns() * Matrix<dtype::index>::blockSize, stream);
-    Matrix<dtype::real> elementalSMatrix(this->mElementalSMatrix->dataRows(),
+    Matrix<dtype::real> elementalSMatrix(this->elementalSMatrix()->dataRows(),
         elementCount.dataColumns() * Matrix<dtype::real>::blockSize, stream);
-    Matrix<dtype::real> elementalRMatrix(this->mElementalRMatrix->dataRows(),
+    Matrix<dtype::real> elementalRMatrix(this->elementalRMatrix()->dataRows(),
         elementCount.dataColumns() * Matrix<dtype::real>::blockSize, stream);
 
     // init connectivityMatrix
@@ -135,12 +135,12 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
             connectivityMatrix(i, j) = -1;
         }
     }
-    for (dtype::size i = 0; i < this->mConnectivityMatrix->rows(); i++) {
-        for (dtype::size j = 0; j < this->mConnectivityMatrix->columns(); j++) {
-            (*this->mConnectivityMatrix)(i, j) =  -1;
+    for (dtype::size i = 0; i < this->connectivityMatrix()->rows(); i++) {
+        for (dtype::size j = 0; j < this->connectivityMatrix()->columns(); j++) {
+            (*this->connectivityMatrix())(i, j) =  -1;
         }
     }
-    this->mConnectivityMatrix->copyToDevice(stream);
+    this->connectivityMatrix()->copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
     dtype::index id[BasisFunction::nodesPerElement];
@@ -176,11 +176,11 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
 
                 // set elemental system element
                 elementalSMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) =
-                    basis[i]->integrate_gradient_with_basis(*basis[j]);
+                    basis[i]->integrateGradientWithBasis(*basis[j]);
 
                 // set elemental residual element
                 elementalRMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) =
-                    basis[i]->integrate_with_basis(*basis[j]);
+                    basis[i]->integrateWithBasis(*basis[j]);
 
                 // increment element count
                 elementCount(id[i], id[j])++;
@@ -199,20 +199,20 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     elementalRMatrix.copyToDevice(stream);
 
     // reduce matrices
-    this->reduceMatrix(this->mConnectivityMatrix, &connectivityMatrix,
-        this->mSMatrix->density(), stream);
-    this->reduceMatrix(this->mElementalSMatrix, &elementalSMatrix,
-        this->mSMatrix->density(), stream);
-    this->reduceMatrix(this->mElementalRMatrix, &elementalRMatrix,
-        this->mSMatrix->density(), stream);
+    this->reduceMatrix(this->connectivityMatrix(), &connectivityMatrix,
+        this->SMatrix()->density(), stream);
+    this->reduceMatrix(this->elementalSMatrix(), &elementalSMatrix,
+        this->SMatrix()->density(), stream);
+    this->reduceMatrix(this->elementalRMatrix(), &elementalRMatrix,
+        this->SMatrix()->density(), stream);
 
     // create gamma
     Matrix<dtype::real> gamma(this->mesh()->elements()->rows(), 1, stream);
 
     // update matrices
-    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix,
+    this->updateMatrix(this->SMatrix(), this->elementalSMatrix(),
         &gamma, stream);
-    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix,
+    this->updateMatrix(this->RMatrix(), this->elementalRMatrix(),
         &gamma, stream);
 }
 
@@ -229,10 +229,10 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
     }
 
     // update 2d systemMatrix
-    this->updateMatrix(this->mSMatrix, this->mElementalSMatrix, gamma, stream);
+    this->updateMatrix(this->SMatrix(), this->elementalSMatrix(), gamma, stream);
 
     // update residual matrix
-    this->updateMatrix(this->mRMatrix, this->mElementalRMatrix, gamma, stream);
+    this->updateMatrix(this->RMatrix(), this->elementalRMatrix(), gamma, stream);
 
     // set cublas stream
     cublasSetStream(handle, stream);
@@ -245,16 +245,16 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
             (2.0f * n * M_PI / this->mesh()->height());
 
         // init system matrix with 2d system matrix
-        if (cublasScopy(handle, this->mSMatrix->dataRows() * SparseMatrix::blockSize,
-            this->mSMatrix->values(), 1, this->systemMatrix(n)->values(), 1)
+        if (cublasScopy(handle, this->SMatrix()->dataRows() * SparseMatrix::blockSize,
+            this->SMatrix()->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
                 "Model::update: calc system matrices for all harmonics");
         }
 
         // add alpha * residualMatrix
-        if (cublasSaxpy(handle, this->mSMatrix->dataRows() * SparseMatrix::blockSize, &alpha,
-            this->mRMatrix->values(), 1, this->systemMatrix(n)->values(), 1)
+        if (cublasSaxpy(handle, this->SMatrix()->dataRows() * SparseMatrix::blockSize, &alpha,
+            this->RMatrix()->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -287,16 +287,15 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
             // calc elements
             for (dtype::size k = 0; k < BasisFunction::nodesPerEdge; k++) {
                 // add new value
-                (*this->mExcitationMatrix)(id[k], l) -= BasisFunction::integrate_boundary_edge(&x[k], &y[k],
-                    &this->electrodes()->electrodesStart()[l * 2],
-                    &this->electrodes()->electrodesEnd()[l * 2]) /
+                (*this->excitationMatrix())(id[k], l) -= BasisFunction::integrateBoundaryEdge(&x[k], &y[k],
+                    this->electrodes()->electrodesStart(l), this->electrodes()->electrodesEnd(l)) /
                     this->electrodes()->width();
             }
         }
     }
 
     // upload matrix
-    this->mExcitationMatrix->copyToDevice(stream);
+    this->excitationMatrix()->copyToDevice(stream);
 }
 
 // calc excitaion components
@@ -318,10 +317,10 @@ void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>** compon
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // Run multiply once more to avoid cublas error
         try {
-            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
+            component[n]->multiply(this->excitationMatrix(), pattern, handle, stream);
         }
         catch (exception& e) {
-            component[n]->multiply(this->mExcitationMatrix, pattern, handle, stream);
+            component[n]->multiply(this->excitationMatrix(), pattern, handle, stream);
         }
     }
 

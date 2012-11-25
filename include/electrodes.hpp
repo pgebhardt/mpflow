@@ -16,8 +16,14 @@ public:
 // access methods
 public:
     dtype::size count() const { return this->mCount; }
-    dtype::real* electrodesStart() const { return this->mElectrodesStart; }
-    dtype::real* electrodesEnd() const { return this->mElectrodesEnd; }
+    dtype::real* electrodesStart(dtype::index id) const {
+        assert(id < this->count());
+        return &this->mElectrodesStart[id * 2];
+    }
+    dtype::real* electrodesEnd(dtype::index id) const {
+        assert(id < this->count());
+        return &this->mElectrodesEnd[id * 2];
+    }
     dtype::real width() const { return this->mWidth; }
     dtype::real height() const { return this->mHeight; }
 

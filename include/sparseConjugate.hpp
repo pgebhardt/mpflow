@@ -23,6 +23,14 @@ public:
     dtype::size rows() const { return this->mRows; }
     dtype::size columns() const { return this->mColumns; }
 
+protected:
+    Matrix<dtype::real>* residuum() const { return this->mResiduum; }
+    Matrix<dtype::real>* projection() const { return this->mProjection; }
+    Matrix<dtype::real>* rsold() const { return this->mRSOld; }
+    Matrix<dtype::real>* rsnew() const { return this->mRSNew; }
+    Matrix<dtype::real>* tempVector() const { return this->mTempVector; }
+    Matrix<dtype::real>* tempNumber() const { return this->mTempNumber; }
+
 // member
 private:
     dtype::size mRows;

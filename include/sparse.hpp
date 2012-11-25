@@ -26,7 +26,7 @@ private:
 
 public:
     // matrix multiply
-    void multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
+    Matrix<dtype::real>* multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
 
 public:
     // block size

@@ -15,10 +15,9 @@ public:
 
 // mathematical evaluation of basis
 public:
-    dtype::real evaluate(dtype::real x, dtype::real y);
-    dtype::real integrate_with_basis(LinearBasis& other);
-    dtype::real integrate_gradient_with_basis(LinearBasis& other);
-    static dtype::real integrate_boundary_edge(dtype::real* x,
+    dtype::real integrateWithBasis(LinearBasis& other);
+    dtype::real integrateGradientWithBasis(LinearBasis& other);
+    static dtype::real integrateBoundaryEdge(dtype::real* x,
         dtype::real* y, dtype::real* start, dtype::real* end);
 
 // operator

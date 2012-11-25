@@ -46,12 +46,19 @@ public:
     Mesh* mesh() const { return this->mMesh; }
     Electrodes* electrodes() const { return this->mElectrodes; }
     dtype::real sigmaRef() const { return this->mSigmaRef; }
-    inline SparseMatrix* systemMatrix(dtype::size id) {
+    SparseMatrix* systemMatrix(dtype::size id) {
         assert(id <= this->mNumHarmonics);
         return this->mSystemMatrix[id];
     }
     Matrix<dtype::real>* excitationMatrix() { return this->mExcitationMatrix; }
     dtype::size numHarmonics() { return this->mNumHarmonics; }
+
+protected:
+    SparseMatrix* SMatrix() const { return this->mSMatrix; }
+    SparseMatrix* RMatrix() const { return this->mRMatrix; }
+    Matrix<dtype::index>* connectivityMatrix() const { return this->mConnectivityMatrix; }
+    Matrix<dtype::real>* elementalSMatrix() const { return this->mElementalSMatrix; }
+    Matrix<dtype::real>* elementalRMatrix() const { return this->mElementalRMatrix; }
 
 // geometry definition
 public:

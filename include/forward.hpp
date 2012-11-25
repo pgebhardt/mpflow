@@ -35,7 +35,6 @@ public:
 // accessors
 public:
     Model<BasisFunction>* model() const { return this->mModel; }
-    NumericSolver* numericSolver() const { return this->mNumericSolver; }
     dtype::size driveCount() const { return this->mDriveCount; }
     dtype::size measurmentCount() const { return this->mMeasurmentCount; }
     Matrix<dtype::real>* jacobian() const { return this->mJacobian; }
@@ -51,6 +50,10 @@ public:
     }
 
     Matrix<dtype::real>* voltageCalculation() const { return this->mVoltageCalculation; }
+
+protected:
+    NumericSolver* numericSolver() const { return this->mNumericSolver; }
+    Matrix<dtype::real>* elementalJacobianMatrix() const { return this->mElementalJacobianMatrix; }
 
 // member
 private:

@@ -55,61 +55,56 @@ void SparseConjugate::solve(SparseMatrix* A, Matrix<dtype::real>* x, Matrix<dtyp
         throw invalid_argument("SparseConjugate::solve: f == NULL");
     }
 
-    // temp for pointer swap
-    Matrix<dtype::real>* temp = NULL;
-
-    // calc mResiduum r = f - A * x
-    A->multiply(this->mResiduum, x, stream);
+    // calc residuum r = f - A * x
+    A->multiply(this->residuum(), x, stream);
 
     // regularize for dc free solution
     if (dcFree == true) {
-        this->mTempNumber->sum(x, stream);
-        Conjugate::addScalar(this->mResiduum, this->mTempNumber, this->rows(),
+        this->tempNumber()->sum(x, stream);
+        Conjugate::addScalar(this->residuum(), this->tempNumber(), this->rows(),
             this->columns(), stream);
     }
 
-    this->mResiduum->scalarMultiply(-1.0, stream);
-    this->mResiduum->add(f, stream);
+    this->residuum()->scalarMultiply(-1.0, stream);
+    this->residuum()->add(f, stream);
 
     // p = r
-    this->mProjection->copy(this->mResiduum, stream);
+    this->projection()->copy(this->residuum(), stream);
 
-    // calc mRSOld
-    this->mRSOld->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
+    // calc rsold
+    this->rsold()->vectorDotProduct(this->residuum(), this->residuum(), stream);
 
     // iterate
     for (dtype::size i = 0; i < iterations; i++) {
         // calc A * p
-        A->multiply(this->mTempVector, this->mProjection, stream);
+        A->multiply(this->tempVector(), this->projection(), stream);
 
         // regularize for dc free solution
         if (dcFree == true) {
-            this->mTempNumber->sum(this->mProjection, stream);
-            Conjugate::addScalar(this->mTempVector, this->mTempNumber, this->rows(),
+            this->tempNumber()->sum(this->projection(), stream);
+            Conjugate::addScalar(this->tempVector(), this->tempNumber(), this->rows(),
                 this->columns(), stream);
         }
 
         // calc p * A * p
-        this->mTempNumber->vectorDotProduct(this->mProjection, this->mTempVector, stream);
+        this->tempNumber()->vectorDotProduct(this->projection(), this->tempVector(), stream);
 
-        // update mResiduum
-        Conjugate::updateVector(this->mResiduum, this->mResiduum,
-            -1.0f, this->mTempVector, this->mRSOld, this->mTempNumber, stream);
+        // update residuum
+        Conjugate::updateVector(this->residuum(), this->residuum(),
+            -1.0f, this->tempVector(), this->rsold(), this->tempNumber(), stream);
 
         // update x
-        Conjugate::updateVector(x, x, 1.0f, this->mProjection,
-            this->mRSOld, this->mTempNumber, stream);
+        Conjugate::updateVector(x, x, 1.0f, this->projection(),
+            this->rsold(), this->tempNumber(), stream);
 
-        // calc mRSNew
-        this->mRSNew->vectorDotProduct(this->mResiduum, this->mResiduum, stream);
+        // calc rsnew
+        this->rsnew()->vectorDotProduct(this->residuum(), this->residuum(), stream);
 
-        // update mProjection
-        Conjugate::updateVector(this->mProjection, this->mResiduum,
-            1.0f, this->mProjection, this->mRSNew, this->mRSOld, stream);
+        // update projection
+        Conjugate::updateVector(this->projection(), this->residuum(),
+            1.0f, this->projection(), this->rsnew(), this->rsold(), stream);
 
-        // swap mRSOld and mRSNew
-        temp = this->mRSOld;
-        this->mRSOld = this->mRSNew;
-        this->mRSNew = temp;
+        // copy rsnew to rsold
+        this->rsold()->copy(this->rsnew());
     }
 }
