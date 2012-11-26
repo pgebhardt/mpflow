@@ -27,36 +27,32 @@ Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::real height,
     }
 
     // create electrode vectors
-    this->mElectrodesStart = new dtype::real[this->mCount * 2];
-    this->mElectrodesEnd = new dtype::real[this->mCount * 2];
+    this->mElectrodesStart = new dtype::real[this->count() * 2];
+    this->mElectrodesEnd = new dtype::real[this->count() * 2];
 
     // fill electrode vectors
     dtype::real angle = 0.0f;
-    dtype::real delta_angle = M_PI / (dtype::real)this->mCount;
-    for (dtype::size i = 0; i < this->mCount; i++) {
+    dtype::real deltaAngle = M_PI / (dtype::real)this->mCount;
+    for (dtype::index i = 0; i < this->mCount; i++) {
         // calc start angle
-        angle = (dtype::real)i * 2.0f * delta_angle;
+        angle = (dtype::real)i * 2.0f * deltaAngle;
 
         // calc start coordinates
-        this->mElectrodesStart[i * 2 + 0] = meshRadius * cos(angle);
-        this->mElectrodesStart[i * 2 + 1] = meshRadius * sin(angle);
+        this->electrodesStart(i)[0] = meshRadius * cos(angle);
+        this->electrodesStart(i)[1] = meshRadius * sin(angle);
 
         // calc end angle
-        angle += this->mWidth / meshRadius;
+        angle += this->width() / meshRadius;
 
         // calc end coordinates
-        this->mElectrodesEnd[i * 2 + 0] = meshRadius * cos(angle);
-        this->mElectrodesEnd[i * 2 + 1] = meshRadius * sin(angle);
+        this->electrodesEnd(i)[0] = meshRadius * cos(angle);
+        this->electrodesEnd(i)[1] = meshRadius * sin(angle);
     }
 }
 
 // delete electrodes class
 Electrodes::~Electrodes() {
     // free electrode vectors
-    if (this->mElectrodesStart != NULL) {
-        delete [] this->mElectrodesStart;
-    }
-    if (this->mElectrodesEnd != NULL) {
-        delete [] this->mElectrodesEnd;
-    }
+    delete [] this->mElectrodesStart;
+    delete [] this->mElectrodesEnd;
 }
