@@ -21,11 +21,11 @@ Basis::Basis(dtype::real* x, dtype::real* y) {
     }
 
     // create memory
-    this->mPoints = new dtype::real[Linear::nodesPerElement * 2];
-    this->mCoefficients = new dtype::real[Linear::nodesPerElement];
+    this->mPoints = new dtype::real[this->nodesPerElement * 2];
+    this->mCoefficients = new dtype::real[this->nodesPerElement];
 
     // init member
-    for (dtype::size i = 0; i < Linear::nodesPerElement; i++) {
+    for (dtype::size i = 0; i < this->nodesPerElement; i++) {
         this->mPoints[i * 2 + 0] = x[i];
         this->mPoints[i * 2 + 1] = y[i];
         this->mCoefficients[i] = 0.0;
