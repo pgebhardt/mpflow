@@ -241,8 +241,7 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
     dtype::real alpha = 0.0f;
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // calc alpha
-        alpha = (2.0f * n * M_PI / this->mesh()->height()) *
-            (2.0f * n * M_PI / this->mesh()->height());
+        alpha = math::square(2.0f * n * M_PI / this->mesh()->height());
 
         // init system matrix with 2d system matrix
         if (cublasScopy(handle, this->SMatrix()->dataRows() * SparseMatrix::blockSize,

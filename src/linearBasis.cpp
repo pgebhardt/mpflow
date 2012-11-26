@@ -128,45 +128,6 @@ dtype::real Linear::integrateGradientWithBasis(Linear& other) {
         this->mCoefficients[2] * other.coefficient(2));
 }
 
-// angle calculation for parametrisation
-dtype::real fasteit_basis_angle(dtype::real x, dtype::real y) {
-    if (x > 0.0f) {
-        return atan(y / x);
-    }
-    else if ((x < 0.0f) && (y >= 0.0f)) {
-        return atan(y / x) + M_PI;
-    }
-    else if ((x < 0.0f) && (y < 0.0f)) {
-        return atan(y / x) - M_PI;
-    }
-    else if ((x == 0.0f) && (y > 0.0f)) {
-        return M_PI / 2.0f;
-    }
-    else if ((x == 0.0f) && (y < 0.0f)) {
-        return - M_PI / 2.0f;
-    }
-    else {
-        return 0.0f;
-    }
-}
-
-// calc parametrisation
-dtype::real fasteit_basis_calc_parametrisation(dtype::real x, dtype::real y,
-    dtype::real offset) {
-    // convert to polar coordinates
-    dtype::real radius = sqrt(x * x + y * y);
-    dtype::real angle = fasteit_basis_angle(x, y) - offset / radius;
-
-    // correct angle
-    angle += (angle < M_PI) ? 2.0f * M_PI : 0.0f;
-    angle -= (angle > M_PI) ? 2.0f * M_PI : 0.0f;
-
-    // calc parameter
-    dtype::real parameter = angle * radius;
-
-    return parameter;
-}
-
 // integrate edge
 dtype::real Linear::integrateBoundaryEdge(dtype::real* x,
     dtype::real* y, dtype::real* start, dtype::real* end) {
@@ -182,13 +143,13 @@ dtype::real Linear::integrateBoundaryEdge(dtype::real* x,
     dtype::real* nodeParameter = new dtype::real[Linear::nodesPerEdge];
     nodeParameter[0] = 0.0f;
     for (dtype::size i = 0; i < Linear::nodesPerEdge; i++) {
-        nodeParameter[i] = fasteit_basis_calc_parametrisation(x[i], y[i], nodeParameter[0]);
+        nodeParameter[i] = math::circleParameter(x[i], y[i], nodeParameter[0]);
     }
 
     // calc integration boundary parameter
     dtype::real boundaryParameter[2];
-    boundaryParameter[0] = fasteit_basis_calc_parametrisation(start[0], start[1], nodeParameter[0]);
-    boundaryParameter[1] = fasteit_basis_calc_parametrisation(end[0], end[1], nodeParameter[0]);
+    boundaryParameter[0] = math::circleParameter(start[0], start[1], nodeParameter[0]);
+    boundaryParameter[1] = math::circleParameter(end[0], end[1], nodeParameter[0]);
 
     // integrate left triangle
     if (nodeParameter[1] < 0.0f) {

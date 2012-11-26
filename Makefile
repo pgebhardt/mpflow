@@ -28,7 +28,7 @@ _CUOBJ = matrix.cu_o sparse.cu_o model.cu_o conjugate.cu_o forward.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fasteit.hpp dtype.hpp matrix.hpp sparse.hpp mesh.hpp linearBasis.hpp electrodes.hpp model.hpp conjugate.hpp sparseConjugate.hpp forward.hpp inverse.hpp solver.hpp
+_DEPS = fasteit.hpp dtype.hpp math.hpp matrix.hpp sparse.hpp mesh.hpp linearBasis.hpp electrodes.hpp model.hpp conjugate.hpp sparseConjugate.hpp forward.hpp inverse.hpp solver.hpp
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Library

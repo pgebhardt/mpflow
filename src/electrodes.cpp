@@ -38,15 +38,15 @@ Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::real height,
         angle = (dtype::real)i * 2.0f * deltaAngle;
 
         // calc start coordinates
-        this->electrodesStart(i)[0] = meshRadius * cos(angle);
-        this->electrodesStart(i)[1] = meshRadius * sin(angle);
+        math::kartesian(this->electrodesStart(i)[0], this->electrodesStart(i)[1],
+            meshRadius, angle);
 
         // calc end angle
         angle += this->width() / meshRadius;
 
         // calc end coordinates
-        this->electrodesEnd(i)[0] = meshRadius * cos(angle);
-        this->electrodesEnd(i)[1] = meshRadius * sin(angle);
+        math::kartesian(this->electrodesEnd(i)[0], this->electrodesEnd(i)[1],
+            meshRadius, angle);
     }
 }
 

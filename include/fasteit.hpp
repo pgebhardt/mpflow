@@ -18,6 +18,7 @@
 namespace fastEIT {
 
 #include "dtype.hpp"
+#include "math.hpp"
 #include "matrix.hpp"
 #include "sparse.hpp"
 #include "mesh.hpp"
