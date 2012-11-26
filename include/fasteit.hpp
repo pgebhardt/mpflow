@@ -23,7 +23,7 @@ namespace fastEIT {
 #include "sparse.hpp"
 #include "mesh.hpp"
 #include "electrodes.hpp"
-#include "linearBasis.hpp"
+#include "basis.hpp"
 #include "model.hpp"
 #include "conjugate.hpp"
 #include "sparseConjugate.hpp"

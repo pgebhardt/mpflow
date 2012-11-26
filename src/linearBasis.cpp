@@ -11,26 +11,8 @@ using namespace fastEIT::basis;
 using namespace std;
 
 // create basis class
-Linear::Linear(dtype::real* x, dtype::real* y) {
-    // check input
-    if (x == NULL) {
-        throw invalid_argument("x == NULL");
-    }
-    if (y == NULL) {
-        throw invalid_argument("y == NULL");
-    }
-
-    // create memory
-    this->mPoints = new dtype::real[Linear::nodesPerElement * 2];
-    this->mCoefficients = new dtype::real[Linear::nodesPerElement];
-
-    // init member
-    for (dtype::size i = 0; i < Linear::nodesPerElement; i++) {
-        this->mPoints[i * 2 + 0] = x[i];
-        this->mPoints[i * 2 + 1] = y[i];
-        this->mCoefficients[i] = 0.0;
-    }
-
+Linear::Linear(dtype::real* x, dtype::real* y)
+    : Basis(x, y) {
     // calc coefficients (A * c = b)
     dtype::real Ainv[3][3];
     dtype::real B[3] = {1.0, 0.0, 0.0};
@@ -38,14 +20,14 @@ Linear::Linear(dtype::real* x, dtype::real* y) {
     // invert matrix A directly
     dtype::real a, b, c, d, e, f, g, h, i;
     a = 1.0;
-    b = this->mPoints[0 * 2 + 0];
-    c = this->mPoints[0 * 2 + 1];
+    b = this->point(0)[0];
+    c = this->point(0)[1];
     d = 1.0;
-    e = this->mPoints[1 * 2 + 0];
-    f = this->mPoints[1 * 2 + 1];
+    e = this->point(1)[0];
+    f = this->point(1)[1];
     g = 1.0;
-    h = this->mPoints[2 * 2 + 0];
-    i = this->mPoints[2 * 2 + 1];
+    h = this->point(2)[0];
+    i = this->point(2)[1];
     dtype::real det = a * (e * i - f * h) - b * (i * d - f * g) + c * (d * h - e * g);
 
     Ainv[0][0] = (e * i - f * h) / det;
@@ -59,38 +41,31 @@ Linear::Linear(dtype::real* x, dtype::real* y) {
     Ainv[2][2] = (a * e - b * d) / det;
 
     // calc coefficients
-    this->mCoefficients[0] = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
-    this->mCoefficients[1] = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
-    this->mCoefficients[2] = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
-}
-
-// delete basis class
-Linear::~Linear() {
-    // cleanup arrays
-    delete [] this->mPoints;
-    delete [] this->mCoefficients;
+    this->setCoefficient(0) = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
+    this->setCoefficient(1) = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
+    this->setCoefficient(2) = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
 }
 
 // evaluate basis function
 dtype::real Linear::operator() (dtype::real x, dtype::real y) {
     // calc result
-    return this->mCoefficients[0] + this->mCoefficients[1] * x +
-        this->mCoefficients[2] * y;
+    return this->coefficient(0) + this->coefficient(1) * x +
+        this->coefficient(2) * y;
 }
 
 // integrate with basis
 dtype::real Linear::integrateWithBasis(Linear& other) {
     // shorten variables
-    dtype::real x1 = this->mPoints[0 * 2 + 0];
-    dtype::real y1 = this->mPoints[0 * 2 + 1];
-    dtype::real x2 = this->mPoints[1 * 2 + 0];
-    dtype::real y2 = this->mPoints[1 * 2 + 1];
-    dtype::real x3 = this->mPoints[2 * 2 + 0];
-    dtype::real y3 = this->mPoints[2 * 2 + 1];
+    dtype::real x1 = this->point(0)[0];
+    dtype::real y1 = this->point(0)[1];
+    dtype::real x2 = this->point(1)[0];
+    dtype::real y2 = this->point(1)[1];
+    dtype::real x3 = this->point(2)[0];
+    dtype::real y3 = this->point(2)[1];
 
-    dtype::real ai = this->mCoefficients[0];
-    dtype::real bi = this->mCoefficients[1];
-    dtype::real ci = this->mCoefficients[2];
+    dtype::real ai = this->coefficient(0);
+    dtype::real bi = this->coefficient(1);
+    dtype::real ci = this->coefficient(2);
     dtype::real aj = other.coefficient(0);
     dtype::real bj = other.coefficient(1);
     dtype::real cj = other.coefficient(2);
@@ -118,14 +93,14 @@ dtype::real Linear::integrateWithBasis(Linear& other) {
 // integrate gradient with basis
 dtype::real Linear::integrateGradientWithBasis(Linear& other) {
     // calc area
-    dtype::real area = 0.5 * fabs((this->mPoints[1 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
-        (this->mPoints[2 * 2 + 1] - this->mPoints[0 * 2 + 1]) -
-        (this->mPoints[2 * 2 + 0] - this->mPoints[0 * 2 + 0]) *
-        (this->mPoints[1 * 2 + 1] - this->mPoints[0 * 2 + 1]));
+    dtype::real area = 0.5 * fabs((this->point(1)[0] - this->point(0)[0]) *
+        (this->point(2)[1] - this->point(0)[1]) -
+        (this->point(2)[0] - this->point(0)[0]) *
+        (this->point(1)[1] - this->point(0)[1]));
 
     // calc integral
-    return area * (this->mCoefficients[1] * other.coefficient(1) +
-        this->mCoefficients[2] * other.coefficient(2));
+    return area * (this->coefficient(1) * other.coefficient(1) +
+        this->coefficient(2) * other.coefficient(2));
 }
 
 // integrate edge
