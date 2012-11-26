@@ -172,4 +172,4 @@ Matrix<dtype::real>* InverseSolver<NumericSolver>::solve(Matrix<dtype::real>* ga
 }
 
 // specialisation
-template class fastEIT::InverseSolver<fastEIT::Numeric::Conjugate>;
+template class fastEIT::InverseSolver<fastEIT::numeric::Conjugate>;

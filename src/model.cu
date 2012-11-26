@@ -130,4 +130,4 @@ void Model<BasisFunction>::updateMatrix(SparseMatrix* matrix,
 }
 
 // specialisation
-template class fastEIT::Model<fastEIT::Basis::Linear>;
+template class fastEIT::Model<fastEIT::basis::Linear>;

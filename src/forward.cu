@@ -102,4 +102,4 @@ Matrix<dtype::real>* ForwardSolver<BasisFunction, NumericSolver>::calcJacobian(M
 }
 
 // specialisation
-template class fastEIT::ForwardSolver<fastEIT::Basis::Linear, fastEIT::Numeric::SparseConjugate>;
+template class fastEIT::ForwardSolver<fastEIT::basis::Linear, fastEIT::numeric::SparseConjugate>;

@@ -256,4 +256,4 @@ Matrix<dtype::real>* ForwardSolver<BasisFunction, NumericSolver>::solve(Matrix<d
 }
 
 // specialisation
-template class fastEIT::ForwardSolver<fastEIT::Basis::Linear, fastEIT::Numeric::SparseConjugate>;
+template class fastEIT::ForwardSolver<fastEIT::basis::Linear, fastEIT::numeric::SparseConjugate>;

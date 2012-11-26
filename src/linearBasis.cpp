@@ -7,7 +7,7 @@
 
 // namespaces
 using namespace fastEIT;
-using namespace fastEIT::Basis;
+using namespace fastEIT::basis;
 using namespace std;
 
 // create basis class

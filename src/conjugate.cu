@@ -7,7 +7,7 @@
 
 // namespaces
 using namespace fastEIT;
-using namespace fastEIT::Numeric;
+using namespace fastEIT::numeric;
 using namespace std;
 
 // add scalar kernel
