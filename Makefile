@@ -17,7 +17,7 @@ CXX = clang++
 NVCC = nvcc
 CFLAGS = -std=c++11 -fPIC
 NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -lineinfo
-LDFLAGS = -L/usr/local/lib -lcudart -lcublas
+LDFLAGS = -L/usr/local/cuda/lib64 -L/usr/local/lib -lcudart -lcublas
 
 # Object files
 _OBJ = mesh.o electrodes.o basis.o linearBasis.o model.o conjugate.o sparseConjugate.o forward.o inverse.o solver.o
