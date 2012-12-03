@@ -13,27 +13,34 @@ namespace fastEIT {
     // constructer and destructor
     public:
         Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real meshRadius);
-        virtual ~Electrodes();
+        virtual ~Electrodes() { }
 
     // accessor
     public:
         dtype::size count() const { return this->count_; }
-        inline const std::tuple<dtype::real, dtype::real> electrodes_start(dtype::index index) const {
-            assert(index < this->count());
-            return std::make_tuple(this->electrodes_start_[index * 2 + 0], this->electrodes_start_[index * 2 + 1]);
+        const std::vector<std::tuple<dtype::real, dtype::real>>& electrodes_start() const {
+            return this->electrodes_start_;
         }
-        inline const std::tuple<dtype::real, dtype::real> electrodes_end(dtype::index index) const {
-            assert(index < this->count());
-            return std::make_tuple(this->electrodes_end_[index * 2 + 0], this->electrodes_end_[index * 2 + 1]);
+        const std::vector<std::tuple<dtype::real, dtype::real>>& electrodes_end() const {
+            return this->electrodes_end_;
         }
         dtype::real width() const { return this->width_; }
         dtype::real height() const { return this->height_; }
 
+    // mutators
+    private:
+        std::vector<std::tuple<dtype::real, dtype::real>>& set_electrodes_start() {
+            return this->electrodes_start_;
+        }
+        std::vector<std::tuple<dtype::real, dtype::real>>& set_electrodes_end() {
+            return this->electrodes_end_;
+        }
+
     // member
     private:
         dtype::size count_;
-        dtype::real* electrodes_start_;
-        dtype::real* electrodes_end_;
+        std::vector<std::tuple<dtype::real, dtype::real>> electrodes_start_;
+        std::vector<std::tuple<dtype::real, dtype::real>> electrodes_end_;
         dtype::real width_;
         dtype::real height_;
     };
