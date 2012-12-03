@@ -47,11 +47,16 @@ namespace fastEIT {
         dtype::size columns() const { return this->columns_; }
         dtype::size data_rows() const { return this->data_rows_; }
         dtype::size data_columns() const { return this->data_columns_; }
+        const type& get(dtype::index i, dtype::index j) const {
+            assert(i < this->rows());
+            assert(j < this->columns());
+            return this->host_data_[i + j * this->data_rows()];
+        }
 
     // mutators
     public:
         type* set_device_data() { return this->device_data_; }
-        type& operator() (dtype::index i, dtype::index j) {
+        type& set(dtype::index i, dtype::index j) {
             assert(i < this->rows());
             assert(j < this->columns());
             return this->host_data_[i + j * this->data_rows()];

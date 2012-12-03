@@ -21,8 +21,8 @@ namespace fastEIT {
             Basis(std::array<std::tuple<dtype::real, dtype::real>, template_nodes_per_element> nodes) {
                 // init member
                 this->nodes_ = nodes;
-                for (dtype::index i = 0; i < this->nodes_per_element; i++) {
-                    this->set_coefficients()[i] = 0.0;
+                for (dtype::real& coefficient : this->set_coefficients()) {
+                    coefficient = 0.0f;
                 }
             }
 
@@ -56,7 +56,8 @@ namespace fastEIT {
         class Linear : public Basis<2, 3> {
         // constructor
         public:
-            Linear(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes);
+            Linear(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
+                dtype::index one);
 
         // mathematical evaluation of basis
         public:

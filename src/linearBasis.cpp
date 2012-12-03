@@ -13,11 +13,13 @@
 #include "../include/basis.hpp"
 
 // create basis class
-fastEIT::basis::Linear::Linear(std::array<std::tuple<dtype::real, dtype::real>, 3> nodes)
+fastEIT::basis::Linear::Linear(std::array<std::tuple<dtype::real, dtype::real>, 3> nodes,
+    dtype::index one)
     : fastEIT::basis::Basis<2, 3>(nodes) {
     // calc coefficients (A * c = b)
     dtype::real Ainv[3][3];
-    dtype::real B[3] = {1.0, 0.0, 0.0};
+    std::array<dtype::real, 3> B = {0.0, 0.0, 0.0};
+    B[one] = 1.0f;
 
     // invert matrix A directly
     dtype::real a, b, c, d, e, f, g, h, i;

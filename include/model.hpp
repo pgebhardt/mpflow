@@ -31,33 +31,21 @@ namespace fastEIT {
         // update model
         void update(const Matrix<dtype::real>& gamma, cublasHandle_t handle, cudaStream_t stream);
 
-    // cuda methods
-    private:
-        // update matrix
-        void updateMatrix(const Matrix<dtype::real>& elements, const Matrix<dtype::real>& gamma,
-            cudaStream_t stream, SparseMatrix& matrix);
-
-        // reduce matrix
-        void reduceMatrix(const Matrix<dtype::real>& intermediateMatrix, dtype::size density, cudaStream_t stream,
-            Matrix<dtype::real>& matrix);
-        void reduceMatrix(const Matrix<dtype::index>& intermediateMatrix, dtype::size density, cudaStream_t stream,
-            Matrix<dtype::index>& matrix);
-
     // accessors
     public:
         const Mesh& mesh() const { return *this->mesh_; }
         const Electrodes& electrodes() const { return *this->electrodes_; }
-        dtype::real sigmaRef() const { return this->sigma_ref_; }
+        dtype::real sigma_ref() const { return this->sigma_ref_; }
         const std::vector<SparseMatrix*>& system_matrices() const { return this->system_matrices_; }
-        const Matrix<dtype::real>& excitationMatrix() { return *this->excitation_matrix_; }
-        dtype::size numHarmonics() const { return this->num_harmonics_; }
+        const Matrix<dtype::real>& excitation_matrix() { return *this->excitation_matrix_; }
+        dtype::size num_harmonics() const { return this->num_harmonics_; }
 
     protected:
         const SparseMatrix& s_matrix() const { return *this->s_matrix_; }
         const SparseMatrix& r_matrix() const { return *this->r_matrix_; }
         const Matrix<dtype::index>& connectivity_matrix() const { return *this->connectivity_matrix_; }
         const Matrix<dtype::real>& elemental_s_matrix() const { return *this->elemental_s_matrix_; }
-        const Matrix<dtype::real>& elemental_r_matrix() const { return *this->elemental_r_atrix_; }
+        const Matrix<dtype::real>& elemental_r_matrix() const { return *this->elemental_r_matrix_; }
 
     // mutators
     protected:
@@ -67,7 +55,7 @@ namespace fastEIT {
         SparseMatrix& set_r_matrix() { return *this->r_matrix_; }
         Matrix<dtype::index>& set_connectivity_matrix() { return *this->connectivity_matrix_; }
         Matrix<dtype::real>& set_elemental_s_matrix()  { return *this->elemental_s_matrix_; }
-        Matrix<dtype::real>& set_elemental_r_matrix() { return *this->elemental_r_atrix_; }
+        Matrix<dtype::real>& set_elemental_r_matrix() { return *this->elemental_r_matrix_; }
 
     // member
     private:

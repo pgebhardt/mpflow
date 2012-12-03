@@ -15,7 +15,7 @@ INSTALL_LIB = /usr/local/lib
 # Copmiler
 CXX = clang++
 NVCC = nvcc
-CFLAGS = -std=c++11 -fPIC
+CFLAGS = -std=c++11 -stdlib=libc++ -fPIC
 NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -lineinfo
 LDFLAGS = -L/usr/local/cuda/lib64 -L/usr/local/lib -lcudart -lcublas
 
@@ -24,11 +24,11 @@ _OBJ = mesh.o electrodes.o linearBasis.o model.o #conjugate.o sparseConjugate.o 
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
-_CUOBJ = matrix.cu_o sparse.cu_o model.cu_o #conjugate.cu_o forward.cu_o
+_CUOBJ = matrix.cu_o sparse.cu_o modelKernel.cu_o #conjugate.cu_o forward.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fasteit.hpp dtype.hpp math.hpp matrix.hpp sparse.hpp mesh.hpp basis.hpp electrodes.hpp model.hpp conjugate.hpp sparseConjugate.hpp forward.hpp inverse.hpp solver.hpp
+_DEPS = fasteit.hpp dtype.hpp math.hpp matrix.hpp sparse.hpp mesh.hpp basis.hpp electrodes.hpp model.hpp modelKernel.hpp conjugate.hpp sparseConjugate.hpp forward.hpp inverse.hpp solver.hpp
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Library

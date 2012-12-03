@@ -128,7 +128,7 @@ void fastEIT::SparseMatrix::convert(const Matrix<dtype::real>& matrix, cudaStrea
     cudaStreamSynchronize(stream);
 
     // save density
-    this->set_density() = maxCount(0, 0);
+    this->set_density() = maxCount.get(0, 0);
 }
 
 // sparse matrix multiply kernel

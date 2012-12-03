@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <assert.h>
 #include <tuple>
+#include <array>
+#include <vector>
 
 // cuda includes
 #include <cuda_runtime.h>
