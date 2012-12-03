@@ -47,7 +47,7 @@ void fastEIT::model::reduceMatrix(const Matrix<dtype::real>& intermediateMatrix,
     // reduce matrix
     reduceMatrixKernel<dtype::real><<<blocks, threads, 0, stream>>>(
         intermediateMatrix.device_data(), shape.column_ids(), matrix.data_rows(),
-        shape.density(), matrix.set_device_data());
+        shape.density(), matrix.device_data());
 }
 void fastEIT::model::reduceMatrix(const Matrix<dtype::index>& intermediateMatrix, const SparseMatrix& shape, cudaStream_t stream,
     Matrix<dtype::index>& matrix) {
@@ -58,7 +58,7 @@ void fastEIT::model::reduceMatrix(const Matrix<dtype::index>& intermediateMatrix
     // reduce matrix
     reduceMatrixKernel<dtype::index><<<blocks, threads, 0, stream>>>(
         intermediateMatrix.device_data(), shape.column_ids(), matrix.data_rows(),
-        shape.density(), matrix.set_device_data());
+        shape.density(), matrix.device_data());
 }
 
 // update matrix kernel
@@ -97,5 +97,5 @@ void fastEIT::model::updateMatrix(const Matrix<dtype::real>& elements, const Mat
     // execute kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(
         connectivityMatrix.device_data(), elements.device_data(), gamma.device_data(),
-        sigmaRef, connectivityMatrix.data_rows(), matrix.density(), matrix.set_values());
+        sigmaRef, connectivityMatrix.data_rows(), matrix.density(), matrix.values());
 }

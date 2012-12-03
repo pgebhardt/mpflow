@@ -67,8 +67,8 @@ fastEIT::Model<BasisFunction>::~Model() {
     delete this->elemental_s_matrix_;
     delete this->elemental_r_matrix_;
 
-    for (dtype::index i = 0; i < this->num_harmonics() + 1; ++i) {
-        delete this->set_system_matrices()[i];
+    for (auto system_matrix : this->system_matrices()) {
+        delete system_matrix;
     }
 }
 
@@ -83,7 +83,7 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
 
     // calc initial system matrix
     // create matrices
-    Matrix<dtype::real> systemMatrix(this->mesh().nodes().rows(), this->mesh().nodes().rows(), stream);
+    Matrix<dtype::real> system_matrix(this->mesh().nodes().rows(), this->mesh().nodes().rows(), stream);
 
     // calc generate empty system matrix
     std::array<dtype::index, BasisFunction::nodes_per_element> indices;
@@ -94,20 +94,20 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
         // set system matrix elements
         for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
             for (dtype::index j = 0; j < BasisFunction::nodes_per_element; ++j) {
-                systemMatrix.set(indices[i], indices[j]) = 1.0f;
+                system_matrix(indices[i], indices[j]) = 1.0f;
             }
         }
     }
 
     // copy matrix to device
-    systemMatrix.copyToDevice(stream);
+    system_matrix.copyToDevice(stream);
 
     // create sparse matrices
-    this->s_matrix_ = new fastEIT::SparseMatrix(systemMatrix, stream);
-    this->r_matrix_ = new fastEIT::SparseMatrix(systemMatrix, stream);
+    this->s_matrix_ = new fastEIT::SparseMatrix(system_matrix, stream);
+    this->r_matrix_ = new fastEIT::SparseMatrix(system_matrix, stream);
 
     for (dtype::index harmonic = 0; harmonic < this->num_harmonics() + 1; ++harmonic) {
-        this->set_system_matrices().push_back(new fastEIT::SparseMatrix(systemMatrix, stream));
+        this->system_matrices().push_back(new fastEIT::SparseMatrix(system_matrix, stream));
     }
 }
 
@@ -120,26 +120,26 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     }
 
     // create intermediate matrices
-    Matrix<dtype::index> elementCount(this->mesh().nodes().rows(), this->mesh().nodes().rows(), stream);
-    Matrix<dtype::index> connectivityMatrix(this->connectivity_matrix().data_rows(),
-        elementCount.data_columns() * fastEIT::Matrix<dtype::index>::block_size, stream);
-    Matrix<dtype::real> elementalSMatrix(this->elemental_s_matrix().data_rows(),
-        elementCount.data_columns() * fastEIT::Matrix<dtype::real>::block_size, stream);
-    Matrix<dtype::real> elementalRMatrix(this->elemental_r_matrix().data_rows(),
-        elementCount.data_columns() * fastEIT::Matrix<dtype::real>::block_size, stream);
+    Matrix<dtype::index> element_count(this->mesh().nodes().rows(), this->mesh().nodes().rows(), stream);
+    Matrix<dtype::index> connectivity_matrix(this->connectivity_matrix().data_rows(),
+        element_count.data_columns() * fastEIT::Matrix<dtype::index>::block_size, stream);
+    Matrix<dtype::real> elemental_s_matrix(this->elemental_s_matrix().data_rows(),
+        element_count.data_columns() * fastEIT::Matrix<dtype::real>::block_size, stream);
+    Matrix<dtype::real> elemental_r_matrix(this->elemental_r_matrix().data_rows(),
+        element_count.data_columns() * fastEIT::Matrix<dtype::real>::block_size, stream);
 
     // init connectivityMatrix
-    for (dtype::size i = 0; i < connectivityMatrix.rows(); ++i) {
-        for (dtype::size j = 0; j < connectivityMatrix.columns(); ++j) {
-            connectivityMatrix.set(i, j) = -1;
+    for (dtype::size i = 0; i < connectivity_matrix.rows(); ++i) {
+        for (dtype::size j = 0; j < connectivity_matrix.columns(); ++j) {
+            connectivity_matrix(i, j) = -1;
         }
     }
     for (dtype::size i = 0; i < this->connectivity_matrix().rows(); ++i) {
         for (dtype::size j = 0; j < this->connectivity_matrix().columns(); ++j) {
-            this->set_connectivity_matrix().set(i, j) =  -1;
+            this->connectivity_matrix()(i, j) =  -1;
         }
     }
-    this->set_connectivity_matrix().copyToDevice(stream);
+    this->connectivity_matrix().copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
     std::array<dtype::index, BasisFunction::nodes_per_element> indices;
@@ -159,21 +159,21 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
         for (dtype::index i = 0; i < BasisFunction::nodes_per_element; i++) {
             for (dtype::index j = 0; j < BasisFunction::nodes_per_element; j++) {
                 // get current element count
-                temp = elementCount.get(indices[i], indices[j]);
+                temp = element_count(indices[i], indices[j]);
 
                 // set connectivity element
-                connectivityMatrix.set(indices[i], indices[j] + connectivityMatrix.data_rows() * temp) = element;
+                connectivity_matrix(indices[i], indices[j] + connectivity_matrix.data_rows() * temp) = element;
 
                 // set elemental system element
-                elementalSMatrix.set(indices[i], indices[j] + connectivityMatrix.data_rows() * temp) =
+                elemental_s_matrix(indices[i], indices[j] + connectivity_matrix.data_rows() * temp) =
                     basis_functions[i]->integrateGradientWithBasis(*basis_functions[j]);
 
                 // set elemental residual element
-                elementalRMatrix.set(indices[i], indices[j] + connectivityMatrix.data_rows() * temp) =
+                elemental_r_matrix(indices[i], indices[j] + connectivity_matrix.data_rows() * temp) =
                     basis_functions[i]->integrateWithBasis(*basis_functions[j]);
 
                 // increment element count
-                elementCount.set(indices[i], indices[j])++;
+                element_count(indices[i], indices[j])++;
             }
         }
 
@@ -184,26 +184,26 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     }
 
     // upload intermediate matrices
-    connectivityMatrix.copyToDevice(stream);
-    elementalSMatrix.copyToDevice(stream);
-    elementalRMatrix.copyToDevice(stream);
+    connectivity_matrix.copyToDevice(stream);
+    elemental_s_matrix.copyToDevice(stream);
+    elemental_r_matrix.copyToDevice(stream);
 
     // reduce matrices
-    model::reduceMatrix(connectivityMatrix, this->s_matrix(), stream,
-        this->set_connectivity_matrix());
-    model::reduceMatrix(elementalSMatrix, this->s_matrix(), stream,
-        this->set_elemental_s_matrix());
-    model::reduceMatrix(elementalRMatrix, this->s_matrix(), stream,
-        this->set_elemental_r_matrix());
+    model::reduceMatrix(connectivity_matrix, this->s_matrix(), stream,
+        this->connectivity_matrix());
+    model::reduceMatrix(elemental_s_matrix, this->s_matrix(), stream,
+        this->elemental_s_matrix());
+    model::reduceMatrix(elemental_r_matrix, this->s_matrix(), stream,
+        this->elemental_r_matrix());
 
     // create gamma
     Matrix<dtype::real> gamma(this->mesh().elements().rows(), 1, stream);
 
     // update matrices
     model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->set_s_matrix());
+        this->sigma_ref(), stream, this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->set_r_matrix());
+        this->sigma_ref(), stream, this->r_matrix());
 }
 
 // update model
@@ -217,9 +217,9 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 
     // update matrices
     model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->set_s_matrix());
+        this->sigma_ref(), stream, this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->set_r_matrix());
+        this->sigma_ref(), stream, this->r_matrix());
 
     // set cublas stream
     cublasSetStream(handle, stream);
@@ -232,7 +232,7 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 
         // init system matrix with 2d system matrix
         if (cublasScopy(handle, this->s_matrix().data_rows() * SparseMatrix::block_size,
-            this->set_s_matrix().values(), 1, this->system_matrices()[harmonic]->set_values(), 1)
+            this->s_matrix().values(), 1, this->system_matrices()[harmonic]->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -240,7 +240,7 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 
         // add alpha * residualMatrix
         if (cublasSaxpy(handle, this->s_matrix().data_rows() * SparseMatrix::block_size, &alpha,
-            this->set_r_matrix().values(), 1, this->system_matrices()[harmonic]->set_values(), 1)
+            this->r_matrix().values(), 1, this->system_matrices()[harmonic]->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -256,31 +256,35 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge> nodes,
         permutated_nodes;
 
-    for (dtype::index i = 0; i < this->mesh().boundary().rows(); ++i) {
-        for (dtype::index l = 0; l < this->electrodes().count(); ++l) {
+    for (dtype::index boundary_element = 0;
+        boundary_element < this->mesh().boundary().rows();
+        ++boundary_element) {
+        for (dtype::index electrode = 0;
+            electrode < this->electrodes().count();
+            ++electrode) {
             // get indices
-            indices = this->mesh().boundaryIndices(i);
+            indices = this->mesh().boundaryIndices(boundary_element);
 
             // get nodes
-            nodes = this->mesh().boundaryNodes(i);
+            nodes = this->mesh().boundaryNodes(boundary_element);
 
             // calc elements
-            for (dtype::index k = 0; k < BasisFunction::nodes_per_edge; ++k) {
+            for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
                 // permutate nodes
                 for (dtype::index n = 0; n < BasisFunction::nodes_per_edge; ++n) {
-                    permutated_nodes[n] = nodes[(k + n) % BasisFunction::nodes_per_edge];
+                    permutated_nodes[n] = nodes[(node + n) % BasisFunction::nodes_per_edge];
                 }
 
                 // add new value
-                this->set_excitation_matrix().set(indices[k], l) -= BasisFunction::integrateBoundaryEdge(permutated_nodes,
-                    this->electrodes().electrodes_start()[l], this->electrodes().electrodes_end()[l]) /
-                    this->electrodes().width();
+                this->excitation_matrix()(indices[node], electrode) -= BasisFunction::integrateBoundaryEdge(
+                    permutated_nodes, this->electrodes().electrodes_start()[electrode],
+                    this->electrodes().electrodes_end()[electrode]) / this->electrodes().width();
             }
         }
     }
 
     // upload matrix
-    this->set_excitation_matrix().copyToDevice(stream);
+    this->excitation_matrix().copyToDevice(stream);
 }
 
 // calc excitaion components

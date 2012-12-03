@@ -61,7 +61,7 @@ std::array<fastEIT::dtype::index, BasisFunction::nodes_per_element> fastEIT::Mes
     // get nodes
     for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
         // get index
-        indices[node] = this->elements().get(element, node);
+        indices[node] = this->elements()(element, node);
     }
 
     return indices;
@@ -81,8 +81,8 @@ std::array<std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>, BasisFunction
     // get nodes
     for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
         // get coordinates
-        nodes[node] = std::make_tuple(this->nodes().get(indices[node], 0),
-            this->nodes().get(indices[node], 1));
+        nodes[node] = std::make_tuple(this->nodes()(indices[node], 0),
+            this->nodes()(indices[node], 1));
     }
 
     return nodes;
@@ -99,7 +99,7 @@ std::array<fastEIT::dtype::index, BasisFunction::nodes_per_edge> fastEIT::Mesh<B
     // get nodes
     for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
         // get index
-        indices[node] = this->boundary().get(bound, node);
+        indices[node] = this->boundary()(bound, node);
     }
 
     return indices;
@@ -119,8 +119,8 @@ std::array<std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>, BasisFunction
     // get nodes
     for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
         // get coordinates
-        nodes[node] = std::make_tuple(this->nodes().get(indices[node], 0),
-            this->nodes().get(indices[node], 1));
+        nodes[node] = std::make_tuple(this->nodes()(indices[node], 0),
+            this->nodes()(indices[node], 1));
     }
 
     return nodes;

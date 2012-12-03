@@ -33,21 +33,21 @@ void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStre
     }
 
     // init struct
-    this->set_rows() = rows;
-    this->set_columns() = columns;
-    this->set_data_rows() = rows;
-    this->set_data_columns() = columns;
-    this->set_density() = 0;
+    this->rows_ = rows;
+    this->columns_ = columns;
+    this->data_rows_ = rows;
+    this->data_columns_ = columns;
+    this->density_ = 0;
     this->values_ = NULL;
     this->column_ids_ = NULL;
 
     // correct size to block size
     if ((this->rows() % Matrix<dtype::real>::block_size != 0) && (this->rows() != 1)) {
-        this->set_data_rows() = (this->rows() / Matrix<dtype::real>::block_size + 1) *
+        this->data_rows_ = (this->rows() / Matrix<dtype::real>::block_size + 1) *
             Matrix<dtype::real>::block_size;
     }
     if ((this->columns() % Matrix<dtype::real>::block_size != 0) && (this->columns() != 1)) {
-        this->set_data_columns() = (this->columns() / Matrix<dtype::real>::block_size + 1) *
+        this->data_columns_ = (this->columns() / Matrix<dtype::real>::block_size + 1) *
             Matrix<dtype::real>::block_size;
     }
 
@@ -120,15 +120,15 @@ void fastEIT::SparseMatrix::convert(const Matrix<dtype::real>& matrix, cudaStrea
     // execute kernel
     sparseCreateKernel<<<this->data_rows() / fastEIT::Matrix<dtype::real>::block_size,
         fastEIT::Matrix<dtype::real>::block_size, 0, stream>>>(matrix.device_data(), matrix.data_rows(),
-        matrix.data_columns(), this->set_values(), this->set_column_ids(), elementCount.set_device_data());
+        matrix.data_columns(), this->values(), this->column_ids(), elementCount.device_data());
 
     // get max count
-    maxCount.max(elementCount, maxCount.data_rows(), stream);
+    maxCount.max(elementCount, stream);
     maxCount.copyToHost(stream);
     cudaStreamSynchronize(stream);
 
     // save density
-    this->set_density() = maxCount.get(0, 0);
+    this->density() = maxCount(0, 0);
 }
 
 // sparse matrix multiply kernel
@@ -191,5 +191,5 @@ void fastEIT::SparseMatrix::multiply(const Matrix<dtype::real>& matrix, cudaStre
     // execute kernel
     sparseMultiplyKernel<<<global, local, 0, stream>>>(this->values(), this->column_ids(),
         matrix.device_data(), result.data_rows(), result.data_columns(), this->density(),
-        result.set_device_data());
+        result.device_data());
 }

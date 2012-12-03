@@ -47,15 +47,9 @@ namespace fastEIT {
 
     // mutators:
     public:
-        dtype::real* set_values() { return this->values_; }
-        dtype::index* set_column_ids() { return this->column_ids_; }
-
-    private:
-        dtype::size& set_rows() { return this->rows_; }
-        dtype::size& set_columns() { return this->columns_; }
-        dtype::size& set_data_rows() { return this->data_rows_; }
-        dtype::size& set_data_columns() { return this->data_columns_; }
-        dtype::size& set_density() { return this->density_; }
+        dtype::real* values() { return this->values_; }
+        dtype::index* column_ids() { return this->column_ids_; }
+        dtype::size& density() { return this->density_; }
 
     // member
     private:

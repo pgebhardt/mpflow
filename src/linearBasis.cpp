@@ -45,9 +45,9 @@ fastEIT::basis::Linear::Linear(std::array<std::tuple<dtype::real, dtype::real>, 
     Ainv[2][2] = (a * e - b * d) / det;
 
     // calc coefficients
-    this->set_coefficients()[0] = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
-    this->set_coefficients()[1] = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
-    this->set_coefficients()[2] = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
+    this->coefficients()[0] = Ainv[0][0] * B[0] + Ainv[0][1] * B[1] + Ainv[0][2] * B[2];
+    this->coefficients()[1] = Ainv[1][0] * B[0] + Ainv[1][1] * B[1] + Ainv[1][2] * B[2];
+    this->coefficients()[2] = Ainv[2][0] * B[0] + Ainv[2][1] * B[1] + Ainv[2][2] * B[2];
 }
 
 // evaluate basis function

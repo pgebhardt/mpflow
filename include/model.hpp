@@ -37,7 +37,7 @@ namespace fastEIT {
         const Electrodes& electrodes() const { return *this->electrodes_; }
         dtype::real sigma_ref() const { return this->sigma_ref_; }
         const std::vector<SparseMatrix*>& system_matrices() const { return this->system_matrices_; }
-        const Matrix<dtype::real>& excitation_matrix() { return *this->excitation_matrix_; }
+        const Matrix<dtype::real>& excitation_matrix() const { return *this->excitation_matrix_; }
         dtype::size num_harmonics() const { return this->num_harmonics_; }
 
     protected:
@@ -49,13 +49,13 @@ namespace fastEIT {
 
     // mutators
     protected:
-        std::vector<SparseMatrix*>& set_system_matrices() { return this->system_matrices_; }
-        Matrix<dtype::real>& set_excitation_matrix() { return *this->excitation_matrix_; }
-        SparseMatrix& set_s_matrix() { return *this->s_matrix_; }
-        SparseMatrix& set_r_matrix() { return *this->r_matrix_; }
-        Matrix<dtype::index>& set_connectivity_matrix() { return *this->connectivity_matrix_; }
-        Matrix<dtype::real>& set_elemental_s_matrix()  { return *this->elemental_s_matrix_; }
-        Matrix<dtype::real>& set_elemental_r_matrix() { return *this->elemental_r_matrix_; }
+        std::vector<SparseMatrix*>& system_matrices() { return this->system_matrices_; }
+        Matrix<dtype::real>& excitation_matrix() { return *this->excitation_matrix_; }
+        SparseMatrix& s_matrix() { return *this->s_matrix_; }
+        SparseMatrix& r_matrix() { return *this->r_matrix_; }
+        Matrix<dtype::index>& connectivity_matrix() { return *this->connectivity_matrix_; }
+        Matrix<dtype::real>& elemental_s_matrix()  { return *this->elemental_s_matrix_; }
+        Matrix<dtype::real>& elemental_r_matrix() { return *this->elemental_r_matrix_; }
 
     // member
     private:

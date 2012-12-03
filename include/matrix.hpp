@@ -36,8 +36,8 @@ namespace fastEIT {
     // reduce methods
     public:
         void sum(const Matrix<type>& value, cudaStream_t stream);
-        void min(const Matrix<type>& value, dtype::size maxIndex, cudaStream_t stream);
-        void max(const Matrix<type>& value, dtype::size maxIndex, cudaStream_t stream);
+        void min(const Matrix<type>& value, cudaStream_t stream);
+        void max(const Matrix<type>& value, cudaStream_t stream);
 
     // accessors
     public:
@@ -47,7 +47,7 @@ namespace fastEIT {
         dtype::size columns() const { return this->columns_; }
         dtype::size data_rows() const { return this->data_rows_; }
         dtype::size data_columns() const { return this->data_columns_; }
-        const type& get(dtype::index i, dtype::index j) const {
+        const type& operator() (dtype::index i, dtype::index j) const {
             assert(i < this->rows());
             assert(j < this->columns());
             return this->host_data_[i + j * this->data_rows()];
@@ -55,15 +55,15 @@ namespace fastEIT {
 
     // mutators
     public:
-        type* set_device_data() { return this->device_data_; }
-        type& set(dtype::index i, dtype::index j) {
+        type* device_data() { return this->device_data_; }
+        type& operator() (dtype::index i, dtype::index j) {
             assert(i < this->rows());
             assert(j < this->columns());
             return this->host_data_[i + j * this->data_rows()];
         }
 
     protected:
-        type* set_host_data() { return this->host_data_; }
+        type* host_data() { return this->host_data_; }
 
     // member
     private:

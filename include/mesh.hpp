@@ -29,7 +29,7 @@ namespace fastEIT {
         std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge>
             boundaryNodes(dtype::index bound) const;
 
-    // access methods
+    // accessors
     public:
         const Matrix<dtype::real>& nodes() const { return *this->nodes_; }
         const Matrix<dtype::index>& elements() const { return *this->elements_; }

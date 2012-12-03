@@ -21,7 +21,7 @@ namespace fastEIT {
             Basis(std::array<std::tuple<dtype::real, dtype::real>, template_nodes_per_element> nodes) {
                 // init member
                 this->nodes_ = nodes;
-                for (dtype::real& coefficient : this->set_coefficients()) {
+                for (dtype::real& coefficient : this->coefficients()) {
                     coefficient = 0.0f;
                 }
             }
@@ -44,7 +44,7 @@ namespace fastEIT {
 
         // mutators
         protected:
-            std::array<dtype::real, nodes_per_element>& set_coefficients() { return this->coefficients_; }
+            std::array<dtype::real, nodes_per_element>& coefficients() { return this->coefficients_; }
 
         // member
         private:
