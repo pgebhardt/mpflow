@@ -6,59 +6,69 @@
 #ifndef FASTEIT_MATRIX_HPP
 #define FASTEIT_MATRIX_HPP
 
-// matrix class definition
-template <class type>
-class Matrix {
-public:
-    // constructor and destructor
-    Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream=NULL);
-    virtual ~Matrix();
+// namespace fastEIT
+namespace fastEIT {
+    // matrix class definition
+    template <class type>
+    class Matrix {
+    public:
+        // constructor and destructor
+        Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream);
+        virtual ~Matrix();
 
-public:
-    // copy methods
-    Matrix<type>* copy(Matrix<type>* other, cudaStream_t stream=NULL);
-    Matrix<type>* copyToDevice(cudaStream_t stream=NULL);
-    Matrix<type>* copyToHost(cudaStream_t stream=NULL);
+    public:
+        // copy methods
+        void copy(const Matrix<type>& other, cudaStream_t stream);
+        void copyToDevice(cudaStream_t stream);
+        void copyToHost(cudaStream_t stream);
 
-public:
-    // block size
-    static const dtype::size blockSize = 16;
+    public:
+        // block size
+        static const dtype::size block_size = 16;
 
-// mathematical methods
-public:
-    Matrix<type>* add(Matrix<type>* value, cudaStream_t stream=NULL);
-    Matrix<type>* multiply(Matrix<type>* A, Matrix<type>* B, cublasHandle_t handle, cudaStream_t stream=NULL);
-    Matrix<type>* scalarMultiply(type scalar, cudaStream_t stream=NULL);
-    Matrix<type>* vectorDotProduct(Matrix<type>* A, Matrix<type>* B, cudaStream_t stream=NULL);
+    // mathematical methods
+    public:
+        void add(const Matrix<type>& value, cudaStream_t stream);
+        void multiply(const Matrix<type>& A, const Matrix<type>& B, cublasHandle_t handle, cudaStream_t stream);
+        void scalarMultiply(type scalar, cudaStream_t stream);
+        void vectorDotProduct(const Matrix<type>& A, const Matrix<type>& B, cudaStream_t stream);
 
-// reduce methods
-public:
-    Matrix<type>* sum(Matrix<type>* value, cudaStream_t stream=NULL);
-    Matrix<type>* min(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream=NULL);
-    Matrix<type>* max(Matrix<type>* value, dtype::size maxIndex, cudaStream_t stream=NULL);
+    // reduce methods
+    public:
+        void sum(const Matrix<type>& value, cudaStream_t stream);
+        void min(const Matrix<type>& value, dtype::size maxIndex, cudaStream_t stream);
+        void max(const Matrix<type>& value, dtype::size maxIndex, cudaStream_t stream);
 
-// accessors
-public:
-    type* hostData() { return this->mHostData; }
-    type* deviceData() { return this->mDeviceData; }
-    dtype::size rows() { return this->mRows; }
-    dtype::size columns() { return this->mColumns; }
-    dtype::size dataRows() { return this->mDataRows; }
-    dtype::size dataColumns() { return this->mDataColumns; }
-    inline type& operator() (dtype::index i, dtype::index j) {
-        assert(i < this->rows());
-        assert(j < this->columns());
-        return this->mHostData[i + j * this->dataRows()];
-    }
+    // accessors
+    public:
+        const type* host_data() const { return this->host_data_; }
+        const type* device_data() const { return this->device_data_; }
+        dtype::size rows() const { return this->rows_; }
+        dtype::size columns() const { return this->columns_; }
+        dtype::size data_rows() const { return this->data_rows_; }
+        dtype::size data_columns() const { return this->data_columns_; }
 
-// member
-private:
-    type* mHostData;
-    type* mDeviceData;
-    dtype::size mRows;
-    dtype::size mColumns;
-    dtype::size mDataRows;
-    dtype::size mDataColumns;
-};
+    // mutators
+    public:
+        type* set_device_data() { return this->device_data_; }
+        type& operator() (dtype::index i, dtype::index j) {
+            assert(i < this->rows());
+            assert(j < this->columns());
+            return this->host_data_[i + j * this->data_rows()];
+        }
+
+    protected:
+        type* set_host_data() { return this->host_data_; }
+
+    // member
+    private:
+        type* host_data_;
+        type* device_data_;
+        dtype::size rows_;
+        dtype::size columns_;
+        dtype::size data_rows_;
+        dtype::size data_columns_;
+    };
+}
 
 #endif
