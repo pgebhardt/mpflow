@@ -37,7 +37,7 @@ LIB = libfasteit.so
 # Rule for library
 $(LIB): $(OBJ) $(CUOBJ) $(DEPS)
 	mkdir -p $(BUILD)
-	$(CXX) -std=c++11 -stdlib=libc++ -shared -o $(BUILD)/$(LIB) $(OBJ) $(CUOBJ) $(LDFLAGS)
+	$(CXX) -shared -o $(BUILD)/$(LIB) $(OBJ) $(CUOBJ) $(LDFLAGS)
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.cpp $(DEPS)
