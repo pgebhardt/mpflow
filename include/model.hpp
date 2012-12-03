@@ -13,7 +13,7 @@ namespace fastEIT {
     class Model {
     // constructor and destructor
     public:
-        Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigmaRef,
+        Model(Mesh<BasisFunction>& mesh, Electrodes& electrodes, dtype::real sigmaRef,
             dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
         virtual ~Model();
 
@@ -33,7 +33,7 @@ namespace fastEIT {
 
     // accessors
     public:
-        const Mesh& mesh() const { return *this->mesh_; }
+        const Mesh<BasisFunction>& mesh() const { return *this->mesh_; }
         const Electrodes& electrodes() const { return *this->electrodes_; }
         dtype::real sigma_ref() const { return this->sigma_ref_; }
         const std::vector<SparseMatrix*>& system_matrices() const { return this->system_matrices_; }
@@ -59,7 +59,7 @@ namespace fastEIT {
 
     // member
     private:
-        Mesh* mesh_;
+        Mesh<BasisFunction>* mesh_;
         Electrodes* electrodes_;
         dtype::real sigma_ref_;
         std::vector<SparseMatrix*> system_matrices_;

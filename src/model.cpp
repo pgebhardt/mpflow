@@ -24,7 +24,7 @@
 
 // create solver model
 template <class BasisFunction>
-fastEIT::Model<BasisFunction>::Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigmaRef,
+fastEIT::Model<BasisFunction>::Model(Mesh<BasisFunction>& mesh, Electrodes& electrodes, dtype::real sigmaRef,
     dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
     : mesh_(&mesh), electrodes_(&electrodes), sigma_ref_(sigmaRef), s_matrix_(NULL), r_matrix_(NULL),
         excitation_matrix_(NULL), connectivity_matrix_(NULL), elemental_s_matrix_(NULL),
@@ -86,17 +86,15 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
     Matrix<dtype::real> systemMatrix(this->mesh().nodes().rows(), this->mesh().nodes().rows(), stream);
 
     // calc generate empty system matrix
-    std::array<dtype::index, BasisFunction::nodes_per_element> id;
-    for (dtype::index k = 0; k < this->mesh().elements().rows(); ++k) {
+    std::array<dtype::index, BasisFunction::nodes_per_element> indices;
+    for (dtype::index element = 0; element < this->mesh().elements().rows(); ++element) {
         // get nodes for element
-        for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
-            id[i] = this->mesh().elements().get(k, i);
-        }
+        indices = this->mesh().elementIndices(element);
 
         // set system matrix elements
         for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
             for (dtype::index j = 0; j < BasisFunction::nodes_per_element; ++j) {
-                systemMatrix.set(id[i], id[j]) = 1.0f;
+                systemMatrix.set(indices[i], indices[j]) = 1.0f;
             }
         }
     }
@@ -144,48 +142,44 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     this->set_connectivity_matrix().copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
-    std::array<dtype::index, BasisFunction::nodes_per_element> id;
-    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element> nodes;
-    std::array<BasisFunction*, BasisFunction::nodes_per_element> basis;
+    std::array<dtype::index, BasisFunction::nodes_per_element> indices;
+    std::array<BasisFunction*, BasisFunction::nodes_per_element> basis_functions;
     dtype::real temp;
 
-    for (dtype::index k = 0; k < this->mesh().elements().rows(); ++k) {
-        // get nodes for element
-        for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
-            id[i] = this->mesh().elements().get(k, i);
-            nodes[i] = std::make_tuple(this->mesh().nodes().get(id[i], 0), this->mesh().nodes().get(id[i], 1));
-        }
+    for (dtype::index element = 0; element < this->mesh().elements().rows(); ++element) {
+        // get element indices
+        indices = this->mesh().elementIndices(element);
 
         // calc corresponding basis functions
-        for (dtype::size i = 0; i < BasisFunction::nodes_per_element; ++i) {
-            basis[i] = new BasisFunction(nodes, i);
+        for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
+            basis_functions[node] = new BasisFunction(this->mesh().elementNodes(element), node);
         }
 
         // set connectivity and elemental residual matrix elements
-        for (dtype::size i = 0; i < BasisFunction::nodes_per_element; i++) {
-            for (dtype::size j = 0; j < BasisFunction::nodes_per_element; j++) {
+        for (dtype::index i = 0; i < BasisFunction::nodes_per_element; i++) {
+            for (dtype::index j = 0; j < BasisFunction::nodes_per_element; j++) {
                 // get current element count
-                temp = elementCount.get(id[i], id[j]);
+                temp = elementCount.get(indices[i], indices[j]);
 
                 // set connectivity element
-                connectivityMatrix.set(id[i], id[j] + connectivityMatrix.data_rows() * temp) = k;
+                connectivityMatrix.set(indices[i], indices[j] + connectivityMatrix.data_rows() * temp) = element;
 
                 // set elemental system element
-                elementalSMatrix.set(id[i], id[j] + connectivityMatrix.data_rows() * temp) =
-                    basis[i]->integrateGradientWithBasis(*basis[j]);
+                elementalSMatrix.set(indices[i], indices[j] + connectivityMatrix.data_rows() * temp) =
+                    basis_functions[i]->integrateGradientWithBasis(*basis_functions[j]);
 
                 // set elemental residual element
-                elementalRMatrix.set(id[i], id[j] + connectivityMatrix.data_rows() * temp) =
-                    basis[i]->integrateWithBasis(*basis[j]);
+                elementalRMatrix.set(indices[i], indices[j] + connectivityMatrix.data_rows() * temp) =
+                    basis_functions[i]->integrateWithBasis(*basis_functions[j]);
 
                 // increment element count
-                elementCount.set(id[i], id[j])++;
+                elementCount.set(indices[i], indices[j])++;
             }
         }
 
         // cleanup
-        for (dtype::size i = 0; i < BasisFunction::nodes_per_element; i++) {
-            delete basis[i];
+        for (BasisFunction*& basis : basis_functions) {
+            delete basis;
         }
     }
 
@@ -258,20 +252,17 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 template <class BasisFunction>
 void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
-    std::array<dtype::index, BasisFunction::nodes_per_edge> id;
+    std::array<dtype::index, BasisFunction::nodes_per_edge> indices;
     std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge> nodes,
         permutated_nodes;
 
     for (dtype::index i = 0; i < this->mesh().boundary().rows(); ++i) {
         for (dtype::index l = 0; l < this->electrodes().count(); ++l) {
-            for (dtype::index k = 0; k < BasisFunction::nodes_per_edge; ++k) {
-                // get node id
-                id[k] = this->mesh().boundary().get(i, k);
+            // get indices
+            indices = this->mesh().boundaryIndices(i);
 
-                // get coordinates
-                nodes[k] = std::make_tuple(this->mesh().nodes().get(id[k], 0),
-                    this->mesh().nodes().get(id[k], 1));
-            }
+            // get nodes
+            nodes = this->mesh().boundaryNodes(i);
 
             // calc elements
             for (dtype::index k = 0; k < BasisFunction::nodes_per_edge; ++k) {
@@ -281,7 +272,7 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
                 }
 
                 // add new value
-                this->set_excitation_matrix().set(id[k], l) -= BasisFunction::integrateBoundaryEdge(permutated_nodes,
+                this->set_excitation_matrix().set(indices[k], l) -= BasisFunction::integrateBoundaryEdge(permutated_nodes,
                     this->electrodes().electrodes_start()[l], this->electrodes().electrodes_end()[l]) /
                     this->electrodes().width();
             }

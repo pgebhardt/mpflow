@@ -9,12 +9,25 @@
 // namespace fastEIT
 namespace fastEIT {
     // mesh class definition
+    template <
+        class BasisFunction
+    >
     class Mesh {
     // constructor and destructor
     public:
         Mesh(Matrix<dtype::real>& nodes, Matrix<dtype::index>& elements,
             Matrix<dtype::index>& boundary, dtype::real radius, dtype::real height);
         virtual ~Mesh();
+
+    // helper methods
+    public:
+        std::array<dtype::index, BasisFunction::nodes_per_element> elementIndices(dtype::index element) const;
+        std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element>
+            elementNodes(dtype::index element) const;
+
+        std::array<dtype::index, BasisFunction::nodes_per_edge> boundaryIndices(dtype::index bound) const;
+        std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge>
+            boundaryNodes(dtype::index bound) const;
 
     // access methods
     public:
