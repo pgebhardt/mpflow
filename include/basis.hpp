@@ -83,10 +83,10 @@ namespace basis {
 
     // mathematical evaluation of basis
     public:
-        virtual dtype::real integrateWithBasis(Linear& other);
-        virtual dtype::real integrateGradientWithBasis(Linear& other);
-        static dtype::real integrateBoundaryEdge(dtype::real* x, dtype::real* y,
-            dtype::real* start, dtype::real* end);
+        virtual dtype::real integrateWithBasis(const Linear& other);
+        virtual dtype::real integrateGradientWithBasis(const Linear& other);
+        static dtype::real integrateBoundaryEdge(const dtype::real* x, const dtype::real* y,
+            const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end);
 
     // operator
     public:

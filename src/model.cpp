@@ -287,7 +287,7 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
             for (dtype::size k = 0; k < BasisFunction::nodesPerEdge; k++) {
                 // add new value
                 (*this->excitationMatrix())(id[k], l) -= BasisFunction::integrateBoundaryEdge(&x[k], &y[k],
-                    this->electrodes()->electrodesStart(l), this->electrodes()->electrodesEnd(l)) /
+                    this->electrodes()->electrodes_start(l), this->electrodes()->electrodes_end(l)) /
                     this->electrodes()->width();
             }
         }

@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_ELECTRODES_HPP
-#define FASTEIT_ELECTRODES_HPP
+#ifndef FASTEIT_INCLUDE_ELECTRODES_HPP
+#define FASTEIT_INCLUDE_ELECTRODES_HPP
 
 // Electrodes class definition
 class Electrodes {
@@ -13,27 +13,27 @@ public:
     Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real meshRadius);
     virtual ~Electrodes();
 
-// access methods
+// accessor
 public:
-    dtype::size count() const { return this->mCount; }
-    dtype::real* electrodesStart(dtype::index id) const {
-        assert(id < this->count());
-        return &this->mElectrodesStart[id * 2];
+    dtype::size count() const { return this->count_; }
+    inline const std::tuple<dtype::real, dtype::real> electrodes_start(dtype::index index) const {
+        assert(index < this->count());
+        return std::make_tuple(this->electrodes_start_[index * 2 + 0], this->electrodes_start_[index * 2 + 1]);
     }
-    dtype::real* electrodesEnd(dtype::index id) const {
-        assert(id < this->count());
-        return &this->mElectrodesEnd[id * 2];
+    inline const std::tuple<dtype::real, dtype::real> electrodes_end(dtype::index index) const {
+        assert(index < this->count());
+        return std::make_tuple(this->electrodes_end_[index * 2 + 0], this->electrodes_end_[index * 2 + 1]);
     }
-    dtype::real width() const { return this->mWidth; }
-    dtype::real height() const { return this->mHeight; }
+    dtype::real width() const { return this->width_; }
+    dtype::real height() const { return this->height_; }
 
 // member
 private:
-    dtype::size mCount;
-    dtype::real* mElectrodesStart;
-    dtype::real* mElectrodesEnd;
-    dtype::real mWidth;
-    dtype::real mHeight;
+    dtype::size count_;
+    dtype::real* electrodes_start_;
+    dtype::real* electrodes_end_;
+    dtype::real width_;
+    dtype::real height_;
 };
 
 #endif

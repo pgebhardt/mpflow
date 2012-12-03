@@ -9,6 +9,7 @@
 // std lib includes
 #include <stdexcept>
 #include <assert.h>
+#include <tuple>
 
 // cuda includes
 #include <cuda_runtime.h>

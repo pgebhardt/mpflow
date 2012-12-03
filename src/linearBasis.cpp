@@ -54,7 +54,7 @@ dtype::real Linear::operator() (dtype::real x, dtype::real y) {
 }
 
 // integrate with basis
-dtype::real Linear::integrateWithBasis(Linear& other) {
+dtype::real Linear::integrateWithBasis(const Linear& other) {
     // shorten variables
     dtype::real x1 = this->point(0)[0];
     dtype::real y1 = this->point(0)[1];
@@ -91,7 +91,7 @@ dtype::real Linear::integrateWithBasis(Linear& other) {
 }
 
 // integrate gradient with basis
-dtype::real Linear::integrateGradientWithBasis(Linear& other) {
+dtype::real Linear::integrateGradientWithBasis(const Linear& other) {
     // calc area
     dtype::real area = 0.5 * fabs((this->point(1)[0] - this->point(0)[0]) *
         (this->point(2)[1] - this->point(0)[1]) -
@@ -104,10 +104,10 @@ dtype::real Linear::integrateGradientWithBasis(Linear& other) {
 }
 
 // integrate edge
-dtype::real Linear::integrateBoundaryEdge(dtype::real* x,
-    dtype::real* y, dtype::real* start, dtype::real* end) {
+dtype::real integrateBoundaryEdge(const dtype::real* x, const dtype::real* y,
+    const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end) {
     // check input
-    if ((x == NULL) || (y == NULL) || (start == NULL) || (end == NULL)) {
+    if ((x == NULL) || (y == NULL)) {
         return 0.0f;
     }
 
@@ -123,8 +123,8 @@ dtype::real Linear::integrateBoundaryEdge(dtype::real* x,
 
     // calc integration boundary parameter
     dtype::real boundaryParameter[2];
-    boundaryParameter[0] = math::circleParameter(start[0], start[1], nodeParameter[0]);
-    boundaryParameter[1] = math::circleParameter(end[0], end[1], nodeParameter[0]);
+    boundaryParameter[0] = math::circleParameter(std::get<0>(start), std::get<1>(start), nodeParameter[0]);
+    boundaryParameter[1] = math::circleParameter(std::get<0>(end), std::get<1>(end), nodeParameter[0]);
 
     // integrate left triangle
     if (nodeParameter[1] < 0.0f) {
