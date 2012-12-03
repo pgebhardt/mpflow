@@ -6,78 +6,83 @@
 #ifndef FASTEIT_MODEL_HPP
 #define FASTEIT_MODEL_HPP
 
-// model class definition
-template <class BasisFunction>
-class Model {
-// constructor and destructor
-public:
-    Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigmaRef,
-        dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream=NULL);
-    virtual ~Model();
+// namespaces fastEIT
+namespace fastEIT {
+    // model class definition
+    template <class BasisFunction>
+    class Model {
+    // constructor and destructor
+    public:
+        Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigmaRef,
+            dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
+        virtual ~Model();
 
-// init methods
-private:
-    void init(cublasHandle_t handle, cudaStream_t stream=NULL);
-    void createSparseMatrices(cublasHandle_t handle, cudaStream_t stream=NULL);
-    void initExcitationMatrix(cudaStream_t stream=NULL);
+    // init methods
+    private:
+        void init(cublasHandle_t handle, cudaStream_t stream);
+        void createSparseMatrices(cublasHandle_t handle, cudaStream_t stream);
+        void initExcitationMatrix(cudaStream_t stream);
 
-public:
-    // calc excitaion components
-    void calcExcitationComponents(Matrix<dtype::real>** component, Matrix<dtype::real>* pattern,
-        cublasHandle_t handle, cudaStream_t stream=NULL);
+    public:
+        // calc excitaion components
+        void calcExcitationComponents(const Matrix<dtype::real>& pattern, cublasHandle_t handle, cudaStream_t stream,
+            std::vector<Matrix<dtype::real>*>& components);
 
-    // update model
-    void update(Matrix<dtype::real>* gamma, cublasHandle_t handle, cudaStream_t stream=NULL);
+        // update model
+        void update(const Matrix<dtype::real>& gamma, cublasHandle_t handle, cudaStream_t stream);
 
-// cuda methods
-private:
-    // update matrix
-    void updateMatrix(SparseMatrix* matrix, Matrix<dtype::real>* elements,
-        Matrix<dtype::real>* gamma, cudaStream_t stream=NULL);
+    // cuda methods
+    private:
+        // update matrix
+        void updateMatrix(const Matrix<dtype::real>& elements, const Matrix<dtype::real>& gamma,
+            cudaStream_t stream, SparseMatrix& matrix);
 
-    // reduce matrix
-    void reduceMatrix(Matrix<dtype::real>* matrix, Matrix<dtype::real>* intermediateMatrix,
-        dtype::size density, cudaStream_t stream=NULL);
-    void reduceMatrix(Matrix<dtype::index>* matrix, Matrix<dtype::index>* intermediateMatrix,
-        dtype::size density, cudaStream_t stream=NULL);
+        // reduce matrix
+        void reduceMatrix(const Matrix<dtype::real>& intermediateMatrix, dtype::size density, cudaStream_t stream,
+            Matrix<dtype::real>& matrix);
+        void reduceMatrix(const Matrix<dtype::index>& intermediateMatrix, dtype::size density, cudaStream_t stream,
+            Matrix<dtype::index>& matrix);
 
-// access methods
-public:
-    Mesh* mesh() const { return this->mMesh; }
-    Electrodes* electrodes() const { return this->mElectrodes; }
-    dtype::real sigmaRef() const { return this->mSigmaRef; }
-    SparseMatrix* systemMatrix(dtype::size id) {
-        assert(id <= this->mNumHarmonics);
-        return this->mSystemMatrix[id];
-    }
-    Matrix<dtype::real>* excitationMatrix() { return this->mExcitationMatrix; }
-    dtype::size numHarmonics() { return this->mNumHarmonics; }
+    // accessors
+    public:
+        const Mesh& mesh() const { return *this->mesh_; }
+        const Electrodes& electrodes() const { return *this->electrodes_; }
+        dtype::real sigmaRef() const { return this->sigma_ref_; }
+        const std::vector<SparseMatrix*>& system_matrices() const { return this->system_matrices_; }
+        const Matrix<dtype::real>& excitationMatrix() { return *this->excitation_matrix_; }
+        dtype::size numHarmonics() const { return this->num_harmonics_; }
 
-protected:
-    SparseMatrix* SMatrix() const { return this->mSMatrix; }
-    SparseMatrix* RMatrix() const { return this->mRMatrix; }
-    Matrix<dtype::index>* connectivityMatrix() const { return this->mConnectivityMatrix; }
-    Matrix<dtype::real>* elementalSMatrix() const { return this->mElementalSMatrix; }
-    Matrix<dtype::real>* elementalRMatrix() const { return this->mElementalRMatrix; }
+    protected:
+        const SparseMatrix& s_matrix() const { return *this->s_matrix_; }
+        const SparseMatrix& r_matrix() const { return *this->r_matrix_; }
+        const Matrix<dtype::index>& connectivity_matrix() const { return *this->connectivity_matrix_; }
+        const Matrix<dtype::real>& elemental_s_matrix() const { return *this->elemental_s_matrix_; }
+        const Matrix<dtype::real>& elemental_r_matrix() const { return *this->elemental_r_atrix_; }
 
-// geometry definition
-public:
-    static const dtype::size nodesPerEdge = BasisFunction::nodesPerElement;
-    static const dtype::size nodesPerElement = BasisFunction::nodesPerEdge;
+    // mutators
+    protected:
+        std::vector<SparseMatrix*>& set_system_matrices() { return this->system_matrices_; }
+        Matrix<dtype::real>& set_excitation_matrix() { return *this->excitation_matrix_; }
+        SparseMatrix& set_s_matrix() { return *this->s_matrix_; }
+        SparseMatrix& set_r_matrix() { return *this->r_matrix_; }
+        Matrix<dtype::index>& set_connectivity_matrix() { return *this->connectivity_matrix_; }
+        Matrix<dtype::real>& set_elemental_s_matrix()  { return *this->elemental_s_matrix_; }
+        Matrix<dtype::real>& set_elemental_r_matrix() { return *this->elemental_r_atrix_; }
 
-// member
-private:
-    Mesh* mMesh;
-    Electrodes* mElectrodes;
-    dtype::real mSigmaRef;
-    SparseMatrix** mSystemMatrix;
-    SparseMatrix* mSMatrix;
-    SparseMatrix* mRMatrix;
-    Matrix<dtype::real>* mExcitationMatrix;
-    Matrix<dtype::index>* mConnectivityMatrix;
-    Matrix<dtype::real>* mElementalSMatrix;
-    Matrix<dtype::real>* mElementalRMatrix;
-    dtype::size mNumHarmonics;
-};
+    // member
+    private:
+        Mesh* mesh_;
+        Electrodes* electrodes_;
+        dtype::real sigma_ref_;
+        std::vector<SparseMatrix*> system_matrices_;
+        SparseMatrix* s_matrix_;
+        SparseMatrix* r_matrix_;
+        Matrix<dtype::real>* excitation_matrix_;
+        Matrix<dtype::index>* connectivity_matrix_;
+        Matrix<dtype::real>* elemental_s_matrix_;
+        Matrix<dtype::real>* elemental_r_matrix_;
+        dtype::size num_harmonics_;
+    };
+}
 
 #endif

@@ -3,28 +3,33 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.hpp"
+#include <stdexcept>
+#include <vector>
+#include <array>
+#include <tuple>
 
-// namespaces
-using namespace fastEIT;
-using namespace std;
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+#include "../include/dtype.hpp"
+#include "../include/math.hpp"
+#include "../include/matrix.hpp"
+#include "../include/sparse.hpp"
+#include "../include/basis.hpp"
+#include "../include/mesh.hpp"
+#include "../include/electrodes.hpp"
+#include "../include/model.hpp"
 
 // create solver model
 template <class BasisFunction>
-Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigmaRef,
+fastEIT::Model<BasisFunction>::Model(Mesh& mesh, Electrodes& electrodes, dtype::real sigmaRef,
     dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
-    : mMesh(mesh), mElectrodes(electrodes), mSigmaRef(sigmaRef), mSystemMatrix(NULL),
-        mSMatrix(NULL), mRMatrix(NULL), mExcitationMatrix(NULL), mConnectivityMatrix(NULL),
-        mElementalSMatrix(NULL), mElementalRMatrix(NULL), mNumHarmonics(numHarmonics) {
+    : mesh_(&mesh), electrodes_(&electrodes), sigma_ref_(sigmaRef), s_matrix_(NULL), r_matrix_(NULL),
+        excitation_matrix_(NULL), connectivity_matrix_(NULL), elemental_s_matrix_(NULL),
+        elemental_r_matrix_(NULL), num_harmonics_(numHarmonics) {
     // check input
-    if (mesh == NULL) {
-        throw invalid_argument("Model::Model: mesh == NULL");
-    }
-    if (electrodes == NULL) {
-        throw invalid_argument("Model::Model: electrodes == NULL");
-    }
     if (handle == NULL) {
-        throw invalid_argument("Model::Model: handle == NULL");
+        throw std::invalid_argument("Model::Model: handle == NULL");
     }
 
     // create system matrices buffer
@@ -37,11 +42,11 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
     this->mExcitationMatrix = new Matrix<dtype::real>(this->mesh()->nodes()->rows(),
         this->electrodes()->count(), stream);
     this->mConnectivityMatrix = new Matrix<dtype::index>(this->mesh()->nodes()->rows(),
-        SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
+        SparseMatrix::block_size * Matrix<dtype::real>::block_size, stream);
     this->mElementalSMatrix = new Matrix<dtype::real>(this->mesh()->nodes()->rows(),
-        SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
+        SparseMatrix::block_size * Matrix<dtype::real>::block_size, stream);
     this->mElementalRMatrix = new Matrix<dtype::real>(this->mesh()->nodes()->rows(),
-        SparseMatrix::blockSize * Matrix<dtype::real>::blockSize, stream);
+        SparseMatrix::block_size * Matrix<dtype::real>::block_size, stream);
 
     // init model
     this->init(handle, stream);
@@ -52,7 +57,7 @@ Model<BasisFunction>::Model(Mesh* mesh, Electrodes* electrodes, dtype::real sigm
 
 // release solver model
 template <class BasisFunction>
-Model<BasisFunction>::~Model() {
+fastEIT::Model<BasisFunction>::~Model() {
     // cleanup
     delete this->mMesh;
     delete this->mElectrodes;
@@ -74,10 +79,10 @@ Model<BasisFunction>::~Model() {
 
 // create sparse matrices
 template <class BasisFunction>
-void Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Model::createSparseMatrices: handle == NULL");
+        throw std::invalid_argument("Model::createSparseMatrices: handle == NULL");
     }
 
     // calc initial system matrix
@@ -104,30 +109,30 @@ void Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStrea
     systemMatrix.copyToDevice(stream);
 
     // create sparse matrices
-    this->mSMatrix = new SparseMatrix(&systemMatrix, stream);
-    this->mRMatrix = new SparseMatrix(&systemMatrix, stream);
+    this->mSMatrix = new fastEIT::SparseMatrix(systemMatrix, stream);
+    this->mRMatrix = new fastEIT::SparseMatrix(systemMatrix, stream);
 
     for (dtype::size i = 0; i < this->numHarmonics() + 1; i++) {
-        this->mSystemMatrix[i] = new SparseMatrix(&systemMatrix, stream);
+        this->mSystemMatrix[i] = new fastEIT::SparseMatrix(systemMatrix, stream);
     }
 }
 
 // init model
 template <class BasisFunction>
-void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Model::init: handle == NULL");
+        throw std::invalid_argument("Model::init: handle == NULL");
     }
 
     // create intermediate matrices
     Matrix<dtype::index> elementCount(this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     Matrix<dtype::index> connectivityMatrix(this->connectivityMatrix()->dataRows(),
-        elementCount.dataColumns() * Matrix<dtype::index>::blockSize, stream);
+        elementCount.data_columns() * fastEIT::Matrix<dtype::index>::block_size, stream);
     Matrix<dtype::real> elementalSMatrix(this->elementalSMatrix()->dataRows(),
-        elementCount.dataColumns() * Matrix<dtype::real>::blockSize, stream);
+        elementCount.data_columns() * fastEIT::Matrix<dtype::real>::block_size, stream);
     Matrix<dtype::real> elementalRMatrix(this->elementalRMatrix()->dataRows(),
-        elementCount.dataColumns() * Matrix<dtype::real>::blockSize, stream);
+        elementCount.data_columns() * fastEIT::Matrix<dtype::real>::block_size, stream);
 
     // init connectivityMatrix
     for (dtype::size i = 0; i < connectivityMatrix.rows(); i++) {
@@ -172,14 +177,14 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
                 temp = elementCount(id[i], id[j]);
 
                 // set connectivity element
-                connectivityMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) = k;
+                connectivityMatrix(id[i], id[j] + connectivityMatrix.data_rows() * temp) = k;
 
                 // set elemental system element
-                elementalSMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) =
+                elementalSMatrix(id[i], id[j] + connectivityMatrix.data_rows() * temp) =
                     basis[i]->integrateGradientWithBasis(*basis[j]);
 
                 // set elemental residual element
-                elementalRMatrix(id[i], id[j] + connectivityMatrix.dataRows() * temp) =
+                elementalRMatrix(id[i], id[j] + connectivityMatrix.data_rows() * temp) =
                     basis[i]->integrateWithBasis(*basis[j]);
 
                 // increment element count
@@ -218,14 +223,11 @@ void Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
 
 // update model
 template <class BasisFunction>
-void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t handle,
+void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
-    if (gamma == NULL) {
-        throw invalid_argument("Model::init: gamma == NULL");
-    }
     if (handle == NULL) {
-        throw invalid_argument("Model::init: handle == NULL");
+        throw std::invalid_argument("Model::init: handle == NULL");
     }
 
     // update 2d systemMatrix
@@ -241,21 +243,21 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
     dtype::real alpha = 0.0f;
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // calc alpha
-        alpha = math::square(2.0f * n * M_PI / this->mesh()->height());
+        alpha = fastEIT::math::square(2.0f * n * M_PI / this->mesh()->height());
 
         // init system matrix with 2d system matrix
-        if (cublasScopy(handle, this->SMatrix()->dataRows() * SparseMatrix::blockSize,
+        if (cublasScopy(handle, this->SMatrix()->dataRows() * SparseMatrix::block_size,
             this->SMatrix()->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
-            throw logic_error(
+            throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
         }
 
         // add alpha * residualMatrix
-        if (cublasSaxpy(handle, this->SMatrix()->dataRows() * SparseMatrix::blockSize, &alpha,
+        if (cublasSaxpy(handle, this->SMatrix()->dataRows() * SparseMatrix::block_size, &alpha,
             this->RMatrix()->values(), 1, this->systemMatrix(n)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
-            throw logic_error(
+            throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
         }
     }
@@ -263,7 +265,7 @@ void Model<BasisFunction>::update(Matrix<dtype::real>* gamma, cublasHandle_t han
 
 // init exitation matrix
 template <class BasisFunction>
-void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
+void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
     dtype::index id[BasisFunction::nodesPerEdge];
     dtype::real x[BasisFunction::nodesPerEdge * 2], y[BasisFunction::nodesPerEdge * 2];
@@ -299,37 +301,31 @@ void Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 
 // calc excitaion components
 template <class BasisFunction>
-void Model<BasisFunction>::calcExcitationComponents(Matrix<dtype::real>** component,
-    Matrix<dtype::real>* pattern, cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::Model<BasisFunction>::calcExcitationComponents(const Matrix<dtype::real>& pattern,
+    cublasHandle_t handle, cudaStream_t stream, std::vector<Matrix<dtype::real>*>& components) {
     // check input
-    if (component == NULL) {
-        throw invalid_argument("Model::calcExcitationComponents: component == NULL");
-    }
-    if (pattern == NULL) {
-        throw invalid_argument("Model::calcExcitationComponents: pattern == NULL");
-    }
     if (handle == NULL) {
-        throw invalid_argument("Model::calcExcitationComponents: handle == NULL");
+        throw std::invalid_argument("Model::calcExcitationComponents: handle == NULL");
     }
 
     // calc excitation matrices
     for (dtype::size n = 0; n < this->numHarmonics() + 1; n++) {
         // Run multiply once more to avoid cublas error
         try {
-            component[n]->multiply(this->excitationMatrix(), pattern, handle, stream);
+            components[n]->multiply(this->excitationMatrix(), pattern, handle, stream);
         }
-        catch (exception& e) {
-            component[n]->multiply(this->excitationMatrix(), pattern, handle, stream);
+        catch (std::exception& e) {
+            components[n]->multiply(this->excitationMatrix(), pattern, handle, stream);
         }
     }
 
     // calc fourier coefficients for current pattern
     // calc ground mode
-    component[0]->scalarMultiply(1.0f / this->mesh()->height(), stream);
+    components[0]->scalarMultiply(1.0f / this->mesh()->height(), stream);
 
     // calc harmonics
     for (dtype::size n = 1; n < this->numHarmonics() + 1; n++) {
-        component[n]->scalarMultiply(
+        components[n]->scalarMultiply(
             2.0f * sin(n * M_PI * this->electrodes()->height() / this->mesh()->height()) /
             (n * M_PI * this->electrodes()->height()), stream);
     }
