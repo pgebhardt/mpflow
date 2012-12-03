@@ -24,11 +24,11 @@ _OBJ = mesh.o electrodes.o linearBasis.o model.o #conjugate.o sparseConjugate.o 
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
-_CUOBJ = matrix.cu_o sparse.cu_o modelKernel.cu_o #conjugate.cu_o forward.cu_o
+_CUOBJ = matrix.cu_o sparse.cu_o model.cu_o #conjugate.cu_o forward.cu_o
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fasteit.hpp dtype.hpp math.hpp matrix.hpp sparse.hpp mesh.hpp basis.hpp electrodes.hpp model.hpp modelKernel.hpp conjugate.hpp sparseConjugate.hpp forward.hpp inverse.hpp solver.hpp
+_DEPS = fasteit.hpp dtype.hpp math.hpp matrix.hpp sparse.hpp mesh.hpp basis.hpp electrodes.hpp model.hpp model.hcu conjugate.hpp sparseConjugate.hpp forward.hpp inverse.hpp solver.hpp
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Library
@@ -37,7 +37,7 @@ LIB = libfasteit.so
 # Rule for library
 $(LIB): $(OBJ) $(CUOBJ) $(DEPS)
 	mkdir -p $(BUILD)
-	$(CXX) -shared -o $(BUILD)/$(LIB) $(OBJ) $(CUOBJ) $(LDFLAGS)
+	$(CXX) -std=c++11 -stdlib=libc++ -shared -o $(BUILD)/$(LIB) $(OBJ) $(CUOBJ) $(LDFLAGS)
 
 # Rule for object files
 $(BUILD)/%.o: $(SRC)/%.cpp $(DEPS)

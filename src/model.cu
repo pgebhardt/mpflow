@@ -12,7 +12,7 @@
 #include "../include/dtype.hpp"
 #include "../include/matrix.hpp"
 #include "../include/sparse.hpp"
-#include "../include/modelKernel.hpp"
+#include "../include/model.hcu"
 
 // reduce connectivity and elementalResidual matrix
 template <class type>
@@ -38,7 +38,7 @@ __global__ void reduceMatrixKernel(const type* intermediateMatrix, const fastEIT
 }
 
 // reduce matrix
-void fastEIT::modelKernel::reduceMatrix(const Matrix<dtype::real>& intermediateMatrix, const SparseMatrix& shape, cudaStream_t stream,
+void fastEIT::model::reduceMatrix(const Matrix<dtype::real>& intermediateMatrix, const SparseMatrix& shape, cudaStream_t stream,
     Matrix<dtype::real>& matrix) {
     // block size
     dim3 blocks(matrix.data_rows() / Matrix<dtype::real>::block_size, 1);
@@ -49,7 +49,7 @@ void fastEIT::modelKernel::reduceMatrix(const Matrix<dtype::real>& intermediateM
         intermediateMatrix.device_data(), shape.column_ids(), matrix.data_rows(),
         shape.density(), matrix.set_device_data());
 }
-void fastEIT::modelKernel::reduceMatrix(const Matrix<dtype::index>& intermediateMatrix, const SparseMatrix& shape, cudaStream_t stream,
+void fastEIT::model::reduceMatrix(const Matrix<dtype::index>& intermediateMatrix, const SparseMatrix& shape, cudaStream_t stream,
     Matrix<dtype::index>& matrix) {
     // block size
     dim3 blocks(matrix.data_rows() / Matrix<dtype::real>::block_size, 1);
@@ -88,7 +88,7 @@ __global__ void updateMatrixKernel(const fastEIT::dtype::index* connectivityMatr
 }
 
 // update matrix
-void fastEIT::modelKernel::updateMatrix(const Matrix<dtype::real>& elements, const Matrix<dtype::real>& gamma,
+void fastEIT::model::updateMatrix(const Matrix<dtype::real>& elements, const Matrix<dtype::real>& gamma,
     const Matrix<dtype::index>& connectivityMatrix, dtype::real sigmaRef, cudaStream_t stream, SparseMatrix& matrix) {
     // dimension
     dim3 threads(Matrix<dtype::real>::block_size, Matrix<dtype::real>::block_size);

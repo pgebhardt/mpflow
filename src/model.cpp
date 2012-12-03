@@ -20,7 +20,7 @@
 #include "../include/mesh.hpp"
 #include "../include/electrodes.hpp"
 #include "../include/model.hpp"
-#include "../include/modelKernel.hpp"
+#include "../include/model.hcu"
 
 // create solver model
 template <class BasisFunction>
@@ -195,20 +195,20 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     elementalRMatrix.copyToDevice(stream);
 
     // reduce matrices
-    modelKernel::reduceMatrix(connectivityMatrix, this->s_matrix(), stream,
+    model::reduceMatrix(connectivityMatrix, this->s_matrix(), stream,
         this->set_connectivity_matrix());
-    modelKernel::reduceMatrix(elementalSMatrix, this->s_matrix(), stream,
+    model::reduceMatrix(elementalSMatrix, this->s_matrix(), stream,
         this->set_elemental_s_matrix());
-    modelKernel::reduceMatrix(elementalRMatrix, this->s_matrix(), stream,
+    model::reduceMatrix(elementalRMatrix, this->s_matrix(), stream,
         this->set_elemental_r_matrix());
 
     // create gamma
     Matrix<dtype::real> gamma(this->mesh().elements().rows(), 1, stream);
 
     // update matrices
-    modelKernel::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
+    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->set_s_matrix());
-    modelKernel::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
+    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->set_r_matrix());
 }
 
@@ -222,9 +222,9 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
     }
 
     // update matrices
-    modelKernel::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
+    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->set_s_matrix());
-    modelKernel::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
+    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->set_r_matrix());
 
     // set cublas stream
