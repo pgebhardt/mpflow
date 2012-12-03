@@ -38,12 +38,12 @@ fastEIT::Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::rea
         angle = (dtype::real)i * 2.0f * deltaAngle;
 
         // calc start coordinates
-        this->set_electrodes_start().push_back(math::kartesian(std::make_tuple(meshRadius, angle)));
+        this->electrodes_start().push_back(math::kartesian(std::make_tuple(meshRadius, angle)));
 
         // calc end angle
         angle += this->width() / meshRadius;
 
         // calc end coordinates
-        this->set_electrodes_end().push_back(math::kartesian(std::make_tuple(meshRadius, angle)));
+        this->electrodes_end().push_back(math::kartesian(std::make_tuple(meshRadius, angle)));
     }
 }
