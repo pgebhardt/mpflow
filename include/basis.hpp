@@ -3,95 +3,72 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_BASIS_HPP
-#define FASTEIT_BASIS_HPP
+#ifndef FASTEIT_INCLUDE_BASIS_HPP
+#define FASTEIT_INCLUDE_BASIS_HPP
 
-// basis namespace
-namespace basis {
-    // abstract basis class
-    template <
-        int templateNodesPerEdge,
-        int templateNodesPerElement
-    >
-    class Basis {
-    // constructor and destructor
-    protected:
-        Basis(dtype::real* x, dtype::real* y) {
-            // check input
-            if (x == NULL) {
-                throw std::invalid_argument("Basis::Basis: x == NULL");
+// namespace fastEIT
+namespace fastEIT {
+    // basis namespace
+    namespace basis {
+        // abstract basis class
+        template <
+            int template_nodes_per_edge,
+            int template_nodes_per_element
+        >
+        class Basis {
+        // constructor and destructor
+        protected:
+            Basis(std::array<std::tuple<dtype::real, dtype::real>, template_nodes_per_element> nodes) {
+                // init member
+                this->nodes_ = nodes;
+                for (dtype::index i = 0; i < this->nodes_per_element; i++) {
+                    this->set_coefficients()[i] = 0.0;
+                }
             }
-            if (y == NULL) {
-                throw std::invalid_argument("Basis::Basis: y == NULL");
-            }
 
-            // create memory
-            this->mPoints = new dtype::real[this->nodesPerElement * 2];
-            this->mCoefficients = new dtype::real[this->nodesPerElement];
+            virtual ~Basis() { }
 
-            // init member
-            for (dtype::size i = 0; i < this->nodesPerElement; i++) {
-                this->mPoints[i * 2 + 0] = x[i];
-                this->mPoints[i * 2 + 1] = y[i];
-                this->mCoefficients[i] = 0.0;
-            }
-        }
+        // evaluation
+        public:
+            virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point) = 0;
 
-        virtual ~Basis() {
-            // cleanup arrays
-            delete [] this->mPoints;
-            delete [] this->mCoefficients;
-        }
+        // geometry definition
+        public:
+            static const dtype::size nodes_per_edge = template_nodes_per_edge;
+            static const dtype::size nodes_per_element = template_nodes_per_element;
 
-    // operator
-    public:
-        virtual dtype::real operator()(dtype::real x, dtype::real y) = 0;
+        // access methods
+        public:
+            const std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element>& nodes() const { return this->nodes_; }
+            const std::array<dtype::real, nodes_per_element>& coefficients() const { return this->coefficients_; }
 
-    // geometry definition
-    public:
-        static const dtype::size nodesPerEdge = templateNodesPerEdge;
-        static const dtype::size nodesPerElement = templateNodesPerElement;
+        protected:
+            std::array<dtype::real, nodes_per_element>& set_coefficients() { return this->coefficients_; }
 
-    // access methods
-    public:
-        const dtype::real* point(dtype::index id) const {
-            assert(id < nodesPerElement);
-            return &this->mPoints[id * 2];
-        }
-        dtype::real coefficient(dtype::index id) const {
-            assert(id < nodesPerElement);
-            return this->mCoefficients[id];
-        }
+        // member
+        private:
+            std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes_;
+            std::array<dtype::real, nodes_per_element> coefficients_;
+        };
 
-    protected:
-        dtype::real& setCoefficient(dtype::index id) {
-            assert(id < nodesPerElement);
-            return this->mCoefficients[id];
-        }
+        // linear basis class definition
+        class Linear : public Basis<2, 3> {
+        // constructor
+        public:
+            Linear(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes);
 
-    // member
-    private:
-        dtype::real* mPoints;
-        dtype::real* mCoefficients;
-    };
+        // mathematical evaluation of basis
+        public:
+            virtual dtype::real integrateWithBasis(const Linear& other);
+            virtual dtype::real integrateGradientWithBasis(const Linear& other);
+            static dtype::real integrateBoundaryEdge(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
+                const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end);
 
-    // linear basis class definition
-    class Linear : public Basis<2, 3> {
-    // constructor
-    public:
-        Linear(dtype::real* x, dtype::real* y);
-
-    // mathematical evaluation of basis
-    public:
-        virtual dtype::real integrateWithBasis(const Linear& other);
-        virtual dtype::real integrateGradientWithBasis(const Linear& other);
-        static dtype::real integrateBoundaryEdge(const dtype::real* x, const dtype::real* y,
-            const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end);
-
-    // operator
-    public:
-        virtual dtype::real operator()(dtype::real x, dtype::real y);
-    };
+        // evaluation
+        public:
+            virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
+        };
+    }
 }
 
 #endif

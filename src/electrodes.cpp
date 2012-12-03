@@ -3,7 +3,14 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.hpp"
+#include <stdexcept>
+#include <assert.h>
+#include <cmath>
+#include <tuple>
+
+#include "../include/dtype.hpp"
+#include "../include/math.hpp"
+#include "../include/electrodes.hpp"
 
 // create electrodes class
 fastEIT::Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real meshRadius)

@@ -15,9 +15,6 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-// namespace fastEIT
-namespace fastEIT {
-
 #include "dtype.hpp"
 #include "math.hpp"
 #include "matrix.hpp"
@@ -31,7 +28,5 @@ namespace fastEIT {
 #include "forward.hpp"
 #include "inverse.hpp"
 #include "solver.hpp"
-
-};
 
 #endif
