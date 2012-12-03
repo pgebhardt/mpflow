@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_MATRIX_HPP
-#define FASTEIT_MATRIX_HPP
+#ifndef FASTEIT_INCLUDE_MATRIX_HPP
+#define FASTEIT_INCLUDE_MATRIX_HPP
 
 // namespace fastEIT
 namespace fastEIT {

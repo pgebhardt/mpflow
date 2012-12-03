@@ -3,101 +3,105 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.hpp"
+#include <stdexcept>
+#include <assert.h>
 
-// namespaces
-using namespace fastEIT;
-using namespace std;
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+#include "../include/dtype.hpp"
+#include "../include/matrix.hpp"
+#include "../include/sparse.hpp"
 
 // create new sparse matrix
-SparseMatrix::SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream) {
+fastEIT::SparseMatrix::SparseMatrix(const Matrix<dtype::real>& matrix, cudaStream_t stream) {
     // create empty sparse matrix
-    this->init(matrix->rows(), matrix->columns(), stream);
+    this->init(matrix.rows(), matrix.columns(), stream);
 
     // convert to sparse_matrix
     this->convert(matrix, stream);
 }
 
 // create empty sparse matrix
-void SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stream) {
+void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stream) {
     // check input
     if (rows == 0) {
-        throw invalid_argument("SparseMatrix::init: rows == 0");
+        throw std::invalid_argument("SparseMatrix::init: rows == 0");
     }
     if (columns == 0) {
-        throw invalid_argument("SparseMatrix::init: columns == 0");
+        throw std::invalid_argument("SparseMatrix::init: columns == 0");
     }
 
     // init struct
-    this->mRows = rows;
-    this->mColumns = columns;
-    this->mDataRows = rows;
-    this->mDataColumns = columns;
-    this->mDensity = 0;
-    this->mValues = NULL;
-    this->mColumnIds = NULL;
+    this->set_rows() = rows;
+    this->set_columns() = columns;
+    this->set_data_rows() = rows;
+    this->set_data_columns() = columns;
+    this->set_density() = 0;
+    this->values_ = NULL;
+    this->column_ids_ = NULL;
 
     // correct size to block size
-    if ((this->rows() % Matrix<dtype::real>::blockSize != 0) && (this->rows() != 1)) {
-        this->mDataRows = (this->rows() / Matrix<dtype::real>::blockSize + 1) *
-            Matrix<dtype::real>::blockSize;
+    if ((this->rows() % Matrix<dtype::real>::block_size != 0) && (this->rows() != 1)) {
+        this->set_data_rows() = (this->rows() / Matrix<dtype::real>::block_size + 1) *
+            Matrix<dtype::real>::block_size;
     }
-    if ((this->columns() % Matrix<dtype::real>::blockSize != 0) && (this->columns() != 1)) {
-        this->mDataColumns = (this->columns() / Matrix<dtype::real>::blockSize + 1) *
-            Matrix<dtype::real>::blockSize;
+    if ((this->columns() % Matrix<dtype::real>::block_size != 0) && (this->columns() != 1)) {
+        this->set_data_columns() = (this->columns() / Matrix<dtype::real>::block_size + 1) *
+            Matrix<dtype::real>::block_size;
     }
 
     // create matrices
-    if (cudaMalloc((void**)&this->mValues, sizeof(dtype::real) *
-        this->dataRows() * SparseMatrix::blockSize) != cudaSuccess) {
-        throw logic_error("SparseMatrix::init: create memory");
+    if (cudaMalloc((void**)&this->values_, sizeof(dtype::real) *
+        this->data_rows() * SparseMatrix::block_size) != cudaSuccess) {
+        throw std::logic_error("SparseMatrix::init: create memory");
     }
 
-    if (cudaMalloc((void**)&this->mColumnIds, sizeof(dtype::index) *
-        this->dataRows() * SparseMatrix::blockSize) != cudaSuccess) {
-        throw logic_error("SparseMatrix::init: create memory");
+    if (cudaMalloc((void**)&this->column_ids_, sizeof(dtype::index) *
+        this->data_rows() * SparseMatrix::block_size) != cudaSuccess) {
+        throw std::logic_error("SparseMatrix::init: create memory");
     }
 }
 
 // release sparse matrix
-SparseMatrix::~SparseMatrix() {
+fastEIT::SparseMatrix::~SparseMatrix() {
     // release matrices
-    cudaFree(this->values());
-    cudaFree(this->columnIds());
+    cudaFree(this->values_);
+    cudaFree(this->column_ids_);
 }
 
 // convert to sparse matrix kernel
-__global__ void sparseCreateKernel(dtype::real* values,
-    dtype::index* columnIds, dtype::real* matrix,
-    dtype::index* elementCount, dtype::size rows, dtype::size columns) {
+__global__ void sparseCreateKernel(const fastEIT::dtype::real* matrix, fastEIT::dtype::size rows,
+    fastEIT::dtype::size columns, fastEIT::dtype::real* values, fastEIT::dtype::index* columnIds,
+    fastEIT::dtype::index* elementCount) {
     // get id
-    dtype::index i = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index i = blockIdx.x * blockDim.x + threadIdx.x;
 
     // element count
-    dtype::size count = 0;
+    fastEIT::dtype::size count = 0;
 
     // init values and columnIds
-    for (dtype::index j = 0; j < SparseMatrix::blockSize; j++) {
-        values[i * SparseMatrix::blockSize + j] = 0.0f;
-        columnIds[i * SparseMatrix::blockSize + j] = -1;
+    for (fastEIT::dtype::index j = 0; j < fastEIT::SparseMatrix::block_size; j++) {
+        values[i * fastEIT::SparseMatrix::block_size + j] = 0.0f;
+        columnIds[i * fastEIT::SparseMatrix::block_size + j] = -1;
     }
 
     // search non-zero elements
-    dtype::real element = 0.0f;
-    for (dtype::index j = 0; j < columns; j++) {
+    fastEIT::dtype::real element = 0.0f;
+    for (fastEIT::dtype::index j = 0; j < columns; j++) {
         // get element
         element = matrix[i + j * rows];
 
         // check for non-zero
         if (element != 0.0f) {
-            values[i * SparseMatrix::blockSize + count] = element;
-            columnIds[i * SparseMatrix::blockSize + count] = j;
+            values[i * fastEIT::SparseMatrix::block_size + count] = element;
+            columnIds[i * fastEIT::SparseMatrix::block_size + count] = j;
 
             // increment count
             count++;
 
             // check count
-            if (count >= SparseMatrix::blockSize) {
+            if (count >= fastEIT::SparseMatrix::block_size) {
                 break;
             }
         }
@@ -108,51 +112,48 @@ __global__ void sparseCreateKernel(dtype::real* values,
 }
 
 // convert to sparse matrix
-void SparseMatrix::convert(Matrix<dtype::real>* matrix, cudaStream_t stream) {
-    // check input
-    if (matrix == NULL) {
-        throw invalid_argument("SparseMatrix::convert: matrix == NULL");
-    }
-
+void fastEIT::SparseMatrix::convert(const Matrix<dtype::real>& matrix, cudaStream_t stream) {
     // create elementCount matrix
-    Matrix<dtype::index> elementCount(this->dataRows(), 1, stream);
-    Matrix<dtype::index> maxCount(this->dataRows(), 1, stream);
+    fastEIT::Matrix<dtype::index> elementCount(this->data_rows(), 1, stream);
+    fastEIT::Matrix<dtype::index> maxCount(this->data_rows(), 1, stream);
 
     // execute kernel
-    sparseCreateKernel<<<this->dataRows() / Matrix<dtype::real>::blockSize,
-        Matrix<dtype::real>::blockSize, 0, stream>>>(
-        this->values(), this->columnIds(), matrix->deviceData(),
-        elementCount.deviceData(), matrix->dataRows(), matrix->dataColumns());
+    sparseCreateKernel<<<this->data_rows() / fastEIT::Matrix<dtype::real>::block_size,
+        fastEIT::Matrix<dtype::real>::block_size, 0, stream>>>(matrix.device_data(), matrix.data_rows(),
+        matrix.data_columns(), this->set_values(), this->set_column_ids(), elementCount.set_device_data());
 
     // get max count
-    maxCount.max(&elementCount, maxCount.dataRows(), stream);
+    maxCount.max(elementCount, maxCount.data_rows(), stream);
     maxCount.copyToHost(stream);
     cudaStreamSynchronize(stream);
 
     // save density
-    this->mDensity = maxCount.hostData()[0];
+    this->set_density() = maxCount(0, 0);
 }
 
 // sparse matrix multiply kernel
-__global__ void sparseMultiplyKernel(dtype::real* result,
-    dtype::real* values, dtype::index* columnIds,
-    dtype::real* matrix, dtype::size rows, dtype::size columns,
-    dtype::size density) {
+__global__ void sparseMultiplyKernel(const fastEIT::dtype::real* values,
+    const fastEIT::dtype::index* columnIds, const fastEIT::dtype::real* matrix, fastEIT::dtype::size rows,
+    fastEIT::dtype::size columns, fastEIT::dtype::size density, fastEIT::dtype::real* result) {
     // get ids
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc result
-    dtype::real res = 0.0f;
-    dtype::index id = -1;
+    fastEIT::dtype::real res = 0.0f;
+    fastEIT::dtype::index id = -1;
 
     // read column ids to local memory
-    __shared__ dtype::index columnId[SparseMatrix::blockSize * SparseMatrix::blockSize];
-    __shared__ dtype::real value[SparseMatrix::blockSize * SparseMatrix::blockSize];
-    columnId[threadIdx.x * SparseMatrix::blockSize + threadIdx.y] = row < rows ?
-        columnIds[row * SparseMatrix::blockSize + threadIdx.y] : -1;
-    value[threadIdx.x * SparseMatrix::blockSize + threadIdx.y] = row < rows ?
-        values[row * SparseMatrix::blockSize + threadIdx.y] : 0.0f;
+    __shared__ fastEIT::dtype::index columnId[
+        fastEIT::SparseMatrix::block_size * fastEIT::SparseMatrix::block_size];
+    __shared__ fastEIT::dtype::real value[
+        fastEIT::SparseMatrix::block_size * fastEIT::SparseMatrix::block_size];
+
+    columnId[threadIdx.x * fastEIT::SparseMatrix::block_size + threadIdx.y] = row < rows ?
+        columnIds[row * fastEIT::SparseMatrix::block_size + threadIdx.y] : -1;
+    value[threadIdx.x * fastEIT::SparseMatrix::block_size + threadIdx.y] = row < rows ?
+        values[row * fastEIT::SparseMatrix::block_size + threadIdx.y] : 0.0f;
+
     __syncthreads();
 
     // check ids
@@ -161,12 +162,12 @@ __global__ void sparseMultiplyKernel(dtype::real* result,
     }
 
     // read matrix to local memory
-    for (dtype::index j = 0; j < density; j++) {
+    for (fastEIT::dtype::index j = 0; j < density; j++) {
         // get column id
-        id = columnId[threadIdx.x * SparseMatrix::blockSize + j];
+        id = columnId[threadIdx.x * fastEIT::SparseMatrix::block_size + j];
 
          res += id != -1 ? matrix[id + column * rows] *
-            value[threadIdx.x * SparseMatrix::blockSize + j] : 0.0f;
+            value[threadIdx.x * fastEIT::SparseMatrix::block_size + j] : 0.0f;
     }
 
     // set result
@@ -174,30 +175,21 @@ __global__ void sparseMultiplyKernel(dtype::real* result,
 }
 
 // sparse matrix multiply
-Matrix<dtype::real>* SparseMatrix::multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
-    cudaStream_t stream) {
-    // check input
-    if (result == NULL) {
-        throw invalid_argument("SparseMatrix::multiply: result == NULL");
-    }
-    if (matrix == NULL) {
-        throw invalid_argument("SparseMatrix::multiply: matrix == NULL");
-    }
-
+void fastEIT::SparseMatrix::multiply(const Matrix<dtype::real>& matrix, cudaStream_t stream,
+    Matrix<dtype::real>& result) const {
     // check size
-    if ((result->dataRows() != this->dataRows()) || (this->dataColumns() != matrix->dataRows()) ||
-        (result->dataColumns() != matrix->dataColumns())) {
-        throw invalid_argument("SparseMatrix::multiply: size");
+    if ((result.data_rows() != this->data_rows()) || (this->data_columns() != matrix.data_rows()) ||
+        (result.data_columns() != matrix.data_columns())) {
+        throw std::invalid_argument("SparseMatrix::multiply: size");
     }
 
     // kernel dimension
-    dim3 global((result->dataRows() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize,
-        (result->dataColumns() + SparseMatrix::blockSize - 1) / SparseMatrix::blockSize);
-    dim3 local(SparseMatrix::blockSize, SparseMatrix::blockSize);
+    dim3 global((result.data_rows() + block_size - 1) / block_size,
+        (result.data_columns() + block_size - 1) / block_size);
+    dim3 local(block_size, block_size);
 
     // execute kernel
-    sparseMultiplyKernel<<<global, local, 0, stream>>>(result->deviceData(), this->values(),
-        this->columnIds(), matrix->deviceData(), result->dataRows(), result->dataColumns(), this->density());
-
-    return result;
+    sparseMultiplyKernel<<<global, local, 0, stream>>>(this->values(), this->column_ids(),
+        matrix.device_data(), result.data_rows(), result.data_columns(), this->density(),
+        result.set_device_data());
 }

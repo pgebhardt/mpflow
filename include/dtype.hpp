@@ -6,12 +6,15 @@
 #ifndef FASTEIT_DTYPE_HPP
 #define FASTEIT_DTYPE_HPP
 
-// namespace dtype
-namespace dtype {
-    // basic scalar types
-    typedef unsigned int size;
-    typedef float real;
-    typedef int index;
+//namespace fastEIT
+namespace fastEIT {
+    // namespace dtype
+    namespace dtype {
+        // basic scalar types
+        typedef unsigned int size;
+        typedef float real;
+        typedef int index;
+    }
 }
 
 #endif

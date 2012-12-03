@@ -3,53 +3,70 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_SPARSE_HPP
-#define FASTEIT_SPARSE_HPP
+#ifndef FASTEIT_INCLUDE_SPARSE_HPP
+#define FASTEIT_INCLUDE_SPARSE_HPP
 
-// sparse matrix class definition
-class SparseMatrix {
-public:
-    // constructor and destructor
-    SparseMatrix(dtype::size rows, dtype::size columns, cudaStream_t stream=NULL) {
-        this->init(rows, columns, stream);
-    }
+// namespace fastEIT
+namespace fastEIT {
+    // sparse matrix class definition
+    class SparseMatrix {
+    public:
+        // constructor and destructor
+        SparseMatrix(dtype::size rows, dtype::size columns, cudaStream_t stream) {
+            this->init(rows, columns, stream);
+        }
 
-    SparseMatrix(Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
-    virtual ~SparseMatrix();
+        SparseMatrix(const Matrix<dtype::real>& matrix, cudaStream_t stream);
+        virtual ~SparseMatrix();
 
-private:
-    // init empty sparse matrix
-    void init(dtype::size rows, dtype::size columns, cudaStream_t stream=NULL);
+    private:
+        // init empty sparse matrix
+        void init(dtype::size rows, dtype::size columns, cudaStream_t stream);
 
-    // convert to sparse matrix
-    void convert(Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
+        // convert to sparse matrix
+        void convert(const Matrix<dtype::real>& matrix, cudaStream_t stream);
 
-public:
-    // matrix multiply
-    Matrix<dtype::real>* multiply(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix, cudaStream_t stream=NULL);
+    public:
+        // matrix multiply
+        void multiply(const Matrix<dtype::real>& matrix, cudaStream_t stream,
+            Matrix<dtype::real>& result) const;
 
-public:
-    // block size
-    static const dtype::size blockSize = 32;
+    public:
+        // block size
+        static const dtype::size block_size = 32;
 
-// accessors
-public:
-    dtype::size rows() const { return this->mRows; }
-    dtype::size columns() const { return this->mColumns; }
-    dtype::size dataRows() const { return this->mDataRows; }
-    dtype::size dataColumns() const { return this->mDataColumns; }
-    dtype::size density() const { return this->mDensity; }
-    dtype::real* values() const { return this->mValues; }
-    dtype::index* columnIds() const { return this->mColumnIds; }
+    // accessors
+    public:
+        dtype::size rows() const { return this->rows_; }
+        dtype::size columns() const { return this->columns_; }
+        dtype::size data_rows() const { return this->data_rows_; }
+        dtype::size data_columns() const { return this->data_columns_; }
+        dtype::size density() const { return this->density_; }
+        const dtype::real* values() const { return this->values_; }
+        const dtype::index* column_ids() const { return this->column_ids_; }
 
-// member
-private:
-    dtype::size mRows;
-    dtype::size mColumns;
-    dtype::size mDataRows;
-    dtype::size mDataColumns;
-    dtype::size mDensity;
-    dtype::real* mValues;
-    dtype::index* mColumnIds;
-};
+    // mutators:
+    public:
+        dtype::real* set_values() { return this->values_; }
+        dtype::index* set_column_ids() { return this->column_ids_; }
+
+    private:
+        dtype::size& set_rows() { return this->rows_; }
+        dtype::size& set_columns() { return this->columns_; }
+        dtype::size& set_data_rows() { return this->data_rows_; }
+        dtype::size& set_data_columns() { return this->data_columns_; }
+        dtype::size& set_density() { return this->density_; }
+
+    // member
+    private:
+        dtype::size rows_;
+        dtype::size columns_;
+        dtype::size data_rows_;
+        dtype::size data_columns_;
+        dtype::size density_;
+        dtype::real* values_;
+        dtype::index* column_ids_;
+    };
+}
+
 #endif

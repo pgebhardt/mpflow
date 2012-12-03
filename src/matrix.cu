@@ -125,14 +125,13 @@ void fastEIT::Matrix<type>::copyToHost(cudaStream_t stream) {
 
 // add kernel
 template<class type>
-__global__ void addKernel(type* A, const type* B,
-    dtype::size rows) {
+__global__ void addKernel(const type* matrix, fastEIT::dtype::size rows, type* result) {
     // get ids
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // add B to A
-    A[row + column * rows] += B[row + column * rows];
+    result[row + column * rows] += matrix[row + column * rows];
 }
 
 // add matrix
@@ -150,8 +149,7 @@ void fastEIT::Matrix<type>::add(const Matrix<type>& value, cudaStream_t stream) 
         this->data_columns() == 1 ? 1 : Matrix<type>::block_size);
 
     // call kernel
-    addKernel<type><<<blocks, threads, 0, stream>>>(this->set_device_data(), value.device_data(),
-        this->data_rows());
+    addKernel<type><<<blocks, threads, 0, stream>>>(value.device_data(), this->data_rows(), this->set_device_data());
 }
 
 
@@ -204,13 +202,13 @@ namespace fastEIT {
 
 // scale kernel
 template <class type>
-__global__ void scaleKernel(type* matrix, type scalar, dtype::size rows) {
+__global__ void scaleKernel(type scalar, fastEIT::dtype::size rows, type* result) {
     // get ids
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // scale matrix with scalar
-    matrix[row + column * rows] *= scalar;
+    result[row + column * rows] *= scalar;
 }
 
 // scalar multiply matrix
@@ -223,16 +221,16 @@ void fastEIT::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
         this->data_columns() == 1 ? 1 : Matrix<type>::block_size);
 
     // call kernel
-    scaleKernel<type><<<blocks, threads, 0, stream>>>(this->set_device_data(), scalar, this->data_rows());
+    scaleKernel<type><<<blocks, threads, 0, stream>>>(scalar, this->data_rows(), this->set_device_data());
 }
 
 // vector dot product kernel
 template <class type>
-__global__ void vectorDotProductKernel(type* result, const type* a, const type* b,
-    dtype::size rows) {
+__global__ void vectorDotProductKernel(const type* a, const type* b, fastEIT::dtype::size rows,
+    type* result) {
     // get ids
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // elementwise multiply
     result[row + column * rows] = a[row + column * rows] * b[row + column * rows];
@@ -255,8 +253,8 @@ void fastEIT::Matrix<type>::vectorDotProduct(const Matrix<type>& A, const Matrix
     dim3 local(Matrix<type>::block_size, columns == 1 ? 1 : Matrix<type>::block_size);
 
     // call dot kernel
-    vectorDotProductKernel<type><<<global, local, 0, stream>>>(this->set_device_data(), A.device_data(),
-        B.device_data(), this->data_rows());
+    vectorDotProductKernel<type><<<global, local, 0, stream>>>(A.device_data(), B.device_data(), this->data_rows(),
+        this->set_device_data());
 
     // sum
     this->sum(*this, stream);
@@ -264,14 +262,14 @@ void fastEIT::Matrix<type>::vectorDotProduct(const Matrix<type>& A, const Matrix
 
 // sum kernel
 template <class type>
-__global__ void sumKernel(type* result, const type* vector, dtype::size rows,
-    dtype::size offset) {
+__global__ void sumKernel(const type* vector, fastEIT::dtype::size rows, fastEIT::dtype::size offset,
+    type* result) {
     // get column
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // get id
-    dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index lid = threadIdx.x;
+    fastEIT::dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index lid = threadIdx.x;
 
     // copy data to shared memory
     __volatile __shared__ type res[fastEIT::Matrix<type>::block_size * fastEIT::Matrix<type>::block_size];
@@ -315,8 +313,8 @@ void fastEIT::Matrix<type>::sum(const Matrix<type>& value, cudaStream_t stream) 
     dtype::size offset = 1;
 
     // start kernel once
-    sumKernel<type><<<global, local, 0, stream>>>(
-        this->set_device_data(), value.device_data(), this->data_rows(), offset);
+    sumKernel<type><<<global, local, 0, stream>>>(value.device_data(), this->data_rows(),
+        offset, this->set_device_data());
 
     // start kernel
     do {
@@ -324,8 +322,8 @@ void fastEIT::Matrix<type>::sum(const Matrix<type>& value, cudaStream_t stream) 
         offset *= Matrix<type>::block_size;
         global.x = (global.x + Matrix<type>::block_size - 1) /  Matrix<type>::block_size;
 
-        sumKernel<<<global, local, 0, stream>>>(
-            this->set_device_data(), this->device_data(), this->data_rows(), offset);
+        sumKernel<<<global, local, 0, stream>>>(this->device_data(), this->data_rows(), offset,
+            this->set_device_data());
 
     }
     while (offset * Matrix<type>::block_size < this->data_rows());
@@ -333,11 +331,11 @@ void fastEIT::Matrix<type>::sum(const Matrix<type>& value, cudaStream_t stream) 
 
 // min kernel
 template <class type>
-__global__ void minKernel(type* result, const type* vector, dtype::size rows, dtype::size maxIndex,
-    dtype::size offset) {
+__global__ void minKernel(const type* vector, fastEIT::dtype::size rows, fastEIT::dtype::size maxIndex,
+    fastEIT::dtype::size offset, type* result) {
     // get id
-    dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index lid = threadIdx.x;
+    fastEIT::dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index lid = threadIdx.x;
 
     // copy data to shared memory
     __volatile __shared__ type res[fastEIT::Matrix<type>::block_size];
@@ -371,9 +369,8 @@ void fastEIT::Matrix<type>::min(const Matrix<type>& value, dtype::size maxIndex,
     dtype::size offset = 1;
 
     // start kernel once
-    minKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(
-        this->set_device_data(), value.device_data(), this->data_rows(), maxIndex,
-        offset);
+    minKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(value.device_data(),
+        this->data_rows(), maxIndex, offset, this->set_device_data());
 
     // start kernel
     do {
@@ -381,9 +378,8 @@ void fastEIT::Matrix<type>::min(const Matrix<type>& value, dtype::size maxIndex,
         offset *= Matrix<type>::block_size;
         global = (global + Matrix<type>::block_size - 1) / Matrix<type>::block_size;
 
-        minKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(
-            this->set_device_data(), this->device_data(), this->data_rows(), maxIndex,
-            offset);
+        minKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(this->device_data(),
+            this->data_rows(), maxIndex, offset, this->set_device_data());
 
     }
     while (offset * Matrix<type>::block_size < this->data_rows());
@@ -391,11 +387,11 @@ void fastEIT::Matrix<type>::min(const Matrix<type>& value, dtype::size maxIndex,
 
 // max kernel
 template <class type>
-__global__ void maxKernel(type* result, const type* vector, dtype::size rows, dtype::size maxIndex,
-    dtype::size offset) {
+__global__ void maxKernel(const type* vector, fastEIT::dtype::size rows, fastEIT::dtype::size maxIndex,
+    fastEIT::dtype::size offset, type* result) {
     // get id
-    dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index lid = threadIdx.x;
+    fastEIT::dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index lid = threadIdx.x;
 
     // copy data to shared memory
     __volatile __shared__ type res[fastEIT::Matrix<type>::block_size];
@@ -429,9 +425,8 @@ void fastEIT::Matrix<type>::max(const Matrix<type>& value, dtype::size maxIndex,
     dtype::size offset = 1;
 
     // start kernel once
-    maxKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(
-        this->set_device_data(), value.device_data(), this->data_rows(), maxIndex,
-        offset);
+    maxKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(value.device_data(),
+        this->data_rows(), maxIndex, offset, this->set_device_data());
 
     // start kernel
     do {
@@ -439,9 +434,8 @@ void fastEIT::Matrix<type>::max(const Matrix<type>& value, dtype::size maxIndex,
         offset *= Matrix<type>::block_size;
         global = (global + Matrix<type>::block_size - 1) / Matrix<type>::block_size;
 
-        maxKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(
-            this->set_device_data(), this->device_data(), this->data_rows(), maxIndex,
-            offset);
+        maxKernel<type><<<global, Matrix<type>::block_size, 0, stream>>>(this->device_data(),
+            this->data_rows(), maxIndex, offset, this->set_device_data());
 
     }
     while (offset * Matrix<type>::block_size < this->data_rows());
@@ -601,5 +595,5 @@ linalgcuError_t linalgcu_matrix_load(linalgcuMatrix_t* resultPointer, const char
 }*/
 
 // specialisation
-template class fastEIT::Matrix<dtype::real>;
-template class fastEIT::Matrix<dtype::index>;
+template class fastEIT::Matrix<fastEIT::dtype::real>;
+template class fastEIT::Matrix<fastEIT::dtype::index>;

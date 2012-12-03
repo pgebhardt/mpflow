@@ -36,20 +36,23 @@ fastEIT::Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::rea
     // fill electrode vectors
     dtype::real angle = 0.0f;
     dtype::real deltaAngle = M_PI / (dtype::real)this->count();
+    std::tuple<dtype::real, dtype::real> point;
     for (dtype::index i = 0; i < this->count(); i++) {
         // calc start angle
         angle = (dtype::real)i * 2.0f * deltaAngle;
 
         // calc start coordinates
-        math::kartesian(this->electrodes_start_[i * 2 + 0], this->electrodes_start_[i * 2 + 1],
-            meshRadius, angle);
+        point = math::kartesian(std::make_tuple(meshRadius, angle));
+        this->electrodes_start_[i * 2 + 0] = std::get<0>(point);
+        this->electrodes_start_[i * 2 + 1] = std::get<1>(point);
 
         // calc end angle
         angle += this->width() / meshRadius;
 
         // calc end coordinates
-        math::kartesian(this->electrodes_end_[i * 2 + 0], this->electrodes_end_[i * 2 + 1],
-            meshRadius, angle);
+        point = math::kartesian(std::make_tuple(meshRadius, angle));
+        this->electrodes_end_[i * 2 + 0] = std::get<0>(point);
+        this->electrodes_end_[i * 2 + 1] = std::get<1>(point);
     }
 }
 

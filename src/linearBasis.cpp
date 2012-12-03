@@ -49,14 +49,14 @@ fastEIT::basis::Linear::Linear(std::array<std::tuple<dtype::real, dtype::real>, 
 }
 
 // evaluate basis function
-dtype::real fastEIT::basis::Linear::evaluate(std::tuple<dtype::real, dtype::real> point) {
+fastEIT::dtype::real fastEIT::basis::Linear::evaluate(std::tuple<dtype::real, dtype::real> point) {
     // calc result
     return this->coefficients()[0] + this->coefficients()[1] * std::get<0>(point) +
         this->coefficients()[2] * std::get<1>(point);
 }
 
 // integrate with basis
-dtype::real fastEIT::basis::Linear::integrateWithBasis(const Linear& other) {
+fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(const Linear& other) {
     // shorten variables
     dtype::real x1 = std::get<0>(this->nodes()[0]);
     dtype::real y1 = std::get<1>(this->nodes()[0]);
@@ -93,7 +93,7 @@ dtype::real fastEIT::basis::Linear::integrateWithBasis(const Linear& other) {
 }
 
 // integrate gradient with basis
-dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(const Linear& other) {
+fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(const Linear& other) {
     // calc area
     dtype::real area = 0.5 * fabs(
         (std::get<0>(this->nodes()[1]) - std::get<0>(this->nodes()[0])) *
@@ -107,7 +107,7 @@ dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(const Linear& oth
 }
 
 // integrate edge
-dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
+fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
     const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end) {
     // integral
