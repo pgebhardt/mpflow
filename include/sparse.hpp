@@ -29,7 +29,7 @@ namespace fastEIT {
     public:
         // matrix multiply
         void multiply(const Matrix<dtype::real>& matrix, cudaStream_t stream,
-            Matrix<dtype::real>& result) const;
+            Matrix<dtype::real>* result) const;
 
     public:
         // block size

@@ -176,20 +176,25 @@ __global__ void sparseMultiplyKernel(const fastEIT::dtype::real* values,
 
 // sparse matrix multiply
 void fastEIT::SparseMatrix::multiply(const Matrix<dtype::real>& matrix, cudaStream_t stream,
-    Matrix<dtype::real>& result) const {
+    Matrix<dtype::real>* result) const {
+    // check input
+    if (result == NULL) {
+        throw std::invalid_argument("SparseMatrix::multiply: result == NULL");
+    }
+
     // check size
-    if ((result.data_rows() != this->data_rows()) || (this->data_columns() != matrix.data_rows()) ||
-        (result.data_columns() != matrix.data_columns())) {
+    if ((result->data_rows() != this->data_rows()) || (this->data_columns() != matrix.data_rows()) ||
+        (result->data_columns() != matrix.data_columns())) {
         throw std::invalid_argument("SparseMatrix::multiply: size");
     }
 
     // kernel dimension
-    dim3 global((result.data_rows() + block_size - 1) / block_size,
-        (result.data_columns() + block_size - 1) / block_size);
+    dim3 global((result->data_rows() + block_size - 1) / block_size,
+        (result->data_columns() + block_size - 1) / block_size);
     dim3 local(block_size, block_size);
 
     // execute kernel
     sparseMultiplyKernel<<<global, local, 0, stream>>>(this->values(), this->column_ids(),
-        matrix.device_data(), result.data_rows(), result.data_columns(), this->density(),
-        result.device_data());
+        matrix.device_data(), result->data_rows(), result->data_columns(), this->density(),
+        result->device_data());
 }

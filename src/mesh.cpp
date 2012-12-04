@@ -20,21 +20,30 @@
 template <
     class BasisFunction
 >
-fastEIT::Mesh<BasisFunction>::Mesh(Matrix<dtype::real>& nodes, Matrix<dtype::index>& elements,
-    Matrix<dtype::index>& boundary, dtype::real radius, dtype::real height)
-    : radius_(radius), height_(height), nodes_(&nodes), elements_(&elements),
-        boundary_(&boundary) {
+fastEIT::Mesh<BasisFunction>::Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
+    Matrix<dtype::index>* boundary, dtype::real radius, dtype::real height)
+    : radius_(radius), height_(height), nodes_(nodes), elements_(elements),
+        boundary_(boundary) {
     // check input
+    if (nodes == NULL) {
+        throw std::invalid_argument("Mesh::Mesh: nodes == NULL");
+    }
+    if (elements == NULL) {
+        throw std::invalid_argument("Mesh::Mesh: elements == NULL");
+    }
+    if (boundary == NULL) {
+        throw std::invalid_argument("Mesh::Mesh: boundary == NULL");
+    }
     if (radius <= 0.0f) {
         throw std::invalid_argument("radius <= 0.0");
     }
     if (height <= 0.0f) {
         throw std::invalid_argument("height <= 0.0");
     }
-    if (elements.columns() != BasisFunction::nodes_per_element) {
+    if (elements->columns() != BasisFunction::nodes_per_element) {
         throw std::invalid_argument("elements.count() != BasisFunction::nodes_per_element");
     }
-    if (boundary.columns() != BasisFunction::nodes_per_edge) {
+    if (boundary->columns() != BasisFunction::nodes_per_edge) {
         throw std::invalid_argument("boundary.count() != BasisFunction::nodes_per_edge");
     }
 }

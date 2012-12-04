@@ -42,15 +42,20 @@ template <
     class type
 >
 void fastEIT::model::reduceMatrix(const Matrix<type>& intermediateMatrix, const SparseMatrix& shape, cudaStream_t stream,
-    Matrix<type>& matrix) {
+    Matrix<type>* matrix) {
+    // check input
+    if (matrix == NULL) {
+        throw std::invalid_argument("model::reduceMatrix: matrix == NULL");
+    }
+
     // block size
-    dim3 blocks(matrix.data_rows() / Matrix<dtype::real>::block_size, 1);
+    dim3 blocks(matrix->data_rows() / Matrix<dtype::real>::block_size, 1);
     dim3 threads(Matrix<dtype::real>::block_size, Matrix<dtype::real>::block_size);
 
     // reduce matrix
     reduceMatrixKernel<type><<<blocks, threads, 0, stream>>>(
-        intermediateMatrix.device_data(), shape.column_ids(), matrix.data_rows(),
-        shape.density(), matrix.device_data());
+        intermediateMatrix.device_data(), shape.column_ids(), matrix->data_rows(),
+        shape.density(), matrix->device_data());
 }
 
 // update matrix kernel
@@ -81,19 +86,24 @@ __global__ void updateMatrixKernel(const fastEIT::dtype::index* connectivityMatr
 
 // update matrix
 void fastEIT::model::updateMatrix(const Matrix<dtype::real>& elements, const Matrix<dtype::real>& gamma,
-    const Matrix<dtype::index>& connectivityMatrix, dtype::real sigmaRef, cudaStream_t stream, SparseMatrix& matrix) {
+    const Matrix<dtype::index>& connectivityMatrix, dtype::real sigmaRef, cudaStream_t stream, SparseMatrix* matrix) {
+    // check input
+    if (matrix == NULL) {
+        throw std::invalid_argument("model::updateMatrix: matrix == NULL");
+    }
+
     // dimension
     dim3 threads(Matrix<dtype::real>::block_size, Matrix<dtype::real>::block_size);
-    dim3 blocks(matrix.data_rows() / Matrix<dtype::real>::block_size, 1);
+    dim3 blocks(matrix->data_rows() / Matrix<dtype::real>::block_size, 1);
 
     // execute kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(
         connectivityMatrix.device_data(), elements.device_data(), gamma.device_data(),
-        sigmaRef, connectivityMatrix.data_rows(), matrix.density(), matrix.values());
+        sigmaRef, connectivityMatrix.data_rows(), matrix->density(), matrix->values());
 }
 
 // template specialisation
-template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(const Matrix<fastEIT::dtype::real>& intermediateMatrix,
-    const SparseMatrix& shape, cudaStream_t stream, Matrix<fastEIT::dtype::real>& matrix);
-template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const Matrix<fastEIT::dtype::index>& intermediateMatrix,
-    const SparseMatrix& shape, cudaStream_t stream, Matrix<fastEIT::dtype::index>& matrix);
+template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(const Matrix<fastEIT::dtype::real>&, const SparseMatrix&,
+    cudaStream_t, Matrix<fastEIT::dtype::real>*);
+template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const Matrix<fastEIT::dtype::index>&, const SparseMatrix&,
+    cudaStream_t, Matrix<fastEIT::dtype::index>*);

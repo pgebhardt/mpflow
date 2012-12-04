@@ -13,7 +13,7 @@ namespace fastEIT {
     class Model {
     // constructor and destructor
     public:
-        Model(Mesh<BasisFunction>& mesh, Electrodes& electrodes, dtype::real sigmaRef,
+        Model(Mesh<BasisFunction>* mesh, Electrodes* electrodes, dtype::real sigmaRef,
             dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
         virtual ~Model();
 
@@ -26,7 +26,7 @@ namespace fastEIT {
     public:
         // calc excitaion components
         void calcExcitationComponents(const Matrix<dtype::real>& pattern, cublasHandle_t handle, cudaStream_t stream,
-            std::vector<Matrix<dtype::real>*>& components);
+            std::vector<Matrix<dtype::real>*>* components);
 
         // update model
         void update(const Matrix<dtype::real>& gamma, cublasHandle_t handle, cudaStream_t stream);

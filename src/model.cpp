@@ -24,12 +24,18 @@
 
 // create solver model
 template <class BasisFunction>
-fastEIT::Model<BasisFunction>::Model(Mesh<BasisFunction>& mesh, Electrodes& electrodes, dtype::real sigmaRef,
+fastEIT::Model<BasisFunction>::Model(Mesh<BasisFunction>* mesh, Electrodes* electrodes, dtype::real sigmaRef,
     dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
-    : mesh_(&mesh), electrodes_(&electrodes), sigma_ref_(sigmaRef), s_matrix_(NULL), r_matrix_(NULL),
+    : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), s_matrix_(NULL), r_matrix_(NULL),
         excitation_matrix_(NULL), connectivity_matrix_(NULL), elemental_s_matrix_(NULL),
         elemental_r_matrix_(NULL), num_harmonics_(numHarmonics) {
     // check input
+    if (mesh == NULL) {
+        throw std::invalid_argument("Model::Model: mesh == NULL");
+    }
+    if (electrodes == NULL) {
+        throw std::invalid_argument("Model::Model: electrodes == NULL");
+    }
     if (handle == NULL) {
         throw std::invalid_argument("Model::Model: handle == NULL");
     }
@@ -190,20 +196,20 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
 
     // reduce matrices
     model::reduceMatrix(connectivity_matrix, this->s_matrix(), stream,
-        this->connectivity_matrix());
+        &this->connectivity_matrix());
     model::reduceMatrix(elemental_s_matrix, this->s_matrix(), stream,
-        this->elemental_s_matrix());
+        &this->elemental_s_matrix());
     model::reduceMatrix(elemental_r_matrix, this->s_matrix(), stream,
-        this->elemental_r_matrix());
+        &this->elemental_r_matrix());
 
     // create gamma
     Matrix<dtype::real> gamma(this->mesh().elements().rows(), 1, stream);
 
     // update matrices
     model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->s_matrix());
+        this->sigma_ref(), stream, &this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->r_matrix());
+        this->sigma_ref(), stream, &this->r_matrix());
 }
 
 // update model
@@ -217,9 +223,9 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 
     // update matrices
     model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->s_matrix());
+        this->sigma_ref(), stream, &this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->r_matrix());
+        this->sigma_ref(), stream, &this->r_matrix());
 
     // set cublas stream
     cublasSetStream(handle, stream);
@@ -290,30 +296,33 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 // calc excitaion components
 template <class BasisFunction>
 void fastEIT::Model<BasisFunction>::calcExcitationComponents(const Matrix<dtype::real>& pattern,
-    cublasHandle_t handle, cudaStream_t stream, std::vector<Matrix<dtype::real>*>& components) {
+    cublasHandle_t handle, cudaStream_t stream, std::vector<Matrix<dtype::real>*>* components) {
     // check input
     if (handle == NULL) {
         throw std::invalid_argument("Model::calcExcitationComponents: handle == NULL");
+    }
+    if (components == NULL) {
+        throw std::invalid_argument("Model::calcExcitationComponents: components == NULL");
     }
 
     // calc excitation matrices
     for (dtype::index harmonic = 0; harmonic < this->num_harmonics() + 1; ++harmonic) {
         // Run multiply once more to avoid cublas error
         try {
-            components[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
+            (*components)[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
         }
         catch (std::exception& e) {
-            components[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
+            (*components)[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
         }
     }
 
     // calc fourier coefficients for current pattern
     // calc ground mode
-    components[0]->scalarMultiply(1.0f / this->mesh().height(), stream);
+    (*components)[0]->scalarMultiply(1.0f / this->mesh().height(), stream);
 
     // calc harmonics
     for (dtype::index harmonic = 1; harmonic < this->num_harmonics() + 1; ++harmonic) {
-        components[harmonic]->scalarMultiply(
+        (*components)[harmonic]->scalarMultiply(
             2.0f * sin(harmonic * M_PI * this->electrodes().height() / this->mesh().height()) /
             (harmonic * M_PI * this->electrodes().height()), stream);
     }
