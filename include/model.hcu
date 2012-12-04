@@ -16,10 +16,11 @@ namespace fastEIT {
             SparseMatrix& matrix);
 
         // reduce matrix
-        void reduceMatrix(const Matrix<dtype::real>& intermediateMatrix, const SparseMatrix& shape,
-            cudaStream_t stream, Matrix<dtype::real>& matrix);
-        void reduceMatrix(const Matrix<dtype::index>& intermediateMatrix, const SparseMatrix& shape,
-            cudaStream_t stream, Matrix<dtype::index>& matrix);
+        template <
+            class type
+        >
+        void reduceMatrix(const Matrix<type>& intermediateMatrix, const SparseMatrix& shape,
+            cudaStream_t stream, Matrix<type>& matrix);
     }
 }
 
