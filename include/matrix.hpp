@@ -9,7 +9,9 @@
 // namespace fastEIT
 namespace fastEIT {
     // matrix class definition
-    template <class type>
+    template <
+        class type
+    >
     class Matrix {
     public:
         // constructor and destructor
@@ -74,6 +76,15 @@ namespace fastEIT {
         dtype::size data_rows_;
         dtype::size data_columns_;
     };
+
+    // namespace matrix
+    namespace matrix {
+        // load matrix from file
+        template <
+            class type
+        >
+        fastEIT::Matrix<type>* loadtxt(const std::string filename, cudaStream_t stream);
+    }
 }
 
 #endif

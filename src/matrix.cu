@@ -5,6 +5,11 @@
 
 #include <stdexcept>
 #include <assert.h>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <fstream>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -438,6 +443,67 @@ void fastEIT::Matrix<type>::max(const Matrix<type>& value, cudaStream_t stream) 
     }
     while (offset * Matrix<type>::block_size < this->data_rows());
 }
+
+// load matrix from file
+template <
+    class type
+>
+fastEIT::Matrix<type>* fastEIT::matrix::loadtxt(const std::string filename, cudaStream_t stream) {
+    // open file stream
+    std::ifstream file;
+    file.open(filename.c_str());
+
+    // read lines
+    std::vector<std::string> lines;
+    std::string line;
+    while (!file.eof()) {
+        // read line
+        getline(file, line);
+
+        // add line to vector
+        lines.push_back(line);
+    }
+
+    // close file
+    file.close();
+
+    // read values
+    std::vector<std::vector<type> > values;
+    for (std::vector<std::string>::iterator line = lines.begin();
+        line != lines.end(); ++line) {
+        // create row vector
+        std::vector<type> row;
+        type value;
+
+        // create string stream
+        std::stringstream line_stream(*line);
+
+        // read values of line
+        while (!line_stream.eof()) {
+            line_stream >> value;
+            row.push_back(value);
+        }
+
+        // add row
+        values.push_back(row);
+    }
+
+    // create matrix
+    Matrix<type>* matrix = new Matrix<type>(values.size() - 1, values[0].size(), stream);
+
+    // add values
+    for (dtype::index row = 0; row < matrix->rows(); ++row) {
+        for (dtype::index column = 0; column < matrix->columns(); ++column) {
+            (*matrix)(row, column) = values[row][column];
+        }
+    }
+
+    // copy data to device
+    matrix->copyToDevice(stream);
+
+    return matrix;
+}
+
 /*
 // save matrix to file
 extern "C"
@@ -474,124 +540,10 @@ linalgcuError_t linalgcu_matrix_save(const char* fileName, linalgcuMatrix_t matr
 
     return LINALGCU_SUCCESS;
 }
-
-// load matrix from file
-extern "C"
-linalgcuError_t linalgcu_matrix_load(linalgcuMatrix_t* resultPointer, const char* fileName,
-    cudaStream_t stream) {
-    // check input
-    if ((fileName == NULL) || (resultPointer == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // init result ointer
-    *resultPointer = NULL;
-
-    // error
-    linalgcuError_t error = LINALGCU_SUCCESS;
-
-    // open file
-    FILE* file = fopen(fileName, "r");
-
-    // check success
-    if (file == NULL) {
-        return LINALGCU_ERROR;
-    }
-
-    // set local
-    setlocale(LC_NUMERIC, "C");
-
-    // line buffer
-    char buffer[10240];
-
-    // get size of matrix
-    linalgcuSize_t rows = 0;
-    linalgcuSize_t columns = 0;
-
-    // get x size
-    while (fgets(buffer, 10240, file) != NULL) {
-        rows++;
-    }
-    fseek(file, 0, SEEK_SET);
-
-    // check x size
-    if (rows == 0) {
-        // cleanup
-        fclose(file);
-
-        return LINALGCU_ERROR;
-    }
-
-    // get first line
-    fgets(buffer, 10240, file);
-
-    // get y size
-    if (strtok(buffer, " \n")) {
-        columns++;
-
-        while (strtok(NULL, " ") != NULL) {
-            columns++;
-        }
-    }
-    fseek(file, 0, SEEK_SET);
-
-    // check y size
-    if (columns == 0) {
-        // cleanup
-        fclose(file);
-
-        return LINALGCU_ERROR;
-    }
-
-    // create matrix
-    linalgcuMatrix_t matrix = NULL;
-    error = linalgcu_matrix_create(&matrix, rows, columns, stream);
-
-    // check success
-    if (error != LINALGCU_SUCCESS) {
-        // cleanup
-        fclose(file);
-
-        return error;
-    }
-
-    // read data
-    char* element = NULL;
-    for (linalgcuSize_t i = 0; i < rows; i++) {
-        // read line
-        fgets(buffer, 10240, file);
-
-        // read first element
-        element = strtok(buffer, " \n");
-
-        if (element == NULL) {
-            // cleanup
-            linalgcu_matrix_release(&matrix);
-            fclose(file);
-
-            return LINALGCU_ERROR;
-        }
-
-        linalgcu_matrix_set_element(matrix, atof(element), i, 0);
-
-        for (linalgcuSize_t j = 1; j < columns; j++) {
-            // get element
-            element = strtok(NULL, " ");
-
-            // set element
-            matrix->hostData[i + matrix->rows * j] = atof(element);
-        }
-    }
-
-    // copy to device
-    linalgcu_matrix_copy_to_device(matrix, stream);
-
-    // set result pointer
-    *resultPointer = matrix;
-
-    return LINALGCU_SUCCESS;
-}*/
+*/
 
 // specialisation
+template fastEIT::Matrix<fastEIT::dtype::real>* fastEIT::matrix::loadtxt<fastEIT::dtype::real>(const std::string, cudaStream_t);
+template fastEIT::Matrix<fastEIT::dtype::index>* fastEIT::matrix::loadtxt<fastEIT::dtype::index>(const std::string, cudaStream_t);
 template class fastEIT::Matrix<fastEIT::dtype::real>;
 template class fastEIT::Matrix<fastEIT::dtype::index>;

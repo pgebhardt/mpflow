@@ -9,6 +9,7 @@
 // std lib includes
 #include <stdexcept>
 #include <assert.h>
+#include <string>
 #include <tuple>
 #include <array>
 #include <vector>
@@ -25,10 +26,10 @@
 #include "electrodes.hpp"
 #include "basis.hpp"
 #include "model.hpp"
-#include "conjugate.hpp"
+/*#include "conjugate.hpp"
 #include "sparseConjugate.hpp"
 #include "forward.hpp"
 #include "inverse.hpp"
-#include "solver.hpp"
+#include "solver.hpp"*/
 
 #endif
