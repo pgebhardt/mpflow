@@ -18,30 +18,25 @@ namespace fastEIT {
         Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream);
         virtual ~Matrix();
 
-    public:
+        // block size
+        static const dtype::size block_size = 16;
+
         // copy methods
         void copy(const Matrix<type>& other, cudaStream_t stream);
         void copyToDevice(cudaStream_t stream);
         void copyToHost(cudaStream_t stream);
 
-    public:
-        // block size
-        static const dtype::size block_size = 16;
-
-    // mathematical methods
-    public:
+        // mathematical methods
         void add(const Matrix<type>& value, cudaStream_t stream);
         void multiply(const Matrix<type>& A, const Matrix<type>& B, cublasHandle_t handle, cudaStream_t stream);
         void scalarMultiply(type scalar, cudaStream_t stream);
         void vectorDotProduct(const Matrix<type>& A, const Matrix<type>& B, cudaStream_t stream);
 
-    // reduce methods
-    public:
+        // reduce methods
         void sum(const Matrix<type>& value, cudaStream_t stream);
         void min(const Matrix<type>& value, cudaStream_t stream);
         void max(const Matrix<type>& value, cudaStream_t stream);
 
-    public:
         // accessors
         const type* host_data() const { return this->host_data_; }
         const type* device_data() const { return this->device_data_; }
@@ -81,6 +76,12 @@ namespace fastEIT {
             class type
         >
         fastEIT::Matrix<type>* loadtxt(const std::string filename, cudaStream_t stream);
+
+        // save matrix to file
+        template <
+            class type
+        >
+        void savetxt(const std::string filename, const Matrix<type>& matrix);
     }
 }
 

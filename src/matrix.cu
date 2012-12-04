@@ -485,6 +485,11 @@ fastEIT::Matrix<type>* fastEIT::matrix::loadtxt(const std::string filename, cuda
 
         // read values of line
         while (!line_stream.eof()) {
+            // check success
+            if (line_stream.fail()) {
+                throw std::logic_error("matrix::loadtxt: invalid value");
+            }
+
             line_stream >> value;
             row.push_back(value);
         }
@@ -507,6 +512,32 @@ fastEIT::Matrix<type>* fastEIT::matrix::loadtxt(const std::string filename, cuda
     matrix->copyToDevice(stream);
 
     return matrix;
+}
+
+// save matrix to file
+template <
+    class type
+>
+void fastEIT::matrix::savetxt(const std::string filename, const Matrix<type>& matrix) {
+    // open file stream
+    std::ofstream file;
+    file.open(filename.c_str());
+
+    // check open
+    if (file.fail()) {
+        throw std::logic_error("matrix::savetxt: cannot open file!");
+    }
+
+    // write data
+    for (dtype::index row = 0; row < matrix.rows(); ++row) {
+        for (dtype::index column = 0; column < matrix.columns() - 1; ++column) {
+            file << matrix(row, column) << " ";
+        }
+        file << matrix(row, matrix.columns() - 1) << std::endl;
+    }
+
+    // close file
+    file.close();
 }
 
 /*
@@ -550,5 +581,7 @@ linalgcuError_t linalgcu_matrix_save(const char* fileName, linalgcuMatrix_t matr
 // specialisation
 template fastEIT::Matrix<fastEIT::dtype::real>* fastEIT::matrix::loadtxt<fastEIT::dtype::real>(const std::string, cudaStream_t);
 template fastEIT::Matrix<fastEIT::dtype::index>* fastEIT::matrix::loadtxt<fastEIT::dtype::index>(const std::string, cudaStream_t);
+template void fastEIT::matrix::savetxt<fastEIT::dtype::real>(const std::string, const fastEIT::Matrix<fastEIT::dtype::real>&);
+template void fastEIT::matrix::savetxt<fastEIT::dtype::index>(const std::string, const fastEIT::Matrix<fastEIT::dtype::index>&);
 template class fastEIT::Matrix<fastEIT::dtype::real>;
 template class fastEIT::Matrix<fastEIT::dtype::index>;
