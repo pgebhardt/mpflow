@@ -3,99 +3,99 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.hpp"
+#include <stdexcept>
+#include <assert.h>
 
-// namespaces
-using namespace fastEIT;
-using namespace fastEIT::numeric;
-using namespace std;
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+#include "../include/dtype.hpp"
+#include "../include/matrix.hpp"
+#include "../include/conjugate.hpp"
+#include "../include/conjugate.hcu"
 
 // create conjugate solver
-Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle, cudaStream_t stream)
-    : mRows(rows), mResiduum(NULL), mProjection(NULL), mRSOld(NULL), mRSNew(NULL),
-        mTempVector(NULL), mTempNumber(NULL) {
+fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle,
+    cudaStream_t stream)
+    : rows_(rows), residuum_(NULL), projection_(NULL), rsold_(NULL), rsnew_(NULL),
+        temp_vector_(NULL), temp_number_(NULL) {
     // check input
     if (rows <= 1) {
-        throw invalid_argument("Conjugate::Conjugate: rows <= 1");
+        throw std::invalid_argument("Conjugate::Conjugate: rows <= 1");
     }
     if (handle == NULL) {
-        throw invalid_argument("Conjugate::Conjugate: handle == NULL");
+        throw std::invalid_argument("Conjugate::Conjugate: handle == NULL");
     }
 
     // create matrices
-    this->mResiduum = new Matrix<dtype::real>(this->rows(), 1, stream);
-    this->mProjection = new Matrix<dtype::real>(this->rows(), 1, stream);
-    this->mRSOld = new Matrix<dtype::real>(this->rows(), 1, stream);
-    this->mRSNew = new Matrix<dtype::real>(this->rows(), 1, stream);
-    this->mTempVector = new Matrix<dtype::real>(this->rows(), this->residuum()->dataRows() /
-        Matrix<dtype::real>::blockSize, stream);
-    this->mTempNumber = new Matrix<dtype::real>(this->rows(), 1, stream);
+    this->residuum_ = new Matrix<dtype::real>(this->rows(), 1, stream);
+    this->projection_ = new Matrix<dtype::real>(this->rows(), 1, stream);
+    this->rsold_ = new Matrix<dtype::real>(this->rows(), 1, stream);
+    this->rsnew_ = new Matrix<dtype::real>(this->rows(), 1, stream);
+    this->temp_vector_ = new Matrix<dtype::real>(this->rows(), this->residuum().data_rows() /
+        Matrix<dtype::real>::block_size, stream);
+    this->temp_number_ = new Matrix<dtype::real>(this->rows(), 1, stream);
 }
 
 // release solver
-Conjugate::~Conjugate() {
+fastEIT::numeric::Conjugate::~Conjugate() {
     // release matrices
-    delete this->mResiduum;
-    delete this->mProjection;
-    delete this->mRSOld;
-    delete this->mRSNew;
-    delete this->mTempVector;
-    delete this->mTempNumber;
+    delete this->residuum_;
+    delete this->projection_;
+    delete this->rsold_;
+    delete this->rsnew_;
+    delete this->temp_vector_;
+    delete this->temp_number_;
 }
 
 // solve conjugate
-void Conjugate::solve(Matrix<dtype::real>* A, Matrix<dtype::real>* x, Matrix<dtype::real>* f,
-    dtype::size iterations, cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::numeric::Conjugate::solve(const Matrix<dtype::real>& A,
+    const Matrix<dtype::real>& f, dtype::size iterations, cublasHandle_t handle,
+    cudaStream_t stream, Matrix<dtype::real>* x) {
     // check input
-    if (A == NULL) {
-        throw invalid_argument("Conjugate::solve: A == NULL");
-    }
     if (x == NULL) {
-        throw invalid_argument("Conjugate::solve: x == NULL");
-    }
-    if (f == NULL) {
-        throw invalid_argument("Conjugate::solve: f == NULL");
+        throw std::invalid_argument("Conjugate::solve: x == NULL");
     }
     if (handle == NULL) {
-        throw invalid_argument("Conjugate::solve: handle == NULL");
+        throw std::invalid_argument("Conjugate::solve: handle == NULL");
     }
 
     // calc residuum r = f - A * x
-    this->residuum()->multiply(A, x, handle, stream);
-    this->residuum()->scalarMultiply(-1.0, stream);
-    this->residuum()->add(f, stream);
+    this->residuum().multiply(A, *x, handle, stream);
+    this->residuum().scalarMultiply(-1.0, stream);
+    this->residuum().add(f, stream);
 
     // p = r
-    this->projection()->copy(this->residuum(), stream);
+    this->projection().copy(this->residuum(), stream);
 
     // calc rsold
-    this->rsold()->vectorDotProduct(this->residuum(), this->residuum(), stream);
+    this->rsold().vectorDotProduct(this->residuum(), this->residuum(), stream);
 
     // iterate
     for (dtype::size i = 0; i < iterations; i++) {
         // calc A * p
-        Conjugate::gemv(this->tempVector(), A, this->projection(), stream);
+        conjugate::gemv(A, this->projection(), stream, &this->temp_vector());
 
         // calc p * A * p
-        this->tempNumber()->vectorDotProduct(this->projection(), this->tempVector(), stream);
+        this->temp_number().vectorDotProduct(this->projection(), this->temp_vector(), stream);
 
         // update residuum
-        Conjugate::updateVector(this->residuum(), this->residuum(), -1.0f,
-            this->tempVector(), this->rsold(), this->tempNumber(), stream);
+        conjugate::updateVector(this->residuum(), -1.0f, this->temp_vector(),
+            this->rsold(), this->temp_number(), stream, &this->residuum());
 
         // update x
-        Conjugate::updateVector(x, x, 1.0f, this->projection(), this->rsold(),
-            this->tempNumber(), stream);
+        conjugate::updateVector(*x, 1.0f, this->projection(), this->rsold(),
+            this->temp_number(), stream, x);
 
         // calc rsnew
-        this->rsnew()->vectorDotProduct(this->residuum(), this->residuum(), stream);
+        this->rsnew().vectorDotProduct(this->residuum(), this->residuum(), stream);
 
         // update projection
-        Conjugate::updateVector(this->projection(), this->residuum(), 1.0f,
-            this->projection(), this->rsnew(), this->rsold(), stream);
+        conjugate::updateVector(this->residuum(), 1.0f, this->projection(),
+            this->rsnew(), this->rsold(), stream, &this->projection());
 
         // copy rsnew to rsold
-        this->rsold()->copy(this->rsnew(), stream);
+        this->rsold().copy(this->rsnew(), stream);
     }
 }
 

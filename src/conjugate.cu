@@ -3,104 +3,112 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.hpp"
+#include <stdexcept>
+#include <assert.h>
 
-// namespaces
-using namespace fastEIT;
-using namespace fastEIT::numeric;
-using namespace std;
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+#include "../include/dtype.hpp"
+#include "../include/matrix.hpp"
+#include "../include/conjugate.hcu"
 
 // add scalar kernel
-__global__ void addScalarKernel(dtype::real* vector, dtype::real* scalar,
-    dtype::size vectorRows, dtype::size rows, dtype::size columns) {
+__global__ void addScalarKernel(const fastEIT::dtype::real* scalar,
+    fastEIT::dtype::size vectorRows, fastEIT::dtype::size rows,
+    fastEIT::dtype::size columns, fastEIT::dtype::real* vector) {
     // get ids
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // add data
-    vector[row + column * vectorRows] += row < rows && column < columns ? scalar[column * vectorRows] : 0.0f;
+    vector[row + column * vectorRows] += row < rows && column < columns ?
+        scalar[column * vectorRows] : 0.0f;
 }
 
 // add scalar
-void Conjugate::addScalar(Matrix<dtype::real>* vector,
-    Matrix<dtype::real>* scalar, dtype::size rows, dtype::size columns, cudaStream_t stream) {
+void fastEIT::numeric::conjugate::addScalar(const Matrix<dtype::real>& scalar,
+    dtype::size rows, dtype::size columns, cudaStream_t stream, Matrix<dtype::real>* vector) {
     // check input
     if (vector == NULL) {
-        throw invalid_argument("Conjugate::addScalar: vector == NULL");
-    }
-    if (scalar == NULL) {
-        throw invalid_argument("Conjugate::addScalar: scalar == NULL");
+        throw std::invalid_argument("Conjugate::addScalar: vector == NULL");
     }
 
     // kernel dimension
-    dim3 global(vector->dataRows() / Matrix<dtype::real>::blockSize, vector->dataColumns() == 1 ? 1 :
-        vector->dataColumns() / Matrix<dtype::real>::blockSize);
-    dim3 local(Matrix<dtype::real>::blockSize, vector->dataColumns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
+    dim3 global(vector->data_rows() / Matrix<dtype::real>::block_size,
+        vector->data_columns() == 1 ? 1 :
+        vector->data_columns() / Matrix<dtype::real>::block_size);
+    dim3 local(Matrix<dtype::real>::block_size,
+        vector->data_columns() == 1 ? 1 : Matrix<dtype::real>::block_size);
 
     // execute kernel
-    addScalarKernel<<<global, local, 0, stream>>>(vector->deviceData(), scalar->deviceData(),
-        vector->dataRows(), rows, columns);
+    addScalarKernel<<<global, local, 0, stream>>>(scalar.device_data(),
+        vector->data_rows(), rows, columns, vector->device_data());
 }
 
 // update vector
-__global__ void updateVectorKernel(dtype::real* result, dtype::real* x1, dtype::real sign,
-    dtype::real* x2, dtype::real* r1, dtype::real* r2, dtype::size rows) {
+__global__ void updateVectorKernel(const fastEIT::dtype::real* x1,
+    const fastEIT::dtype::real sign, const fastEIT::dtype::real* x2,
+    const fastEIT::dtype::real* r1, const fastEIT::dtype::real* r2,
+    fastEIT::dtype::size rows, fastEIT::dtype::real* result) {
     // get ids
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
-    result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] + sign * x2[row + column * rows] *
+    result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] +
+        sign * x2[row + column * rows] *
         r1[column * rows] / r2[column * rows] : 0.0f;
 }
 
 // update vector
-void Conjugate::updateVector(Matrix<dtype::real>* result,
-    Matrix<dtype::real>* x1, dtype::real sign, Matrix<dtype::real>* x2,
-    Matrix<dtype::real>* r1, Matrix<dtype::real>* r2, cudaStream_t stream) {
+void fastEIT::numeric::conjugate::updateVector(const Matrix<dtype::real>& x1,
+    dtype::real sign, const Matrix<dtype::real>& x2, const Matrix<dtype::real>& r1,
+    const Matrix<dtype::real>& r2, cudaStream_t stream, Matrix<dtype::real>* result) {
     if (result == NULL) {
-        throw invalid_argument("Conjugate::addScalar: result == NULL");
-    }
-    if (x1 == NULL) {
-        throw invalid_argument("Conjugate::addScalar: x1 == NULL");
-    }
-    if (x2 == NULL) {
-        throw invalid_argument("Conjugate::addScalar: x2 == NULL");
-    }
-    if (r1 == NULL) {
-        throw invalid_argument("Conjugate::addScalar: r1 == NULL");
-    }
-    if (r2 == NULL) {
-        throw invalid_argument("Conjugate::addScalar: r2 == NULL");
+        throw std::invalid_argument("Conjugate::addScalar: result == NULL");
     }
 
     // kernel dimension
-    dim3 global(result->dataRows() / Matrix<dtype::real>::blockSize, result->dataColumns() == 1 ? 1 :
-        result->dataColumns() / Matrix<dtype::real>::blockSize);
-    dim3 local(Matrix<dtype::real>::blockSize, result->dataColumns() == 1 ? 1 : Matrix<dtype::real>::blockSize);
+    dim3 global(result->data_rows() / Matrix<dtype::real>::block_size,
+        result->data_columns() == 1 ? 1 :
+        result->data_columns() / Matrix<dtype::real>::block_size);
+    dim3 local(Matrix<dtype::real>::block_size,
+        result->data_columns() == 1 ? 1 : Matrix<dtype::real>::block_size);
 
     // execute kernel
-    updateVectorKernel<<<global, local, 0, stream>>>(result->deviceData(),
-        x1->deviceData(), sign, x2->deviceData(), r1->deviceData(), r2->deviceData(), result->dataRows());
+    updateVectorKernel<<<global, local, 0, stream>>>(x1.device_data(), sign,
+        x2.device_data(), r1.device_data(), r2.device_data(), result->data_rows(),
+        result->device_data());
 }
 
 // gemv kernel
-__global__ void gemvKernel(dtype::real* matrix, dtype::real* vector,
-    dtype::real* result, dtype::size rows) {
+__global__ void gemvKernel(const fastEIT::dtype::real* matrix,
+    const fastEIT::dtype::real* vector, fastEIT::dtype::size rows,
+    fastEIT::dtype::real* result) {
     // get ids
-    dtype::index row = threadIdx.x + blockIdx.x * blockDim.x;
-    dtype::index column = (threadIdx.y + blockIdx.y * blockDim.y) * 2 * Matrix<dtype::real>::blockSize;
+    fastEIT::dtype::index row = threadIdx.x + blockIdx.x * blockDim.x;
+    fastEIT::dtype::index column = (threadIdx.y + blockIdx.y * blockDim.y) *
+        2 * fastEIT::Matrix<fastEIT::dtype::real>::block_size;
 
     // load vector to shared memory
-    __shared__ dtype::real work[2 * Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize];
-    work[threadIdx.x + threadIdx.y * 2 * Matrix<dtype::real>::blockSize] = column + threadIdx.x < rows ?
-        vector[column + threadIdx.x] : 0.0f;
+    __shared__ fastEIT::dtype::real work[2 *
+        fastEIT::Matrix<fastEIT::dtype::real>::block_size *
+        fastEIT::Matrix<fastEIT::dtype::real>::block_size];
+    work[threadIdx.x +
+        threadIdx.y * 2 * fastEIT::Matrix<fastEIT::dtype::real>::block_size] =
+        column + threadIdx.x < rows ? vector[column + threadIdx.x] : 0.0f;
     __syncthreads();
 
     // compute partial vector product
-    dtype::real product = 0.0f;
-    for (dtype::index i = 0; i < 2 * Matrix<dtype::real>::blockSize; i++) {
-        product += row < rows && column + i < rows ? matrix[row + (column + i) * rows] * work[i + threadIdx.y * 2 * Matrix<dtype::real>::blockSize] : 0.0f;
+    fastEIT::dtype::real product = 0.0f;
+    for (fastEIT::dtype::index i = 0;
+        i < 2 * fastEIT::Matrix<fastEIT::dtype::real>::block_size;
+        i++) {
+        product += row < rows && column + i < rows ?
+            matrix[row + (column + i) * rows] * work[i +
+            threadIdx.y * 2 * fastEIT::Matrix<fastEIT::dtype::real>::block_size] :
+            0.0f;
     }
 
     // set result
@@ -110,9 +118,10 @@ __global__ void gemvKernel(dtype::real* matrix, dtype::real* vector,
 }
 
 // row reduce kernel
-__global__ void reduceRowKernel(dtype::real* vector, dtype::size rows) {
+__global__ void reduceRowKernel(fastEIT::dtype::size rows,
+    fastEIT::dtype::real* vector) {
     // get id
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // check row
     if (row >= rows) {
@@ -120,9 +129,11 @@ __global__ void reduceRowKernel(dtype::real* vector, dtype::size rows) {
     }
 
     // sum row
-    dtype::real sum = 0.0f;
-    dtype::size count = (rows + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize);
-    for (dtype::index i = 0; i < count; i++) {
+    fastEIT::dtype::real sum = 0.0f;
+    fastEIT::dtype::size count =
+        (rows + 2 * fastEIT::Matrix<fastEIT::dtype::real>::block_size - 1) /
+        (2 * fastEIT::Matrix<fastEIT::dtype::real>::block_size);
+    for (fastEIT::dtype::index i = 0; i < count; i++) {
         sum += vector[row + i * rows];
     }
 
@@ -131,31 +142,30 @@ __global__ void reduceRowKernel(dtype::real* vector, dtype::size rows) {
 }
 
 // fast gemv
-void Conjugate::gemv(Matrix<dtype::real>* result, Matrix<dtype::real>* matrix,
-    Matrix<dtype::real>* vector, cudaStream_t stream) {
+void fastEIT::numeric::conjugate::gemv(const Matrix<dtype::real>& matrix,
+    const Matrix<dtype::real>& vector, cudaStream_t stream, Matrix<dtype::real>* result) {
     // check input
     if (result == NULL) {
-        throw invalid_argument("Conjugate::addScalar: result == NULL");
-    }
-    if (matrix == NULL) {
-        throw invalid_argument("Conjugate::addScalar: matrix == NULL");
-    }
-    if (vector == NULL) {
-        throw invalid_argument("Conjugate::addScalar: vector == NULL");
+        throw std::invalid_argument("Conjugate::addScalar: result == NULL");
     }
 
     // dimension
-    dim3 blocks((matrix->dataRows() + 2 * Matrix<dtype::real>::blockSize - 1) / (2 * Matrix<dtype::real>::blockSize),
-        (matrix->dataRows() / (2 * Matrix<dtype::real>::blockSize) + Matrix<dtype::real>::blockSize - 1) / Matrix<dtype::real>::blockSize);
-    dim3 threads(2 * Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
+    dim3 blocks(
+        (matrix.data_rows() + 2 * Matrix<dtype::real>::block_size - 1) /
+        (2 * Matrix<dtype::real>::block_size),
+        (matrix.data_rows() / (2 * Matrix<dtype::real>::block_size) +
+        Matrix<dtype::real>::block_size - 1) / Matrix<dtype::real>::block_size);
+    dim3 threads(2 * Matrix<dtype::real>::block_size, Matrix<dtype::real>::block_size);
 
     // call gemv kernel
-    gemvKernel<<<blocks, threads, 0, stream>>>(matrix->deviceData(), vector->deviceData(),
-        result->deviceData(), matrix->dataRows());
+    gemvKernel<<<blocks, threads, 0, stream>>>(matrix.device_data(), vector.device_data(),
+        matrix.data_rows(), result->device_data());
 
     // call reduce kernel
-    reduceRowKernel<<<(matrix->dataColumns() + Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize - 1) /
-        (Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize),
-        Matrix<dtype::real>::blockSize * Matrix<dtype::real>::blockSize, 0, stream>>>(result->deviceData(), result->dataRows());
+    reduceRowKernel<<<(matrix.data_columns() +
+        Matrix<dtype::real>::block_size * Matrix<dtype::real>::block_size - 1) /
+        (Matrix<dtype::real>::block_size * Matrix<dtype::real>::block_size),
+        Matrix<dtype::real>::block_size * Matrix<dtype::real>::block_size, 0, stream>>>(
+            result->data_rows(), result->device_data());
 }
 

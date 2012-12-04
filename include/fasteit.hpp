@@ -26,8 +26,8 @@
 #include "electrodes.hpp"
 #include "basis.hpp"
 #include "model.hpp"
-/*#include "conjugate.hpp"
-#include "sparseConjugate.hpp"
+#include "conjugate.hpp"
+/*#include "sparseConjugate.hpp"
 #include "forward.hpp"
 #include "inverse.hpp"
 #include "solver.hpp"*/
