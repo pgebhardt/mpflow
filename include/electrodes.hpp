@@ -27,15 +27,6 @@ namespace fastEIT {
         dtype::real width() const { return this->width_; }
         dtype::real height() const { return this->height_; }
 
-    // mutators
-    private:
-        std::vector<std::tuple<dtype::real, dtype::real>>& electrodes_start() {
-            return this->electrodes_start_;
-        }
-        std::vector<std::tuple<dtype::real, dtype::real>>& electrodes_end() {
-            return this->electrodes_end_;
-        }
-
     // member
     private:
         dtype::size count_;
