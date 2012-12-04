@@ -453,6 +453,11 @@ fastEIT::Matrix<type>* fastEIT::matrix::loadtxt(const std::string filename, cuda
     std::ifstream file;
     file.open(filename.c_str());
 
+    // check open
+    if (file.fail()) {
+        throw std::logic_error("matrix::loadtxt: cannot open file!");
+    }
+
     // read lines
     std::vector<std::string> lines;
     std::string line;

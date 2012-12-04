@@ -3,26 +3,30 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.hpp"
+#include <stdexcept>
+#include <assert.h>
 
-// namespaces
-using namespace fastEIT;
-using namespace std;
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+#include "../include/dtype.hpp"
+#include "../include/matrix.hpp"
+#include "../include/forward.hcu"
 
 // calc jacobian kernel
-template<class BasisFunction>
-__global__ void calcJacobianKernel(dtype::real* jacobian,
-    dtype::real* drivePhi,
-    dtype::real* measurmentPhi,
-    dtype::index* connectivityMatrix,
-    dtype::real* elementalJacobianMatrix,
-    dtype::real* gamma, dtype::real sigmaRef,
-    dtype::size rows, dtype::size columns,
-    dtype::size phiRows, dtype::size elementCount,
-    dtype::size driveCount, dtype::size measurmentCount, bool additiv) {
+template<
+    int nodes_per_element
+>
+__global__ void calcJacobianKernel(const fastEIT::dtype::real* drivePhi,
+    const fastEIT::dtype::real* measurmentPhi, const fastEIT::dtype::index* connectivityMatrix,
+    const fastEIT::dtype::real* elementalJacobianMatrix, const fastEIT::dtype::real* gamma,
+    fastEIT::dtype::real sigmaRef, fastEIT::dtype::size rows, fastEIT::dtype::size columns,
+    fastEIT::dtype::size phiRows, fastEIT::dtype::size elementCount,
+    fastEIT::dtype::size driveCount, fastEIT::dtype::size measurmentCount, bool additiv,
+    fastEIT::dtype::real* jacobian) {
     // get id
-    dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // check column
     if (column >= elementCount) {
@@ -30,29 +34,31 @@ __global__ void calcJacobianKernel(dtype::real* jacobian,
     }
 
     // calc measurment and drive id
-    dtype::size roundMeasurmentCount = ((measurmentCount + Matrix<dtype::real>::blockSize - 1) /
-        Matrix<dtype::real>::blockSize) * Matrix<dtype::real>::blockSize;
-    dtype::size measurmentId = row % roundMeasurmentCount;
-    dtype::size driveId = row / roundMeasurmentCount;
+    fastEIT::dtype::size roundMeasurmentCount = (
+        (measurmentCount + fastEIT::Matrix<fastEIT::dtype::real>::block_size - 1) /
+        fastEIT::Matrix<fastEIT::dtype::real>::block_size) *
+        fastEIT::Matrix<fastEIT::dtype::real>::block_size;
+    fastEIT::dtype::size measurmentId = row % roundMeasurmentCount;
+    fastEIT::dtype::size driveId = row / roundMeasurmentCount;
 
     // variables
-    dtype::real dPhi[BasisFunction::nodesPerElement], mPhi[BasisFunction::nodesPerElement];
-    dtype::index id;
+    fastEIT::dtype::real dPhi[nodes_per_element], mPhi[nodes_per_element];
+    fastEIT::dtype::index index;
 
     // get data
-    for (int i = 0; i < BasisFunction::nodesPerElement; i++) {
-        id = connectivityMatrix[column + i * columns];
-        dPhi[i] = driveId < driveCount ? drivePhi[(dtype::size)id + driveId * phiRows] : 0.0f;
-        mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[(dtype::size)id +
+    for (fastEIT::dtype::index i = 0; i < nodes_per_element; i++) {
+        index = connectivityMatrix[column + i * columns];
+        dPhi[i] = driveId < driveCount ? drivePhi[index + driveId * phiRows] : 0.0f;
+        mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[index +
             measurmentId * phiRows] : 0.0f;
     }
 
     // calc matrix element
-    dtype::real element = 0.0f;
-    for (int i = 0; i < BasisFunction::nodesPerElement; i++) {
-        for (int j = 0; j < BasisFunction::nodesPerElement; j++) {
+    fastEIT::dtype::real element = 0.0f;
+    for (fastEIT::dtype::index i = 0; i < nodes_per_element; i++) {
+        for (fastEIT::dtype::index j = 0; j < nodes_per_element; j++) {
             element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column +
-                (i + j * BasisFunction::nodesPerElement) * columns];
+                (i + j * nodes_per_element) * columns];
         }
     }
 
@@ -69,37 +75,36 @@ __global__ void calcJacobianKernel(dtype::real* jacobian,
 }
 
 // calc jacobian
-template
-<
-    class BasisFunction,
-    class NumericSolver
+template <
+    int nodes_per_element
 >
-Matrix<dtype::real>* ForwardSolver<BasisFunction, NumericSolver>::calcJacobian(Matrix<dtype::real>* gamma,
-    dtype::size harmonic, bool additiv, cudaStream_t stream) const {
+void fastEIT::forward::calcJacobian(const Matrix<dtype::real>& gamma, const Matrix<dtype::real>& phi,
+    const Matrix<dtype::index>& elements, const Matrix<dtype::real>& elemental_jacobian_matrix,
+    dtype::size drive_count, dtype::size measurment_count, dtype::real sigma_ref, bool additiv,
+    cudaStream_t stream, Matrix<dtype::real>* jacobian) {
     // check input
-    if (gamma == NULL) {
-        throw invalid_argument("ForwardSolver::calcJacobian: gamma == NULL");
-    }
-    if (harmonic > this->model()->numHarmonics()) {
-        throw invalid_argument("ForwardSolver::calcJacobian: harmonic > this->model()->numHarmonics()");
+    if (jacobian == NULL) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: jacobian == NULL");
     }
 
     // dimension
-    dim3 blocks(this->jacobian()->dataRows() / Matrix<dtype::real>::blockSize,
-        this->jacobian()->dataColumns() / Matrix<dtype::real>::blockSize);
-    dim3 threads(Matrix<dtype::real>::blockSize, Matrix<dtype::real>::blockSize);
+    dim3 blocks(jacobian->data_rows() / fastEIT::Matrix<fastEIT::dtype::real>::block_size,
+        jacobian->data_columns() / fastEIT::Matrix<fastEIT::dtype::real>::block_size);
+    dim3 threads(fastEIT::Matrix<fastEIT::dtype::real>::block_size,
+        fastEIT::Matrix<fastEIT::dtype::real>::block_size);
 
     // calc jacobian
-    calcJacobianKernel<BasisFunction><<<blocks, threads, 0, stream>>>(
-        this->jacobian()->deviceData(), this->phi(harmonic)->deviceData(),
-        &this->phi(harmonic)->deviceData()[this->driveCount() * this->phi(harmonic)->dataRows()],
-        this->model()->mesh()->elements()->deviceData(), this->elementalJacobianMatrix()->deviceData(),
-        gamma->deviceData(), this->model()->sigmaRef(), this->jacobian()->dataRows(), this->jacobian()->dataColumns(),
-        this->phi(harmonic)->dataRows(), this->model()->mesh()->elements()->rows(),
-        this->driveCount(), this->measurmentCount(), additiv);
-
-    return this->jacobian();
+    calcJacobianKernel<nodes_per_element><<<blocks, threads, 0, stream>>>(
+        phi.device_data(), &phi.device_data()[drive_count * phi.data_rows()],
+        elements.device_data(), elemental_jacobian_matrix.device_data(),
+        gamma.device_data(), sigma_ref, jacobian->data_rows(), jacobian->data_columns(),
+        phi.data_rows(), elements.rows(), drive_count, measurment_count, additiv,
+        jacobian->device_data());
 }
 
-// specialisation
-template class fastEIT::ForwardSolver<fastEIT::basis::Linear, fastEIT::numeric::SparseConjugate>;
+// template specialisation
+template void fastEIT::forward::calcJacobian<3>(
+    const fastEIT::Matrix<fastEIT::dtype::real>&, const fastEIT::Matrix<fastEIT::dtype::real>&,
+    const fastEIT::Matrix<fastEIT::dtype::index>&, const fastEIT::Matrix<fastEIT::dtype::real>&,
+    fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::real, bool,
+    cudaStream_t, fastEIT::Matrix<fastEIT::dtype::real>*);

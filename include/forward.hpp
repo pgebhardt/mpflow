@@ -3,70 +3,74 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_FORWARD_SOLVER_HPP
-#define FASTEIT_FORWARD_SOLVER_HPP
+#ifndef FASTEIT_INCLUDE_FORWARD_HPP
+#define FASTEIT_INCLUDE_FORWARD_HPP
 
-// forward solver class definition
-template
-<
-    class BasisFunction,
-    class NumericSolver
->
-class ForwardSolver {
-// constructor and destructor
-public:
-    ForwardSolver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurmentPattern,
-        Matrix<dtype::real>* drivePattern, dtype::size numHarmonics, dtype::real sigmaRef,
-        cublasHandle_t handle, cudaStream_t stream=NULL);
-    virtual ~ForwardSolver();
+// namespace fastEIT
+namespace fastEIT {
+    // forward solver class definition
+    template <
+        class BasisFunction,
+        class NumericSolver
+    >
+    class ForwardSolver {
+    // constructor and destructor
+    public:
+        ForwardSolver(Mesh<BasisFunction>* mesh, Electrodes* electrodes,
+            const Matrix<dtype::real>& measurment_pattern,
+            const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
+            dtype::size num_harmonics, cublasHandle_t handle, cudaStream_t stream);
+        virtual ~ForwardSolver();
 
-public:
-    // init jacobian calculation matrix
-    void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream=NULL);
+    public:
+        // forward solving
+        const Matrix<dtype::real>& solve(const Matrix<dtype::real>& gamma, dtype::size steps,
+            cublasHandle_t handle, cudaStream_t stream);
 
-    // calc jacobian
-    Matrix<dtype::real>* calcJacobian(Matrix<dtype::real>* gamma, dtype::size harmonic, bool additiv,
-        cudaStream_t stream=NULL) const;
+    protected:
+        // init jacobian calculation matrix
+        void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
 
-    // forward solving
-    Matrix<dtype::real>* solve(Matrix<dtype::real>* gamma, dtype::size steps, cublasHandle_t handle,
-        cudaStream_t stream=NULL) const;
+    public:
+        // accessors
+        const Model<BasisFunction>& model() const { return *this->model_; }
+        const NumericSolver& numeric_solver() const { return *this->numeric_solver_; }
+        dtype::size drive_count() const { return this->drive_count_; }
+        dtype::size measurment_count() const { return this->measurment_count_; }
+        const Matrix<dtype::real>& jacobian() const { return *this->jacobian_; }
+        const Matrix<dtype::real>& voltage() const { return *this->voltage_; }
+        const std::vector<Matrix<dtype::real>*>& phi() const { return this->phi_; }
+        const std::vector<Matrix<dtype::real>*>& excitation() const {
+            return this->excitation_; }
+        const Matrix<dtype::real>& voltage_calculation() const {
+            return *this->voltage_calculation_; }
+        const Matrix<dtype::real>& elemental_jacobian_matrix() const {
+            return *this->elemental_jacobian_matrix_; }
 
-// accessors
-public:
-    Model<BasisFunction>* model() const { return this->mModel; }
-    dtype::size driveCount() const { return this->mDriveCount; }
-    dtype::size measurmentCount() const { return this->mMeasurmentCount; }
-    Matrix<dtype::real>* jacobian() const { return this->mJacobian; }
-    Matrix<dtype::real>* voltage() const { return this->mVoltage; }
+        // mutators
+        Model<BasisFunction>& model() { return *this->model_; }
+        NumericSolver& numeric_solver() { return *this->numeric_solver_; }
+        Matrix<dtype::real>& jacobian() { return *this->jacobian_; }
+        Matrix<dtype::real>& voltage() { return *this->voltage_; }
+        std::vector<Matrix<dtype::real>*>& phi() { return this->phi_; }
+        std::vector<Matrix<dtype::real>*>& excitation() { return this->excitation_; }
+        Matrix<dtype::real>& voltage_calculation() { return *this->voltage_calculation_; }
+        Matrix<dtype::real>& elemental_jacobian_matrix() {
+            return *this->elemental_jacobian_matrix_; }
 
-    Matrix<dtype::real>* phi(dtype::size id) const {
-        assert(id <= this->model()->numHarmonics());
-        return this->mPhi[id];
-    }
-    Matrix<dtype::real>* excitation(dtype::size id) const {
-        assert(id <= this->model()->numHarmonics());
-        return this->mExcitation[id];
-    }
-
-    Matrix<dtype::real>* voltageCalculation() const { return this->mVoltageCalculation; }
-
-protected:
-    NumericSolver* numericSolver() const { return this->mNumericSolver; }
-    Matrix<dtype::real>* elementalJacobianMatrix() const { return this->mElementalJacobianMatrix; }
-
-// member
-private:
-    Model<BasisFunction>* mModel;
-    NumericSolver* mNumericSolver;
-    dtype::size mDriveCount;
-    dtype::size mMeasurmentCount;
-    Matrix<dtype::real>* mJacobian;
-    Matrix<dtype::real>* mVoltage;
-    Matrix<dtype::real>** mPhi;
-    Matrix<dtype::real>** mExcitation;
-    Matrix<dtype::real>* mVoltageCalculation;
-    Matrix<dtype::real>* mElementalJacobianMatrix;
-};
+    // member
+    private:
+        Model<BasisFunction>* model_;
+        NumericSolver* numeric_solver_;
+        dtype::size drive_count_;
+        dtype::size measurment_count_;
+        Matrix<dtype::real>* jacobian_;
+        Matrix<dtype::real>* voltage_;
+        std::vector<Matrix<dtype::real>*> phi_;
+        std::vector<Matrix<dtype::real>*> excitation_;
+        Matrix<dtype::real>* voltage_calculation_;
+        Matrix<dtype::real>* elemental_jacobian_matrix_;
+    };
+}
 
 #endif

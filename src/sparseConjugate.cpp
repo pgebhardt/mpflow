@@ -77,7 +77,7 @@ void fastEIT::numeric::SparseConjugate::solve(const SparseMatrix& A,
     this->rsold().vectorDotProduct(this->residuum(), this->residuum(), stream);
 
     // iterate
-    for (dtype::index i = 0; i < iterations; i++) {
+    for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
         A.multiply(this->projection(), stream, &this->temp_vector());
 

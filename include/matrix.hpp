@@ -41,8 +41,8 @@ namespace fastEIT {
         void min(const Matrix<type>& value, cudaStream_t stream);
         void max(const Matrix<type>& value, cudaStream_t stream);
 
-    // accessors
     public:
+        // accessors
         const type* host_data() const { return this->host_data_; }
         const type* device_data() const { return this->device_data_; }
         dtype::size rows() const { return this->rows_; }
@@ -55,16 +55,13 @@ namespace fastEIT {
             return this->host_data_[i + j * this->data_rows()];
         }
 
-    // mutators
-    public:
+        // mutators
         type* device_data() { return this->device_data_; }
         type& operator() (dtype::index i, dtype::index j) {
             assert(i < this->rows());
             assert(j < this->columns());
             return this->host_data_[i + j * this->data_rows()];
         }
-
-    protected:
         type* host_data() { return this->host_data_; }
 
     // member

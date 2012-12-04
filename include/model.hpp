@@ -31,24 +31,21 @@ namespace fastEIT {
         // update model
         void update(const Matrix<dtype::real>& gamma, cublasHandle_t handle, cudaStream_t stream);
 
-    // accessors
     public:
+        // accessors
         const Mesh<BasisFunction>& mesh() const { return *this->mesh_; }
         const Electrodes& electrodes() const { return *this->electrodes_; }
         dtype::real sigma_ref() const { return this->sigma_ref_; }
         const std::vector<SparseMatrix*>& system_matrices() const { return this->system_matrices_; }
         const Matrix<dtype::real>& excitation_matrix() const { return *this->excitation_matrix_; }
         dtype::size num_harmonics() const { return this->num_harmonics_; }
-
-    protected:
         const SparseMatrix& s_matrix() const { return *this->s_matrix_; }
         const SparseMatrix& r_matrix() const { return *this->r_matrix_; }
         const Matrix<dtype::index>& connectivity_matrix() const { return *this->connectivity_matrix_; }
         const Matrix<dtype::real>& elemental_s_matrix() const { return *this->elemental_s_matrix_; }
         const Matrix<dtype::real>& elemental_r_matrix() const { return *this->elemental_r_matrix_; }
 
-    // mutators
-    protected:
+        // mutators
         std::vector<SparseMatrix*>& system_matrices() { return this->system_matrices_; }
         Matrix<dtype::real>& excitation_matrix() { return *this->excitation_matrix_; }
         SparseMatrix& s_matrix() { return *this->s_matrix_; }

@@ -72,7 +72,7 @@ void fastEIT::numeric::Conjugate::solve(const Matrix<dtype::real>& A,
     this->rsold().vectorDotProduct(this->residuum(), this->residuum(), stream);
 
     // iterate
-    for (dtype::size i = 0; i < iterations; i++) {
+    for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
         conjugate::gemv(A, this->projection(), stream, &this->temp_vector());
 

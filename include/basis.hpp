@@ -37,13 +37,13 @@ namespace fastEIT {
             static const dtype::size nodes_per_edge = template_nodes_per_edge;
             static const dtype::size nodes_per_element = template_nodes_per_element;
 
-        // accessors
         public:
+            // accessors
             const std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element>& nodes() const { return this->nodes_; }
             const std::array<dtype::real, nodes_per_element>& coefficients() const { return this->coefficients_; }
 
-        // mutators
-        protected:
+            // mutators
+            std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element>& nodes() { return this->nodes_; }
             std::array<dtype::real, nodes_per_element>& coefficients() { return this->coefficients_; }
 
         // member
