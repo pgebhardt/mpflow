@@ -34,7 +34,6 @@ namespace fastEIT {
             const Matrix<dtype::real>& temp_number() const { return *this->temp_number_; }
 
             // mutators
-            dtype::size& rows() { return this->rows_; }
             Matrix<dtype::real>& residuum() { return *this->residuum_; }
             Matrix<dtype::real>& projection() { return *this->projection_; }
             Matrix<dtype::real>& rsold() { return *this->rsold_; }

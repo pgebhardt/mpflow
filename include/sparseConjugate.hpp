@@ -24,8 +24,8 @@ namespace fastEIT {
                 dtype::size iterations, bool dcFree, cudaStream_t stream,
                 Matrix<dtype::real>* x);
 
-        // accessors
         public:
+            // accessors
             dtype::size rows() const { return this->rows_; }
             dtype::size columns() const { return this->columns_; }
             const Matrix<dtype::real>& residuum() const { return *this->residuum_; }
@@ -35,8 +35,7 @@ namespace fastEIT {
             const Matrix<dtype::real>& temp_vector() const { return *this->temp_vector_; }
             const Matrix<dtype::real>& temp_number() const { return *this->temp_number_; }
 
-        // mutators
-        protected:
+            // mutators
             Matrix<dtype::real>& residuum() { return *this->residuum_; }
             Matrix<dtype::real>& projection() { return *this->projection_; }
             Matrix<dtype::real>& rsold() { return *this->rsold_; }
