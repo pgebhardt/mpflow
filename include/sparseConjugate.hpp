@@ -3,49 +3,59 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_SPARSE_CONJUGATE_HPP
-#define FASTEIT_SPARSE_CONJUGATE_HPP
+#ifndef FASTEIT_INCLUDE_SPARSE_CONJUGATE_HPP
+#define FASTEIT_INCLUDE_SPARSE_CONJUGATE_HPP
 
-// namespace numeric
-namespace numeric {
-    // conjugate class definition
-    class SparseConjugate {
-    // constructor and destructor
-    public:
-        SparseConjugate(dtype::size rows, dtype::size columns,
-            cudaStream_t stream=NULL);
-        virtual ~SparseConjugate();
+// namespace fastEIT
+namespace fastEIT {
+    // namespace numeric
+    namespace numeric {
+        // conjugate class definition
+        class SparseConjugate {
+        // constructor and destructor
+        public:
+            SparseConjugate(dtype::size rows, dtype::size columns,
+                cudaStream_t stream);
+            virtual ~SparseConjugate();
 
-    public:
-        // solve system
-        void solve(SparseMatrix* A, Matrix<dtype::real>* x,
-            Matrix<dtype::real>* f, dtype::size iterations, bool dcFree,
-            cudaStream_t stream=NULL);
+        public:
+            // solve system
+            void solve(const SparseMatrix& A, const Matrix<dtype::real>& f,
+                dtype::size iterations, bool dcFree, cudaStream_t stream,
+                Matrix<dtype::real>* x);
 
-    // accessors
-    public:
-        dtype::size rows() const { return this->mRows; }
-        dtype::size columns() const { return this->mColumns; }
+        // accessors
+        public:
+            dtype::size rows() const { return this->rows_; }
+            dtype::size columns() const { return this->columns_; }
+            const Matrix<dtype::real>& residuum() const { return *this->residuum_; }
+            const Matrix<dtype::real>& projection() const { return *this->projection_; }
+            const Matrix<dtype::real>& rsold() const { return *this->rsold_; }
+            const Matrix<dtype::real>& rsnew() const { return *this->rsnew_; }
+            const Matrix<dtype::real>& temp_vector() const { return *this->temp_vector_; }
+            const Matrix<dtype::real>& temp_number() const { return *this->temp_number_; }
 
-    protected:
-        Matrix<dtype::real>* residuum() const { return this->mResiduum; }
-        Matrix<dtype::real>* projection() const { return this->mProjection; }
-        Matrix<dtype::real>* rsold() const { return this->mRSOld; }
-        Matrix<dtype::real>* rsnew() const { return this->mRSNew; }
-        Matrix<dtype::real>* tempVector() const { return this->mTempVector; }
-        Matrix<dtype::real>* tempNumber() const { return this->mTempNumber; }
+        // mutators
+        protected:
+            Matrix<dtype::real>& residuum() { return *this->residuum_; }
+            Matrix<dtype::real>& projection() { return *this->projection_; }
+            Matrix<dtype::real>& rsold() { return *this->rsold_; }
+            Matrix<dtype::real>& rsnew() { return *this->rsnew_; }
+            Matrix<dtype::real>& temp_vector() { return *this->temp_vector_; }
+            Matrix<dtype::real>& temp_number() { return *this->temp_number_; }
 
-    // member
-    private:
-        dtype::size mRows;
-        dtype::size mColumns;
-        Matrix<dtype::real>* mResiduum;
-        Matrix<dtype::real>* mProjection;
-        Matrix<dtype::real>* mRSOld;
-        Matrix<dtype::real>* mRSNew;
-        Matrix<dtype::real>* mTempVector;
-        Matrix<dtype::real>* mTempNumber;
-    };
+        // member
+        private:
+            dtype::size rows_;
+            dtype::size columns_;
+            Matrix<dtype::real>* residuum_;
+            Matrix<dtype::real>* projection_;
+            Matrix<dtype::real>* rsold_;
+            Matrix<dtype::real>* rsnew_;
+            Matrix<dtype::real>* temp_vector_;
+            Matrix<dtype::real>* temp_number_;
+        };
+    }
 }
 
 #endif

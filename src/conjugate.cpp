@@ -11,8 +11,8 @@
 
 #include "../include/dtype.hpp"
 #include "../include/matrix.hpp"
-#include "../include/conjugate.hpp"
 #include "../include/conjugate.hcu"
+#include "../include/conjugate.hpp"
 
 // create conjugate solver
 fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle,
