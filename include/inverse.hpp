@@ -27,7 +27,6 @@ namespace fastEIT {
             dtype::size steps, bool regularized, cublasHandle_t handle,
             cudaStream_t stream, Matrix<dtype::real>* gamma);
 
-    protected:
         // calc system matrix
         void calcSystemMatrix(const Matrix<dtype::real>& jacobian, cublasHandle_t handle,
             cudaStream_t stream);

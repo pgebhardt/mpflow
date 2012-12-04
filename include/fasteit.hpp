@@ -30,6 +30,6 @@
 #include "sparseConjugate.hpp"
 #include "forward.hpp"
 #include "inverse.hpp"
-//#include "solver.hpp"
+#include "solver.hpp"
 
 #endif

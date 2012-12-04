@@ -3,115 +3,121 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.hpp"
+#include <stdexcept>
+#include <assert.h>
+#include <vector>
+#include <array>
+#include <tuple>
 
-// namespaces
-using namespace fastEIT;
-using namespace std;
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+#include "../include/dtype.hpp"
+#include "../include/matrix.hpp"
+#include "../include/sparse.hpp"
+#include "../include/basis.hpp"
+#include "../include/mesh.hpp"
+#include "../include/electrodes.hpp"
+#include "../include/conjugate.hpp"
+#include "../include/sparseConjugate.hpp"
+#include "../include/model.hpp"
+#include "../include/forward.hpp"
+#include "../include/inverse.hpp"
+#include "../include/solver.hpp"
 
 // create solver
-Solver::Solver(Mesh* mesh, Electrodes* electrodes, Matrix<dtype::real>* measurmentPattern,
-    Matrix<dtype::real>* drivePattern, dtype::real numHarmonics, dtype::real sigmaRef,
-    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream)
-    : mForwardSolver(NULL), mInverseSolver(NULL), mDGamma(NULL), mGamma(NULL),
-        mMeasuredVoltage(NULL), mCalibrationVoltage(NULL) {
+fastEIT::Solver::Solver(Mesh<basis::Linear>* mesh, Electrodes* electrodes,
+    const Matrix<dtype::real>& measurment_pattern,
+    const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
+    dtype::size num_harmonics, dtype::real regularization_factor, cublasHandle_t handle,
+    cudaStream_t stream)
+    : forward_solver_(NULL), inverse_solver_(NULL), dgamma_(NULL), gamma_(NULL),
+        measured_voltage_(NULL), calibration_voltage_(NULL) {
     // check input
-    if (mesh == NULL) {
-        throw invalid_argument("Solver::Solver: mesh == NULL");
-    }
-    if (electrodes == NULL) {
-        throw invalid_argument("Solver::Solver: electrodes == NULL");
-    }
-    if (measurmentPattern == NULL) {
-        throw invalid_argument("Solver::Solver: measurmentPattern == NULL");
-    }
-    if (drivePattern == NULL) {
-        throw invalid_argument("Solver::Solver: drivePattern == NULL");
-    }
     if (handle == NULL) {
-        throw invalid_argument("Solver::Solver: handle == NULL");
+        throw std::invalid_argument("Solver::Solver: handle == NULL");
     }
 
     // create solver
-    this->mForwardSolver = new ForwardSolver<basis::Linear, numeric::SparseConjugate>(mesh, electrodes,
-        measurmentPattern, drivePattern, numHarmonics, sigmaRef, handle, stream);
+    this->forward_solver_ = new ForwardSolver<basis::Linear, numeric::SparseConjugate>(mesh, electrodes,
+        measurment_pattern, drive_pattern, sigma_ref, num_harmonics, handle, stream);
 
-    this->mInverseSolver = new InverseSolver<numeric::Conjugate>(mesh->elements()->rows(),
-        measurmentPattern->dataColumns() * drivePattern->dataColumns(), regularizationFactor, handle, stream);
+    this->inverse_solver_ = new InverseSolver<numeric::Conjugate>(mesh->elements().rows(),
+        measurment_pattern.data_columns() * drive_pattern.data_columns(), regularization_factor, handle, stream);
 
     // create matrices
-    this->mDGamma = new Matrix<dtype::real>(mesh->elements()->rows(), 1, stream);
-    this->mGamma = new Matrix<dtype::real>(mesh->elements()->rows(), 1, stream);
-    this->mMeasuredVoltage = new Matrix<dtype::real>(this->forwardSolver()->measurmentCount(),
-        this->forwardSolver()->driveCount(), stream);
-    this->mCalibrationVoltage = new Matrix<dtype::real>(this->forwardSolver()->measurmentCount(),
-        this->forwardSolver()->driveCount(), stream);
+    this->dgamma_ = new Matrix<dtype::real>(mesh->elements().rows(), 1, stream);
+    this->gamma_ = new Matrix<dtype::real>(mesh->elements().rows(), 1, stream);
+    this->measured_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurment_count(),
+        this->forward_solver().drive_count(), stream);
+    this->calibration_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurment_count(),
+        this->forward_solver().drive_count(), stream);
 }
 
 // release solver
-Solver::~Solver() {
+fastEIT::Solver::~Solver() {
     // cleanup
-    delete this->mForwardSolver;
-    delete this->mInverseSolver;
-    delete this->mDGamma;
-    delete this->mGamma;
-    delete this->mMeasuredVoltage;
-    delete this->mCalibrationVoltage;
+    delete this->forward_solver_;
+    delete this->inverse_solver_;
+    delete this->dgamma_;
+    delete this->gamma_;
+    delete this->measured_voltage_;
+    delete this->calibration_voltage_;
 }
 
 // pre solve for accurate initial jacobian
-Matrix<dtype::real>* Solver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::Solver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Solver::pre_solve: handle == NULL");
+        throw std::invalid_argument("Solver::pre_solve: handle == NULL");
     }
 
     // forward solving a few steps
-    this->forwardSolver()->solve(this->gamma(), 1000, handle, stream);
+    this->forward_solver().solve(this->gamma(), 1000, handle, stream);
 
     // calc system matrix
-    this->inverseSolver()->calcSystemMatrix(this->forwardSolver()->jacobian(), handle, stream);
+    this->inverse_solver().calcSystemMatrix(this->forward_solver().jacobian(), handle, stream);
 
     // set measuredVoltage and calibrationVoltage to calculatedVoltage
-    this->measuredVoltage()->copy(this->forwardSolver()->voltage(), stream);
-    this->calibrationVoltage()->copy(this->forwardSolver()->voltage(), stream);
-
-    return this->forwardSolver()->voltage();
+    this->measured_voltage().copy(this->forward_solver().voltage(), stream);
+    this->calibration_voltage().copy(this->forward_solver().voltage(), stream);
 }
 
 // calibrate
-Matrix<dtype::real>* Solver::calibrate(cublasHandle_t handle, cudaStream_t stream) {
+const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Solver::calibrate: handle == NULL");
+        throw std::invalid_argument("Solver::calibrate: handle == NULL");
     }
 
     // solve forward
-    this->forwardSolver()->solve(this->gamma(), 20, handle, stream);
+    this->forward_solver().solve(this->gamma(), 20, handle, stream);
 
     // calc inverse system matrix
-    this->inverseSolver()->calcSystemMatrix(this->forwardSolver()->jacobian(), handle, stream);
+    this->inverse_solver().calcSystemMatrix(this->forward_solver().jacobian(), handle, stream);
 
     // solve inverse
-    this->inverseSolver()->solve(this->dGamma(), this->forwardSolver()->jacobian(),
-        this->forwardSolver()->voltage(), this->calibrationVoltage(), 90, true, handle, stream);
+    this->inverse_solver().solve(this->forward_solver().jacobian(), this->forward_solver().voltage(),
+        this->calibration_voltage(), 90, true, handle, stream, &this->dgamma());
 
     // add to gamma
-    this->gamma()->add(this->dGamma(), stream);
+    this->gamma().add(this->dgamma(), stream);
 
     return this->gamma();
 }
 
 // solving
-Matrix<dtype::real>* Solver::solve(cublasHandle_t handle, cudaStream_t stream) {
+const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
-        throw invalid_argument("Solver::solve: handle == NULL");
+        throw std::invalid_argument("Solver::solve: handle == NULL");
     }
 
     // solve
-    this->inverseSolver()->solve(this->dGamma(), this->forwardSolver()->jacobian(),
-        this->calibrationVoltage(), this->measuredVoltage(), 90, false, handle, stream);
+    this->inverse_solver().solve(this->forward_solver().jacobian(), this->calibration_voltage(),
+        this->measured_voltage(), 90, false, handle, stream, &this->dgamma());
 
-    return this->dGamma();
+    return this->dgamma();
 }

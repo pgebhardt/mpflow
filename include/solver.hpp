@@ -3,49 +3,66 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_SOLVER_HPP
-#define FASTEIT_SOLVER_HPP
+#ifndef FASTEIT_INCLUDE_SOLVER_HPP
+#define FASTEIT_INCLUDE_SOLVER_HPP
 
-// solver class definition
-class Solver {
-// constructor and destructor
-public:
-    Solver(Mesh* mesh, Electrodes* electrodes,
-        Matrix<dtype::real>* measurmentPattern,
-        Matrix<dtype::real>* drivePattern, dtype::real numHarmonics,
-        dtype::real sigmaRef, dtype::real regularizationFactor,
-        cublasHandle_t handle, cudaStream_t stream=NULL);
-    virtual ~Solver();
+// namespace fastEIT
+namespace fastEIT {
+    // solver class definition
+    class Solver {
+    // constructor and destructor
+    public:
+        Solver(Mesh<basis::Linear>* mesh, Electrodes* electrodes,
+            const Matrix<dtype::real>& measurment_pattern,
+            const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
+            dtype::size num_harmonics, dtype::real regularization_factor,
+            cublasHandle_t handle, cudaStream_t stream);
+        virtual ~Solver();
 
-public:
-    // pre solve for accurate initial jacobian
-    Matrix<dtype::real>* preSolve(cublasHandle_t handle, cudaStream_t stream=NULL);
+    public:
+        // pre solve for accurate initial jacobian
+        void preSolve(cublasHandle_t handle, cudaStream_t stream);
 
-    // calibrate
-    Matrix<dtype::real>* calibrate(cublasHandle_t handle, cudaStream_t stream=NULL);
+        // calibrate
+        const Matrix<dtype::real>& calibrate(cublasHandle_t handle, cudaStream_t stream);
 
-    // solving
-    Matrix<dtype::real>* solve(cublasHandle_t handle, cudaStream_t stream=NULL);
+        // solving
+        const Matrix<dtype::real>& solve(cublasHandle_t handle, cudaStream_t stream);
 
-// accessors
-public:
-    ForwardSolver<basis::Linear, numeric::SparseConjugate>* forwardSolver() const {
-        return this->mForwardSolver;
-    }
-    InverseSolver<numeric::Conjugate>* inverseSolver() const { return this->mInverseSolver; }
-    Matrix<dtype::real>* dGamma() const { return this->mDGamma; }
-    Matrix<dtype::real>* gamma() const { return this->mGamma; }
-    Matrix<dtype::real>* measuredVoltage() const { return this->mMeasuredVoltage; }
-    Matrix<dtype::real>* calibrationVoltage() const { return this->mCalibrationVoltage; }
+    public:
+        // accessors
+        const ForwardSolver<basis::Linear, numeric::SparseConjugate>& forward_solver() const {
+            return *this->forward_solver_;
+        }
+        const InverseSolver<numeric::Conjugate>& inverse_solver() const {
+            return *this->inverse_solver_;
+        }
+        const Matrix<dtype::real>& dgamma() const { return *this->dgamma_; }
+        const Matrix<dtype::real>& gamma() const { return *this->gamma_; }
+        const Matrix<dtype::real>& measured_voltage() const { return *this->measured_voltage_; }
+        const Matrix<dtype::real>& calibration_voltage() const {
+            return *this->calibration_voltage_;
+        }
 
-// member
-private:
-    ForwardSolver<basis::Linear, numeric::SparseConjugate>* mForwardSolver;
-    InverseSolver<numeric::Conjugate>* mInverseSolver;
-    Matrix<dtype::real>* mDGamma;
-    Matrix<dtype::real>* mGamma;
-    Matrix<dtype::real>* mMeasuredVoltage;
-    Matrix<dtype::real>* mCalibrationVoltage;
-};
+        // mutators
+        ForwardSolver<basis::Linear, numeric::SparseConjugate>& forward_solver() {
+            return *this->forward_solver_;
+        }
+        InverseSolver<numeric::Conjugate>& inverse_solver() { return *this->inverse_solver_; }
+        Matrix<dtype::real>& dgamma() { return *this->dgamma_; }
+        Matrix<dtype::real>& gamma() { return *this->gamma_; }
+        Matrix<dtype::real>& measured_voltage() { return *this->measured_voltage_; }
+        Matrix<dtype::real>& calibration_voltage() { return *this->calibration_voltage_; }
+
+    // member
+    private:
+        ForwardSolver<basis::Linear, numeric::SparseConjugate>* forward_solver_;
+        InverseSolver<numeric::Conjugate>* inverse_solver_;
+        Matrix<dtype::real>* dgamma_;
+        Matrix<dtype::real>* gamma_;
+        Matrix<dtype::real>* measured_voltage_;
+        Matrix<dtype::real>* calibration_voltage_;
+    };
+}
 
 #endif
