@@ -311,7 +311,7 @@ void fastEIT::Model<BasisFunction>::calcExcitationComponents(const Matrix<dtype:
         try {
             (*components)[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
         }
-        catch (std::exception& e) {
+        catch(const std::exception& e) {
             (*components)[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
         }
     }
