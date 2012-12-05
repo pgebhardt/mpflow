@@ -1,5 +1,10 @@
-#ifndef FASTEIT_INCLUDE_MATH_HPP
-#define FASTEIT_INCLUDE_MATH_HPP
+// fastEIT
+//
+// Copyright (C) 2012  Patrik Gebhardt
+// Contact: patrik.gebhardt@rub.de
+
+#ifndef FASTEIT_INCLUDE_MATH_H
+#define FASTEIT_INCLUDE_MATH_H
 
 // namespace fastEIT
 namespace fastEIT {

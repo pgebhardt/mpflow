@@ -9,11 +9,11 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/sparse.hpp"
-#include "../include/conjugate.hcu"
-#include "../include/sparseConjugate.hpp"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/sparse_matrix.h"
+#include "../include/sparse_conjugate.h"
+#include "../include/conjugate_cuda.h"
 
 // create conjugate solver
 fastEIT::numeric::SparseConjugate::SparseConjugate(dtype::size rows,

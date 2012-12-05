@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_ELECTRODES_HPP
-#define FASTEIT_INCLUDE_ELECTRODES_HPP
+#ifndef FASTEIT_INCLUDE_ELECTRODES_H
+#define FASTEIT_INCLUDE_ELECTRODES_H
 
 // namespace fastEIT
 namespace fastEIT {

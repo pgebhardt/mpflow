@@ -8,9 +8,9 @@
 #include <tuple>
 #include <array>
 
-#include "../include/dtype.hpp"
-#include "../include/math.hpp"
-#include "../include/basis.hpp"
+#include "../include/dtype.h"
+#include "../include/math.h"
+#include "../include/basis.h"
 
 // create basis class
 fastEIT::basis::Linear::Linear(

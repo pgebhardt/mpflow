@@ -14,8 +14,8 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
 
 // create new matrix
 template<class type>
@@ -539,44 +539,6 @@ void fastEIT::matrix::savetxt(const std::string filename, const Matrix<type>& ma
     // close file
     file.close();
 }
-
-/*
-// save matrix to file
-extern "C"
-linalgcuError_t linalgcu_matrix_save(const char* fileName, linalgcuMatrix_t matrix) {
-    // check input
-    if ((fileName == NULL) || (matrix == NULL)) {
-        return LINALGCU_ERROR;
-    }
-
-    // open file
-    FILE* file = fopen(fileName, "w");
-
-    // check success
-    if (file == NULL) {
-        return LINALGCU_ERROR;
-    }
-
-    // set local
-    setlocale(LC_NUMERIC, "C");
-
-    // write matrix
-    for (linalgcuSize_t i = 0; i < matrix->rows; i++) {
-        for (linalgcuSize_t j = 0; j < matrix->columns - 1; j++) {
-            // write single element
-            fprintf(file, "%f ", matrix->hostData[i + matrix->rows * j]);
-        }
-
-        // write last row element
-        fprintf(file, "%f\n", matrix->hostData[i + (matrix->columns - 1) * matrix->rows]);
-    }
-
-    // cleanup
-    fclose(file);
-
-    return LINALGCU_SUCCESS;
-}
-*/
 
 // specialisation
 template fastEIT::Matrix<fastEIT::dtype::real>* fastEIT::matrix::loadtxt<fastEIT::dtype::real>(const std::string, cudaStream_t);

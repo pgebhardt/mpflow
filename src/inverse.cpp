@@ -12,12 +12,12 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/mesh.hpp"
-#include "../include/electrodes.hpp"
-#include "../include/conjugate.hpp"
-#include "../include/inverse.hpp"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/mesh.h"
+#include "../include/electrodes.h"
+#include "../include/conjugate.h"
+#include "../include/inverse.h"
 
 // create inverse_solver
 template <

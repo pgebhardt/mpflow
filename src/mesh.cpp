@@ -11,10 +11,10 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/basis.hpp"
-#include "../include/mesh.hpp"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/basis.h"
+#include "../include/mesh.h"
 
 // create mesh class
 template <

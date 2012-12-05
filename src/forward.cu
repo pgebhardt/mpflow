@@ -9,9 +9,9 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/forward.hcu"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/forward_cuda.h"
 
 // calc jacobian kernel
 template<

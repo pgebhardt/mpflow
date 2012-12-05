@@ -9,9 +9,9 @@
 #include <vector>
 #include <tuple>
 
-#include "../include/dtype.hpp"
-#include "../include/math.hpp"
-#include "../include/electrodes.hpp"
+#include "../include/dtype.h"
+#include "../include/math.h"
+#include "../include/electrodes.h"
 
 // create electrodes class
 fastEIT::Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real meshRadius)

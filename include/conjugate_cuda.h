@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_CONJUGATE_HCU
-#define FASTEIT_INCLUDE_CONJUGATE_HCU
+#ifndef FASTEIT_INCLUDE_CONJUGATE_CUDA_H
+#define FASTEIT_INCLUDE_CONJUGATE_CUDA_H
 
 // namespace fastEIT
 namespace fastEIT {

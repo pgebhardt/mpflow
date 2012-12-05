@@ -12,18 +12,20 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/math.hpp"
-#include "../include/matrix.hpp"
-#include "../include/sparse.hpp"
-#include "../include/basis.hpp"
-#include "../include/mesh.hpp"
-#include "../include/electrodes.hpp"
-#include "../include/model.hpp"
-#include "../include/model.hcu"
+#include "../include/dtype.h"
+#include "../include/math.h"
+#include "../include/matrix.h"
+#include "../include/sparse_matrix.h"
+#include "../include/basis.h"
+#include "../include/mesh.h"
+#include "../include/electrodes.h"
+#include "../include/model.h"
+#include "../include/model_cuda.h"
 
 // create solver model
-template <class BasisFunction>
+template <
+    class BasisFunction
+>
 fastEIT::Model<BasisFunction>::Model(Mesh<BasisFunction>* mesh, Electrodes* electrodes, dtype::real sigmaRef,
     dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
     : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), s_matrix_(NULL), r_matrix_(NULL),
@@ -61,7 +63,9 @@ fastEIT::Model<BasisFunction>::Model(Mesh<BasisFunction>* mesh, Electrodes* elec
 }
 
 // release solver model
-template <class BasisFunction>
+template <
+    class BasisFunction
+>
 fastEIT::Model<BasisFunction>::~Model() {
     // cleanup
     delete this->mesh_;
@@ -80,7 +84,9 @@ fastEIT::Model<BasisFunction>::~Model() {
 
 
 // create sparse matrices
-template <class BasisFunction>
+template <
+    class BasisFunction
+>
 void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -118,7 +124,9 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
 }
 
 // init model
-template <class BasisFunction>
+template <
+    class BasisFunction
+>
 void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -213,7 +221,9 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
 }
 
 // update model
-template <class BasisFunction>
+template <
+    class BasisFunction
+>
 void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
@@ -255,7 +265,9 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 }
 
 // init exitation matrix
-template <class BasisFunction>
+template <
+    class BasisFunction
+>
 void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
     std::array<dtype::index, BasisFunction::nodes_per_edge> indices;
@@ -294,7 +306,9 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 }
 
 // calc excitaion components
-template <class BasisFunction>
+template <
+    class BasisFunction
+>
 void fastEIT::Model<BasisFunction>::calcExcitationComponents(const Matrix<dtype::real>& pattern,
     cublasHandle_t handle, cudaStream_t stream, std::vector<Matrix<dtype::real>*>* components) {
     // check input

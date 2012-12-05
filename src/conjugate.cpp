@@ -9,10 +9,10 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/conjugate.hcu"
-#include "../include/conjugate.hpp"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/conjugate.h"
+#include "../include/conjugate_cuda.h"
 
 // create conjugate solver
 fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle,

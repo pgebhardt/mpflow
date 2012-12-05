@@ -12,18 +12,18 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/sparse.hpp"
-#include "../include/basis.hpp"
-#include "../include/mesh.hpp"
-#include "../include/electrodes.hpp"
-#include "../include/conjugate.hpp"
-#include "../include/sparseConjugate.hpp"
-#include "../include/model.hpp"
-#include "../include/forward.hpp"
-#include "../include/inverse.hpp"
-#include "../include/solver.hpp"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/sparse_matrix.h"
+#include "../include/basis.h"
+#include "../include/mesh.h"
+#include "../include/electrodes.h"
+#include "../include/conjugate.h"
+#include "../include/sparse_conjugate.h"
+#include "../include/model.h"
+#include "../include/forward.h"
+#include "../include/inverse.h"
+#include "../include/solver.h"
 
 // create solver
 fastEIT::Solver::Solver(Mesh<basis::Linear>* mesh, Electrodes* electrodes,

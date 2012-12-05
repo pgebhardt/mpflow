@@ -9,9 +9,9 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/sparse.hpp"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/sparse_matrix.h"
 
 // create new sparse matrix
 fastEIT::SparseMatrix::SparseMatrix(const Matrix<dtype::real>& matrix, cudaStream_t stream) {

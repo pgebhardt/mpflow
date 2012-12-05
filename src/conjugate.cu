@@ -9,9 +9,9 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/conjugate.hcu"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/conjugate_cuda.h"
 
 // add scalar kernel
 __global__ void addScalarKernel(const fastEIT::dtype::real* scalar,

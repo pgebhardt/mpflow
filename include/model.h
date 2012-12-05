@@ -3,13 +3,15 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_MODEL_HPP
-#define FASTEIT_MODEL_HPP
+#ifndef FASTEIT_INCLUDE_MODEL_H
+#define FASTEIT_INCLUDE_MODEL_H
 
 // namespaces fastEIT
 namespace fastEIT {
     // model class definition
-    template <class BasisFunction>
+    template <
+        class BasisFunction
+    >
     class Model {
     // constructor and destructor
     public:

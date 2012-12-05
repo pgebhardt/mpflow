@@ -9,13 +9,15 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/sparse.hpp"
-#include "../include/model.hcu"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/sparse_matrix.h"
+#include "../include/model_cuda.h"
 
 // reduce connectivity and elementalResidual matrix
-template <class type>
+template <
+    class type
+>
 __global__ void reduceMatrixKernel(const type* intermediateMatrix, const fastEIT::dtype::index* systemMatrixColumnIds,
     fastEIT::dtype::size rows, fastEIT::dtype::size density, type* matrix) {
     // get ids

@@ -12,17 +12,17 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-#include "../include/dtype.hpp"
-#include "../include/matrix.hpp"
-#include "../include/sparse.hpp"
-#include "../include/mesh.hpp"
-#include "../include/electrodes.hpp"
-#include "../include/basis.hpp"
-#include "../include/model.hpp"
-#include "../include/conjugate.hpp"
-#include "../include/sparseConjugate.hpp"
-#include "../include/forward.hpp"
-#include "../include/forward.hcu"
+#include "../include/dtype.h"
+#include "../include/matrix.h"
+#include "../include/sparse_matrix.h"
+#include "../include/mesh.h"
+#include "../include/electrodes.h"
+#include "../include/basis.h"
+#include "../include/model.h"
+#include "../include/conjugate.h"
+#include "../include/sparse_conjugate.h"
+#include "../include/forward.h"
+#include "../include/forward_cuda.h"
 
 // create forward_solver
 template <
