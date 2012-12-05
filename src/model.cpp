@@ -77,7 +77,7 @@ fastEIT::Model<BasisFunction>::~Model() {
     delete this->elemental_s_matrix_;
     delete this->elemental_r_matrix_;
 
-    for (auto system_matrix : this->system_matrices()) {
+    for (auto system_matrix : this->system_matrices_) {
         delete system_matrix;
     }
 }
@@ -119,7 +119,7 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
     this->r_matrix_ = new fastEIT::SparseMatrix(system_matrix, stream);
 
     for (dtype::index harmonic = 0; harmonic < this->num_harmonics() + 1; ++harmonic) {
-        this->system_matrices().push_back(new fastEIT::SparseMatrix(system_matrix, stream));
+        this->system_matrices_.push_back(new fastEIT::SparseMatrix(system_matrix, stream));
     }
 }
 
@@ -248,7 +248,7 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 
         // init system matrix with 2d system matrix
         if (cublasScopy(handle, this->s_matrix().data_rows() * SparseMatrix::block_size,
-            this->s_matrix().values(), 1, this->system_matrices()[harmonic]->values(), 1)
+            this->s_matrix().values(), 1, this->system_matrix(harmonic).values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -256,7 +256,7 @@ void fastEIT::Model<BasisFunction>::update(const Matrix<dtype::real>& gamma, cub
 
         // add alpha * residualMatrix
         if (cublasSaxpy(handle, this->s_matrix().data_rows() * SparseMatrix::block_size, &alpha,
-            this->r_matrix().values(), 1, this->system_matrices()[harmonic]->values(), 1)
+            this->r_matrix().values(), 1, this->system_matrix(harmonic).values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -309,34 +309,31 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 template <
     class BasisFunction
 >
-void fastEIT::Model<BasisFunction>::calcExcitationComponents(const Matrix<dtype::real>& pattern,
-    cublasHandle_t handle, cudaStream_t stream, std::vector<Matrix<dtype::real>*>* components) {
+void fastEIT::Model<BasisFunction>::calcExcitationComponent(const Matrix<dtype::real>& pattern,
+    dtype::size harmonic, cublasHandle_t handle, cudaStream_t stream, Matrix<dtype::real>* component) {
     // check input
     if (handle == NULL) {
         throw std::invalid_argument("Model::calcExcitationComponents: handle == NULL");
     }
-    if (components == NULL) {
+    if (component == NULL) {
         throw std::invalid_argument("Model::calcExcitationComponents: components == NULL");
     }
 
     // calc excitation matrices
-    for (dtype::index harmonic = 0; harmonic < this->num_harmonics() + 1; ++harmonic) {
-        // Run multiply once more to avoid cublas error
-        try {
-            (*components)[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
-        }
-        catch(const std::exception& e) {
-            (*components)[harmonic]->multiply(this->excitation_matrix(), pattern, handle, stream);
-        }
+    // Run multiply once more to avoid cublas error
+    try {
+        component->multiply(this->excitation_matrix(), pattern, handle, stream);
+    }
+    catch(const std::exception& e) {
+        component->multiply(this->excitation_matrix(), pattern, handle, stream);
     }
 
     // calc fourier coefficients for current pattern
-    // calc ground mode
-    (*components)[0]->scalarMultiply(1.0f / this->mesh().height(), stream);
-
-    // calc harmonics
-    for (dtype::index harmonic = 1; harmonic < this->num_harmonics() + 1; ++harmonic) {
-        (*components)[harmonic]->scalarMultiply(
+    if (harmonic == 0) {
+        // calc ground mode
+        component->scalarMultiply(1.0f / this->mesh().height(), stream);
+    } else {
+        component->scalarMultiply(
             2.0f * sin(harmonic * M_PI * this->electrodes().height() / this->mesh().height()) /
             (harmonic * M_PI * this->electrodes().height()), stream);
     }

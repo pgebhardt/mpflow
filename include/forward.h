@@ -39,9 +39,9 @@ namespace fastEIT {
         dtype::size measurment_count() const { return this->measurment_count_; }
         const Matrix<dtype::real>& jacobian() const { return *this->jacobian_; }
         const Matrix<dtype::real>& voltage() const { return *this->voltage_; }
-        const std::vector<Matrix<dtype::real>*>& phi() const { return this->phi_; }
-        const std::vector<Matrix<dtype::real>*>& excitation() const {
-            return this->excitation_; }
+        const Matrix<dtype::real>& potential(dtype::index index) const { return *this->potential_[index]; }
+        const Matrix<dtype::real>& excitation(dtype::index index) const {
+            return *this->excitation_[index]; }
         const Matrix<dtype::real>& voltage_calculation() const {
             return *this->voltage_calculation_; }
         const Matrix<dtype::real>& elemental_jacobian_matrix() const {
@@ -52,8 +52,9 @@ namespace fastEIT {
         NumericSolver& numeric_solver() { return *this->numeric_solver_; }
         Matrix<dtype::real>& jacobian() { return *this->jacobian_; }
         Matrix<dtype::real>& voltage() { return *this->voltage_; }
-        std::vector<Matrix<dtype::real>*>& phi() { return this->phi_; }
-        std::vector<Matrix<dtype::real>*>& excitation() { return this->excitation_; }
+        Matrix<dtype::real>& potential(dtype::index index) { return *this->potential_[index]; }
+        Matrix<dtype::real>& excitation(dtype::index index) {
+            return *this->excitation_[index]; }
         Matrix<dtype::real>& voltage_calculation() { return *this->voltage_calculation_; }
         Matrix<dtype::real>& elemental_jacobian_matrix() {
             return *this->elemental_jacobian_matrix_; }
@@ -66,7 +67,7 @@ namespace fastEIT {
         dtype::size measurment_count_;
         Matrix<dtype::real>* jacobian_;
         Matrix<dtype::real>* voltage_;
-        std::vector<Matrix<dtype::real>*> phi_;
+        std::vector<Matrix<dtype::real>*> potential_;
         std::vector<Matrix<dtype::real>*> excitation_;
         Matrix<dtype::real>* voltage_calculation_;
         Matrix<dtype::real>* elemental_jacobian_matrix_;

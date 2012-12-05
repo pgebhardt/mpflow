@@ -27,8 +27,8 @@ namespace fastEIT {
 
     public:
         // calc excitaion components
-        void calcExcitationComponents(const Matrix<dtype::real>& pattern, cublasHandle_t handle, cudaStream_t stream,
-            std::vector<Matrix<dtype::real>*>* components);
+        void calcExcitationComponent(const Matrix<dtype::real>& pattern, dtype::size harmonic, cublasHandle_t handle,
+            cudaStream_t stream, Matrix<dtype::real>* component);
 
         // update model
         void update(const Matrix<dtype::real>& gamma, cublasHandle_t handle, cudaStream_t stream);
@@ -38,7 +38,7 @@ namespace fastEIT {
         const Mesh<BasisFunction>& mesh() const { return *this->mesh_; }
         const Electrodes& electrodes() const { return *this->electrodes_; }
         dtype::real sigma_ref() const { return this->sigma_ref_; }
-        const std::vector<SparseMatrix*>& system_matrices() const { return this->system_matrices_; }
+        const SparseMatrix& system_matrix(dtype::index index) const { return *this->system_matrices_[index]; }
         const Matrix<dtype::real>& excitation_matrix() const { return *this->excitation_matrix_; }
         dtype::size num_harmonics() const { return this->num_harmonics_; }
         const SparseMatrix& s_matrix() const { return *this->s_matrix_; }
@@ -48,7 +48,7 @@ namespace fastEIT {
         const Matrix<dtype::real>& elemental_r_matrix() const { return *this->elemental_r_matrix_; }
 
         // mutators
-        std::vector<SparseMatrix*>& system_matrices() { return this->system_matrices_; }
+        SparseMatrix& system_matrix(dtype::index index) { return *this->system_matrices_[index]; }
         Matrix<dtype::real>& excitation_matrix() { return *this->excitation_matrix_; }
         SparseMatrix& s_matrix() { return *this->s_matrix_; }
         SparseMatrix& r_matrix() { return *this->r_matrix_; }

@@ -61,9 +61,9 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
 
     // create matrices
     for (dtype::index harmonic = 0; harmonic < num_harmonics + 1; ++harmonic) {
-        this->phi().push_back(new Matrix<dtype::real>(mesh->nodes().rows(),
+        this->potential_.push_back(new Matrix<dtype::real>(mesh->nodes().rows(),
             this->drive_count() + this->measurment_count(), stream));
-        this->excitation().push_back(new Matrix<dtype::real>(mesh->nodes().rows(),
+        this->excitation_.push_back(new Matrix<dtype::real>(mesh->nodes().rows(),
             this->drive_count() + this->measurment_count(), stream));
     }
 
@@ -88,7 +88,9 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
     pattern.copyToDevice(stream);
 
     // calc excitation components
-    this->model().calcExcitationComponents(pattern, handle, stream, &this->excitation());
+    for (dtype::index harmonic = 0; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
+        this->model().calcExcitationComponent(pattern, harmonic, handle, stream, &this->excitation(harmonic));
+    }
 
     // calc voltage calculation matrix
     dtype::real alpha = -1.0f, beta = 0.0f;
@@ -126,10 +128,10 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::~ForwardSolver() {
     delete this->voltage_calculation_;
     delete this->elemental_jacobian_matrix_;
 
-    for (auto phi : this->phi()) {
+    for (auto phi : this->potential_) {
         delete phi;
     }
-    for (auto excitation : this->excitation()) {
+    for (auto excitation : this->excitation_) {
         delete excitation;
     }
     delete this->model_;
@@ -199,22 +201,22 @@ const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunctio
     this->model().update(gamma, handle, stream);
 
     // solve for ground mode
-    this->numeric_solver().solve(*this->model().system_matrices()[0], *this->excitation()[0],
-        steps, true, stream, this->phi()[0]);
+    this->numeric_solver().solve(this->model().system_matrix(0), this->excitation(0),
+        steps, true, stream, &this->potential(0));
 
     // solve for higher harmonics
     for (dtype::index harmonic = 1; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
-        this->numeric_solver().solve(*this->model().system_matrices()[harmonic], *this->excitation()[harmonic],
-            steps, false, stream, this->phi()[harmonic]);
+        this->numeric_solver().solve(this->model().system_matrix(harmonic), this->excitation(harmonic),
+            steps, false, stream, &this->potential(harmonic));
     }
 
     // calc jacobian
-    forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, *this->phi()[0],
+    forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, this->potential(0),
         this->model().mesh().elements(), this->elemental_jacobian_matrix(),
         this->drive_count(), this->measurment_count(), this->model().sigma_ref(),
         false, stream, &this->jacobian());
     for (dtype::index harmonic = 1; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
-        forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, *this->phi()[harmonic],
+        forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, this->potential(harmonic),
             this->model().mesh().elements(), this->elemental_jacobian_matrix(),
             this->drive_count(), this->measurment_count(), this->model().sigma_ref(),
             true, stream, &this->jacobian());
@@ -228,7 +230,7 @@ const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunctio
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation().data_rows(),
         this->drive_count(), this->voltage_calculation().data_columns(), &alpha,
         this->voltage_calculation().device_data(), this->voltage_calculation().data_rows(),
-        this->phi()[0]->device_data(), this->phi()[0]->data_rows(), &beta,
+        this->potential(0).device_data(), this->potential(0).data_rows(), &beta,
         this->voltage().device_data(), this->voltage().data_rows());
 
     // add harmonic voltages
@@ -237,7 +239,7 @@ const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunctio
         cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation().data_rows(),
             this->drive_count(), this->voltage_calculation().data_columns(), &alpha,
             this->voltage_calculation().device_data(), this->voltage_calculation().data_rows(),
-            this->phi()[harmonic]->device_data(), this->phi()[harmonic]->data_rows(), &beta,
+            this->potential(harmonic).device_data(), this->potential(harmonic).data_rows(), &beta,
             this->voltage().device_data(), this->voltage().data_rows());
     }
 
