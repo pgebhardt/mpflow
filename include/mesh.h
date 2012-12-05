@@ -15,8 +15,9 @@ namespace fastEIT {
     class Mesh {
     // constructor and destructor
     public:
-        Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
-            Matrix<dtype::index>* boundary, dtype::real radius, dtype::real height);
+        Mesh(const Matrix<dtype::real>& nodes, const Matrix<dtype::index>& elements,
+            const Matrix<dtype::index>& boundary, dtype::real radius, dtype::real height,
+            cudaStream_t stream);
         virtual ~Mesh();
 
     // helper methods

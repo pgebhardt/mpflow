@@ -20,32 +20,39 @@
 template <
     class BasisFunction
 >
-fastEIT::Mesh<BasisFunction>::Mesh(Matrix<dtype::real>* nodes, Matrix<dtype::index>* elements,
-    Matrix<dtype::index>* boundary, dtype::real radius, dtype::real height)
-    : radius_(radius), height_(height), nodes_(nodes), elements_(elements),
-        boundary_(boundary) {
+fastEIT::Mesh<BasisFunction>::Mesh(const Matrix<dtype::real>& nodes,
+    const Matrix<dtype::index>& elements, const Matrix<dtype::index>& boundary,
+    dtype::real radius, dtype::real height, cudaStream_t stream)
+    : radius_(radius), height_(height), nodes_(NULL), elements_(NULL),
+        boundary_(NULL) {
     // check input
-    if (nodes == NULL) {
-        throw std::invalid_argument("Mesh::Mesh: nodes == NULL");
-    }
-    if (elements == NULL) {
-        throw std::invalid_argument("Mesh::Mesh: elements == NULL");
-    }
-    if (boundary == NULL) {
-        throw std::invalid_argument("Mesh::Mesh: boundary == NULL");
-    }
     if (radius <= 0.0f) {
         throw std::invalid_argument("radius <= 0.0");
     }
     if (height <= 0.0f) {
         throw std::invalid_argument("height <= 0.0");
     }
-    if (elements->columns() != BasisFunction::nodes_per_element) {
+    if (elements.columns() != BasisFunction::nodes_per_element) {
         throw std::invalid_argument("elements.count() != BasisFunction::nodes_per_element");
     }
-    if (boundary->columns() != BasisFunction::nodes_per_edge) {
+    if (boundary.columns() != BasisFunction::nodes_per_edge) {
         throw std::invalid_argument("boundary.count() != BasisFunction::nodes_per_edge");
     }
+
+    // create matrices
+    this->nodes_ = new Matrix<dtype::real>(nodes.rows(), nodes.columns(), stream);
+    this->elements_ = new Matrix<dtype::index>(elements.rows(), elements.columns(), stream);
+    this->boundary_ = new Matrix<dtype::index>(boundary.rows(), boundary.columns(), stream);
+
+    // copy matrices
+    this->nodes_->copy(nodes, stream);
+    this->elements_->copy(elements, stream);
+    this->boundary_->copy(boundary, stream);
+
+    // copy to host
+    this->nodes_->copyToHost(stream);
+    this->elements_->copyToHost(stream);
+    this->boundary_->copyToHost(stream);
 }
 
 // delete mesh class
