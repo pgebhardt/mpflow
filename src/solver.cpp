@@ -26,7 +26,10 @@
 #include "../include/solver.h"
 
 // create solver
-fastEIT::Solver::Solver(Mesh<basis::Linear>* mesh, Electrodes* electrodes,
+template <
+    class BasisFunction
+>
+fastEIT::Solver<BasisFunction>::Solver(Mesh<BasisFunction>* mesh, Electrodes* electrodes,
     const Matrix<dtype::real>& measurment_pattern,
     const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
     dtype::size num_harmonics, dtype::real regularization_factor, cublasHandle_t handle,
@@ -39,7 +42,7 @@ fastEIT::Solver::Solver(Mesh<basis::Linear>* mesh, Electrodes* electrodes,
     }
 
     // create solver
-    this->forward_solver_ = new ForwardSolver<basis::Linear, numeric::SparseConjugate>(mesh, electrodes,
+    this->forward_solver_ = new ForwardSolver<BasisFunction, numeric::SparseConjugate>(mesh, electrodes,
         measurment_pattern, drive_pattern, sigma_ref, num_harmonics, handle, stream);
 
     this->inverse_solver_ = new InverseSolver<numeric::Conjugate>(mesh->elements().rows(),
@@ -55,7 +58,10 @@ fastEIT::Solver::Solver(Mesh<basis::Linear>* mesh, Electrodes* electrodes,
 }
 
 // release solver
-fastEIT::Solver::~Solver() {
+template <
+    class BasisFunction
+>
+fastEIT::Solver<BasisFunction>::~Solver() {
     // cleanup
     delete this->forward_solver_;
     delete this->inverse_solver_;
@@ -66,7 +72,10 @@ fastEIT::Solver::~Solver() {
 }
 
 // pre solve for accurate initial jacobian
-void fastEIT::Solver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
+template <
+    class BasisFunction
+>
+void fastEIT::Solver<BasisFunction>::preSolve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
         throw std::invalid_argument("Solver::pre_solve: handle == NULL");
@@ -84,7 +93,10 @@ void fastEIT::Solver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
 }
 
 // calibrate
-fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
+template <
+    class BasisFunction
+>
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver<BasisFunction>::calibrate(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -106,7 +118,10 @@ fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
 
     return this->gamma();
 }
-fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
+template <
+    class BasisFunction
+>
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver<BasisFunction>::calibrate(
     const Matrix<dtype::real>& calibration_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
     // set calibration_voltage
@@ -117,7 +132,10 @@ fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
 }
 
 // solving
-fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
+template <
+    class BasisFunction
+>
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver<BasisFunction>::solve(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -130,7 +148,10 @@ fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
 
     return this->dgamma();
 }
-fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
+template <
+    class BasisFunction
+>
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver<BasisFunction>::solve(
     const Matrix<dtype::real>& measured_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
     // set voltage
@@ -139,7 +160,10 @@ fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
     // solve
     return this->solve(handle, stream);
 }
-fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
+template <
+    class BasisFunction
+>
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver<BasisFunction>::solve(
     const Matrix<dtype::real>& measured_voltage,
     const Matrix<dtype::real>& calibration_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
@@ -150,3 +174,6 @@ fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
     // solve
     return this->solve(handle, stream);
 }
+
+// specialization
+template class fastEIT::Solver<fastEIT::basis::Linear>;

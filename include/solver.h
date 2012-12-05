@@ -9,10 +9,13 @@
 // namespace fastEIT
 namespace fastEIT {
     // solver class definition
+    template <
+        class BasisFunction
+    >
     class Solver {
     // constructor and destructor
     public:
-        Solver(Mesh<basis::Linear>* mesh, Electrodes* electrodes,
+        Solver(Mesh<BasisFunction>* mesh, Electrodes* electrodes,
             const Matrix<dtype::real>& measurment_pattern,
             const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
             dtype::size num_harmonics, dtype::real regularization_factor,
@@ -38,7 +41,7 @@ namespace fastEIT {
 
     public:
         // accessors
-        const ForwardSolver<basis::Linear, numeric::SparseConjugate>& forward_solver() const {
+        const ForwardSolver<BasisFunction, numeric::SparseConjugate>& forward_solver() const {
             return *this->forward_solver_;
         }
         const InverseSolver<numeric::Conjugate>& inverse_solver() const {
@@ -52,7 +55,7 @@ namespace fastEIT {
         }
 
         // mutators
-        ForwardSolver<basis::Linear, numeric::SparseConjugate>& forward_solver() {
+        ForwardSolver<BasisFunction, numeric::SparseConjugate>& forward_solver() {
             return *this->forward_solver_;
         }
         InverseSolver<numeric::Conjugate>& inverse_solver() { return *this->inverse_solver_; }
@@ -63,7 +66,7 @@ namespace fastEIT {
 
     // member
     private:
-        ForwardSolver<basis::Linear, numeric::SparseConjugate>* forward_solver_;
+        ForwardSolver<BasisFunction, numeric::SparseConjugate>* forward_solver_;
         InverseSolver<numeric::Conjugate>* inverse_solver_;
         Matrix<dtype::real>* dgamma_;
         Matrix<dtype::real>* gamma_;
