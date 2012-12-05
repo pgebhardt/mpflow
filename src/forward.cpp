@@ -189,7 +189,7 @@ template <
     class BasisFunction,
     class NumericSolver
 >
-const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunction, NumericSolver>::solve(
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunction, NumericSolver>::solve(
     const Matrix<dtype::real>& gamma, dtype::size steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input

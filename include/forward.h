@@ -24,7 +24,7 @@ namespace fastEIT {
 
     public:
         // forward solving
-        const Matrix<dtype::real>& solve(const Matrix<dtype::real>& gamma, dtype::size steps,
+        Matrix<dtype::real>& solve(const Matrix<dtype::real>& gamma, dtype::size steps,
             cublasHandle_t handle, cudaStream_t stream);
 
     protected:
