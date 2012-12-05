@@ -24,10 +24,17 @@ namespace fastEIT {
         void preSolve(cublasHandle_t handle, cudaStream_t stream);
 
         // calibrate
-        const Matrix<dtype::real>& calibrate(cublasHandle_t handle, cudaStream_t stream);
+        Matrix<dtype::real>& calibrate(cublasHandle_t handle, cudaStream_t stream);
+        Matrix<dtype::real>& calibrate(const Matrix<dtype::real>& calibration_voltage,
+            cublasHandle_t handle, cudaStream_t stream);
 
         // solving
-        const Matrix<dtype::real>& solve(cublasHandle_t handle, cudaStream_t stream);
+        Matrix<dtype::real>& solve(cublasHandle_t handle, cudaStream_t stream);
+        Matrix<dtype::real>& solve(const Matrix<dtype::real>& measured_voltage,
+            cublasHandle_t handle, cudaStream_t stream);
+        Matrix<dtype::real>& solve(const Matrix<dtype::real>& measured_voltage,
+            const Matrix<dtype::real>& calibration_voltage, cublasHandle_t handle,
+            cudaStream_t stream);
 
     public:
         // accessors

@@ -84,7 +84,7 @@ void fastEIT::Solver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
 }
 
 // calibrate
-const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -106,9 +106,18 @@ const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
 
     return this->gamma();
 }
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::calibrate(
+    const Matrix<dtype::real>& calibration_voltage, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // set calibration_voltage
+    this->calibration_voltage().copy(calibration_voltage, stream);
+
+    // calibrate
+    return this->calibrate(handle, stream);
+}
 
 // solving
-const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -120,4 +129,24 @@ const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
         this->measured_voltage(), 90, false, handle, stream, &this->dgamma());
 
     return this->dgamma();
+}
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
+    const Matrix<dtype::real>& measured_voltage, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // set voltage
+    this->measured_voltage().copy(measured_voltage, stream);
+
+    // solve
+    return this->solve(handle, stream);
+}
+fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::Solver::solve(
+    const Matrix<dtype::real>& measured_voltage,
+    const Matrix<dtype::real>& calibration_voltage, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // set voltage
+    this->measured_voltage().copy(measured_voltage, stream);
+    this->calibration_voltage().copy(calibration_voltage, stream);
+
+    // solve
+    return this->solve(handle, stream);
 }
