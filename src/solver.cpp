@@ -30,7 +30,7 @@ template <
     class BasisFunction
 >
 fastEIT::Solver<BasisFunction>::Solver(Mesh<BasisFunction>* mesh, Electrodes* electrodes,
-    const Matrix<dtype::real>& measurment_pattern,
+    const Matrix<dtype::real>& measurement_pattern,
     const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
     dtype::size num_harmonics, dtype::real regularization_factor, cublasHandle_t handle,
     cudaStream_t stream)
@@ -43,17 +43,17 @@ fastEIT::Solver<BasisFunction>::Solver(Mesh<BasisFunction>* mesh, Electrodes* el
 
     // create solver
     this->forward_solver_ = new ForwardSolver<BasisFunction, numeric::SparseConjugate>(mesh, electrodes,
-        measurment_pattern, drive_pattern, sigma_ref, num_harmonics, handle, stream);
+        measurement_pattern, drive_pattern, sigma_ref, num_harmonics, handle, stream);
 
     this->inverse_solver_ = new InverseSolver<numeric::Conjugate>(mesh->elements().rows(),
-        measurment_pattern.data_columns() * drive_pattern.data_columns(), regularization_factor, handle, stream);
+        measurement_pattern.data_columns() * drive_pattern.data_columns(), regularization_factor, handle, stream);
 
     // create matrices
     this->dgamma_ = new Matrix<dtype::real>(mesh->elements().rows(), 1, stream);
     this->gamma_ = new Matrix<dtype::real>(mesh->elements().rows(), 1, stream);
-    this->measured_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurment_count(),
+    this->measured_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurement_count(),
         this->forward_solver().drive_count(), stream);
-    this->calibration_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurment_count(),
+    this->calibration_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurement_count(),
         this->forward_solver().drive_count(), stream);
 }
 

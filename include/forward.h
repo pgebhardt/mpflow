@@ -17,7 +17,7 @@ namespace fastEIT {
     // constructor and destructor
     public:
         ForwardSolver(Mesh<BasisFunction>* mesh, Electrodes* electrodes,
-            const Matrix<dtype::real>& measurment_pattern,
+            const Matrix<dtype::real>& measurement_pattern,
             const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
             dtype::size num_harmonics, cublasHandle_t handle, cudaStream_t stream);
         virtual ~ForwardSolver();
@@ -36,7 +36,7 @@ namespace fastEIT {
         const Model<BasisFunction>& model() const { return *this->model_; }
         const NumericSolver& numeric_solver() const { return *this->numeric_solver_; }
         dtype::size drive_count() const { return this->drive_count_; }
-        dtype::size measurment_count() const { return this->measurment_count_; }
+        dtype::size measurement_count() const { return this->measurement_count_; }
         const Matrix<dtype::real>& jacobian() const { return *this->jacobian_; }
         const Matrix<dtype::real>& voltage() const { return *this->voltage_; }
         const Matrix<dtype::real>& potential(dtype::index index) const { return *this->potential_[index]; }
@@ -64,7 +64,7 @@ namespace fastEIT {
         Model<BasisFunction>* model_;
         NumericSolver* numeric_solver_;
         dtype::size drive_count_;
-        dtype::size measurment_count_;
+        dtype::size measurement_count_;
         Matrix<dtype::real>* jacobian_;
         Matrix<dtype::real>* voltage_;
         std::vector<Matrix<dtype::real>*> potential_;

@@ -18,7 +18,9 @@
 #include "../include/matrix.h"
 
 // create new matrix
-template<class type>
+template<
+    class type
+>
 fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
     : host_data_(NULL), device_data_(NULL), rows_(rows), data_rows_(rows),
         columns_(columns), data_columns_(columns) {
@@ -69,7 +71,9 @@ fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_
 }
 
 // release matrix
-template <class type>
+template <
+    class type
+>
 fastEIT::Matrix<type>::~Matrix() {
     // free matrix host data
     cudaFree(this->host_data_);
@@ -79,7 +83,9 @@ fastEIT::Matrix<type>::~Matrix() {
 }
 
 // copy matrix
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::copy(const Matrix<type>& other, cudaStream_t stream) {
     // check size
     if ((other.data_rows() != this->data_rows()) || (other.data_columns() != this->data_columns())) {
@@ -99,7 +105,9 @@ void fastEIT::Matrix<type>::copy(const Matrix<type>& other, cudaStream_t stream)
 }
 
 // copy to device
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::copyToDevice(cudaStream_t stream) {
     // copy host buffer to device
     cudaMemcpyAsync(this->device_data(), this->host_data(),
@@ -114,7 +122,9 @@ void fastEIT::Matrix<type>::copyToDevice(cudaStream_t stream) {
 }
 
 // copy to host
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::copyToHost(cudaStream_t stream) {
     // copy host buffer to device
     cudaMemcpyAsync(this->host_data(), this->device_data(),
@@ -129,7 +139,9 @@ void fastEIT::Matrix<type>::copyToHost(cudaStream_t stream) {
 }
 
 // add kernel
-template<class type>
+template<
+    class type
+>
 __global__ void addKernel(const type* matrix, fastEIT::dtype::size rows, type* result) {
     // get ids
     fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
@@ -140,7 +152,9 @@ __global__ void addKernel(const type* matrix, fastEIT::dtype::size rows, type* r
 }
 
 // add matrix
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::add(const Matrix<type>& value, cudaStream_t stream) {
     // check size
     if ((this->data_rows() != value.data_rows()) || (this->data_columns() != value.data_columns())) {
@@ -159,7 +173,9 @@ void fastEIT::Matrix<type>::add(const Matrix<type>& value, cudaStream_t stream) 
 
 
 // matrix multiply
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::multiply(const Matrix<type>& A, const Matrix<type>& B,
     cublasHandle_t handle, cudaStream_t stream) {
     throw std::logic_error("Matrix::multiply: not supported dtype");
@@ -206,7 +222,9 @@ namespace fastEIT {
 }
 
 // scale kernel
-template <class type>
+template <
+    class type
+>
 __global__ void scaleKernel(type scalar, fastEIT::dtype::size rows, type* result) {
     // get ids
     fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
@@ -217,7 +235,9 @@ __global__ void scaleKernel(type scalar, fastEIT::dtype::size rows, type* result
 }
 
 // scalar multiply matrix
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
     // dimension
     dim3 blocks(this->data_rows() == 1 ? 1 : this->data_rows() / Matrix<type>::block_size,
@@ -230,7 +250,9 @@ void fastEIT::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
 }
 
 // vector dot product kernel
-template <class type>
+template <
+    class type
+>
 __global__ void vectorDotProductKernel(const type* a, const type* b, fastEIT::dtype::size rows,
     type* result) {
     // get ids
@@ -242,7 +264,9 @@ __global__ void vectorDotProductKernel(const type* a, const type* b, fastEIT::dt
 }
 
 // vector dot product
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::vectorDotProduct(const Matrix<type>& A, const Matrix<type>& B,
     cudaStream_t stream) {
     // check size
@@ -266,7 +290,9 @@ void fastEIT::Matrix<type>::vectorDotProduct(const Matrix<type>& A, const Matrix
 }
 
 // sum kernel
-template <class type>
+template <
+    class type
+>
 __global__ void sumKernel(const type* vector, fastEIT::dtype::size rows, fastEIT::dtype::size offset,
     type* result) {
     // get column
@@ -302,7 +328,9 @@ __global__ void sumKernel(const type* vector, fastEIT::dtype::size rows, fastEIT
 }
 
 // sum
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::sum(const Matrix<type>& value, cudaStream_t stream) {
     // check size
     if (this->data_rows() != value.data_rows()) {
@@ -335,7 +363,9 @@ void fastEIT::Matrix<type>::sum(const Matrix<type>& value, cudaStream_t stream) 
 }
 
 // min kernel
-template <class type>
+template <
+    class type
+>
 __global__ void minKernel(const type* vector, fastEIT::dtype::size rows, fastEIT::dtype::size offset, type* result) {
     // get id
     fastEIT::dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -361,7 +391,9 @@ __global__ void minKernel(const type* vector, fastEIT::dtype::size rows, fastEIT
 }
 
 // min
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::min(const Matrix<type>& value, cudaStream_t stream) {
     // check size
     if (this->data_rows() != value.data_rows()) {
@@ -390,7 +422,9 @@ void fastEIT::Matrix<type>::min(const Matrix<type>& value, cudaStream_t stream) 
 }
 
 // max kernel
-template <class type>
+template <
+    class type
+>
 __global__ void maxKernel(const type* vector, fastEIT::dtype::size rows, fastEIT::dtype::size offset, type* result) {
     // get id
     fastEIT::dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -416,7 +450,9 @@ __global__ void maxKernel(const type* vector, fastEIT::dtype::size rows, fastEIT
 }
 
 // max
-template <class type>
+template <
+    class type
+>
 void fastEIT::Matrix<type>::max(const Matrix<type>& value, cudaStream_t stream) {
     // check size
     if (this->data_rows() != value.data_rows()) {

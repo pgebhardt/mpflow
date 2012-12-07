@@ -16,7 +16,7 @@ namespace fastEIT {
     // constructor and destructor
     public:
         Solver(Mesh<BasisFunction>* mesh, Electrodes* electrodes,
-            const Matrix<dtype::real>& measurment_pattern,
+            const Matrix<dtype::real>& measurement_pattern,
             const Matrix<dtype::real>& drive_pattern, dtype::real sigma_ref,
             dtype::size num_harmonics, dtype::real regularization_factor,
             cublasHandle_t handle, cudaStream_t stream);
