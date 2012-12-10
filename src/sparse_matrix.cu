@@ -3,8 +3,9 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdexcept>
 #include <assert.h>
+
+#include <stdexcept>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -14,9 +15,14 @@
 #include "../include/sparse_matrix.h"
 
 // create new sparse matrix
-fastEIT::SparseMatrix::SparseMatrix(const Matrix<dtype::real>& matrix, cudaStream_t stream) {
+fastEIT::SparseMatrix::SparseMatrix(const Matrix<dtype::real>* matrix, cudaStream_t stream) {
+    // check input
+    if (matrix == NULL) {
+        throw std::invalid_argument("SparseMatrix::SparseMatrix: matrix == NULL");
+    }
+
     // create empty sparse matrix
-    this->init(matrix.rows(), matrix.columns(), stream);
+    this->init(matrix->rows(), matrix->columns(), stream);
 
     // convert to sparse_matrix
     this->convert(matrix, stream);
@@ -112,18 +118,23 @@ __global__ void sparseCreateKernel(const fastEIT::dtype::real* matrix, fastEIT::
 }
 
 // convert to sparse matrix
-void fastEIT::SparseMatrix::convert(const Matrix<dtype::real>& matrix, cudaStream_t stream) {
+void fastEIT::SparseMatrix::convert(const Matrix<dtype::real>* matrix, cudaStream_t stream) {
+    // check input
+    if (matrix == NULL) {
+        throw std::invalid_argument("SparseMatrix::convert: matrix == NULL");
+    }
+
     // create elementCount matrix
     fastEIT::Matrix<dtype::index> elementCount(this->data_rows(), 1, stream);
     fastEIT::Matrix<dtype::index> maxCount(this->data_rows(), 1, stream);
 
     // execute kernel
     sparseCreateKernel<<<this->data_rows() / fastEIT::Matrix<dtype::real>::block_size,
-        fastEIT::Matrix<dtype::real>::block_size, 0, stream>>>(matrix.device_data(), matrix.data_rows(),
-        matrix.data_columns(), this->values(), this->column_ids(), elementCount.device_data());
+        fastEIT::Matrix<dtype::real>::block_size, 0, stream>>>(matrix->device_data(), matrix->data_rows(),
+        matrix->data_columns(), this->values(), this->column_ids(), elementCount.device_data());
 
     // get max count
-    maxCount.max(elementCount, stream);
+    maxCount.max(&elementCount, stream);
     maxCount.copyToHost(stream);
     cudaStreamSynchronize(stream);
 
@@ -175,16 +186,20 @@ __global__ void sparseMultiplyKernel(const fastEIT::dtype::real* values,
 }
 
 // sparse matrix multiply
-void fastEIT::SparseMatrix::multiply(const Matrix<dtype::real>& matrix, cudaStream_t stream,
+void fastEIT::SparseMatrix::multiply(const Matrix<dtype::real>* matrix, cudaStream_t stream,
     Matrix<dtype::real>* result) const {
     // check input
+    if (matrix == NULL) {
+        throw std::invalid_argument("SparseMatrix::multiply: matrix == NULL");
+    }
     if (result == NULL) {
         throw std::invalid_argument("SparseMatrix::multiply: result == NULL");
     }
 
     // check size
-    if ((result->data_rows() != this->data_rows()) || (this->data_columns() != matrix.data_rows()) ||
-        (result->data_columns() != matrix.data_columns())) {
+    if ((result->data_rows() != this->data_rows()) ||
+        (this->data_columns() != matrix->data_rows()) ||
+        (result->data_columns() != matrix->data_columns())) {
         throw std::invalid_argument("SparseMatrix::multiply: size");
     }
 
@@ -195,6 +210,6 @@ void fastEIT::SparseMatrix::multiply(const Matrix<dtype::real>& matrix, cudaStre
 
     // execute kernel
     sparseMultiplyKernel<<<global, local, 0, stream>>>(this->values(), this->column_ids(),
-        matrix.device_data(), result->data_rows(), result->data_columns(), this->density(),
+        matrix->device_data(), result->data_rows(), result->data_columns(), this->density(),
         result->device_data());
 }

@@ -27,9 +27,12 @@ __global__ void addScalarKernel(const fastEIT::dtype::real* scalar,
 }
 
 // add scalar
-void fastEIT::numeric::conjugate::addScalar(const Matrix<dtype::real>& scalar,
+void fastEIT::numeric::conjugate::addScalar(const Matrix<dtype::real>* scalar,
     dtype::size rows, dtype::size columns, cudaStream_t stream, Matrix<dtype::real>* vector) {
     // check input
+    if (scalar == NULL) {
+        throw std::invalid_argument("Conjugate::addScalar: scalar == NULL");
+    }
     if (vector == NULL) {
         throw std::invalid_argument("Conjugate::addScalar: vector == NULL");
     }
@@ -42,7 +45,7 @@ void fastEIT::numeric::conjugate::addScalar(const Matrix<dtype::real>& scalar,
         vector->data_columns() == 1 ? 1 : Matrix<dtype::real>::block_size);
 
     // execute kernel
-    addScalarKernel<<<global, local, 0, stream>>>(scalar.device_data(),
+    addScalarKernel<<<global, local, 0, stream>>>(scalar->device_data(),
         vector->data_rows(), rows, columns, vector->device_data());
 }
 
@@ -62,9 +65,22 @@ __global__ void updateVectorKernel(const fastEIT::dtype::real* x1,
 }
 
 // update vector
-void fastEIT::numeric::conjugate::updateVector(const Matrix<dtype::real>& x1,
-    dtype::real sign, const Matrix<dtype::real>& x2, const Matrix<dtype::real>& r1,
-    const Matrix<dtype::real>& r2, cudaStream_t stream, Matrix<dtype::real>* result) {
+void fastEIT::numeric::conjugate::updateVector(const Matrix<dtype::real>* x1,
+    dtype::real sign, const Matrix<dtype::real>* x2, const Matrix<dtype::real>* r1,
+    const Matrix<dtype::real>* r2, cudaStream_t stream, Matrix<dtype::real>* result) {
+    // check input
+    if (x1 == NULL) {
+        throw std::invalid_argument("Conjugate::addScalar: x1 == NULL");
+    }
+    if (x2 == NULL) {
+        throw std::invalid_argument("Conjugate::addScalar: x2 == NULL");
+    }
+    if (r1 == NULL) {
+        throw std::invalid_argument("Conjugate::addScalar: r1 == NULL");
+    }
+    if (r2 == NULL) {
+        throw std::invalid_argument("Conjugate::addScalar: r2 == NULL");
+    }
     if (result == NULL) {
         throw std::invalid_argument("Conjugate::addScalar: result == NULL");
     }
@@ -77,8 +93,8 @@ void fastEIT::numeric::conjugate::updateVector(const Matrix<dtype::real>& x1,
         result->data_columns() == 1 ? 1 : Matrix<dtype::real>::block_size);
 
     // execute kernel
-    updateVectorKernel<<<global, local, 0, stream>>>(x1.device_data(), sign,
-        x2.device_data(), r1.device_data(), r2.device_data(), result->data_rows(),
+    updateVectorKernel<<<global, local, 0, stream>>>(x1->device_data(), sign,
+        x2->device_data(), r1->device_data(), r2->device_data(), result->data_rows(),
         result->device_data());
 }
 
@@ -142,27 +158,33 @@ __global__ void reduceRowKernel(fastEIT::dtype::size rows,
 }
 
 // fast gemv
-void fastEIT::numeric::conjugate::gemv(const Matrix<dtype::real>& matrix,
-    const Matrix<dtype::real>& vector, cudaStream_t stream, Matrix<dtype::real>* result) {
+void fastEIT::numeric::conjugate::gemv(const Matrix<dtype::real>* matrix,
+    const Matrix<dtype::real>* vector, cudaStream_t stream, Matrix<dtype::real>* result) {
     // check input
+    if (matrix == NULL) {
+        throw std::invalid_argument("Conjugate::addScalar: matrix == NULL");
+    }
+    if (vector == NULL) {
+        throw std::invalid_argument("Conjugate::addScalar: vector == NULL");
+    }
     if (result == NULL) {
         throw std::invalid_argument("Conjugate::addScalar: result == NULL");
     }
 
     // dimension
     dim3 blocks(
-        (matrix.data_rows() + 2 * Matrix<dtype::real>::block_size - 1) /
+        (matrix->data_rows() + 2 * Matrix<dtype::real>::block_size - 1) /
         (2 * Matrix<dtype::real>::block_size),
-        (matrix.data_rows() / (2 * Matrix<dtype::real>::block_size) +
+        (matrix->data_rows() / (2 * Matrix<dtype::real>::block_size) +
         Matrix<dtype::real>::block_size - 1) / Matrix<dtype::real>::block_size);
     dim3 threads(2 * Matrix<dtype::real>::block_size, Matrix<dtype::real>::block_size);
 
     // call gemv kernel
-    gemvKernel<<<blocks, threads, 0, stream>>>(matrix.device_data(), vector.device_data(),
-        matrix.data_rows(), result->device_data());
+    gemvKernel<<<blocks, threads, 0, stream>>>(matrix->device_data(), vector->device_data(),
+        matrix->data_rows(), result->device_data());
 
     // call reduce kernel
-    reduceRowKernel<<<(matrix.data_columns() +
+    reduceRowKernel<<<(matrix->data_columns() +
         Matrix<dtype::real>::block_size * Matrix<dtype::real>::block_size - 1) /
         (Matrix<dtype::real>::block_size * Matrix<dtype::real>::block_size),
         Matrix<dtype::real>::block_size * Matrix<dtype::real>::block_size, 0, stream>>>(

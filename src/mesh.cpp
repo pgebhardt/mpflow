@@ -23,7 +23,7 @@ template <
 >
 fastEIT::Mesh<BasisFunction>::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes,
     std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
-    dtype::real radius, dtype::real height, cudaStream_t stream)
+    dtype::real radius, dtype::real height)
     : radius_(radius), height_(height), nodes_(nodes), elements_(elements),
         boundary_(boundary) {
     // check input

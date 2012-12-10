@@ -3,8 +3,9 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdexcept>
 #include <assert.h>
+
+#include <stdexcept>
 #include <vector>
 #include <array>
 #include <tuple>
@@ -93,11 +94,11 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
     system_matrix.copyToDevice(stream);
 
     // create sparse matrices
-    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream);
-    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream);
+    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix>(&system_matrix, stream);
+    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix>(&system_matrix, stream);
 
     for (dtype::index harmonic = 0; harmonic < this->num_harmonics() + 1; ++harmonic) {
-        this->system_matrices_.push_back(std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream));
+        this->system_matrices_.push_back(std::make_shared<fastEIT::SparseMatrix>(&system_matrix, stream));
     }
 }
 

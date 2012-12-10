@@ -3,8 +3,9 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdexcept>
 #include <assert.h>
+
+#include <stdexcept>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -78,11 +79,23 @@ __global__ void calcJacobianKernel(const fastEIT::dtype::real* drivePhi,
 template <
     int nodes_per_element
 >
-void fastEIT::forward::calcJacobian(const Matrix<dtype::real>& gamma, const Matrix<dtype::real>& phi,
-    const Matrix<dtype::index>& elements, const Matrix<dtype::real>& elemental_jacobian_matrix,
+void fastEIT::forward::calcJacobian(const Matrix<dtype::real>* gamma, const Matrix<dtype::real>* phi,
+    const Matrix<dtype::index>* elements, const Matrix<dtype::real>* elemental_jacobian_matrix,
     dtype::size drive_count, dtype::size measurment_count, dtype::real sigma_ref, bool additiv,
     cudaStream_t stream, Matrix<dtype::real>* jacobian) {
     // check input
+    if (gamma == NULL) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: gamma == NULL");
+    }
+    if (phi == NULL) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: phi == NULL");
+    }
+    if (elements == NULL) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: elements == NULL");
+    }
+    if (elemental_jacobian_matrix == NULL) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: elemental_jacobian_matrix == NULL");
+    }
     if (jacobian == NULL) {
         throw std::invalid_argument("ForwardSolver::calcJacobian: jacobian == NULL");
     }
@@ -95,16 +108,16 @@ void fastEIT::forward::calcJacobian(const Matrix<dtype::real>& gamma, const Matr
 
     // calc jacobian
     calcJacobianKernel<nodes_per_element><<<blocks, threads, 0, stream>>>(
-        phi.device_data(), &phi.device_data()[drive_count * phi.data_rows()],
-        elements.device_data(), elemental_jacobian_matrix.device_data(),
-        gamma.device_data(), sigma_ref, jacobian->data_rows(), jacobian->data_columns(),
-        phi.data_rows(), elements.rows(), drive_count, measurment_count, additiv,
+        phi->device_data(), &phi->device_data()[drive_count * phi->data_rows()],
+        elements->device_data(), elemental_jacobian_matrix->device_data(),
+        gamma->device_data(), sigma_ref, jacobian->data_rows(), jacobian->data_columns(),
+        phi->data_rows(), elements->rows(), drive_count, measurment_count, additiv,
         jacobian->device_data());
 }
 
 // template specialisation
 template void fastEIT::forward::calcJacobian<3>(
-    const fastEIT::Matrix<fastEIT::dtype::real>&, const fastEIT::Matrix<fastEIT::dtype::real>&,
-    const fastEIT::Matrix<fastEIT::dtype::index>&, const fastEIT::Matrix<fastEIT::dtype::real>&,
+    const fastEIT::Matrix<fastEIT::dtype::real>*, const fastEIT::Matrix<fastEIT::dtype::real>*,
+    const fastEIT::Matrix<fastEIT::dtype::index>*, const fastEIT::Matrix<fastEIT::dtype::real>*,
     fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::real, bool,
     cudaStream_t, fastEIT::Matrix<fastEIT::dtype::real>*);

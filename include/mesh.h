@@ -16,8 +16,7 @@ namespace fastEIT {
     public:
         // constructor
         Mesh(std::shared_ptr<Matrix<dtype::real>> nodes, std::shared_ptr<Matrix<dtype::index>> elements,
-            std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height,
-            cudaStream_t stream);
+            std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height);
 
         // helper methods
         std::array<dtype::index, BasisFunction::nodes_per_element> elementIndices(dtype::index element) const;

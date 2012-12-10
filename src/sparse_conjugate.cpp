@@ -54,7 +54,7 @@ void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix
     }
 
     // calc residuum r = f - A * x
-    A->multiply(*x, stream, this->residuum().get());
+    A->multiply(x.get(), stream, this->residuum().get());
 
     // regularize for dc free solution
     if (dcFree == true) {
@@ -75,7 +75,7 @@ void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
-        A->multiply(*this->projection(), stream, this->temp_vector().get());
+        A->multiply(this->projection().get(), stream, this->temp_vector().get());
 
         // regularize for dc free solution
         if (dcFree == true) {

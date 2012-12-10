@@ -43,9 +43,15 @@ __global__ void reduceMatrixKernel(const type* intermediateMatrix, const fastEIT
 template <
     class type
 >
-void fastEIT::model::reduceMatrix(const Matrix<type>& intermediateMatrix, const SparseMatrix& shape, cudaStream_t stream,
-    Matrix<type>* matrix) {
+void fastEIT::model::reduceMatrix(const Matrix<type>* intermediateMatrix,
+    const SparseMatrix* shape, cudaStream_t stream, Matrix<type>* matrix) {
     // check input
+    if (intermediateMatrix == NULL) {
+        throw std::invalid_argument("model::reduceMatrix: intermediateMatrix == NULL");
+    }
+    if (shape == NULL) {
+        throw std::invalid_argument("model::reduceMatrix: shape == NULL");
+    }
     if (matrix == NULL) {
         throw std::invalid_argument("model::reduceMatrix: matrix == NULL");
     }
@@ -56,8 +62,8 @@ void fastEIT::model::reduceMatrix(const Matrix<type>& intermediateMatrix, const 
 
     // reduce matrix
     reduceMatrixKernel<type><<<blocks, threads, 0, stream>>>(
-        intermediateMatrix.device_data(), shape.column_ids(), matrix->data_rows(),
-        shape.density(), matrix->device_data());
+        intermediateMatrix->device_data(), shape->column_ids(), matrix->data_rows(),
+        shape->density(), matrix->device_data());
 }
 
 // update matrix kernel
@@ -87,9 +93,19 @@ __global__ void updateMatrixKernel(const fastEIT::dtype::index* connectivityMatr
 }
 
 // update matrix
-void fastEIT::model::updateMatrix(const Matrix<dtype::real>& elements, const Matrix<dtype::real>& gamma,
-    const Matrix<dtype::index>& connectivityMatrix, dtype::real sigmaRef, cudaStream_t stream, SparseMatrix* matrix) {
+void fastEIT::model::updateMatrix(const Matrix<dtype::real>* elements,
+    const Matrix<dtype::real>* gamma, const Matrix<dtype::index>* connectivityMatrix,
+    dtype::real sigmaRef, cudaStream_t stream, SparseMatrix* matrix) {
     // check input
+    if (elements == NULL) {
+        throw std::invalid_argument("model::updateMatrix: elements == NULL");
+    }
+    if (gamma == NULL) {
+        throw std::invalid_argument("model::updateMatrix: gamma == NULL");
+    }
+    if (connectivityMatrix == NULL) {
+        throw std::invalid_argument("model::updateMatrix: connectivityMatrix == NULL");
+    }
     if (matrix == NULL) {
         throw std::invalid_argument("model::updateMatrix: matrix == NULL");
     }
@@ -100,12 +116,12 @@ void fastEIT::model::updateMatrix(const Matrix<dtype::real>& elements, const Mat
 
     // execute kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(
-        connectivityMatrix.device_data(), elements.device_data(), gamma.device_data(),
-        sigmaRef, connectivityMatrix.data_rows(), matrix->density(), matrix->values());
+        connectivityMatrix->device_data(), elements->device_data(), gamma->device_data(),
+        sigmaRef, connectivityMatrix->data_rows(), matrix->density(), matrix->values());
 }
 
 // template specialisation
-template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(const Matrix<fastEIT::dtype::real>&, const SparseMatrix&,
+template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(const Matrix<fastEIT::dtype::real>*, const SparseMatrix*,
     cudaStream_t, Matrix<fastEIT::dtype::real>*);
-template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const Matrix<fastEIT::dtype::index>&, const SparseMatrix&,
+template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const Matrix<fastEIT::dtype::index>*, const SparseMatrix*,
     cudaStream_t, Matrix<fastEIT::dtype::index>*);
