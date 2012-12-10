@@ -33,66 +33,75 @@ template <
     class NumericSolver
 >
 fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
-    Mesh<BasisFunction>* mesh, Electrodes* electrodes,
-    const Matrix<dtype::real>& measurement_pattern, const Matrix<dtype::real>& drive_pattern,
-    dtype::real sigma_ref, dtype::size num_harmonics, cublasHandle_t handle,
-    cudaStream_t stream)
-    : model_(NULL), numeric_solver_(NULL), drive_count_(drive_pattern.columns()),
-        measurement_count_(measurement_pattern.columns()), jacobian_(NULL), voltage_(NULL),
-        voltage_calculation_(NULL), elemental_jacobian_matrix_(NULL) {
+    std::shared_ptr<Model<BasisFunction>> model,
+    const std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    const std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+    cublasHandle_t handle, cudaStream_t stream)
+    : model_(model), drive_count_(0), measurement_count_(0) {
     // check input
+    if (model == nullptr) {
+        throw std::invalid_argument("ForwardSolver::ForwardSolver: model == nullptr");
+    }
+    if (measurement_pattern == nullptr) {
+        throw std::invalid_argument(
+            "ForwardSolver::ForwardSolver: measurement_pattern == nullptr");
+    }
+    if (drive_pattern == nullptr) {
+        throw std::invalid_argument(
+            "ForwardSolver::ForwardSolver: drive_pattern == nullptr");
+    }
     if (handle == NULL) {
         throw std::invalid_argument("ForwardSolver::ForwardSolver: handle == NULL");
     }
 
-    // create model
-    this->model_ = new Model<BasisFunction>(mesh, electrodes, sigma_ref, num_harmonics, handle,
-        stream);
+    // set counts
+    this->drive_count() = drive_pattern->columns();
+    this->measurement_count() = measurement_pattern->columns();
 
     // create NumericSolver solver
-    this->numeric_solver_ = new NumericSolver(mesh->nodes()->rows(),
+    this->numeric_solver_ = std::make_shared<NumericSolver>(this->model()->mesh()->nodes()->rows(),
         this->drive_count() + this->measurement_count(), stream);
 
     // create matrices
-    this->jacobian_ = new Matrix<dtype::real>(measurement_pattern.data_columns() *
-        drive_pattern.data_columns(), mesh->elements()->rows(), stream);
-    this->voltage_  = new Matrix<dtype::real>(this->measurement_count(), this->drive_count(), stream);
-    this->voltage_calculation_  = new Matrix<dtype::real>(this->measurement_count(),
-        mesh->nodes()->rows(), stream);
-    this->elemental_jacobian_matrix_  = new Matrix<dtype::real>(mesh->elements()->rows(),
+    this->jacobian_ = std::make_shared<Matrix<dtype::real>>(measurement_pattern->data_columns() *
+        drive_pattern->data_columns(), this->model()->mesh()->elements()->rows(), stream);
+    this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->measurement_count(), this->drive_count(), stream);
+    this->voltage_calculation_ = std::make_shared<Matrix<dtype::real>>(this->measurement_count(),
+        this->model()->mesh()->nodes()->rows(), stream);
+    this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
         math::square(BasisFunction::nodes_per_element), stream);
 
     // create matrices
-    for (dtype::index harmonic = 0; harmonic < num_harmonics + 1; ++harmonic) {
-        this->potential_.push_back(new Matrix<dtype::real>(mesh->nodes()->rows(),
+    for (dtype::index harmonic = 0; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
+        this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
             this->drive_count() + this->measurement_count(), stream));
-        this->excitation_.push_back(new Matrix<dtype::real>(mesh->nodes()->rows(),
+        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
             this->drive_count() + this->measurement_count(), stream));
     }
 
     // create pattern matrix
-    Matrix<dtype::real> pattern(drive_pattern.rows(),
+    auto pattern = std::make_shared<Matrix<dtype::real>>(drive_pattern->rows(),
         this->drive_count() + this->measurement_count(), stream);
 
     // fill pattern matrix with drive pattern
-    for (dtype::index row = 0; row < pattern.rows(); ++row) {
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
         for (dtype::index column = 0; column < this->drive_count(); ++column) {
-            pattern(row, column) = drive_pattern(row, column);
+            (*pattern)(row, column) = (*drive_pattern)(row, column);
         }
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index row = 0; row < pattern.rows(); ++row) {
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
         for (dtype::index column = 0; column < this->measurement_count(); ++column) {
-            pattern(row, column + this->drive_count()) = measurement_pattern(row, column);
+            (*pattern)(row, column + this->drive_count()) = (*measurement_pattern)(row, column);
         }
     }
-    pattern.copyToDevice(stream);
+    pattern->copyToDevice(stream);
 
     // calc excitation components
-    for (dtype::index harmonic = 0; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
-        this->model().calcExcitationComponent(pattern, harmonic, handle, stream, &this->excitation(harmonic));
+    for (dtype::index harmonic = 0; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
+        this->model()->calcExcitationComponent(pattern, harmonic, handle, stream, this->excitation(harmonic));
     }
 
     // calc voltage calculation matrix
@@ -100,45 +109,23 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
 
     // one prerun for cublas
     cublasSetStream(handle, stream);
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurement_pattern.data_columns(),
-        this->model().excitation_matrix().data_rows(), measurement_pattern.data_rows(), &alpha,
-        measurement_pattern.device_data(), measurement_pattern.data_rows(),
-        this->model().excitation_matrix().device_data(), this->model().excitation_matrix().data_rows(),
-        &beta, this->voltage_calculation().device_data(), this->voltage_calculation().data_rows());
+    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurement_pattern->data_columns(),
+        this->model()->excitation_matrix()->data_rows(), measurement_pattern->data_rows(), &alpha,
+        measurement_pattern->device_data(), measurement_pattern->data_rows(),
+        this->model()->excitation_matrix()->device_data(), this->model()->excitation_matrix()->data_rows(),
+        &beta, this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows());
 
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurement_pattern.data_columns(),
-        this->model().excitation_matrix().data_rows(), measurement_pattern.data_rows(), &alpha,
-        measurement_pattern.device_data(), measurement_pattern.data_rows(),
-        this->model().excitation_matrix().device_data(), this->model().excitation_matrix().data_rows(),
-        &beta, this->voltage_calculation().device_data(), this->voltage_calculation().data_rows())
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, measurement_pattern->data_columns(),
+        this->model()->excitation_matrix()->data_rows(), measurement_pattern->data_rows(), &alpha,
+        measurement_pattern->device_data(), measurement_pattern->data_rows(),
+        this->model()->excitation_matrix()->device_data(), this->model()->excitation_matrix()->data_rows(),
+        &beta, this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows())
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
     }
 
     // init jacobian calculation matrix
     this->initJacobianCalculationMatrix(handle, stream);
-}
-
-// release solver
-template <
-    class BasisFunction,
-    class NumericSolver
->
-fastEIT::ForwardSolver<BasisFunction, NumericSolver>::~ForwardSolver() {
-    // cleanup
-    delete this->jacobian_;
-    delete this->voltage_;
-    delete this->voltage_calculation_;
-    delete this->elemental_jacobian_matrix_;
-
-    for (auto phi : this->potential_) {
-        delete phi;
-    }
-    for (auto excitation : this->excitation_) {
-        delete excitation;
-    }
-    delete this->model_;
-    delete this->numeric_solver_;
 }
 
 // init jacobian calculation matrix
@@ -158,21 +145,21 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
     std::array<BasisFunction*, BasisFunction::nodes_per_element> basis_functions;
 
     // fill connectivity and elementalJacobianMatrix
-    for (dtype::index element = 0; element < this->model().mesh().elements()->rows(); ++element) {
+    for (dtype::index element = 0; element < this->model()->mesh()->elements()->rows(); ++element) {
         // get element indices
-        indices = this->model().mesh().elementIndices(element);
+        indices = this->model()->mesh()->elementIndices(element);
 
         // calc corresponding basis functions
         for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
             basis_functions[node] = new BasisFunction(
-                this->model().mesh().elementNodes(element), node);
+                this->model()->mesh()->elementNodes(element), node);
         }
 
         // fill matrix
         for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
             for (dtype::index j = 0; j < BasisFunction::nodes_per_element; ++j) {
                 // set elementalJacobianMatrix element
-                this->elemental_jacobian_matrix()(element, i + j * BasisFunction::nodes_per_element) =
+                (*this->elemental_jacobian_matrix())(element, i + j * BasisFunction::nodes_per_element) =
                     basis_functions[i]->integrateGradientWithBasis(*basis_functions[j]);
             }
         }
@@ -184,7 +171,7 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
     }
 
     // upload to device
-    this->elemental_jacobian_matrix().copyToDevice(stream);
+    this->elemental_jacobian_matrix()->copyToDevice(stream);
 }
 
 // forward solving
@@ -192,37 +179,40 @@ template <
     class BasisFunction,
     class NumericSolver
 >
-fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunction, NumericSolver>::solve(
-    const Matrix<dtype::real>& gamma, dtype::size steps, cublasHandle_t handle,
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<BasisFunction, NumericSolver>::solve(
+    const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
+    if (gamma == nullptr) {
+        throw std::invalid_argument("ForwardSolver::solve: gamma == nullptr");
+    }
     if (handle == NULL) {
         throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
     }
 
     // update system matrix
-    this->model().update(gamma, handle, stream);
+    this->model()->update(gamma, handle, stream);
 
     // solve for ground mode
-    this->numeric_solver().solve(this->model().system_matrix(0), this->excitation(0),
-        steps, true, stream, &this->potential(0));
+    this->numeric_solver()->solve(this->model()->system_matrix(0), this->excitation(0),
+        steps, true, stream, this->potential(0));
 
     // solve for higher harmonics
-    for (dtype::index harmonic = 1; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
-        this->numeric_solver().solve(this->model().system_matrix(harmonic), this->excitation(harmonic),
-            steps, false, stream, &this->potential(harmonic));
+    for (dtype::index harmonic = 1; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
+        this->numeric_solver()->solve(this->model()->system_matrix(harmonic), this->excitation(harmonic),
+            steps, false, stream, this->potential(harmonic));
     }
 
     // calc jacobian
-    forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, this->potential(0),
-        *this->model().mesh().elements(), this->elemental_jacobian_matrix(),
-        this->drive_count(), this->measurement_count(), this->model().sigma_ref(),
-        false, stream, &this->jacobian());
-    for (dtype::index harmonic = 1; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
-        forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, this->potential(harmonic),
-            *this->model().mesh().elements(), this->elemental_jacobian_matrix(),
-            this->drive_count(), this->measurement_count(), this->model().sigma_ref(),
-            true, stream, &this->jacobian());
+    forward::calcJacobian<BasisFunction::nodes_per_element>(gamma.get(), this->potential(0).get(),
+        this->model()->mesh()->elements().get(), this->elemental_jacobian_matrix().get(),
+        this->drive_count(), this->measurement_count(), this->model()->sigma_ref(),
+        false, stream, this->jacobian().get());
+    for (dtype::index harmonic = 1; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
+        forward::calcJacobian<BasisFunction::nodes_per_element>(gamma.get(), this->potential(harmonic).get(),
+            this->model()->mesh()->elements().get(), this->elemental_jacobian_matrix().get(),
+            this->drive_count(), this->measurement_count(), this->model()->sigma_ref(),
+            true, stream, this->jacobian().get());
     }
 
     // set stream
@@ -230,20 +220,20 @@ fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunction, Num
 
     // add voltage
     dtype::real alpha = 1.0f, beta = 0.0f;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation().data_rows(),
-        this->drive_count(), this->voltage_calculation().data_columns(), &alpha,
-        this->voltage_calculation().device_data(), this->voltage_calculation().data_rows(),
-        this->potential(0).device_data(), this->potential(0).data_rows(), &beta,
-        this->voltage().device_data(), this->voltage().data_rows());
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation()->data_rows(),
+        this->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
+        this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows(),
+        this->potential(0)->device_data(), this->potential(0)->data_rows(), &beta,
+        this->voltage()->device_data(), this->voltage()->data_rows());
 
     // add harmonic voltages
     beta = 1.0f;
-    for (dtype::index harmonic = 1; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
-        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation().data_rows(),
-            this->drive_count(), this->voltage_calculation().data_columns(), &alpha,
-            this->voltage_calculation().device_data(), this->voltage_calculation().data_rows(),
-            this->potential(harmonic).device_data(), this->potential(harmonic).data_rows(), &beta,
-            this->voltage().device_data(), this->voltage().data_rows());
+    for (dtype::index harmonic = 1; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation()->data_rows(),
+            this->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
+            this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows(),
+            this->potential(harmonic)->device_data(), this->potential(harmonic)->data_rows(), &beta,
+            this->voltage()->device_data(), this->voltage()->data_rows());
     }
 
     return this->voltage();

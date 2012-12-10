@@ -66,6 +66,7 @@ namespace fastEIT {
 
     // member
     private:
+        Model<BasisFunction>* model_;
         ForwardSolver<BasisFunction, numeric::SparseConjugate>* forward_solver_;
         InverseSolver<numeric::Conjugate>* inverse_solver_;
         Matrix<dtype::real>* dgamma_;

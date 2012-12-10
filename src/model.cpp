@@ -29,9 +29,7 @@ template <
 >
 fastEIT::Model<BasisFunction>::Model(std::shared_ptr<Mesh<BasisFunction>> mesh, std::shared_ptr<Electrodes> electrodes,
     dtype::real sigmaRef, dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
-    : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), s_matrix_(nullptr), r_matrix_(nullptr),
-        excitation_matrix_(nullptr), connectivity_matrix_(nullptr), elemental_s_matrix_(nullptr),
-        elemental_r_matrix_(nullptr), num_harmonics_(numHarmonics) {
+    : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), num_harmonics_(numHarmonics) {
     // check input
     if (mesh == NULL) {
         throw std::invalid_argument("Model::Model: mesh == NULL");
