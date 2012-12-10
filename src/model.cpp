@@ -300,10 +300,10 @@ void fastEIT::Model<BasisFunction>::calcExcitationComponent(const std::shared_pt
     // calc excitation matrices
     // Run multiply once more to avoid cublas error
     try {
-        component->multiply(*this->excitation_matrix(), *pattern, handle, stream);
+        component->multiply(this->excitation_matrix().get(), pattern.get(), handle, stream);
     }
     catch(const std::exception& e) {
-        component->multiply(*this->excitation_matrix(), *pattern, handle, stream);
+        component->multiply(this->excitation_matrix().get(), pattern.get(), handle, stream);
     }
 
     // calc fourier coefficients for current pattern

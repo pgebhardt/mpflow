@@ -22,20 +22,20 @@ namespace fastEIT {
         static const dtype::size block_size = 16;
 
         // copy methods
-        void copy(const Matrix<type>& other, cudaStream_t stream);
+        void copy(const Matrix<type>* other, cudaStream_t stream);
         void copyToDevice(cudaStream_t stream);
         void copyToHost(cudaStream_t stream);
 
         // mathematical methods
-        void add(const Matrix<type>& value, cudaStream_t stream);
-        void multiply(const Matrix<type>& A, const Matrix<type>& B, cublasHandle_t handle, cudaStream_t stream);
+        void add(const Matrix<type>* value, cudaStream_t stream);
+        void multiply(const Matrix<type>* A, const Matrix<type>* B, cublasHandle_t handle, cudaStream_t stream);
         void scalarMultiply(type scalar, cudaStream_t stream);
-        void vectorDotProduct(const Matrix<type>& A, const Matrix<type>& B, cudaStream_t stream);
+        void vectorDotProduct(const Matrix<type>* A, const Matrix<type>* B, cudaStream_t stream);
 
         // reduce methods
-        void sum(const Matrix<type>& value, cudaStream_t stream);
-        void min(const Matrix<type>& value, cudaStream_t stream);
-        void max(const Matrix<type>& value, cudaStream_t stream);
+        void sum(const Matrix<type>* value, cudaStream_t stream);
+        void min(const Matrix<type>* value, cudaStream_t stream);
+        void max(const Matrix<type>* value, cudaStream_t stream);
 
         // accessors
         const type* host_data() const { return this->host_data_; }
@@ -81,7 +81,7 @@ namespace fastEIT {
         template <
             class type
         >
-        void savetxt(const std::string filename, const Matrix<type>& matrix);
+        void savetxt(const std::string filename, const Matrix<type>* matrix);
     }
 }
 
