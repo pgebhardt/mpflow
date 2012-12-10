@@ -58,19 +58,19 @@ void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix
 
     // regularize for dc free solution
     if (dcFree == true) {
-        this->temp_number()->sum(*x, stream);
-        conjugate::addScalar(*this->temp_number(), this->rows(), this->columns(),
+        this->temp_number()->sum(x.get(), stream);
+        conjugate::addScalar(this->temp_number().get(), this->rows(), this->columns(),
             stream, this->residuum().get());
     }
 
     this->residuum()->scalarMultiply(-1.0, stream);
-    this->residuum()->add(*f, stream);
+    this->residuum()->add(f.get(), stream);
 
     // p = r
-    this->projection()->copy(*this->residuum(), stream);
+    this->projection()->copy(this->residuum().get(), stream);
 
     // calc rsold
-    this->rsold()->vectorDotProduct(*this->residuum(), *this->residuum(), stream);
+    this->rsold()->vectorDotProduct(this->residuum().get(), this->residuum().get(), stream);
 
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
@@ -79,30 +79,31 @@ void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix
 
         // regularize for dc free solution
         if (dcFree == true) {
-            this->temp_number()->sum(*this->projection(), stream);
-            conjugate::addScalar(*this->temp_number(), this->rows(), this->columns(), stream,
-                this->temp_vector().get());
+            this->temp_number()->sum(this->projection().get(), stream);
+            conjugate::addScalar(this->temp_number().get(), this->rows(), this->columns(),
+                stream, this->temp_vector().get());
         }
 
         // calc p * A * p
-        this->temp_number()->vectorDotProduct(*this->projection(), *this->temp_vector(), stream);
+        this->temp_number()->vectorDotProduct(this->projection().get(),
+            this->temp_vector().get(), stream);
 
         // update residuum
-        conjugate::updateVector(*this->residuum(), -1.0f, *this->temp_vector(),
-            *this->rsold(), *this->temp_number(), stream, this->residuum().get());
+        conjugate::updateVector(this->residuum().get(), -1.0f, this->temp_vector().get(),
+            this->rsold().get(), this->temp_number().get(), stream, this->residuum().get());
 
         // update x
-        conjugate::updateVector(*x, 1.0f, *this->projection(), *this->rsold(),
-            *this->temp_number(), stream, x.get());
+        conjugate::updateVector(x.get(), 1.0f, this->projection().get(), this->rsold().get(),
+            this->temp_number().get(), stream, x.get());
 
         // calc rsnew
-        this->rsnew()->vectorDotProduct(*this->residuum(), *this->residuum(), stream);
+        this->rsnew()->vectorDotProduct(this->residuum().get(), this->residuum().get(), stream);
 
         // update projection
-        conjugate::updateVector(*this->residuum(), 1.0f, *this->projection(), *this->rsnew(),
-            *this->rsold(), stream, this->projection().get());
+        conjugate::updateVector(this->residuum().get(), 1.0f, this->projection().get(),
+            this->rsnew().get(), this->rsold().get(), stream, this->projection().get());
 
         // copy rsnew to rsold
-        this->rsold()->copy(*this->rsnew(), stream);
+        this->rsold()->copy(this->rsnew().get(), stream);
     }
 }
