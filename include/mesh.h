@@ -29,16 +29,16 @@ namespace fastEIT {
             boundaryNodes(dtype::index bound) const;
 
         // accessors
-        const std::shared_ptr<Matrix<dtype::real>>& nodes() const { return this->nodes_; }
-        const std::shared_ptr<Matrix<dtype::index>>& elements() const { return this->elements_; }
-        const std::shared_ptr<Matrix<dtype::index>>& boundary() const { return this->boundary_; }
+        const std::shared_ptr<Matrix<dtype::real>> nodes() const { return this->nodes_; }
+        const std::shared_ptr<Matrix<dtype::index>> elements() const { return this->elements_; }
+        const std::shared_ptr<Matrix<dtype::index>> boundary() const { return this->boundary_; }
         dtype::real radius() const { return this->radius_; }
         dtype::real height() const { return this->height_; }
 
         // mutators
-        std::shared_ptr<Matrix<dtype::real>>& nodes() { return this->nodes_; }
-        std::shared_ptr<Matrix<dtype::index>>& elements() { return this->elements_; }
-        std::shared_ptr<Matrix<dtype::index>>& boundary() { return this->boundary_; }
+        std::shared_ptr<Matrix<dtype::real>> nodes() { return this->nodes_; }
+        std::shared_ptr<Matrix<dtype::index>> elements() { return this->elements_; }
+        std::shared_ptr<Matrix<dtype::index>> boundary() { return this->boundary_; }
         dtype::real& radius() { return this->radius_; }
         dtype::real& height() { return this->height_; }
 

@@ -11,15 +11,15 @@ namespace fastEIT {
     // cuda kernel
     namespace model {
         // update matrix
-        void updateMatrix(const Matrix<dtype::real>& elements, const Matrix<dtype::real>& gamma,
-            const Matrix<dtype::index>& connectivityMatrix, dtype::real sigmaRef, cudaStream_t stream,
+        void updateMatrix(const Matrix<dtype::real>* elements, const Matrix<dtype::real>* gamma,
+            const Matrix<dtype::index>* connectivityMatrix, dtype::real sigmaRef, cudaStream_t stream,
             SparseMatrix* matrix);
 
         // reduce matrix
         template <
             class type
         >
-        void reduceMatrix(const Matrix<type>& intermediateMatrix, const SparseMatrix& shape,
+        void reduceMatrix(const Matrix<type>* intermediateMatrix, const SparseMatrix* shape,
             cudaStream_t stream, Matrix<type>* matrix);
     }
 }

@@ -13,61 +13,61 @@ namespace fastEIT {
         class BasisFunction
     >
     class Model {
-    // constructor and destructor
     public:
-        Model(Mesh<BasisFunction>* mesh, Electrodes* electrodes, dtype::real sigmaRef,
-            dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
-        virtual ~Model();
+        // constructor
+        Model(std::shared_ptr<Mesh<BasisFunction>> mesh, std::shared_ptr<Electrodes> electrodes,
+            dtype::real sigmaRef, dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
 
-    // init methods
+        // calc excitaion components
+        void calcExcitationComponent(const std::shared_ptr<Matrix<dtype::real>> pattern, dtype::size harmonic,
+            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> component);
+
+        // update model
+        void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
+
+        // accessors
+        const std::shared_ptr<Mesh<BasisFunction>> mesh() const { return this->mesh_; }
+        const std::shared_ptr<Electrodes> electrodes() const { return this->electrodes_; }
+        dtype::real sigma_ref() const { return this->sigma_ref_; }
+        const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
+        const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const { return this->excitation_matrix_; }
+        dtype::size num_harmonics() const { return this->num_harmonics_; }
+        const std::shared_ptr<SparseMatrix> s_matrix() const { return this->s_matrix_; }
+        const std::shared_ptr<SparseMatrix> r_matrix() const { return this->r_matrix_; }
+        const std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() const { return this->connectivity_matrix_; }
+        const std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix() const { return this->elemental_s_matrix_; }
+        const std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() const { return this->elemental_r_matrix_; }
+
+        // mutators
+        std::shared_ptr<Mesh<BasisFunction>> mesh() { return this->mesh_; }
+        std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
+        dtype::real sigma_ref() { return this->sigma_ref_; }
+        std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
+        std::shared_ptr<Matrix<dtype::real>> excitation_matrix() { return this->excitation_matrix_; }
+        dtype::size num_harmonics() { return this->num_harmonics_; }
+        std::shared_ptr<SparseMatrix> s_matrix() { return this->s_matrix_; }
+        std::shared_ptr<SparseMatrix> r_matrix() { return this->r_matrix_; }
+        std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() { return this->connectivity_matrix_; }
+        std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix() { return this->elemental_s_matrix_; }
+        std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() { return this->elemental_r_matrix_; }
+
     private:
+        // init methods
         void init(cublasHandle_t handle, cudaStream_t stream);
         void createSparseMatrices(cublasHandle_t handle, cudaStream_t stream);
         void initExcitationMatrix(cudaStream_t stream);
 
-    public:
-        // calc excitaion components
-        void calcExcitationComponent(const Matrix<dtype::real>& pattern, dtype::size harmonic, cublasHandle_t handle,
-            cudaStream_t stream, Matrix<dtype::real>* component);
-
-        // update model
-        void update(const Matrix<dtype::real>& gamma, cublasHandle_t handle, cudaStream_t stream);
-
-    public:
-        // accessors
-        const Mesh<BasisFunction>& mesh() const { return *this->mesh_; }
-        const Electrodes& electrodes() const { return *this->electrodes_; }
-        dtype::real sigma_ref() const { return this->sigma_ref_; }
-        const SparseMatrix& system_matrix(dtype::index index) const { return *this->system_matrices_[index]; }
-        const Matrix<dtype::real>& excitation_matrix() const { return *this->excitation_matrix_; }
-        dtype::size num_harmonics() const { return this->num_harmonics_; }
-        const SparseMatrix& s_matrix() const { return *this->s_matrix_; }
-        const SparseMatrix& r_matrix() const { return *this->r_matrix_; }
-        const Matrix<dtype::index>& connectivity_matrix() const { return *this->connectivity_matrix_; }
-        const Matrix<dtype::real>& elemental_s_matrix() const { return *this->elemental_s_matrix_; }
-        const Matrix<dtype::real>& elemental_r_matrix() const { return *this->elemental_r_matrix_; }
-
-        // mutators
-        SparseMatrix& system_matrix(dtype::index index) { return *this->system_matrices_[index]; }
-        Matrix<dtype::real>& excitation_matrix() { return *this->excitation_matrix_; }
-        SparseMatrix& s_matrix() { return *this->s_matrix_; }
-        SparseMatrix& r_matrix() { return *this->r_matrix_; }
-        Matrix<dtype::index>& connectivity_matrix() { return *this->connectivity_matrix_; }
-        Matrix<dtype::real>& elemental_s_matrix()  { return *this->elemental_s_matrix_; }
-        Matrix<dtype::real>& elemental_r_matrix() { return *this->elemental_r_matrix_; }
-
-    // member
-    private:
-        Mesh<BasisFunction>* mesh_;
-        Electrodes* electrodes_;
+        // member
+        std::shared_ptr<Mesh<BasisFunction>> mesh_;
+        std::shared_ptr<Electrodes> electrodes_;
         dtype::real sigma_ref_;
-        std::vector<SparseMatrix*> system_matrices_;
-        SparseMatrix* s_matrix_;
-        SparseMatrix* r_matrix_;
-        Matrix<dtype::real>* excitation_matrix_;
-        Matrix<dtype::index>* connectivity_matrix_;
-        Matrix<dtype::real>* elemental_s_matrix_;
-        Matrix<dtype::real>* elemental_r_matrix_;
+        std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
+        std::shared_ptr<SparseMatrix> s_matrix_;
+        std::shared_ptr<SparseMatrix> r_matrix_;
+        std::shared_ptr<Matrix<dtype::real>> excitation_matrix_;
+        std::shared_ptr<Matrix<dtype::index>> connectivity_matrix_;
+        std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix_;
+        std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix_;
         dtype::size num_harmonics_;
     };
 }
