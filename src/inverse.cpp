@@ -28,37 +28,21 @@ template <
 fastEIT::InverseSolver<NumericSolver>::InverseSolver(dtype::size element_count,
     dtype::size voltage_count, dtype::real regularization_factor,
     cublasHandle_t handle, cudaStream_t stream)
-    : numeric_solver_(NULL), dvoltage_(NULL), zeros_(NULL), excitation_(NULL),
-        system_matrix_(NULL), jacobian_square_(NULL),
-        regularization_factor_(regularization_factor) {
+    : regularization_factor_(regularization_factor) {
     // check input
     if (handle == NULL) {
         throw std::invalid_argument("InverseSolver::InverseSolver: handle == NULL");
     }
 
     // create matrices
-    this->dvoltage_ = new Matrix<dtype::real>(voltage_count, 1, stream);
-    this->zeros_ = new Matrix<dtype::real>(element_count, 1, stream);
-    this->excitation_ = new Matrix<dtype::real>(element_count, 1, stream);
-    this->system_matrix_ = new Matrix<dtype::real>(element_count, element_count, stream);
-    this->jacobian_square_ = new Matrix<dtype::real>(element_count, element_count, stream);
+    this->dvoltage_ = std::make_shared<Matrix<dtype::real>>(voltage_count, 1, stream);
+    this->zeros_ = std::make_shared<Matrix<dtype::real>>(element_count, 1, stream);
+    this->excitation_ = std::make_shared<Matrix<dtype::real>>(element_count, 1, stream);
+    this->system_matrix_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count, stream);
+    this->jacobian_square_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count, stream);
 
     // create numeric solver
-    this->numeric_solver_ = new NumericSolver(element_count, handle, stream);
-}
-
-// release solver
-template <
-    class NumericSolver
->
-fastEIT::InverseSolver<NumericSolver>::~InverseSolver() {
-    // cleanup
-    delete this->numeric_solver_;
-    delete this->dvoltage_;
-    delete this->zeros_;
-    delete this->excitation_;
-    delete this->system_matrix_;
-    delete this->jacobian_square_;
+    this->numeric_solver_ = std::make_shared<NumericSolver>(element_count, handle, stream);
 }
 
 // calc system matrix
@@ -66,8 +50,12 @@ template <
     class NumericSolver
 >
 void fastEIT::InverseSolver<NumericSolver>::calcSystemMatrix(
-    const Matrix<dtype::real>& jacobian, cublasHandle_t handle, cudaStream_t stream) {
+    const std::shared_ptr<Matrix<dtype::real>> jacobian, cublasHandle_t handle,
+    cudaStream_t stream) {
     // check input
+    if (jacobian == nullptr) {
+        throw std::invalid_argument("InverseSolver::calcSystemMatrix: jacobian == nullptr");
+    }
     if (handle == NULL) {
         throw std::invalid_argument("InverseSolver::calcSystemMatrix: handle == NULL");
     }
@@ -76,26 +64,26 @@ void fastEIT::InverseSolver<NumericSolver>::calcSystemMatrix(
     dtype::real alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobian_square().data_rows(),
-        this->jacobian_square().data_columns(), jacobian.data_rows(), &alpha,
-        jacobian.device_data(), jacobian.data_rows(), jacobian.device_data(),
-        jacobian.data_rows(), &beta, this->jacobian_square().device_data(),
-        this->jacobian_square().data_rows())
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobian_square()->data_rows(),
+        this->jacobian_square()->data_columns(), jacobian->data_rows(), &alpha,
+        jacobian->device_data(), jacobian->data_rows(), jacobian->device_data(),
+        jacobian->data_rows(), &beta, this->jacobian_square()->device_data(),
+        this->jacobian_square()->data_rows())
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("InverseSolver::calcSystemMatrix: calc Jt * J");
     }
 
     // copy jacobianSquare to systemMatrix
-    this->system_matrix().copy(this->jacobian_square(), stream);
+    this->system_matrix()->copy(this->jacobian_square().get(), stream);
 
     // add lambda * Jt * J * Jt * J to systemMatrix
     beta = this->regularization_factor();
-    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobian_square().data_columns(),
-        this->jacobian_square().data_rows(), this->jacobian_square().data_columns(),
-        &beta, this->jacobian_square().device_data(),
-        this->jacobian_square().data_rows(), this->jacobian_square().device_data(),
-        this->jacobian_square().data_rows(), &alpha, this->system_matrix().device_data(),
-        this->system_matrix().data_rows()) != CUBLAS_STATUS_SUCCESS) {
+    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobian_square()->data_columns(),
+        this->jacobian_square()->data_rows(), this->jacobian_square()->data_columns(),
+        &beta, this->jacobian_square()->device_data(),
+        this->jacobian_square()->data_rows(), this->jacobian_square()->device_data(),
+        this->jacobian_square()->data_rows(), &alpha, this->system_matrix()->device_data(),
+        this->system_matrix()->data_rows()) != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
             "InverseSolver::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
     }
@@ -106,10 +94,20 @@ template <
     class NumericSolver
 >
 void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
-    const Matrix<dtype::real>& jacobian, const Matrix<dtype::real>& calculated_voltage,
-    const Matrix<dtype::real>& measured_voltage, cublasHandle_t handle,
+    const std::shared_ptr<Matrix<dtype::real>> jacobian,
+    const std::shared_ptr<Matrix<dtype::real>> calculated_voltage,
+    const std::shared_ptr<Matrix<dtype::real>> measured_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
+    if (jacobian == nullptr) {
+        throw std::invalid_argument("InverseSolver::calcExcitation: jacobian == nullptr");
+    }
+    if (calculated_voltage == nullptr) {
+        throw std::invalid_argument("InverseSolver::calcExcitation: calculated_voltage == nullptr");
+    }
+    if (measured_voltage == nullptr) {
+        throw std::invalid_argument("InverseSolver::calcExcitation: measured_voltage == nullptr");
+    }
     if (handle == NULL) {
         throw std::invalid_argument("InverseSolver::calcExcitation: handle == NULL");
     }
@@ -118,8 +116,8 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
     cublasSetStream(handle, stream);
 
     // copy measuredVoltage to dVoltage
-    if (cublasScopy(handle, this->dvoltage().data_rows(),
-        calculated_voltage.device_data(), 1, this->dvoltage().device_data(), 1)
+    if (cublasScopy(handle, this->dvoltage()->data_rows(),
+        calculated_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
             "InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
@@ -127,8 +125,8 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
 
     // substract calculatedVoltage
     dtype::real alpha = -1.0f;
-    if (cublasSaxpy(handle, this->dvoltage().data_rows(), &alpha,
-        measured_voltage.device_data(), 1, this->dvoltage().device_data(), 1)
+    if (cublasSaxpy(handle, this->dvoltage()->data_rows(), &alpha,
+        measured_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
             "Model::calcExcitation: substract calculatedVoltage");
@@ -137,9 +135,9 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
     // calc excitation
     alpha = 1.0f;
     dtype::real beta = 0.0f;
-    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian.data_rows(), jacobian.data_columns(), &alpha,
-        jacobian.device_data(), jacobian.data_rows(), this->dvoltage().device_data(), 1, &beta,
-        this->excitation().device_data(), 1) != CUBLAS_STATUS_SUCCESS) {
+    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->data_rows(), jacobian->data_columns(), &alpha,
+        jacobian->device_data(), jacobian->data_rows(), this->dvoltage()->device_data(), 1, &beta,
+        this->excitation()->device_data(), 1) != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("InverseSolver::calcExcitation: calc excitation");
     }
 }
@@ -148,29 +146,40 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
 template <
     class NumericSolver
 >
-const fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::InverseSolver<NumericSolver>::solve(
-    const Matrix<dtype::real>& jacobian, const Matrix<dtype::real>& calculated_voltage,
-    const Matrix<dtype::real>& measured_voltage, dtype::size steps, bool regularized,
-    cublasHandle_t handle, cudaStream_t stream, Matrix<dtype::real>* gamma) {
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::InverseSolver<NumericSolver>::solve(
+    const std::shared_ptr<Matrix<dtype::real>> jacobian,
+    const std::shared_ptr<Matrix<dtype::real>> calculated_voltage,
+    const std::shared_ptr<Matrix<dtype::real>> measured_voltage, dtype::size steps,
+    bool regularized, cublasHandle_t handle, cudaStream_t stream,
+    std::shared_ptr<Matrix<dtype::real>> gamma) {
     // check input
+    if (jacobian == nullptr) {
+        throw std::invalid_argument("InverseSolver::solve: jacobian == nullptr");
+    }
+    if (calculated_voltage == nullptr) {
+        throw std::invalid_argument("InverseSolver::solve: calculated_voltage == nullptr");
+    }
+    if (measured_voltage == nullptr) {
+        throw std::invalid_argument("InverseSolver::solve: measured_voltage == nullptr");
+    }
+    if (gamma == nullptr) {
+        throw std::invalid_argument("InverseSolver::solve: gamma == nullptr");
+    }
     if (handle == NULL) {
         throw std::invalid_argument("InverseSolver::solve: handle == NULL");
     }
-    if (gamma == NULL) {
-        throw std::invalid_argument("InverseSolver::solve: gamma == NULL");
-    }
 
     // reset gamma
-    gamma->copy(this->zeros(), stream);
+    gamma->copy(this->zeros().get(), stream);
 
     // calc excitation
     this->calcExcitation(jacobian, calculated_voltage, measured_voltage, handle, stream);
 
     // solve system
-    this->numeric_solver().solve(regularized ? this->system_matrix() : this->jacobian_square(),
+    this->numeric_solver()->solve(regularized ? this->system_matrix() : this->jacobian_square(),
         this->excitation(), steps, handle, stream, gamma);
 
-    return *gamma;
+    return gamma;
 }
 
 // specialisation
