@@ -3,11 +3,13 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdexcept>
 #include <assert.h>
+
+#include <stdexcept>
 #include <vector>
 #include <array>
 #include <tuple>
+#include <memory>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -45,12 +47,12 @@ fastEIT::Solver<BasisFunction>::Solver(Mesh<BasisFunction>* mesh, Electrodes* el
     this->forward_solver_ = new ForwardSolver<BasisFunction, numeric::SparseConjugate>(mesh, electrodes,
         measurement_pattern, drive_pattern, sigma_ref, num_harmonics, handle, stream);
 
-    this->inverse_solver_ = new InverseSolver<numeric::Conjugate>(mesh->elements().rows(),
+    this->inverse_solver_ = new InverseSolver<numeric::Conjugate>(mesh->elements()->rows(),
         measurement_pattern.data_columns() * drive_pattern.data_columns(), regularization_factor, handle, stream);
 
     // create matrices
-    this->dgamma_ = new Matrix<dtype::real>(mesh->elements().rows(), 1, stream);
-    this->gamma_ = new Matrix<dtype::real>(mesh->elements().rows(), 1, stream);
+    this->dgamma_ = new Matrix<dtype::real>(mesh->elements()->rows(), 1, stream);
+    this->gamma_ = new Matrix<dtype::real>(mesh->elements()->rows(), 1, stream);
     this->measured_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurement_count(),
         this->forward_solver().drive_count(), stream);
     this->calibration_voltage_ = new Matrix<dtype::real>(this->forward_solver().measurement_count(),

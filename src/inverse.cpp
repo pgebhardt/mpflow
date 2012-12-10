@@ -3,11 +3,13 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <stdexcept>
 #include <assert.h>
+
+#include <stdexcept>
 #include <vector>
 #include <array>
 #include <tuple>
+#include <memory>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>

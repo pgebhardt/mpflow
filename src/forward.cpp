@@ -9,6 +9,7 @@
 #include <vector>
 #include <array>
 #include <tuple>
+#include <memory>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -49,23 +50,23 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
         stream);
 
     // create NumericSolver solver
-    this->numeric_solver_ = new NumericSolver(mesh->nodes().rows(),
+    this->numeric_solver_ = new NumericSolver(mesh->nodes()->rows(),
         this->drive_count() + this->measurement_count(), stream);
 
     // create matrices
     this->jacobian_ = new Matrix<dtype::real>(measurement_pattern.data_columns() *
-        drive_pattern.data_columns(), mesh->elements().rows(), stream);
+        drive_pattern.data_columns(), mesh->elements()->rows(), stream);
     this->voltage_  = new Matrix<dtype::real>(this->measurement_count(), this->drive_count(), stream);
     this->voltage_calculation_  = new Matrix<dtype::real>(this->measurement_count(),
-        mesh->nodes().rows(), stream);
-    this->elemental_jacobian_matrix_  = new Matrix<dtype::real>(mesh->elements().rows(),
+        mesh->nodes()->rows(), stream);
+    this->elemental_jacobian_matrix_  = new Matrix<dtype::real>(mesh->elements()->rows(),
         math::square(BasisFunction::nodes_per_element), stream);
 
     // create matrices
     for (dtype::index harmonic = 0; harmonic < num_harmonics + 1; ++harmonic) {
-        this->potential_.push_back(new Matrix<dtype::real>(mesh->nodes().rows(),
+        this->potential_.push_back(new Matrix<dtype::real>(mesh->nodes()->rows(),
             this->drive_count() + this->measurement_count(), stream));
-        this->excitation_.push_back(new Matrix<dtype::real>(mesh->nodes().rows(),
+        this->excitation_.push_back(new Matrix<dtype::real>(mesh->nodes()->rows(),
             this->drive_count() + this->measurement_count(), stream));
     }
 
@@ -157,7 +158,7 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
     std::array<BasisFunction*, BasisFunction::nodes_per_element> basis_functions;
 
     // fill connectivity and elementalJacobianMatrix
-    for (dtype::index element = 0; element < this->model().mesh().elements().rows(); ++element) {
+    for (dtype::index element = 0; element < this->model().mesh().elements()->rows(); ++element) {
         // get element indices
         indices = this->model().mesh().elementIndices(element);
 
@@ -214,12 +215,12 @@ fastEIT::Matrix<fastEIT::dtype::real>& fastEIT::ForwardSolver<BasisFunction, Num
 
     // calc jacobian
     forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, this->potential(0),
-        this->model().mesh().elements(), this->elemental_jacobian_matrix(),
+        *this->model().mesh().elements(), this->elemental_jacobian_matrix(),
         this->drive_count(), this->measurement_count(), this->model().sigma_ref(),
         false, stream, &this->jacobian());
     for (dtype::index harmonic = 1; harmonic < this->model().num_harmonics() + 1; ++harmonic) {
         forward::calcJacobian<BasisFunction::nodes_per_element>(gamma, this->potential(harmonic),
-            this->model().mesh().elements(), this->elemental_jacobian_matrix(),
+            *this->model().mesh().elements(), this->elemental_jacobian_matrix(),
             this->drive_count(), this->measurement_count(), this->model().sigma_ref(),
             true, stream, &this->jacobian());
     }

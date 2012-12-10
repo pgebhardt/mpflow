@@ -7,12 +7,13 @@
 #define FASTEIT_INCLUDE_FASTEIT_H
 
 // std lib includes
-#include <stdexcept>
 #include <assert.h>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <array>
 #include <vector>
+#include <memory>
 
 // cuda includes
 #include <cuda_runtime.h>

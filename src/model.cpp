@@ -8,6 +8,7 @@
 #include <vector>
 #include <array>
 #include <tuple>
+#include <memory>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -46,13 +47,13 @@ fastEIT::Model<BasisFunction>::Model(Mesh<BasisFunction>* mesh, Electrodes* elec
     this->createSparseMatrices(handle, stream);
 
     // create matrices
-    this->excitation_matrix_ = new Matrix<dtype::real>(this->mesh().nodes().rows(),
+    this->excitation_matrix_ = new Matrix<dtype::real>(this->mesh().nodes()->rows(),
         this->electrodes().count(), stream);
-    this->connectivity_matrix_ = new Matrix<dtype::index>(this->mesh().nodes().rows(),
+    this->connectivity_matrix_ = new Matrix<dtype::index>(this->mesh().nodes()->rows(),
         SparseMatrix::block_size * Matrix<dtype::real>::block_size, stream);
-    this->elemental_s_matrix_ = new Matrix<dtype::real>(this->mesh().nodes().rows(),
+    this->elemental_s_matrix_ = new Matrix<dtype::real>(this->mesh().nodes()->rows(),
         SparseMatrix::block_size * Matrix<dtype::real>::block_size, stream);
-    this->elemental_r_matrix_ = new Matrix<dtype::real>(this->mesh().nodes().rows(),
+    this->elemental_r_matrix_ = new Matrix<dtype::real>(this->mesh().nodes()->rows(),
         SparseMatrix::block_size * Matrix<dtype::real>::block_size, stream);
 
     // init model
@@ -95,11 +96,11 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
 
     // calc initial system matrix
     // create matrices
-    Matrix<dtype::real> system_matrix(this->mesh().nodes().rows(), this->mesh().nodes().rows(), stream);
+    Matrix<dtype::real> system_matrix(this->mesh().nodes()->rows(), this->mesh().nodes()->rows(), stream);
 
     // calc generate empty system matrix
     std::array<dtype::index, BasisFunction::nodes_per_element> indices;
-    for (dtype::index element = 0; element < this->mesh().elements().rows(); ++element) {
+    for (dtype::index element = 0; element < this->mesh().elements()->rows(); ++element) {
         // get nodes for element
         indices = this->mesh().elementIndices(element);
 
@@ -134,7 +135,7 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     }
 
     // create intermediate matrices
-    Matrix<dtype::index> element_count(this->mesh().nodes().rows(), this->mesh().nodes().rows(), stream);
+    Matrix<dtype::index> element_count(this->mesh().nodes()->rows(), this->mesh().nodes()->rows(), stream);
     Matrix<dtype::index> connectivity_matrix(this->connectivity_matrix().data_rows(),
         element_count.data_columns() * fastEIT::Matrix<dtype::index>::block_size, stream);
     Matrix<dtype::real> elemental_s_matrix(this->elemental_s_matrix().data_rows(),
@@ -160,7 +161,7 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     std::array<BasisFunction*, BasisFunction::nodes_per_element> basis_functions;
     dtype::real temp;
 
-    for (dtype::index element = 0; element < this->mesh().elements().rows(); ++element) {
+    for (dtype::index element = 0; element < this->mesh().elements()->rows(); ++element) {
         // get element indices
         indices = this->mesh().elementIndices(element);
 
@@ -211,7 +212,7 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
         &this->elemental_r_matrix());
 
     // create gamma
-    Matrix<dtype::real> gamma(this->mesh().elements().rows(), 1, stream);
+    Matrix<dtype::real> gamma(this->mesh().elements()->rows(), 1, stream);
 
     // update matrices
     model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
@@ -275,7 +276,7 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
         permutated_nodes;
 
     for (dtype::index boundary_element = 0;
-        boundary_element < this->mesh().boundary().rows();
+        boundary_element < this->mesh().boundary()->rows();
         ++boundary_element) {
         for (dtype::index electrode = 0;
             electrode < this->electrodes().count();
