@@ -20,6 +20,7 @@
 #include <cublas_v2.h>
 
 #include "dtype.h"
+#include "constants.h"
 #include "math.h"
 #include "matrix.h"
 #include "sparse_matrix.h"
