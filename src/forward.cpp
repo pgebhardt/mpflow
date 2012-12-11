@@ -4,7 +4,7 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include "../include/fasteit.h"
-#include "../include/forward_cuda.h"
+#include "../include/forward_kernel.h"
 
 // create forward_solver
 template <
@@ -183,15 +183,15 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
     }
 
     // calc jacobian
-    forward::calcJacobian<BasisFunction::nodes_per_element>(gamma.get(), this->potential(0).get(),
-        this->model()->mesh()->elements().get(), this->elemental_jacobian_matrix().get(),
+    forward::calcJacobian<BasisFunction>(gamma, this->potential(0),
+        this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
         this->drive_count(), this->measurement_count(), this->model()->sigma_ref(),
-        false, stream, this->jacobian().get());
+        false, stream, this->jacobian());
     for (dtype::index harmonic = 1; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
-        forward::calcJacobian<BasisFunction::nodes_per_element>(gamma.get(), this->potential(harmonic).get(),
-            this->model()->mesh()->elements().get(), this->elemental_jacobian_matrix().get(),
+        forward::calcJacobian<BasisFunction>(gamma, this->potential(harmonic),
+            this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
             this->drive_count(), this->measurement_count(), this->model()->sigma_ref(),
-            true, stream, this->jacobian().get());
+            true, stream, this->jacobian());
     }
 
     // set stream
@@ -218,5 +218,50 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
     return this->voltage();
 }
 
+// calc jacobian
+template <
+    class BasisFunction
+>
+void fastEIT::forward::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gamma,
+    const std::shared_ptr<Matrix<dtype::real>> potential,
+    const std::shared_ptr<Matrix<dtype::index>> elements,
+    const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix,
+    dtype::size drive_count, dtype::size measurment_count, dtype::real sigma_ref,
+    bool additiv, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> jacobian) {
+    // check input
+    if (gamma == nullptr) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: gamma == nullptr");
+    }
+    if (potential == nullptr) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: potential == nullptr");
+    }
+    if (elements == nullptr) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: elements == nullptr");
+    }
+    if (elemental_jacobian_matrix == nullptr) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: elemental_jacobian_matrix == nullptr");
+    }
+    if (jacobian == nullptr) {
+        throw std::invalid_argument("ForwardSolver::calcJacobian: jacobian == nullptr");
+    }
+
+    // dimension
+    dim3 blocks(jacobian->data_rows() / matrix::block_size,
+        jacobian->data_columns() / matrix::block_size);
+    dim3 threads(matrix::block_size, matrix::block_size);
+
+    // calc jacobian
+    forwardKernel::calcJacobian<BasisFunction::nodes_per_element>(blocks, threads, stream,
+        potential->device_data(), &potential->device_data()[drive_count * potential->data_rows()],
+        elements->device_data(), elemental_jacobian_matrix->device_data(),
+        gamma->device_data(), sigma_ref, jacobian->data_rows(), jacobian->data_columns(),
+        potential->data_rows(), elements->rows(), drive_count, measurment_count, additiv,
+        jacobian->device_data());
+}
+
 // specialisation
+template void fastEIT::forward::calcJacobian<fastEIT::basis::Linear>(
+    const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
+    const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
+    dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
 template class fastEIT::ForwardSolver<fastEIT::basis::Linear, fastEIT::numeric::SparseConjugate>;

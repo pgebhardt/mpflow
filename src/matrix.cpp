@@ -278,7 +278,8 @@ void fastEIT::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>>
         this->device_data());
 
     // sum
-    this->sum(std::shared_ptr<fastEIT::Matrix<type>>(this), stream);
+    struct noop_deleter { void operator()(void*) {} };
+    this->sum(std::shared_ptr<fastEIT::Matrix<type>>(this, noop_deleter()), stream);
 }
 
 // sum

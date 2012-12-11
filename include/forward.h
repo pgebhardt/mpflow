@@ -82,6 +82,21 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> voltage_calculation_;
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
     };
+
+    // helper functions
+    namespace forward {
+        // calc jacobian
+        template <
+            class BasisFunction
+        >
+        void calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gamma,
+            const std::shared_ptr<Matrix<dtype::real>> potential,
+            const std::shared_ptr<Matrix<dtype::index>> elements,
+            const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix,
+            dtype::size drive_count, dtype::size measurment_count,
+            dtype::real sigma_ref, bool additiv,
+            cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> jacobian);
+    }
 }
 
 #endif
