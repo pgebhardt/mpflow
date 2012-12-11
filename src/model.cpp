@@ -4,7 +4,7 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include "../include/fasteit.h"
-#include "../include/model_cuda.h"
+#include "../include/model_kernel.h"
 
 // create solver model
 template <
@@ -169,21 +169,21 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     elemental_r_matrix->copyToDevice(stream);
 
     // reduce matrices
-    model::reduceMatrix(connectivity_matrix.get(), this->s_matrix().get(), stream,
-        this->connectivity_matrix().get());
-    model::reduceMatrix(elemental_s_matrix.get(), this->s_matrix().get(), stream,
-        this->elemental_s_matrix().get());
-    model::reduceMatrix(elemental_r_matrix.get(), this->s_matrix().get(), stream,
-        this->elemental_r_matrix().get());
+    model::reduceMatrix(connectivity_matrix, this->s_matrix(), stream,
+        this->connectivity_matrix());
+    model::reduceMatrix(elemental_s_matrix, this->s_matrix(), stream,
+        this->elemental_s_matrix());
+    model::reduceMatrix(elemental_r_matrix, this->s_matrix(), stream,
+        this->elemental_r_matrix());
 
     // create gamma
     auto gamma = std::make_shared<Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
 
     // update matrices
-    model::updateMatrix(this->elemental_s_matrix().get(), gamma.get(), this->connectivity_matrix().get(),
-        this->sigma_ref(), stream, this->s_matrix().get());
-    model::updateMatrix(this->elemental_r_matrix().get(), gamma.get(), this->connectivity_matrix().get(),
-        this->sigma_ref(), stream, this->r_matrix().get());
+    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->s_matrix());
+    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->r_matrix());
 }
 
 // update model
@@ -198,10 +198,10 @@ void fastEIT::Model<BasisFunction>::update(const std::shared_ptr<Matrix<dtype::r
     }
 
     // update matrices
-    model::updateMatrix(this->elemental_s_matrix().get(), gamma.get(), this->connectivity_matrix().get(),
-        this->sigma_ref(), stream, this->s_matrix().get());
-    model::updateMatrix(this->elemental_r_matrix().get(), gamma.get(), this->connectivity_matrix().get(),
-        this->sigma_ref(), stream, this->r_matrix().get());
+    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->s_matrix());
+    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->r_matrix());
 
     // set cublas stream
     cublasSetStream(handle, stream);
@@ -305,5 +305,68 @@ void fastEIT::Model<BasisFunction>::calcExcitationComponent(const std::shared_pt
     }
 }
 
+// reduce matrix
+template <
+    class type
+>
+void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
+    const std::shared_ptr<SparseMatrix> shape, cudaStream_t stream,
+    std::shared_ptr<Matrix<type>> matrix) {
+    // check input
+    if (intermediateMatrix == nullptr) {
+        throw std::invalid_argument("model::reduceMatrix: intermediateMatrix == nullptr");
+    }
+    if (shape == nullptr) {
+        throw std::invalid_argument("model::reduceMatrix: shape == nullptr");
+    }
+    if (matrix == nullptr) {
+        throw std::invalid_argument("model::reduceMatrix: matrix == nullptr");
+    }
+
+    // block size
+    dim3 blocks(matrix->data_rows() / matrix::block_size, 1);
+    dim3 threads(matrix::block_size, matrix::block_size);
+
+    // reduce matrix
+    modelKernel::reduceMatrix<type>(blocks, threads, stream,
+        intermediateMatrix->device_data(), shape->column_ids(), matrix->data_rows(),
+        shape->density(), matrix->device_data());
+}
+
+// update matrix
+void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> elements,
+    const std::shared_ptr<Matrix<dtype::real>> gamma,
+    const std::shared_ptr<Matrix<dtype::index>> connectivityMatrix,
+    dtype::real sigmaRef, cudaStream_t stream,
+    std::shared_ptr<SparseMatrix> matrix) {
+    // check input
+    if (elements == nullptr) {
+        throw std::invalid_argument("model::updateMatrix: elements == nullptr");
+    }
+    if (gamma == nullptr) {
+        throw std::invalid_argument("model::updateMatrix: gamma == nullptr");
+    }
+    if (connectivityMatrix == nullptr) {
+        throw std::invalid_argument("model::updateMatrix: connectivityMatrix == nullptr");
+    }
+    if (matrix == nullptr) {
+        throw std::invalid_argument("model::updateMatrix: matrix == nullptr");
+    }
+
+    // dimension
+    dim3 threads(matrix::block_size, matrix::block_size);
+    dim3 blocks(matrix->data_rows() / matrix::block_size, 1);
+
+    // execute kernel
+    modelKernel::updateMatrix(blocks, threads, stream,
+        connectivityMatrix->device_data(), elements->device_data(), gamma->device_data(),
+        sigmaRef, connectivityMatrix->data_rows(), matrix->density(), matrix->values());
+}
+
 // specialisation
+template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(const std::shared_ptr<Matrix<fastEIT::dtype::real>>,
+    const std::shared_ptr<SparseMatrix>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::real>>);
+template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const std::shared_ptr<Matrix<fastEIT::dtype::index>>,
+    const std::shared_ptr<SparseMatrix>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::index>>);
+
 template class fastEIT::Model<fastEIT::basis::Linear>;

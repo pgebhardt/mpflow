@@ -70,6 +70,23 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix_;
         dtype::size num_harmonics_;
     };
+
+    // special functions
+    namespace model {
+        // update matrix
+        void updateMatrix(const std::shared_ptr<Matrix<dtype::real>> elements,
+            const std::shared_ptr<Matrix<dtype::real>> gamma,
+            const std::shared_ptr<Matrix<dtype::index>> connectivityMatrix, dtype::real sigmaRef,
+            cudaStream_t stream, std::shared_ptr<SparseMatrix> matrix);
+
+        // reduce matrix
+        template <
+            class type
+        >
+        void reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
+            const std::shared_ptr<SparseMatrix> shape, cudaStream_t stream,
+            std::shared_ptr<Matrix<type>> matrix);
+    }
 }
 
 #endif

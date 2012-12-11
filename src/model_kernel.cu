@@ -1,0 +1,96 @@
+// fastEIT
+//
+// Copyright (C) 2012  Patrik Gebhardt
+// Contact: patrik.gebhardt@rub.de
+
+#include <stdexcept>
+#include <assert.h>
+
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+#include "../include/dtype.h"
+#include "../include/constants.h"
+#include "../include/model_kernel.h"
+
+// reduce connectivity and elementalResidual matrix
+template <
+    class type
+>
+static __global__ void reduceMatrixKernel(const type* intermediateMatrix,
+    const fastEIT::dtype::index* systemMatrixColumnIds, fastEIT::dtype::size rows,
+    fastEIT::dtype::size density, type* matrix) {
+    // get ids
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // get column id
+    fastEIT::dtype::index columnId = systemMatrixColumnIds[row * fastEIT::sparseMatrix::block_size + column];
+
+    // check column id
+    if (columnId == -1) {
+        return;
+    }
+
+    // reduce matrices
+    for (fastEIT::dtype::index k = 0; k < density; ++k) {
+        matrix[row + (column + k * fastEIT::sparseMatrix::block_size) * rows] =
+            intermediateMatrix[row + (columnId + k * rows) * rows];
+    }
+}
+
+// reduce matrix wrapper
+template <
+    class type
+>
+void fastEIT::modelKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+    const type* intermediateMatrix, const dtype::index* systemMatrixColumnIds,
+    dtype::size rows, dtype::size density, type* matrix) {
+    // call cuda kernel
+    reduceMatrixKernel<type><<<blocks, threads, 0, stream>>>(intermediateMatrix,
+        systemMatrixColumnIds, rows, density, matrix);
+}
+
+// reduce matrix specialisation
+template void fastEIT::modelKernel::reduceMatrix<fastEIT::dtype::real>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::real*, const fastEIT::dtype::index*,
+    fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::real*);
+template void fastEIT::modelKernel::reduceMatrix<fastEIT::dtype::index>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::index*, const fastEIT::dtype::index*,
+    fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::index*);
+
+// update matrix kernel
+static __global__ void updateMatrixKernel(const fastEIT::dtype::index* connectivityMatrix,
+    const fastEIT::dtype::real* elementalMatrix, const fastEIT::dtype::real* gamma,
+    fastEIT::dtype::real sigmaRef, fastEIT::dtype::size rows,
+    fastEIT::dtype::size density, fastEIT::dtype::real* matrixValues) {
+    // get ids
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // calc residual matrix element
+    fastEIT::dtype::real value = 0.0f;
+    fastEIT::dtype::index elementId = -1;
+    for (fastEIT::dtype::index k = 0; k < density; ++k) {
+        // get element id
+        elementId = connectivityMatrix[row +
+            (column + k * fastEIT::sparseMatrix::block_size) * rows];
+
+        value += elementId != -1 ? elementalMatrix[row +
+            (column + k * fastEIT::sparseMatrix::block_size) * rows] *
+            sigmaRef * exp10f(gamma[elementId] / 10.0f) : 0.0f;
+    }
+
+    // set residual matrix element
+    matrixValues[row * fastEIT::sparseMatrix::block_size + column] = value;
+}
+
+// update matrix kernel wrapper
+void fastEIT::modelKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+    const dtype::index* connectivityMatrix, const dtype::real* elementalMatrix,
+    const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows,
+    dtype::size density, dtype::real* matrixValues) {
+    // call cuda kernel
+    updateMatrixKernel<<<blocks, threads, 0, stream>>>(connectivityMatrix, elementalMatrix,
+        gamma, sigma_ref, rows, density, matrixValues);
+}
