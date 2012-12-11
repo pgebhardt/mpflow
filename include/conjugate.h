@@ -49,6 +49,23 @@ namespace fastEIT {
             std::shared_ptr<Matrix<dtype::real>> temp_vector_;
             std::shared_ptr<Matrix<dtype::real>> temp_number_;
         };
+
+        // helper functions
+        namespace conjugate {
+            void addScalar(const std::shared_ptr<Matrix<dtype::real>> scalar,
+                dtype::size rows, dtype::size columns, cudaStream_t stream,
+                std::shared_ptr<Matrix<dtype::real>> vector);
+
+            void updateVector(const std::shared_ptr<Matrix<dtype::real>> x1,
+                dtype::real sign, const std::shared_ptr<Matrix<dtype::real>> x2,
+                const std::shared_ptr<Matrix<dtype::real>> r1,
+                const std::shared_ptr<Matrix<dtype::real>> r2, cudaStream_t stream,
+                std::shared_ptr<Matrix<dtype::real>> result);
+
+            void gemv(const std::shared_ptr<Matrix<dtype::real>> matrix,
+                const std::shared_ptr<Matrix<dtype::real>> vector, cudaStream_t stream,
+                std::shared_ptr<Matrix<dtype::real>> result);
+        }
     }
 }
 
