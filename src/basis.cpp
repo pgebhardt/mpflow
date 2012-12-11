@@ -4,13 +4,7 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include <cmath>
-#include <stdexcept>
-#include <tuple>
-#include <array>
-
-#include "../include/dtype.h"
-#include "../include/math.h"
-#include "../include/basis.h"
+#include "../include/fasteit.h"
 
 // create basis class
 fastEIT::basis::Linear::Linear(

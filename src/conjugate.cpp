@@ -3,17 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <assert.h>
-
-#include <stdexcept>
-#include <memory>
-
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
-
-#include "../include/dtype.h"
-#include "../include/matrix.h"
-#include "../include/conjugate.h"
+#include "../include/fasteit.h"
 #include "../include/conjugate_cuda.h"
 
 // create conjugate solver
@@ -34,7 +24,7 @@ fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle,
     this->rsold_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
     this->rsnew_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
     this->temp_vector_ = std::make_shared<Matrix<dtype::real>>(this->rows(),
-        this->residuum()->data_rows() / Matrix<dtype::real>::block_size, stream);
+        this->residuum()->data_rows() / matrix::block_size, stream);
     this->temp_number_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
 }
 
@@ -57,15 +47,15 @@ void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real
     }
 
     // calc residuum r = f - A * x
-    this->residuum()->multiply(A.get(), x.get(), handle, stream);
+    this->residuum()->multiply(A, x, handle, stream);
     this->residuum()->scalarMultiply(-1.0, stream);
-    this->residuum()->add(f.get(), stream);
+    this->residuum()->add(f, stream);
 
     // p = r
-    this->projection()->copy(this->residuum().get(), stream);
+    this->projection()->copy(this->residuum(), stream);
 
     // calc rsold
-    this->rsold()->vectorDotProduct(this->residuum().get(), this->residuum().get(), stream);
+    this->rsold()->vectorDotProduct(this->residuum(), this->residuum(), stream);
 
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
@@ -73,8 +63,8 @@ void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real
         conjugate::gemv(A.get(), this->projection().get(), stream, this->temp_vector().get());
 
         // calc p * A * p
-        this->temp_number()->vectorDotProduct(this->projection().get(),
-            this->temp_vector().get(), stream);
+        this->temp_number()->vectorDotProduct(this->projection(),
+            this->temp_vector(), stream);
 
         // update residuum
         conjugate::updateVector(this->residuum().get(), -1.0f, this->temp_vector().get(),
@@ -85,14 +75,14 @@ void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real
             this->temp_number().get(), stream, x.get());
 
         // calc rsnew
-        this->rsnew()->vectorDotProduct(this->residuum().get(), this->residuum().get(), stream);
+        this->rsnew()->vectorDotProduct(this->residuum(), this->residuum(), stream);
 
         // update projection
         conjugate::updateVector(this->residuum().get(), 1.0f, this->projection().get(),
             this->rsnew().get(), this->rsold().get(), stream, this->projection().get());
 
         // copy rsnew to rsold
-        this->rsold()->copy(this->rsnew().get(), stream);
+        this->rsold()->copy(this->rsnew(), stream);
     }
 }
 

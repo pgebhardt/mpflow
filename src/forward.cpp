@@ -3,28 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <assert.h>
-
-#include <stdexcept>
-#include <vector>
-#include <array>
-#include <tuple>
-#include <memory>
-
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
-
-#include "../include/dtype.h"
-#include "../include/math.h"
-#include "../include/matrix.h"
-#include "../include/sparse_matrix.h"
-#include "../include/mesh.h"
-#include "../include/electrodes.h"
-#include "../include/basis.h"
-#include "../include/model.h"
-#include "../include/conjugate.h"
-#include "../include/sparse_conjugate.h"
-#include "../include/forward.h"
+#include "../include/fasteit.h"
 #include "../include/forward_cuda.h"
 
 // create forward_solver

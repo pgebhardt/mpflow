@@ -3,18 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <assert.h>
-
-#include <stdexcept>
-#include <memory>
-
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
-
-#include "../include/dtype.h"
-#include "../include/matrix.h"
-#include "../include/sparse_matrix.h"
-#include "../include/sparse_conjugate.h"
+#include "../include/fasteit.h"
 #include "../include/conjugate_cuda.h"
 
 // create conjugate solver
@@ -54,39 +43,39 @@ void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix
     }
 
     // calc residuum r = f - A * x
-    A->multiply(x.get(), stream, this->residuum().get());
+    A->multiply(x, stream, this->residuum());
 
     // regularize for dc free solution
     if (dcFree == true) {
-        this->temp_number()->sum(x.get(), stream);
+        this->temp_number()->sum(x, stream);
         conjugate::addScalar(this->temp_number().get(), this->rows(), this->columns(),
             stream, this->residuum().get());
     }
 
     this->residuum()->scalarMultiply(-1.0, stream);
-    this->residuum()->add(f.get(), stream);
+    this->residuum()->add(f, stream);
 
     // p = r
-    this->projection()->copy(this->residuum().get(), stream);
+    this->projection()->copy(this->residuum(), stream);
 
     // calc rsold
-    this->rsold()->vectorDotProduct(this->residuum().get(), this->residuum().get(), stream);
+    this->rsold()->vectorDotProduct(this->residuum(), this->residuum(), stream);
 
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
-        A->multiply(this->projection().get(), stream, this->temp_vector().get());
+        A->multiply(this->projection(), stream, this->temp_vector());
 
         // regularize for dc free solution
         if (dcFree == true) {
-            this->temp_number()->sum(this->projection().get(), stream);
+            this->temp_number()->sum(this->projection(), stream);
             conjugate::addScalar(this->temp_number().get(), this->rows(), this->columns(),
                 stream, this->temp_vector().get());
         }
 
         // calc p * A * p
-        this->temp_number()->vectorDotProduct(this->projection().get(),
-            this->temp_vector().get(), stream);
+        this->temp_number()->vectorDotProduct(this->projection(),
+            this->temp_vector(), stream);
 
         // update residuum
         conjugate::updateVector(this->residuum().get(), -1.0f, this->temp_vector().get(),
@@ -97,13 +86,13 @@ void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix
             this->temp_number().get(), stream, x.get());
 
         // calc rsnew
-        this->rsnew()->vectorDotProduct(this->residuum().get(), this->residuum().get(), stream);
+        this->rsnew()->vectorDotProduct(this->residuum(), this->residuum(), stream);
 
         // update projection
         conjugate::updateVector(this->residuum().get(), 1.0f, this->projection().get(),
             this->rsnew().get(), this->rsold().get(), stream, this->projection().get());
 
         // copy rsnew to rsold
-        this->rsold()->copy(this->rsnew().get(), stream);
+        this->rsold()->copy(this->rsnew(), stream);
     }
 }

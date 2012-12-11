@@ -3,19 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <assert.h>
-#include <stdexcept>
-#include <tuple>
-#include <array>
-#include <memory>
-
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
-
-#include "../include/dtype.h"
-#include "../include/matrix.h"
-#include "../include/basis.h"
-#include "../include/mesh.h"
+#include "../include/fasteit.h"
 
 // create mesh class
 template <

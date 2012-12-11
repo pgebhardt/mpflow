@@ -3,23 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <assert.h>
-
-#include <stdexcept>
-#include <vector>
-#include <array>
-#include <tuple>
-#include <memory>
-
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
-
-#include "../include/dtype.h"
-#include "../include/matrix.h"
-#include "../include/mesh.h"
-#include "../include/electrodes.h"
-#include "../include/conjugate.h"
-#include "../include/inverse.h"
+#include "../include/fasteit.h"
 
 // create inverse_solver
 template <
@@ -74,7 +58,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcSystemMatrix(
     }
 
     // copy jacobianSquare to systemMatrix
-    this->system_matrix()->copy(this->jacobian_square().get(), stream);
+    this->system_matrix()->copy(this->jacobian_square(), stream);
 
     // add lambda * Jt * J * Jt * J to systemMatrix
     beta = this->regularization_factor();
@@ -170,7 +154,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::InverseSolver<Nu
     }
 
     // reset gamma
-    gamma->copy(this->zeros().get(), stream);
+    gamma->copy(this->zeros(), stream);
 
     // calc excitation
     this->calcExcitation(jacobian, calculated_voltage, measured_voltage, handle, stream);

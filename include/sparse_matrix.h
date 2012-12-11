@@ -16,15 +16,12 @@ namespace fastEIT {
             this->init(rows, columns, stream);
         }
 
-        SparseMatrix(const Matrix<dtype::real>* matrix, cudaStream_t stream);
+        SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream);
         virtual ~SparseMatrix();
 
         // matrix multiply
-        void multiply(const Matrix<dtype::real>* matrix, cudaStream_t stream,
-            Matrix<dtype::real>* result) const;
-
-        // block size
-        static const dtype::size block_size = 32;
+        void multiply(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream,
+            std::shared_ptr<Matrix<dtype::real>> result) const;
 
         // accessors
         dtype::size rows() const { return this->rows_; }
@@ -45,7 +42,7 @@ namespace fastEIT {
         void init(dtype::size rows, dtype::size columns, cudaStream_t stream);
 
         // convert to sparse matrix
-        void convert(const Matrix<dtype::real>* matrix, cudaStream_t stream);
+        void convert(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream);
 
         // member
         dtype::size rows_;

@@ -3,29 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include <assert.h>
-
-#include <stdexcept>
-#include <vector>
-#include <array>
-#include <tuple>
-#include <memory>
-
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
-
-#include "../include/dtype.h"
-#include "../include/matrix.h"
-#include "../include/sparse_matrix.h"
-#include "../include/basis.h"
-#include "../include/mesh.h"
-#include "../include/electrodes.h"
-#include "../include/conjugate.h"
-#include "../include/sparse_conjugate.h"
-#include "../include/model.h"
-#include "../include/forward.h"
-#include "../include/inverse.h"
-#include "../include/solver.h"
+#include "../include/fasteit.h"
 
 // create solver
 template <
@@ -90,8 +68,8 @@ void fastEIT::Solver<BasisFunction>::preSolve(cublasHandle_t handle, cudaStream_
     this->inverse_solver()->calcSystemMatrix(this->forward_solver()->jacobian(), handle, stream);
 
     // set measuredVoltage and calibrationVoltage to calculatedVoltage
-    this->measured_voltage()->copy(this->forward_solver()->voltage().get(), stream);
-    this->calibration_voltage()->copy(this->forward_solver()->voltage().get(), stream);
+    this->measured_voltage()->copy(this->forward_solver()->voltage(), stream);
+    this->calibration_voltage()->copy(this->forward_solver()->voltage(), stream);
 }
 
 // calibrate
@@ -120,7 +98,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<BasisFunc
         calibration_voltage, 90, true, handle, stream, this->dgamma());
 
     // add to gamma
-    this->gamma()->add(this->dgamma().get(), stream);
+    this->gamma()->add(this->dgamma(), stream);
 
     return this->gamma();
 }
