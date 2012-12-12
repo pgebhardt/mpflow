@@ -14,6 +14,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 // cuda includes
 #include <cuda_runtime.h>
@@ -24,9 +25,9 @@
 #include "math.h"
 #include "matrix.h"
 #include "sparse_matrix.h"
+#include "basis.h"
 #include "mesh.h"
 #include "electrodes.h"
-#include "basis.h"
 #include "model.h"
 #include "conjugate.h"
 #include "sparse_conjugate.h"

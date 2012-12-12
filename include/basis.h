@@ -69,6 +69,24 @@ namespace fastEIT {
             // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
         };
+
+        // quadratic basis class definition
+        class Quadratic : public Basis<3, 6> {
+        // constructor
+        public:
+            Quadratic(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
+                dtype::index one);
+
+/*        public:
+            // mathematical evaluation of basis
+            virtual dtype::real integrateWithBasis(const Linear& other);
+            virtual dtype::real integrateGradientWithBasis(const Linear& other);
+            static dtype::real integrateBoundaryEdge(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
+                const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end);
+
+            // evaluation
+            virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);*/
+        };
     }
 }
 

@@ -41,7 +41,7 @@ namespace fastEIT {
         dtype::real& radius() { return this->radius_; }
         dtype::real& height() { return this->height_; }
 
-    private:
+    protected:
         // member
         std::shared_ptr<Matrix<dtype::real>> nodes_;
         std::shared_ptr<Matrix<dtype::index>> elements_;
@@ -49,6 +49,18 @@ namespace fastEIT {
         dtype::real radius_;
         dtype::real height_;
     };
+
+    // mesh helper
+    namespace mesh {
+        // quadratic mesh from linear
+        std::tuple<
+            std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
+            std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>,
+            std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>> quadraticMeshFromLinear(
+            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> nodes_old,
+            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> elements_old,
+            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> boundary_old);
+    }
 }
 
 #endif

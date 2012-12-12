@@ -187,3 +187,11 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
 
     return integral;
 }
+
+// quadratic basis function constructor
+fastEIT::basis::Quadratic::Quadratic(
+    std::array<std::tuple<dtype::real, dtype::real>, 6> nodes,
+    dtype::index one)
+    : fastEIT::basis::Basis<3, 6>(nodes) {
+
+}
