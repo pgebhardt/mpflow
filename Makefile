@@ -18,12 +18,13 @@ INSTALL_LIB = /usr/local/lib
 # Copmiler
 CXX = clang++
 NVCC = nvcc
-CFLAGS = -std=c++11 -stdlib=libc++ -fPIC
+CFLAGS = -std=c++11 -fPIC
 NVFLAGS = -Xcompiler -fpic -m64 -arch=sm_30 --compiler-options -fno-strict-aliasing -use_fast_math --ptxas-options=-v -lineinfo
 LDFLAGS = -L/usr/local/cuda/lib64 -L/usr/local/lib -lcudart -lcublas
 
 ifeq ($(UNAME), Darwin)
-LDFLAGS = $(LDFLAGS) -lc++
+CFLAGS += -stdlib=libc++
+LDFLAGS += -lc++
 endif
 
 # Object files
