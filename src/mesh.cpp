@@ -221,10 +221,9 @@ fastEIT::mesh::quadraticMeshFromLinear(
     }
 
     // create matrices
-    cudaStream_t stream = NULL;
-    auto nodes_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(p.size(), 2, stream);
-    auto elements_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(tnew.size(), 6, stream);
-    auto boundary_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(bnew.size(), 3, stream);
+    auto nodes_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(p.size(), 2, nullptr);
+    auto elements_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(tnew.size(), 6, nullptr);
+    auto boundary_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(bnew.size(), 3, nullptr);
 
     // copy vectors to matrices
 
@@ -249,4 +248,6 @@ fastEIT::mesh::quadraticMeshFromLinear(
     return std::make_tuple(nodes_new, elements_new, boundary_new);
 }
 
+// class specialisations
 template class fastEIT::Mesh<fastEIT::basis::Linear>;
+template class fastEIT::Mesh<fastEIT::basis::Quadratic>;
