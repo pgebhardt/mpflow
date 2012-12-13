@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <stdexcept>
 #include <string>
+#include <istream>
 #include <tuple>
 #include <array>
 #include <vector>

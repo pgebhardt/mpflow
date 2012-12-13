@@ -400,33 +400,27 @@ void fastEIT::Matrix<type>::max(const std::shared_ptr<Matrix<type>> value,
     while (offset * matrix::block_size < this->data_rows());
 }
 
-// load matrix from file
+// load matrix from stream
 template <
     class type
 >
-std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(const std::string filename, cudaStream_t stream) {
-    // open file stream
-    std::ifstream file;
-    file.open(filename.c_str());
-
-    // check open
-    if (file.fail()) {
-        throw std::logic_error("matrix::loadtxt: cannot open file!");
+std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(std::istream* istream,
+    cudaStream_t stream) {
+    // check input
+    if (istream == nullptr) {
+        throw std::invalid_argument("matrix::loadtxt: istream == nullptr");
     }
 
     // read lines
     std::vector<std::string> lines;
     std::string line;
-    while (!file.eof()) {
+    while (!istream->eof()) {
         // read line
-        getline(file, line);
+        getline(*istream, line);
 
         // add line to vector
         lines.push_back(line);
     }
-
-    // close file
-    file.close();
 
     // read values
     std::vector<std::vector<type> > values;
@@ -467,6 +461,53 @@ std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(const std::strin
     matrix->copyToDevice(stream);
 
     return matrix;
+
+}
+
+// load matrix from file
+template <
+    class type
+>
+std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(const std::string filename, cudaStream_t stream) {
+    // open file stream
+    std::ifstream file;
+    file.open(filename.c_str());
+
+    // check open
+    if (file.fail()) {
+        throw std::logic_error("matrix::loadtxt: cannot open file!");
+    }
+
+    // load matrix
+    auto matrix = loadtxt<type>(&file, stream);
+
+    // close file
+    file.close();
+
+    return matrix;
+}
+
+// save matrix to stream
+template <
+    class type
+>
+void fastEIT::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix,
+    std::ostream* ostream) {
+    // check input
+    if (matrix == nullptr) {
+        throw std::invalid_argument("matrix::savetxt: matrix == nullptr");
+    }
+    if (ostream == nullptr) {
+        throw std::invalid_argument("matrix::savetxt: ostream == nullptr");
+    }
+
+    // write data
+    for (dtype::index row = 0; row < matrix->rows(); ++row) {
+        for (dtype::index column = 0; column < matrix->columns() - 1; ++column) {
+            *ostream << (*matrix)(row, column) << " ";
+        }
+        *ostream << (*matrix)(row, matrix->columns() - 1) << std::endl;
+    }
 }
 
 // save matrix to file
@@ -489,13 +530,8 @@ void fastEIT::matrix::savetxt(const std::string filename,
         throw std::logic_error("matrix::savetxt: cannot open file!");
     }
 
-    // write data
-    for (dtype::index row = 0; row < matrix->rows(); ++row) {
-        for (dtype::index column = 0; column < matrix->columns() - 1; ++column) {
-            file << (*matrix)(row, column) << " ";
-        }
-        file << (*matrix)(row, matrix->columns() - 1) << std::endl;
-    }
+    // save matrix
+    savetxt<type>(matrix, &file);
 
     // close file
     file.close();
@@ -503,9 +539,20 @@ void fastEIT::matrix::savetxt(const std::string filename,
 
 // specialisation
 template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
+    fastEIT::matrix::loadtxt<fastEIT::dtype::real>(std::istream*, cudaStream_t);
+template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>
+    fastEIT::matrix::loadtxt<fastEIT::dtype::index>(std::istream*, cudaStream_t);
+
+template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     fastEIT::matrix::loadtxt<fastEIT::dtype::real>(const std::string, cudaStream_t);
 template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>
     fastEIT::matrix::loadtxt<fastEIT::dtype::index>(const std::string, cudaStream_t);
+
+template void fastEIT::matrix::savetxt<fastEIT::dtype::real>(
+    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::ostream*);
+template void fastEIT::matrix::savetxt<fastEIT::dtype::index>(
+    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>, std::ostream*);
+
 template void fastEIT::matrix::savetxt<fastEIT::dtype::real>(const std::string,
     const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>);
 template void fastEIT::matrix::savetxt<fastEIT::dtype::index>(const std::string,
