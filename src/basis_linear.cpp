@@ -8,9 +8,9 @@
 
 // create basis class
 fastEIT::basis::Linear::Linear(
-    std::array<std::tuple<dtype::real, dtype::real>, 3> nodes,
+    std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
     dtype::index one)
-    : fastEIT::basis::Basis<2, 3>(nodes) {
+    : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes) {
     // calc coefficients (A * c = b)
     dtype::real Ainv[3][3];
     std::array<dtype::real, 3> B = {0.0, 0.0, 0.0};
@@ -69,7 +69,12 @@ fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
 
 // integrate with basis
 fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
-    const Linear& other) {
+    const std::shared_ptr<Linear> other) {
+    // check input
+    if (other == nullptr) {
+        throw std::invalid_argument("basis::Linear::integrateWithBasis: other == nullptr");
+    }
+
     // shorten variables
     dtype::real x1 = std::get<0>(this->nodes()[0]);
     dtype::real y1 = std::get<1>(this->nodes()[0]);
@@ -81,9 +86,9 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
     dtype::real ai = this->coefficients()[0];
     dtype::real bi = this->coefficients()[1];
     dtype::real ci = this->coefficients()[2];
-    dtype::real aj = other.coefficients()[0];
-    dtype::real bj = other.coefficients()[1];
-    dtype::real cj = other.coefficients()[2];
+    dtype::real aj = other->coefficients()[0];
+    dtype::real bj = other->coefficients()[1];
+    dtype::real cj = other->coefficients()[2];
 
     // calc area
     dtype::real area = 0.5 * fabs((x2 - x1) * (y3 - y1) -
@@ -111,7 +116,12 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
 
 // integrate gradient with basis
 fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
-    const Linear& other) {
+    const std::shared_ptr<Linear> other) {
+    // check input
+    if (other == nullptr) {
+        throw std::invalid_argument("basis::Linear::integrateGradientWithBasis: other == nullptr");
+    }
+
     // calc area
     dtype::real area = 0.5 * fabs(
         (std::get<0>(this->nodes()[1]) - std::get<0>(this->nodes()[0])) *
@@ -120,8 +130,8 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
         (std::get<1>(this->nodes()[1]) - std::get<1>(this->nodes()[0])));
 
     // calc integral
-    return area * (this->coefficients()[1] * other.coefficients()[1] +
-        this->coefficients()[2] * other.coefficients()[2]);
+    return area * (this->coefficients()[1] * other->coefficients()[1] +
+        this->coefficients()[2] * other->coefficients()[2]);
 }
 
 // integrate edge
@@ -186,12 +196,4 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
     delete [] nodeParameter;
 
     return integral;
-}
-
-// quadratic basis function constructor
-fastEIT::basis::Quadratic::Quadratic(
-    std::array<std::tuple<dtype::real, dtype::real>, 6> nodes,
-    dtype::index one)
-    : fastEIT::basis::Basis<3, 6>(nodes) {
-
 }

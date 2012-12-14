@@ -121,7 +121,7 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
 
     // variables
     std::array<dtype::index, BasisFunction::nodes_per_element> indices;
-    std::array<BasisFunction*, BasisFunction::nodes_per_element> basis_functions;
+    std::array<std::shared_ptr<BasisFunction>, BasisFunction::nodes_per_element> basis_functions;
 
     // fill connectivity and elementalJacobianMatrix
     for (dtype::index element = 0; element < this->model()->mesh()->elements()->rows(); ++element) {
@@ -130,7 +130,7 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
 
         // calc corresponding basis functions
         for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
-            basis_functions[node] = new BasisFunction(
+            basis_functions[node] = std::make_shared<BasisFunction>(
                 this->model()->mesh()->elementNodes(element), node);
         }
 
@@ -139,13 +139,8 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
             for (dtype::index j = 0; j < BasisFunction::nodes_per_element; ++j) {
                 // set elementalJacobianMatrix element
                 (*this->elemental_jacobian_matrix())(element, i + j * BasisFunction::nodes_per_element) =
-                    basis_functions[i]->integrateGradientWithBasis(*basis_functions[j]);
+                    basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
             }
-        }
-
-        // cleanup
-        for (BasisFunction*& basis : basis_functions) {
-            delete basis;
         }
     }
 
@@ -264,4 +259,5 @@ template void fastEIT::forward::calcJacobian<fastEIT::basis::Linear>(
     const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
     const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
+
 template class fastEIT::ForwardSolver<fastEIT::basis::Linear, fastEIT::numeric::SparseConjugate>;

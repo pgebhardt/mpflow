@@ -54,17 +54,18 @@ namespace fastEIT {
 
         // linear basis class definition
         class Linear : public Basis<2, 3> {
-        // constructor
         public:
+            // constructor
             Linear(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
                 dtype::index one);
 
-        public:
             // mathematical evaluation of basis
-            virtual dtype::real integrateWithBasis(const Linear& other);
-            virtual dtype::real integrateGradientWithBasis(const Linear& other);
-            static dtype::real integrateBoundaryEdge(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
-                const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end);
+            virtual dtype::real integrateWithBasis(const std::shared_ptr<Linear> other);
+            virtual dtype::real integrateGradientWithBasis(const std::shared_ptr<Linear> other);
+            static dtype::real integrateBoundaryEdge(
+                std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
+                const std::tuple<dtype::real, dtype::real> start,
+                const std::tuple<dtype::real, dtype::real> end);
 
             // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
@@ -72,20 +73,21 @@ namespace fastEIT {
 
         // quadratic basis class definition
         class Quadratic : public Basis<3, 6> {
-        // constructor
         public:
+            // constructor
             Quadratic(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
                 dtype::index one);
 
-/*        public:
             // mathematical evaluation of basis
-            virtual dtype::real integrateWithBasis(const Linear& other);
-            virtual dtype::real integrateGradientWithBasis(const Linear& other);
-            static dtype::real integrateBoundaryEdge(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
-                const std::tuple<dtype::real, dtype::real> start, const std::tuple<dtype::real, dtype::real> end);
+            virtual dtype::real integrateWithBasis(const std::shared_ptr<Quadratic> other);
+            virtual dtype::real integrateGradientWithBasis(const std::shared_ptr<Quadratic> other);
+            static dtype::real integrateBoundaryEdge(
+                std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
+                const std::tuple<dtype::real, dtype::real> start,
+                const std::tuple<dtype::real, dtype::real> end);
 
             // evaluation
-            virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);*/
+            virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
         };
     }
 }

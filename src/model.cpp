@@ -123,7 +123,7 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
 
     // fill intermediate connectivity and elemental matrices
     std::array<dtype::index, BasisFunction::nodes_per_element> indices;
-    std::array<BasisFunction*, BasisFunction::nodes_per_element> basis_functions;
+    std::array<std::shared_ptr<BasisFunction>, BasisFunction::nodes_per_element> basis_functions;
     dtype::real temp;
 
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
@@ -132,7 +132,8 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
 
         // calc corresponding basis functions
         for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
-            basis_functions[node] = new BasisFunction(this->mesh()->elementNodes(element), node);
+            basis_functions[node] = std::make_shared<BasisFunction>(
+                this->mesh()->elementNodes(element), node);
         }
 
         // set connectivity and elemental residual matrix elements
@@ -146,20 +147,15 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
 
                 // set elemental system element
                 (*elemental_s_matrix)(indices[i], indices[j] + connectivity_matrix->data_rows() * temp) =
-                    basis_functions[i]->integrateGradientWithBasis(*basis_functions[j]);
+                    basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
 
                 // set elemental residual element
                 (*elemental_r_matrix)(indices[i], indices[j] + connectivity_matrix->data_rows() * temp) =
-                    basis_functions[i]->integrateWithBasis(*basis_functions[j]);
+                    basis_functions[i]->integrateWithBasis(basis_functions[j]);
 
                 // increment element count
                 (*element_count)(indices[i], indices[j])++;
             }
-        }
-
-        // cleanup
-        for (BasisFunction*& basis : basis_functions) {
-            delete basis;
         }
     }
 
