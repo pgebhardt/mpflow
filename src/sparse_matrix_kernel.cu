@@ -3,8 +3,15 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
+// Define this to turn on error checking
+#define CUDA_ERROR_CHECK
+
+#include <cstdlib>
+#include <cstdio>
+
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include "../include/cuda_error.h"
 
 #include "../include/dtype.h"
 #include "../include/constants.h"
@@ -59,6 +66,8 @@ void fastEIT::sparseMatrixKernel::convert(dim3 blocks, dim3 threads, cudaStream_
     // call cuda kernel
     convertKernel<<<blocks, threads, 0, stream>>>(matrix, rows, columns,
         values, columnIds, elementCount);
+
+    CudaCheckError();
 }
 
 // sparse matrix multiply kernel
@@ -113,4 +122,6 @@ void fastEIT::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cudaStream
     // call cuda kernel
     multiplyKernel<<<blocks, threads, 0, stream>>>(values, columnIds, matrix,
         rows, columns, density, result);
+
+    CudaCheckError();
 }

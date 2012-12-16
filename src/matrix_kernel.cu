@@ -3,8 +3,15 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
+// Define this to turn on error checking
+#define CUDA_ERROR_CHECK
+
+#include <cstdlib>
+#include <cstdio>
+
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include "../include/cuda_error.h"
 
 #include "../include/dtype.h"
 #include "../include/constants.h"
@@ -32,6 +39,8 @@ void fastEIT::matrixKernel::add(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* matrix, fastEIT::dtype::size rows, type* result) {
     // call cuda kernel
     addKernel<type><<<blocks, threads, 0, stream>>>(matrix, rows, result);
+
+    CudaCheckError();
 }
 
 // add specialisation
@@ -63,6 +72,8 @@ void fastEIT::matrixKernel::scale(dim3 blocks, dim3 threads, cudaStream_t stream
     type scalar, dtype::size rows, type* result) {
     // call cuda kernel
     scaleKernel<type><<<blocks, threads, 0, stream>>>(scalar, rows, result);
+
+    CudaCheckError();
 }
 
 // scale specialisation
@@ -97,6 +108,8 @@ void fastEIT::matrixKernel::vectorDotProduct(dim3 blocks, dim3 threads,
     // call cuda kernel
     vectorDotProductKernel<type><<<blocks, threads, 0, stream>>>(
         a, b, rows, result);
+
+    CudaCheckError();
 }
 
 // vector dot product specialisation
@@ -153,6 +166,8 @@ void fastEIT::matrixKernel::sum(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* vector, dtype::size rows, dtype::size offset, type* result) {
     // call cuda kernel
     sumKernel<type><<<blocks, threads, 0, stream>>>(vector, rows, offset, result);
+
+    CudaCheckError();
 }
 
 // sum specialisation
@@ -199,6 +214,8 @@ void fastEIT::matrixKernel::min(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* vector, dtype::size rows, dtype::size offset, type* result) {
     // call cuda kernel
     minKernel<type><<<blocks, threads, 0, stream>>>(vector, rows, offset, result);
+
+    CudaCheckError();
 }
 
 // min specialisation
@@ -245,6 +262,8 @@ void fastEIT::matrixKernel::max(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* vector, dtype::size rows, dtype::size offset, type* result) {
     // call cuda kernel
     maxKernel<type><<<blocks, threads, 0, stream>>>(vector, rows, offset, result);
+
+    CudaCheckError();
 }
 
 // max specialisation

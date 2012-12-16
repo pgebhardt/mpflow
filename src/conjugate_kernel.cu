@@ -3,8 +3,15 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
+// Define this to turn on error checking
+#define CUDA_ERROR_CHECK
+
+#include <cstdlib>
+#include <cstdio>
+
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include "../include/cuda_error.h"
 
 #include "../include/dtype.h"
 #include "../include/constants.h"
@@ -30,6 +37,8 @@ void fastEIT::numeric::conjugateKernel::addScalar(dim3 blocks, dim3 threads,
     // call cuda kernel
     addScalarKernel<<<blocks, threads, 0, stream>>>(scalar, vector_rows,
         rows, columns, vector);
+
+    CudaCheckError();
 }
 
 // update vector kernel
@@ -55,6 +64,8 @@ void fastEIT::numeric::conjugateKernel::updateVector(dim3 blocks, dim3 threads,
     // call cuda kernel
     updateVectorKernel<<<blocks, threads, 0, stream>>>(x1, sign, x2, r1, r2, rows,
         result);
+
+    CudaCheckError();
 }
 
 // gemv kernel
@@ -95,6 +106,8 @@ void fastEIT::numeric::conjugateKernel::gemv(dim3 blocks, dim3 threads,
     dtype::size rows, dtype::real* result) {
     // call cuda kernel
     gemvKernel<<<blocks, threads, 0, stream>>>(matrix, vector, rows, result);
+
+    CudaCheckError();
 }
 
 // row reduce kernel
@@ -126,4 +139,6 @@ void fastEIT::numeric::conjugateKernel::reduceRow(dim3 blocks, dim3 threads,
     cudaStream_t stream, dtype::size rows, dtype::real* vector) {
     // call cuda kernel
     reduceRowKernel<<<blocks, threads, 0, stream>>>(rows, vector);
+
+    CudaCheckError();
 }

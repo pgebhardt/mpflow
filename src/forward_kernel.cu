@@ -3,8 +3,15 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
+// Define this to turn on error checking
+#define CUDA_ERROR_CHECK
+
+#include <cstdlib>
+#include <cstdio>
+
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include "../include/cuda_error.h"
 
 #include "../include/dtype.h"
 #include "../include/constants.h"
@@ -86,6 +93,8 @@ void fastEIT::forwardKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_
         drive_phi, measurment_phi, connectivity_matrix, elemental_jacobian_matrix, gamma,
         sigma_ref, rows, columns, phi_rows, element_count, drive_count,
         measurment_count, additiv, jacobian);
+
+    CudaCheckError();
 }
 
 // template specialisation

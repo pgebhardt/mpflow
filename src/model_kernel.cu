@@ -6,8 +6,15 @@
 #include <stdexcept>
 #include <assert.h>
 
+// Define this to turn on error checking
+#define CUDA_ERROR_CHECK
+
+#include <cstdlib>
+#include <cstdio>
+
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include "../include/cuda_error.h"
 
 #include "../include/dtype.h"
 #include "../include/constants.h"
@@ -49,6 +56,8 @@ void fastEIT::modelKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t 
     // call cuda kernel
     reduceMatrixKernel<type><<<blocks, threads, 0, stream>>>(intermediateMatrix,
         systemMatrixColumnIds, rows, density, matrix);
+
+    CudaCheckError();
 }
 
 // reduce matrix specialisation
@@ -93,4 +102,6 @@ void fastEIT::modelKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t 
     // call cuda kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(connectivityMatrix, elementalMatrix,
         gamma, sigma_ref, rows, density, matrixValues);
+
+    CudaCheckError();
 }
