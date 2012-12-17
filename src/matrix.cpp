@@ -408,44 +408,46 @@ std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(std::istream* is
         throw std::invalid_argument("matrix::loadtxt: istream == nullptr");
     }
 
-    // read lines
-    std::vector<std::string> lines;
+    // read matrix
+    std::vector<std::vector<type>> values;
     std::string line;
+    type value;
     while (!istream->eof()) {
         // read line
         getline(*istream, line);
 
-        // add line to vector
-        lines.push_back(line);
-    }
-
-    // read values
-    std::vector<std::vector<type> > values;
-    for (auto line : lines) {
-        // create row vector
-        std::vector<type> row;
-        type value;
+        // check succes
+        if (istream->fail()) {
+            break;
+        }
 
         // create string stream
         std::stringstream line_stream(line);
 
         // read values of line
+        std::vector<type> row;
         while (!line_stream.eof()) {
-            // check success
-            if (line_stream.fail()) {
+            // read value
+            line_stream >> value;
+
+            // check read error
+            if (line_stream.bad()) {
                 throw std::logic_error("matrix::loadtxt: invalid value");
             }
 
-            line_stream >> value;
             row.push_back(value);
         }
 
         // add row
-        values.push_back(row);
+        if (row.size() != 0) {
+            values.push_back(row);
+        }
     }
 
     // create matrix
-    auto matrix = std::make_shared<Matrix<type>>(values.size() - 1, values[0].size(), stream);
+    std::cout << "count: " << values.size() << std::endl;
+    std::cout << "last: " << values[values.size()-1][0] << std::endl;
+    auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
 
     // add values
     for (dtype::index row = 0; row < matrix->rows(); ++row) {
