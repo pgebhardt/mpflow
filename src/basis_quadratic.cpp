@@ -6,15 +6,6 @@
 #include <cmath>
 #include "../include/fasteit.h"
 
-// create basis class
-fastEIT::basis::Quadratic::Quadratic(
-    std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
-    dtype::index one)
-    : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes) {
-    // calc coefficients
-    // TODO
-}
-
 // evaluate basis function
 fastEIT::dtype::real fastEIT::basis::Quadratic::evaluate(
     std::tuple<dtype::real, dtype::real> point) {

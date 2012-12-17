@@ -6,11 +6,11 @@
 #include <cmath>
 #include "../include/fasteit.h"
 
-// create basis class
+/*// create basis class
 fastEIT::basis::Linear::Linear(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
     dtype::index one)
-    : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes) {
+    : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
     // calc coefficients (A * c = b)
     dtype::real Ainv[3][3];
     std::array<dtype::real, 3> B = {0.0, 0.0, 0.0};
@@ -56,7 +56,7 @@ fastEIT::basis::Linear::Linear(
         Ainv[2][1] * B[1] +
         Ainv[2][2] * B[2];
 }
-
+*/
 // evaluate basis function
 fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
     std::tuple<dtype::real, dtype::real> point) {

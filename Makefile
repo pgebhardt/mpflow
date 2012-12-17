@@ -28,7 +28,7 @@ LDFLAGS += -lc++
 endif
 
 # Object files
-_OBJ = matrix.o sparse_matrix.o mesh.o electrodes.o basis_linear.o basis_quadratic.o model.o conjugate.o sparse_conjugate.o forward.o inverse.o solver.o
+_OBJ = matrix.o sparse_matrix.o mesh.o electrodes.o basis.o basis_linear.o basis_quadratic.o model.o conjugate.o sparse_conjugate.o forward.o inverse.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
