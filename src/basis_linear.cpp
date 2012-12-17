@@ -6,57 +6,30 @@
 #include <cmath>
 #include "../include/fasteit.h"
 
-/*// create basis class
+// create basis class
 fastEIT::basis::Linear::Linear(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
     dtype::index one)
     : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
-    // calc coefficients (A * c = b)
-    dtype::real Ainv[3][3];
-    std::array<dtype::real, 3> B = {0.0, 0.0, 0.0};
-    B[one] = 1.0f;
+    // calc coefficients with gauss
+    std::array<std::array<dtype::real, nodes_per_element>, nodes_per_element> A;
+    std::array<dtype::real, nodes_per_element> b;
+    for (int i = 0; i<nodes_per_element; ++i) {
+        b[i]=0.0;
+    }
+    b[one] = 1.0f;
 
-    // invert matrix A directly
-    dtype::real a, b, c, d, e, f, g, h, i;
-    a = 1.0;
-    b = std::get<0>(this->nodes()[0]);
-    c = std::get<1>(this->nodes()[0]);
-    d = 1.0;
-    e = std::get<0>(this->nodes()[1]);
-    f = std::get<1>(this->nodes()[1]);
-    g = 1.0;
-    h = std::get<0>(this->nodes()[2]);
-    i = std::get<1>(this->nodes()[2]);
-    dtype::real det =
-        a * (e * i - f * h) -
-        b * (i * d - f * g) +
-        c * (d * h - e * g);
-
-    Ainv[0][0] = (e * i - f * h) / det;
-    Ainv[0][1] = (c * h - b * i) / det;
-    Ainv[0][2] = (b * f - c * e) / det;
-    Ainv[1][0] = (f * g - d * i) / det;
-    Ainv[1][1] = (a * i - c * g) / det;
-    Ainv[1][2] = (c * d - a * f) / det;
-    Ainv[2][0] = (d * h - e * g) / det;
-    Ainv[2][1] = (g * b - a * h) / det;
-    Ainv[2][2] = (a * e - b * d) / det;
+    // fill coefficients
+    for (int i = 0; i< nodes_per_element; i++) {
+        A[i][0] = 1.0;
+        A[i][1] = std::get<0>(this->nodes()[i]);
+        A[i][2] = std::get<1>(this->nodes()[i]);
+    }
 
     // calc coefficients
-    this->coefficients()[0] =
-        Ainv[0][0] * B[0] +
-        Ainv[0][1] * B[1] +
-        Ainv[0][2] * B[2];
-    this->coefficients()[1] =
-        Ainv[1][0] * B[0] +
-        Ainv[1][1] * B[1] +
-        Ainv[1][2] * B[2];
-    this->coefficients()[2] =
-        Ainv[2][0] * B[0] +
-        Ainv[2][1] * B[1] +
-        Ainv[2][2] * B[2];
+    this->coefficients() = math::gaussElemination<dtype::real, nodes_per_element>(A, b);
 }
-*/
+
 // evaluate basis function
 fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
     std::tuple<dtype::real, dtype::real> point) {

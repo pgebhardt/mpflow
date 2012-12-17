@@ -19,7 +19,13 @@ namespace fastEIT {
         // constructor and destructor
         protected:
             Basis(std::array<std::tuple<dtype::real, dtype::real>, template_nodes_per_element> nodes,
-                    dtype::index one);
+                dtype::index one) {
+                // init member
+                this->nodes_ = nodes;
+                for (dtype::real& coefficient : this->coefficients()) {
+                    coefficient = 0.0f;
+                }
+            }
 
             virtual ~Basis() { }
 
@@ -52,8 +58,7 @@ namespace fastEIT {
         public:
             // constructor
             Linear(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
-                dtype::index one)
-                : Basis<2, 3>(nodes, one) { }
+                dtype::index one);
 
             // mathematical evaluation of basis
             virtual dtype::real integrateWithBasis(const std::shared_ptr<Linear> other);
@@ -72,8 +77,7 @@ namespace fastEIT {
         public:
             // constructor
             Quadratic(std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
-                dtype::index one)
-                : Basis<3, 6>(nodes, one) { }
+                dtype::index one);
 
             // mathematical evaluation of basis
             virtual dtype::real integrateWithBasis(const std::shared_ptr<Quadratic> other);
