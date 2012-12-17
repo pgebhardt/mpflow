@@ -445,8 +445,6 @@ std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(std::istream* is
     }
 
     // create matrix
-    std::cout << "count: " << values.size() << std::endl;
-    std::cout << "last: " << values[values.size()-1][0] << std::endl;
     auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
 
     // add values
@@ -460,7 +458,6 @@ std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(std::istream* is
     matrix->copyToDevice(stream);
 
     return matrix;
-
 }
 
 // load matrix from file
