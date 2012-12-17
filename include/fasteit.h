@@ -6,11 +6,15 @@
 #ifndef FASTEIT_INCLUDE_FASTEIT_H
 #define FASTEIT_INCLUDE_FASTEIT_H
 
+#include <cstdlib>
+#include <cstdio>
+
 // std lib includes
 #include <assert.h>
 #include <stdexcept>
 #include <string>
 #include <istream>
+#include <iostream>
 #include <tuple>
 #include <array>
 #include <vector>
@@ -20,6 +24,7 @@
 // cuda includes
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include "cuda_error.h"
 
 #include "dtype.h"
 #include "constants.h"

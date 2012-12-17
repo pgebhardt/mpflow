@@ -41,6 +41,8 @@ fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_
     error = cudaHostAlloc((void**)&this->host_data_, sizeof(type) *
         this->data_rows() * this->data_columns(), cudaHostAllocDefault);
 
+    CudaCheckError();
+
     // check success
     if (error != cudaSuccess) {
         throw std::logic_error("Matrix::Matrix: create host data memory");
@@ -49,6 +51,8 @@ fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_
     // create matrix device data memory
     error = cudaMalloc((void**)&this->device_data_,
         sizeof(type) * this->data_rows() * this->data_columns());
+
+    CudaCheckError();
 
     // check success
     if (error != cudaSuccess) {
@@ -70,10 +74,12 @@ template <
 >
 fastEIT::Matrix<type>::~Matrix() {
     // free matrix host data
-    cudaFree(this->host_data_);
+    cudaFreeHost(this->host_data_);
+    CudaCheckError();
 
     // free matrix device data
     cudaFree(this->device_data_);
+    CudaCheckError();
 }
 
 // copy matrix
@@ -94,15 +100,12 @@ void fastEIT::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> other,
     }
 
     // copy data
-    cudaMemcpyAsync(this->device_data(), other->device_data(),
+    CudaSafeCall(
+        cudaMemcpyAsync(this->device_data(), other->device_data(),
         sizeof(type) * this->data_rows() * this->data_columns(),
-        cudaMemcpyDeviceToDevice, stream);
+        cudaMemcpyDeviceToDevice, stream));
 
-    // TODO
-    /*// check success
-    if (error != cudaSuccess) {
-        throw logic_error("Matrix::copyToDevice: copy error");
-    }*/
+    CudaCheckError();
 }
 
 // copy to device
@@ -111,15 +114,12 @@ template <
 >
 void fastEIT::Matrix<type>::copyToDevice(cudaStream_t stream) {
     // copy host buffer to device
-    cudaMemcpyAsync(this->device_data(), this->host_data(),
-        sizeof(type) * this->data_rows() * this->data_columns(),
-        cudaMemcpyHostToDevice, stream);
+    CudaSafeCall(
+        cudaMemcpyAsync(this->device_data(), this->host_data(),
+            sizeof(type) * this->data_rows() * this->data_columns(),
+            cudaMemcpyHostToDevice, stream));
 
-    // TODO
-    /*// check success
-    if (error != cudaSuccess) {
-        throw logic_error("Matrix::copyToDevice: copy error");
-    }*/
+    CudaCheckError();
 }
 
 // copy to host
@@ -128,15 +128,12 @@ template <
 >
 void fastEIT::Matrix<type>::copyToHost(cudaStream_t stream) {
     // copy host buffer to device
-    cudaMemcpyAsync(this->host_data(), this->device_data(),
-        sizeof(type) * this->data_rows() * this->data_columns(),
-        cudaMemcpyDeviceToHost, stream);
+    CudaSafeCall(
+        cudaMemcpyAsync(this->host_data(), this->device_data(),
+            sizeof(type) * this->data_rows() * this->data_columns(),
+            cudaMemcpyDeviceToHost, stream));
 
-    // TODO
-    /*// check success
-    if (error != cudaSuccess) {
-        throw logic_error("Matrix::copyToDevice: copy error");
-    }*/
+    CudaCheckError();
 }
 
 // add matrix

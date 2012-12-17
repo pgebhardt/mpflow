@@ -3,11 +3,10 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-// Define this to turn on error checking
-#define CUDA_ERROR_CHECK
-
 #include <cstdlib>
 #include <cstdio>
+
+#include <iostream>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>

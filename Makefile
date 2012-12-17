@@ -36,7 +36,7 @@ _CUOBJ = matrix_kernel.cu_o sparse_matrix_kernel.cu_o model_kernel.cu_o conjugat
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fasteit.h dtype.h constants.h math.h matrix.h matrix_kernel.h sparse_matrix.h sparse_matrix_kernel.h mesh.h basis.h electrodes.h model.h model_kernel.h conjugate.h conjugate_kernel.h sparse_conjugate.h forward.h forward_kernel.h inverse.h solver.h
+_DEPS = fasteit.h dtype.h constants.h cuda_error.h math.h matrix.h matrix_kernel.h sparse_matrix.h sparse_matrix_kernel.h mesh.h basis.h electrodes.h model.h model_kernel.h conjugate.h conjugate_kernel.h sparse_conjugate.h forward.h forward_kernel.h inverse.h solver.h
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Library

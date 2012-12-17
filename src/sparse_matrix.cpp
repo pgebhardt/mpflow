@@ -67,6 +67,7 @@ fastEIT::SparseMatrix::~SparseMatrix() {
     // release matrices
     cudaFree(this->values_);
     cudaFree(this->column_ids_);
+    CudaCheckError();
 }
 
 // convert to sparse matrix
