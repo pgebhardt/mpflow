@@ -65,6 +65,46 @@ namespace fastEIT {
             // calc parameter
             return angle * std::get<0>(polar_point);
         }
+
+        // simple gauss elemination
+        template <
+            class type,
+            int size
+        >
+        std::array<type, size> gaussElemination(
+            std::array<std::array<type, size>, size> matrix,
+            std::array<type, size> excitation) {
+            dtype::real x, sum;
+            dtype::index n = size;
+
+            // foraward elemination
+            for (int k=0;k<n-1;k++) {
+
+                    for (int i=k+1;i<n;i++) {
+                        x = matrix[i][k]/matrix[k][k];
+
+                        for (int j=k+1;j<n;j++) {
+                            matrix[i][j] = matrix[i][j] -matrix[k][j]*x;
+                        }
+                        excitation[i] = excitation[i] - excitation[k]*x;
+                    }
+
+            }
+
+            // Resubstitution
+            excitation[n-1]=excitation[n-1]/matrix[n-1][n-1];
+            for ( int i = n-2; i >= 0; i--) {
+                sum = excitation[i];
+
+                for (int j = i+1; j < n; j++) {
+                    sum = sum - matrix[i][j]*excitation[j];
+                }
+
+                excitation[i] = sum/matrix[i][i];
+            }
+
+            return excitation;
+        }
     }
 }
 
