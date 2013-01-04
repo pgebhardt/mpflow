@@ -47,9 +47,8 @@ fastEIT::dtype::real fastEIT::basis::Quadratic::integrateGradientWithBasis(
 
 // integrate edge
 fastEIT::dtype::real fastEIT::basis::Quadratic::integrateBoundaryEdge(
-    std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
-    const std::tuple<dtype::real, dtype::real> start,
-    const std::tuple<dtype::real, dtype::real> end) {
+    const std::array<dtype::real, nodes_per_edge> nodes, const dtype::index one,
+    const dtype::real start, const dtype::real end) {
     // TODO
     return 0.0;
 }

@@ -232,33 +232,67 @@ template <
 >
 void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
-    std::array<dtype::index, BasisFunction::nodes_per_edge> indices;
-    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge> nodes,
-        permutated_nodes;
+    std::array<dtype::index, BasisFunction::nodes_per_edge> nodes_indices;
+    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge> nodes_coordinates;
 
+    // needed arrays
+    std::array<dtype::real, BasisFunction::nodes_per_edge> node_parameter;
+    std::array<dtype::real, 2> boundary_parameter;
+
+    // calc excitaion matrix
     for (dtype::index boundary_element = 0;
         boundary_element < this->mesh()->boundary()->rows();
         ++boundary_element) {
+        // get indices
+        nodes_indices = this->mesh()->boundaryIndices(boundary_element);
+
+        // get nodes coordinates
+        nodes_coordinates = this->mesh()->boundaryNodes(boundary_element);
+
+        // prepare vector to sort nodes by parameter
+        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
+        for (dtype::size node = 0; node < BasisFunction::nodes_per_edge; ++node) {
+            nodes.push_back(std::make_tuple(nodes_indices[node], nodes_coordinates[node]));
+        }
+
+        // sort nodes by parameter
+        std::sort(nodes.begin(), nodes.end(),
+            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
+                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
+                -> bool {
+                    return math::circleParameter(std::get<1>(b),
+                        math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
+        });
+
+        // integrate basis function for each electrode
         for (dtype::index electrode = 0;
             electrode < this->electrodes()->count();
             ++electrode) {
-            // get indices
-            indices = this->mesh()->boundaryIndices(boundary_element);
-
-            // get nodes
-            nodes = this->mesh()->boundaryNodes(boundary_element);
-
             // calc elements
             for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
-                // permutate nodes
-                for (dtype::index n = 0; n < BasisFunction::nodes_per_edge; ++n) {
-                    permutated_nodes[n] = nodes[(node + n) % BasisFunction::nodes_per_edge];
+                // calc node parameter centered to node
+                node_parameter[node] = math::circleParameter(std::get<1>(nodes[node]), 0.0);
+                for (dtype::size i = 0; i < BasisFunction::nodes_per_edge; ++i) {
+                    if (i != node) {
+                        node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
+                            node_parameter[node]);
+                    }
                 }
 
+                // calc boundary parameter centered to node
+                boundary_parameter[0] = math::circleParameter(this->electrodes()->electrodes_start()[electrode],
+                    node_parameter[node]);
+                boundary_parameter[1] = math::circleParameter(this->electrodes()->electrodes_end()[electrode],
+                    node_parameter[node]);
+
+                // reset node parameter
+                node_parameter[node] = 0.0;
+
                 // add new value
-                (*this->excitation_matrix())(indices[node], electrode) -= BasisFunction::integrateBoundaryEdge(
-                    permutated_nodes, this->electrodes()->electrodes_start()[electrode],
-                    this->electrodes()->electrodes_end()[electrode]) / this->electrodes()->width();
+                (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) -=
+                    BasisFunction::integrateBoundaryEdge(
+                        node_parameter, node, boundary_parameter[0], boundary_parameter[1]) /
+                    this->electrodes()->width();
             }
         }
     }

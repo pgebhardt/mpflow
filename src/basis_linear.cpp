@@ -109,64 +109,58 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
 
 // integrate edge
 fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
-    std::array<std::tuple<dtype::real, dtype::real>, nodes_per_edge> nodes,
-    const std::tuple<dtype::real, dtype::real> start,
-    const std::tuple<dtype::real, dtype::real> end) {
+    const std::array<dtype::real, nodes_per_edge> nodes, const dtype::index one,
+    const dtype::real start, const dtype::real end) {
     // integral
-    dtype::real integral = 0.0f;
+    dtype::real integral = 0.0;
 
-    // calc node parameter
-    dtype::real* nodeParameter = new dtype::real[nodes_per_edge];
-    nodeParameter[0] = 0.0f;
-    for (dtype::size i = 0; i < nodes_per_edge; i++) {
-        nodeParameter[i] = math::circleParameter(nodes[i], nodeParameter[0]);
-    }
+    // first parameter set to one
+    if (one == 0) {
+        // check if integration interval is outside of function definition
+        if ((start < nodes[1]) && (end > 0.0)) {
+            // function is completely inside of integration interval
+            if ((start <= 0.0) && (end >= nodes[1])) {
+                integral = 0.5 * nodes[1];
 
-    // calc integration boundary parameter
-    dtype::real boundaryParameter[2];
-    boundaryParameter[0] = math::circleParameter(start, nodeParameter[0]);
-    boundaryParameter[1] = math::circleParameter(end, nodeParameter[0]);
+            // end of integration interval is inside of function definition
+            } else if ((start <= 0.0) && (end < nodes[1])) {
+                integral = (end - 0.5 * math::square(end) / nodes[1]);
 
-    // integrate left triangle
-    if (nodeParameter[1] < 0.0f) {
-        if ((boundaryParameter[0] < 0.0f) && (boundaryParameter[1] > nodeParameter[1])) {
-            if ((boundaryParameter[1] >= 0.0f) && (boundaryParameter[0] <= nodeParameter[1])) {
-                integral = -0.5f * nodeParameter[1];
+            // start of integration interval is inside of function definition
+            } else if ((start > 0.0) && (end >= nodes[1])) {
+                integral = (nodes[1] - 0.5 * math::square(nodes[1]) / nodes[1]) -
+                            (start - 0.5 * math::square(start) / nodes[1]);
 
-            } else if ((boundaryParameter[1] >= 0.0f) && (boundaryParameter[0] > nodeParameter[1])) {
-                integral = -(boundaryParameter[0] - 0.5 * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
-
-            } else if ((boundaryParameter[1] < 0.0f) && (boundaryParameter[0] <= nodeParameter[1])) {
-                integral = (boundaryParameter[1] - 0.5 * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]) -
-                           (nodeParameter[1] - 0.5 * nodeParameter[1] * nodeParameter[1] / nodeParameter[1]);
-
-            } else if ((boundaryParameter[1] < 0.0f) && (boundaryParameter[0] > nodeParameter[1])) {
-                integral = (boundaryParameter[1] - 0.5 * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]) -
-                           (boundaryParameter[0] - 0.5 * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
+            // both ends of integration interval are inside of function definition
+            } else if ((start > 0.0) && (end < nodes[1])) {
+                integral = (end - 0.5 * math::square(end) / nodes[1]) -
+                            (start - 0.5 * math::square(start) / nodes[1]);
             }
         }
+    // second parameter set to one
     } else {
-        // integrate right triangle
-        if ((boundaryParameter[1] > 0.0f) && (nodeParameter[1] > boundaryParameter[0])) {
-            if ((boundaryParameter[0] <= 0.0f) && (boundaryParameter[1] >= nodeParameter[1])) {
-                integral = 0.5f * nodeParameter[1];
+        // check if integration interval is outside of function definition
+        if ((start < 0.0) && (end > nodes[0])) {
+            // function is completely inside of integration interval
+            if ((start <= nodes[0]) && (end >= 0.0)) {
+                integral = -0.5f * nodes[0];
 
-            } else if ((boundaryParameter[0] <= 0.0f) && (boundaryParameter[1] < nodeParameter[1])) {
-                integral = (boundaryParameter[1] - 0.5f * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]);
+            // end of integration interval is inside of function definition
+            } else if ((start <= nodes[0]) && (end < 0.0)) {
+                integral = (end - 0.5 * end * end / nodes[0]) -
+                           (nodes[0] - 0.5 * nodes[0] * nodes[0] / nodes[0]);
 
-            } else if ((boundaryParameter[0] > 0.0f) && (boundaryParameter[1] >= nodeParameter[1])) {
-                integral = (nodeParameter[1] - 0.5f * nodeParameter[1] * nodeParameter[1] / nodeParameter[1]) -
-                            (boundaryParameter[0] - 0.5f * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
+            // start of integration interval is inside of function definition
+            } else if ((start > nodes[0]) && (end >= 0.0)) {
+                integral = -(start - 0.5 * start * start / nodes[0]);
 
-            } else if ((boundaryParameter[0] > 0.0f) && (boundaryParameter[1] < nodeParameter[1])) {
-                integral = (boundaryParameter[1] - 0.5f * boundaryParameter[1] * boundaryParameter[1] / nodeParameter[1]) -
-                            (boundaryParameter[0] - 0.5f * boundaryParameter[0] * boundaryParameter[0] / nodeParameter[1]);
+            // both ends of integration interval are inside of function definition
+            } else if ((start > nodes[0]) && (end < 0.0)) {
+                integral = (end - 0.5 * end * end / nodes[0]) -
+                           (start - 0.5 * start * start / nodes[0]);
             }
         }
     }
-
-    // cleanup
-    delete [] nodeParameter;
 
     return integral;
 }
