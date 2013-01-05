@@ -267,7 +267,7 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
         // calc parameter offset
         dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
 
-        // calc node parameter centered to node
+        // calc node parameter centered to node 0
         for (dtype::size i = 0; i < BasisFunction::nodes_per_edge; ++i) {
             node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
                 parameter_offset);
@@ -277,11 +277,11 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
         for (dtype::index electrode = 0;
             electrode < this->electrodes()->count();
             ++electrode) {
-            // calc boundary parameter centered to node
-            boundary_parameter[0] = math::circleParameter(this->electrodes()->electrodes_start()[electrode],
-                parameter_offset);
-            boundary_parameter[1] = math::circleParameter(this->electrodes()->electrodes_end()[electrode],
-                parameter_offset);
+            // calc boundary parameter centered to node 0
+            boundary_parameter[0] = math::circleParameter(
+                this->electrodes()->electrodes_start()[electrode], parameter_offset);
+            boundary_parameter[1] = math::circleParameter(
+                this->electrodes()->electrodes_end()[electrode], parameter_offset);
 
             // calc elements
             for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {

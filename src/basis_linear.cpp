@@ -120,16 +120,17 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
     start = std::min(std::max(0.0f, start), nodes[nodes_per_edge - 1]);
     end = std::min(std::max(0.0f, end), nodes[nodes_per_edge - 1]);
 
-    // calc coefficients for f = a + b * x
-    dtype::real a, b;
+    // calc coefficients for basis function
+    std::array<dtype::real, nodes_per_edge> coefficients;
     if (one == 0) {
-        a = 1.0;
-        b = -1.0 / nodes[1];
+        coefficients[0] = 1.0;
+        coefficients[1] = -1.0 / nodes[1];
     } else {
-        a = 0.0;
-        b = 1.0 / nodes[1];
+        coefficients[0] = 0.0;
+        coefficients[1] = 1.0 / nodes[1];
     }
 
     // calc integral
-    return a * end - a * start + 0.5 * b * math::square(end) - 0.5 * b * math::square(start);
+    return (coefficients[0] * end + 0.5 * coefficients[1] * math::square(end)) -
+        (coefficients[0] * start + 0.5 * coefficients[1] * math::square(start));
 }
