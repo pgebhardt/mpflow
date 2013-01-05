@@ -237,7 +237,7 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 
     // needed arrays
     std::array<dtype::real, BasisFunction::nodes_per_edge> node_parameter;
-    std::array<dtype::real, 2> boundary_parameter;
+    dtype::real integration_start, integration_end;
 
     // calc excitaion matrix
     for (dtype::index boundary_element = 0;
@@ -277,17 +277,17 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
         for (dtype::index electrode = 0;
             electrode < this->electrodes()->count();
             ++electrode) {
-            // calc boundary parameter centered to node 0
-            boundary_parameter[0] = math::circleParameter(
+            // calc integration interval centered to node 0
+            integration_start = math::circleParameter(
                 std::get<0>(this->electrodes()->coordinates()[electrode]), parameter_offset);
-            boundary_parameter[1] = math::circleParameter(
+            integration_end = math::circleParameter(
                 std::get<1>(this->electrodes()->coordinates()[electrode]), parameter_offset);
 
             // calc elements
             for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
                 (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) -=
                     BasisFunction::integrateBoundaryEdge(
-                        node_parameter, node, boundary_parameter[0], boundary_parameter[1]) /
+                        node_parameter, node, integration_start, integration_end) /
                     this->electrodes()->width();
             }
         }
