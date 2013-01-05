@@ -144,7 +144,7 @@ fastEIT::mesh::quadraticMeshFromLinear(
     std::vector<std::array<fastEIT::dtype::index, 2> > already_calc_midpoints(0);
     std::vector<std::array<fastEIT::dtype::real, 2> > new_calc_nodes(0);
     std::vector<std::array<fastEIT::dtype::index, 6> > quadratic_elements_vector(elements_old->rows());
-    std::vector<std::array<fastEIT::dtype::index, 2> > actual_edge(2);
+    std::vector<std::array<fastEIT::dtype::index, 2> > current_edge(2);
     std::vector<std::array<fastEIT::dtype::real, 2> > quadratic_node_vector(0);
     std::vector<std::array<fastEIT::dtype::real, 2> > node_from_linear(1);
     std::vector<std::array<fastEIT::dtype::index, 3> > quadratic_boundary_vector(0);
@@ -163,35 +163,35 @@ fastEIT::mesh::quadraticMeshFromLinear(
     // calculate new midpoints between existing ones
     for (fastEIT::dtype::index element = 0; element < elements_old->rows(); ++element) {
         for (fastEIT::dtype::index element_node = 0; element_node < elements_old->columns(); ++element_node) {
-            // get actual edge
-            actual_edge[0][0] = (*elements_old)(element, element_node);
-            actual_edge[0][1] = (*elements_old)(element,
+            // get current edge
+            current_edge[0][0] = (*elements_old)(element, element_node);
+            current_edge[0][1] = (*elements_old)(element,
                 (element_node + 1)%elements_old->columns());
 
-            // get actual edge inverted
-            actual_edge[1][0] = (*elements_old)(element,
+            // get current edge inverted
+            current_edge[1][0] = (*elements_old)(element,
                 (element_node + 1)%elements_old->columns());
-            actual_edge[1][1] = (*elements_old)(element, element_node);
+            current_edge[1][1] = (*elements_old)(element, element_node);
 
-            //check if midpoint for actual adge was calculated before
-            auto index = std::find(already_calc_midpoints.begin(), already_calc_midpoints.end(), actual_edge[0]);
+            //check if midpoint for current adge was calculated before
+            auto index = std::find(already_calc_midpoints.begin(), already_calc_midpoints.end(), current_edge[0]);
             if(index != already_calc_midpoints.end()) {
                 // midpoint already exists, using existing one. check for inverted coords too
                 quadratic_elements_vector[element][element_node + 3] = nodes_old->rows() +
                     std::distance(already_calc_midpoints.begin(), index);
             } else {
                 index = std::find(already_calc_midpoints.begin(),
-                    already_calc_midpoints.end(), actual_edge[1]);
+                    already_calc_midpoints.end(), current_edge[1]);
 
                 if(index != already_calc_midpoints.end()) {
                     quadratic_elements_vector[element][element_node + 3] = nodes_old->rows() +
                     std::distance(already_calc_midpoints.begin(), index);
                 } else {
                     // midpoint does not exist. calculate new one
-                    fastEIT::dtype::real node_x = 0.5 * ((*nodes_old)(actual_edge[0][0], 0) +
-                        (*nodes_old)(actual_edge[0][1],0));
-                    fastEIT::dtype::real node_y = 0.5 * ((*nodes_old)(actual_edge[0][0], 1) +
-                        (*nodes_old)(actual_edge[0][1],1));
+                    fastEIT::dtype::real node_x = 0.5 * ((*nodes_old)(current_edge[0][0], 0) +
+                        (*nodes_old)(current_edge[0][1],0));
+                    fastEIT::dtype::real node_y = 0.5 * ((*nodes_old)(current_edge[0][0], 1) +
+                        (*nodes_old)(current_edge[0][1],1));
 
                     // create array with x and y coords
                     std::array<fastEIT::dtype::real, 2> midpoint = {node_x , node_y};
@@ -199,10 +199,10 @@ fastEIT::mesh::quadraticMeshFromLinear(
                     // append new midpoint to existing nodes
                     new_calc_nodes.push_back(midpoint);
 
-                    // append actual edge to 'already done' list
-                    already_calc_midpoints.push_back(actual_edge[0]);
+                    // append current edge to 'already done' list
+                    already_calc_midpoints.push_back(current_edge[0]);
 
-                    // set new node for actual element andd adjust node index
+                    // set new node for current element andd adjust node index
                     quadratic_elements_vector[element][element_node + 3] = 
                         (new_calc_nodes.size() - 1 + nodes_old->rows());
                 }
@@ -222,19 +222,19 @@ fastEIT::mesh::quadraticMeshFromLinear(
 
     // calculate new boundary Matrix
     for(fastEIT::dtype::index bound = 0; bound < boundary_old->rows(); ++bound){
-        // get actual bound
+        // get current bound
         linear_bound[0][0] = (*boundary_old)(bound,0);
         linear_bound[0][1] = (*boundary_old)(bound,1);
 
-        // get actual bound invertet
+        // get current bound invertet
         linear_bound_inverted[0][0] = (*boundary_old)(bound,1);
         linear_bound_inverted[0][1] = (*boundary_old)(bound,0);
 
-        // check wether actual bound is in xy or yx coord in calculated midpoint vector
+        // check wether current bound is in xy or yx coord in calculated midpoint vector
         auto index = std::find(already_calc_midpoints.begin(),
             already_calc_midpoints.end(), linear_bound[0]);
         if(index != already_calc_midpoints.end()) {
-            // get midpoint index of actual bound or invertetd bound
+            // get midpoint index of current bound or invertetd bound
             new_bound = std::distance(already_calc_midpoints.begin(), index) + nodes_old->rows();
         } else {
             index = std::find(already_calc_midpoints.begin(),
@@ -242,12 +242,12 @@ fastEIT::mesh::quadraticMeshFromLinear(
             new_bound = std::distance(already_calc_midpoints.begin(), index) + nodes_old->rows();
         }
 
-        // set midpoint in the middle of actual bound
+        // set midpoint in the middle of current bound
         quadratic_bound[0][2] = linear_bound[0][1];
         quadratic_bound[0][1] = new_bound;
         quadratic_bound[0][0] = linear_bound[0][0];
 
-        // append actual bound line with 3 indices to new boundary vector
+        // append current bound line with 3 indices to new boundary vector
         quadratic_boundary_vector.push_back(quadratic_bound[0]);
     }
 
