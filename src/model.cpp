@@ -264,31 +264,27 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
                         math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
         });
 
+        // calc parameter offset
+        dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
+
+        // calc node parameter centered to node
+        for (dtype::size i = 0; i < BasisFunction::nodes_per_edge; ++i) {
+            node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
+                parameter_offset);
+        }
+
         // integrate basis function for each electrode
         for (dtype::index electrode = 0;
             electrode < this->electrodes()->count();
             ++electrode) {
+            // calc boundary parameter centered to node
+            boundary_parameter[0] = math::circleParameter(this->electrodes()->electrodes_start()[electrode],
+                parameter_offset);
+            boundary_parameter[1] = math::circleParameter(this->electrodes()->electrodes_end()[electrode],
+                parameter_offset);
+
             // calc elements
             for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
-                // calc node parameter centered to node
-                node_parameter[node] = math::circleParameter(std::get<1>(nodes[node]), 0.0);
-                for (dtype::size i = 0; i < BasisFunction::nodes_per_edge; ++i) {
-                    if (i != node) {
-                        node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
-                            node_parameter[node]);
-                    }
-                }
-
-                // calc boundary parameter centered to node
-                boundary_parameter[0] = math::circleParameter(this->electrodes()->electrodes_start()[electrode],
-                    node_parameter[node]);
-                boundary_parameter[1] = math::circleParameter(this->electrodes()->electrodes_end()[electrode],
-                    node_parameter[node]);
-
-                // reset node parameter
-                node_parameter[node] = 0.0;
-
-                // add new value
                 (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) -=
                     BasisFunction::integrateBoundaryEdge(
                         node_parameter, node, boundary_parameter[0], boundary_parameter[1]) /

@@ -109,58 +109,27 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
 
 // integrate edge
 fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
-    const std::array<dtype::real, nodes_per_edge> nodes, const dtype::index one,
-    const dtype::real start, const dtype::real end) {
-    // integral
-    dtype::real integral = 0.0;
-
-    // first parameter set to one
-    if (one == 0) {
-        // check if integration interval is outside of function definition
-        if ((start < nodes[1]) && (end > 0.0)) {
-            // function is completely inside of integration interval
-            if ((start <= 0.0) && (end >= nodes[1])) {
-                integral = 0.5 * nodes[1];
-
-            // end of integration interval is inside of function definition
-            } else if ((start <= 0.0) && (end < nodes[1])) {
-                integral = (end - 0.5 * math::square(end) / nodes[1]);
-
-            // start of integration interval is inside of function definition
-            } else if ((start > 0.0) && (end >= nodes[1])) {
-                integral = (nodes[1] - 0.5 * math::square(nodes[1]) / nodes[1]) -
-                            (start - 0.5 * math::square(start) / nodes[1]);
-
-            // both ends of integration interval are inside of function definition
-            } else if ((start > 0.0) && (end < nodes[1])) {
-                integral = (end - 0.5 * math::square(end) / nodes[1]) -
-                            (start - 0.5 * math::square(start) / nodes[1]);
-            }
-        }
-    // second parameter set to one
-    } else {
-        // check if integration interval is outside of function definition
-        if ((start < 0.0) && (end > nodes[0])) {
-            // function is completely inside of integration interval
-            if ((start <= nodes[0]) && (end >= 0.0)) {
-                integral = -0.5f * nodes[0];
-
-            // end of integration interval is inside of function definition
-            } else if ((start <= nodes[0]) && (end < 0.0)) {
-                integral = (end - 0.5 * end * end / nodes[0]) -
-                           (nodes[0] - 0.5 * nodes[0] * nodes[0] / nodes[0]);
-
-            // start of integration interval is inside of function definition
-            } else if ((start > nodes[0]) && (end >= 0.0)) {
-                integral = -(start - 0.5 * start * start / nodes[0]);
-
-            // both ends of integration interval are inside of function definition
-            } else if ((start > nodes[0]) && (end < 0.0)) {
-                integral = (end - 0.5 * end * end / nodes[0]) -
-                           (start - 0.5 * start * start / nodes[0]);
-            }
-        }
+    std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
+    dtype::real start, dtype::real end) {
+    // check integration interval
+    if (end < start) {
+        return 0.0;
     }
 
-    return integral;
+    // crop integration interval to function definition
+    start = std::min(std::max(0.0f, start), nodes[nodes_per_edge - 1]);
+    end = std::min(std::max(0.0f, end), nodes[nodes_per_edge - 1]);
+
+    // calc coefficients for f = a + b * x
+    dtype::real a, b;
+    if (one == 0) {
+        a = 1.0;
+        b = -1.0 / nodes[1];
+    } else {
+        a = 0.0;
+        b = 1.0 / nodes[1];
+    }
+
+    // calc integral
+    return a * end - a * start + 0.5 * b * math::square(end) - 0.5 * b * math::square(start);
 }

@@ -64,8 +64,8 @@ namespace fastEIT {
             virtual dtype::real integrateWithBasis(const std::shared_ptr<Linear> other);
             virtual dtype::real integrateGradientWithBasis(const std::shared_ptr<Linear> other);
             static dtype::real integrateBoundaryEdge(
-                const std::array<dtype::real, nodes_per_edge> nodes, const dtype::index one,
-                const dtype::real start, const dtype::real end);
+                std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
+                dtype::real start, dtype::real end);
 
             // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
@@ -82,8 +82,8 @@ namespace fastEIT {
             virtual dtype::real integrateWithBasis(const std::shared_ptr<Quadratic> other);
             virtual dtype::real integrateGradientWithBasis(const std::shared_ptr<Quadratic> other);
             static dtype::real integrateBoundaryEdge(
-                const std::array<dtype::real, nodes_per_edge> nodes, const dtype::index one,
-                const dtype::real start, const dtype::real end);
+                std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
+                dtype::real start, dtype::real end);
 
             // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
