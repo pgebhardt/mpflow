@@ -6,7 +6,7 @@
 #include "../include/fasteit.h"
 
 // create electrodes class
-fastEIT::Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real meshRadius)
+fastEIT::Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::real height, dtype::real radius)
     : count_(count), width_(width), height_(height) {
     // check input
     if (count == 0) {
@@ -18,24 +18,20 @@ fastEIT::Electrodes::Electrodes(dtype::size count, dtype::real width, dtype::rea
     if (height <= 0.0f) {
         throw std::invalid_argument("height <= 0.0");
     }
-    if (meshRadius <= 0.0f) {
-        throw std::invalid_argument("meshRadius <= 0.0");
+    if (radius <= 0.0f) {
+        throw std::invalid_argument("radius <= 0.0");
     }
 
     // fill electrode vectors
     dtype::real angle = 0.0f;
-    dtype::real deltaAngle = M_PI / (dtype::real)this->count();
-    for (dtype::index i = 0; i < this->count(); i++) {
+    dtype::real delta_angle = M_PI / (dtype::real)this->count();
+    for (dtype::index electrode = 0; electrode < this->count(); ++electrode) {
         // calc start angle
-        angle = (dtype::real)i * 2.0f * deltaAngle;
+        angle = (dtype::real)electrode * 2.0 * delta_angle;
 
-        // calc start coordinates
-        this->electrodes_start_.push_back(math::kartesian(std::make_tuple(meshRadius, angle)));
-
-        // calc end angle
-        angle += this->width() / meshRadius;
-
-        // calc end coordinates
-        this->electrodes_end_.push_back(math::kartesian(std::make_tuple(meshRadius, angle)));
+        // calc coordinates
+        this->coordinates_.push_back(std::make_tuple(
+            math::kartesian(std::make_tuple(radius, angle)),
+            math::kartesian(std::make_tuple(radius, angle + this->width() / radius))));
     }
 }
