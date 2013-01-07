@@ -120,18 +120,24 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
     }
 
     // variables
-    std::array<dtype::index, BasisFunction::nodes_per_element> indices;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> nodes;
+    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element> nodes_coordinates;
     std::array<std::shared_ptr<BasisFunction>, BasisFunction::nodes_per_element> basis_functions;
 
     // fill connectivity and elementalJacobianMatrix
     for (dtype::index element = 0; element < this->model()->mesh()->elements()->rows(); ++element) {
-        // get element indices
-        indices = this->model()->mesh()->elementIndices(element);
+        // get element nodes
+        nodes = this->model()->mesh()->elementNodes(element);
+
+        // extract nodes coordinates
+        for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
+            nodes_coordinates[node] = std::get<1>(nodes[node]);
+        }
 
         // calc corresponding basis functions
         for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
             basis_functions[node] = std::make_shared<BasisFunction>(
-                this->model()->mesh()->elementNodes(element), node);
+                nodes_coordinates, node);
         }
 
         // fill matrix

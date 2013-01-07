@@ -58,77 +58,53 @@ fastEIT::Mesh<fastEIT::basis::Quadratic>::Mesh(std::shared_ptr<Matrix<dtype::rea
 template <
     class BasisFunction
 >
-std::array<fastEIT::dtype::index, BasisFunction::nodes_per_element> fastEIT::Mesh<BasisFunction>::elementIndices(
-    dtype::index element) const {
-    // needed variables
-    std::array<dtype::index, BasisFunction::nodes_per_element> indices;
+std::array<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>,
+    BasisFunction::nodes_per_element> fastEIT::Mesh<BasisFunction>::elementNodes(dtype::index element) const {
+    // result array
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> result;
 
-    // get nodes
+    // get node index and coordinate
+    dtype::index index = -1;
+    std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
     for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
         // get index
-        indices[node] = (*this->elements())(element, node);
-    }
+        index = (*this->elements())(element, node);
 
-    return indices;
-}
-
-template <
-    class BasisFunction
->
-std::array<std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>, BasisFunction::nodes_per_element>
-    fastEIT::Mesh<BasisFunction>::elementNodes(dtype::index element) const {
-    // nodes array
-    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element> nodes;
-
-    // get indices
-    auto indices = this->elementIndices(element);
-
-    // get nodes
-    for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
         // get coordinates
-        nodes[node] = std::make_tuple((*this->nodes())(indices[node], 0),
-            (*this->nodes())(indices[node], 1));
+        coordinates = std::make_tuple((*this->nodes())(index, 0),
+            (*this->nodes())(index, 1));
+
+        // add to array
+        result[node] = std::make_tuple(index, coordinates);
     }
 
-    return nodes;
+    return result;
 }
 
 template <
     class BasisFunction
 >
-std::array<fastEIT::dtype::index, BasisFunction::nodes_per_edge> fastEIT::Mesh<BasisFunction>::boundaryIndices(
-    dtype::index bound) const {
-    // needed variables
-    std::array<dtype::index, BasisFunction::nodes_per_edge> indices;
+std::array<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>,
+    BasisFunction::nodes_per_edge> fastEIT::Mesh<BasisFunction>::boundaryNodes(dtype::index element) const {
+    // result array
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_edge> result;
 
-    // get nodes
+    // get node index and coordinate
+    dtype::index index = -1;
+    std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
     for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
         // get index
-        indices[node] = (*this->boundary())(bound, node);
-    }
+        index = (*this->boundary())(element, node);
 
-    return indices;
-}
-
-template <
-    class BasisFunction
->
-std::array<std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>, BasisFunction::nodes_per_edge>
-    fastEIT::Mesh<BasisFunction>::boundaryNodes(dtype::index bound) const {
-    // nodes array
-    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge> nodes;
-
-    // get indices
-    auto indices = this->boundaryIndices(bound);
-
-    // get nodes
-    for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
         // get coordinates
-        nodes[node] = std::make_tuple((*this->nodes())(indices[node], 0),
-            (*this->nodes())(indices[node], 1));
+        coordinates = std::make_tuple((*this->nodes())(index, 0),
+            (*this->nodes())(index, 1));
+
+        // add to array
+        result[node] = std::make_tuple(index, coordinates);
     }
 
-    return nodes;
+    return result;
 }
 
 // function create quadratic mesh from linear

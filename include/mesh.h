@@ -19,13 +19,10 @@ namespace fastEIT {
             std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height);
 
         // helper methods
-        std::array<dtype::index, BasisFunction::nodes_per_element> elementIndices(dtype::index element) const;
-        std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element>
-            elementNodes(dtype::index element) const;
-
-        std::array<dtype::index, BasisFunction::nodes_per_edge> boundaryIndices(dtype::index bound) const;
-        std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge>
-            boundaryNodes(dtype::index bound) const;
+        std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
+            BasisFunction::nodes_per_element> elementNodes(dtype::index element) const;
+        std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
+            BasisFunction::nodes_per_edge> boundaryNodes(dtype::index element) const;
 
         // accessors
         const std::shared_ptr<Matrix<dtype::real>> nodes() const { return this->nodes_; }

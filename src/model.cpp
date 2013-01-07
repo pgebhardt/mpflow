@@ -60,15 +60,15 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
 
     // calc generate empty system matrix
-    std::array<dtype::index, BasisFunction::nodes_per_element> indices;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> nodes;
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
         // get nodes for element
-        indices = this->mesh()->elementIndices(element);
+        nodes = this->mesh()->elementNodes(element);
 
         // set system matrix elements
         for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
             for (dtype::index j = 0; j < BasisFunction::nodes_per_element; ++j) {
-                (*system_matrix)(indices[i], indices[j]) = 1.0f;
+                (*system_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
             }
         }
     }
@@ -122,39 +122,48 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     this->connectivity_matrix()->copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
-    std::array<dtype::index, BasisFunction::nodes_per_element> indices;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> nodes;
+    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element> nodes_coordinates;
     std::array<std::shared_ptr<BasisFunction>, BasisFunction::nodes_per_element> basis_functions;
     dtype::real temp;
 
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
-        // get element indices
-        indices = this->mesh()->elementIndices(element);
+        // get element nodes
+        nodes = this->mesh()->elementNodes(element);
+
+        // extract coordinates
+        for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
+            nodes_coordinates[node] = std::get<1>(nodes[node]);
+        }
 
         // calc corresponding basis functions
         for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
             basis_functions[node] = std::make_shared<BasisFunction>(
-                this->mesh()->elementNodes(element), node);
+                nodes_coordinates, node);
         }
 
         // set connectivity and elemental residual matrix elements
         for (dtype::index i = 0; i < BasisFunction::nodes_per_element; i++) {
             for (dtype::index j = 0; j < BasisFunction::nodes_per_element; j++) {
                 // get current element count
-                temp = (*element_count)(indices[i], indices[j]);
+                temp = (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
 
                 // set connectivity element
-                (*connectivity_matrix)(indices[i], indices[j] + connectivity_matrix->data_rows() * temp) = element;
+                (*connectivity_matrix)(std::get<0>(nodes[i]), std::get<0>(
+                    nodes[j]) + connectivity_matrix->data_rows() * temp) = element;
 
                 // set elemental system element
-                (*elemental_s_matrix)(indices[i], indices[j] + connectivity_matrix->data_rows() * temp) =
+                (*elemental_s_matrix)(std::get<0>(nodes[i]), std::get<0>(
+                    nodes[j]) + connectivity_matrix->data_rows() * temp) =
                     basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
 
                 // set elemental residual element
-                (*elemental_r_matrix)(indices[i], indices[j] + connectivity_matrix->data_rows() * temp) =
+                (*elemental_r_matrix)(std::get<0>(nodes[i]), std::get<0>(
+                    nodes[j]) + connectivity_matrix->data_rows() * temp) =
                     basis_functions[i]->integrateWithBasis(basis_functions[j]);
 
                 // increment element count
-                (*element_count)(indices[i], indices[j])++;
+                (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]))++;
             }
         }
     }
@@ -232,8 +241,7 @@ template <
 >
 void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
-    std::array<dtype::index, BasisFunction::nodes_per_edge> nodes_indices;
-    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_edge> nodes_coordinates;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_edge> nodes;
 
     // needed arrays
     std::array<dtype::real, BasisFunction::nodes_per_edge> node_parameter;
@@ -243,17 +251,8 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     for (dtype::index boundary_element = 0;
         boundary_element < this->mesh()->boundary()->rows();
         ++boundary_element) {
-        // get indices
-        nodes_indices = this->mesh()->boundaryIndices(boundary_element);
-
-        // get nodes coordinates
-        nodes_coordinates = this->mesh()->boundaryNodes(boundary_element);
-
-        // prepare vector to sort nodes by parameter
-        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
-        for (dtype::size node = 0; node < BasisFunction::nodes_per_edge; ++node) {
-            nodes.push_back(std::make_tuple(nodes_indices[node], nodes_coordinates[node]));
-        }
+        // get boundary nodes
+        nodes = this->mesh()->boundaryNodes(boundary_element);
 
         // sort nodes by parameter
         std::sort(nodes.begin(), nodes.end(),
