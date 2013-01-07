@@ -10,19 +10,11 @@ template <
     class BasisFunction
 >
 fastEIT::Solver<BasisFunction>::Solver(std::shared_ptr<Model<BasisFunction>> model,
-    const std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
-    const std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
         throw std::invalid_argument("Solver::Solver: model == nullptr");
-    }
-    if (measurement_pattern == nullptr) {
-        throw std::invalid_argument("Solver::Solver: measurement_pattern == nullptr");
-    }
-    if (drive_pattern == nullptr) {
-        throw std::invalid_argument("Solver::Solver: drive_pattern == nullptr");
     }
     if (handle == NULL) {
         throw std::invalid_argument("Solver::Solver: handle == NULL");
@@ -30,12 +22,13 @@ fastEIT::Solver<BasisFunction>::Solver(std::shared_ptr<Model<BasisFunction>> mod
 
     // create forward solver
     this->forward_solver_ = std::make_shared<ForwardSolver<BasisFunction, numeric::SparseConjugate>>(
-        this->model(), measurement_pattern, drive_pattern, handle, stream);
+        this->model(), handle, stream);
 
     // create inverse solver
     this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
         this->model()->mesh()->elements()->rows(),
-        measurement_pattern->data_columns() * drive_pattern->data_columns(),
+        this->model()->electrodes()->measurement_pattern()->data_columns() *
+        this->model()->electrodes()->drive_pattern()->data_columns(),
         regularization_factor, handle, stream);
 
     // create matrices
@@ -44,11 +37,11 @@ fastEIT::Solver<BasisFunction>::Solver(std::shared_ptr<Model<BasisFunction>> mod
     this->gamma_ = std::make_shared<Matrix<dtype::real>>(
         this->model()->mesh()->elements()->rows(), 1, stream);
     this->measured_voltage_ = std::make_shared<Matrix<dtype::real>>(
-        this->forward_solver()->measurement_count(),
-        this->forward_solver()->drive_count(), stream);
+        this->model()->electrodes()->measurement_count(),
+        this->model()->electrodes()->drive_count(), stream);
     this->calibration_voltage_ = std::make_shared<Matrix<dtype::real>>(
-        this->forward_solver()->measurement_count(),
-        this->forward_solver()->drive_count(), stream);
+        this->model()->electrodes()->measurement_count(),
+        this->model()->electrodes()->drive_count(), stream);
 }
 
 // pre solve for accurate initial jacobian

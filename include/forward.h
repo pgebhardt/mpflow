@@ -17,8 +17,6 @@ namespace fastEIT {
     public:
         // constructor
         ForwardSolver(std::shared_ptr<Model<BasisFunction>> model,
-            const std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
-            const std::shared_ptr<Matrix<dtype::real>> drive_pattern,
             cublasHandle_t handle, cudaStream_t stream);
 
         // forward solving
@@ -31,8 +29,6 @@ namespace fastEIT {
         const std::shared_ptr<NumericSolver> numeric_solver() const {
             return this->numeric_solver_;
         }
-        const dtype::size& drive_count() const { return this->drive_count_; }
-        const dtype::size& measurement_count() const  { return this->measurement_count_; }
         const std::shared_ptr<Matrix<dtype::real>> jacobian() const { return this->jacobian_; }
         const std::shared_ptr<Matrix<dtype::real>> voltage() const { return this->voltage_; }
         const std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) const {
@@ -51,8 +47,6 @@ namespace fastEIT {
         // mutators
         std::shared_ptr<Model<BasisFunction>> model() { return this->model_; }
         std::shared_ptr<NumericSolver> numeric_solver() { return this->numeric_solver_; }
-        dtype::size& drive_count() { return this->drive_count_; }
-        dtype::size& measurement_count() { return this->measurement_count_; }
         std::shared_ptr<Matrix<dtype::real>> jacobian() { return this->jacobian_; }
         std::shared_ptr<Matrix<dtype::real>> voltage() { return this->voltage_; }
         std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
@@ -73,8 +67,6 @@ namespace fastEIT {
         // member
         std::shared_ptr<Model<BasisFunction>> model_;
         std::shared_ptr<NumericSolver> numeric_solver_;
-        dtype::size drive_count_;
-        dtype::size measurement_count_;
         std::shared_ptr<Matrix<dtype::real>> jacobian_;
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;

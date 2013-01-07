@@ -16,8 +16,6 @@ namespace fastEIT {
     public:
         // constructor
         Solver(std::shared_ptr<Model<BasisFunction>> model,
-            const std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
-            const std::shared_ptr<Matrix<dtype::real>> drive_pattern,
             dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian

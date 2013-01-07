@@ -10,8 +10,9 @@
 template <
     class BasisFunction
 >
-fastEIT::Model<BasisFunction>::Model(std::shared_ptr<Mesh<BasisFunction>> mesh, std::shared_ptr<Electrodes> electrodes,
-    dtype::real sigmaRef, dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
+fastEIT::Model<BasisFunction>::Model(std::shared_ptr<Mesh<BasisFunction>> mesh,
+    std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes, dtype::real sigmaRef,
+    dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
     : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), num_harmonics_(numHarmonics) {
     // check input
     if (mesh == nullptr) {
@@ -282,12 +283,15 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
             integration_end = math::circleParameter(
                 std::get<1>(this->electrodes()->coordinates()[electrode]), parameter_offset);
 
-            // calc elements
-            for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
-                (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) -=
-                    BasisFunction::integrateBoundaryEdge(
-                        node_parameter, node, integration_start, integration_end) /
-                    this->electrodes()->width();
+            // integrat boundary if integration_start is left of integration_end
+            if (integration_start < integration_end) {
+                // calc elements
+                for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
+                    (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) -=
+                        BasisFunction::integrateBoundaryEdge(
+                            node_parameter, node, integration_start, integration_end) /
+                        this->electrodes()->width();
+                }
             }
         }
     }

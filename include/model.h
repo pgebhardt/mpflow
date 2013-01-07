@@ -15,7 +15,7 @@ namespace fastEIT {
     class Model {
     public:
         // constructor
-        Model(std::shared_ptr<Mesh<BasisFunction>> mesh, std::shared_ptr<Electrodes> electrodes,
+        Model(std::shared_ptr<Mesh<BasisFunction>> mesh, std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes,
             dtype::real sigmaRef, dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
 
         // calc excitaion components
@@ -27,7 +27,7 @@ namespace fastEIT {
 
         // accessors
         const std::shared_ptr<Mesh<BasisFunction>> mesh() const { return this->mesh_; }
-        const std::shared_ptr<Electrodes> electrodes() const { return this->electrodes_; }
+        const std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes() const { return this->electrodes_; }
         dtype::real sigma_ref() const { return this->sigma_ref_; }
         const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
         const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const { return this->excitation_matrix_; }
@@ -40,7 +40,7 @@ namespace fastEIT {
 
         // mutators
         std::shared_ptr<Mesh<BasisFunction>> mesh() { return this->mesh_; }
-        std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
+        std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes() { return this->electrodes_; }
         dtype::real sigma_ref() { return this->sigma_ref_; }
         std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
         std::shared_ptr<Matrix<dtype::real>> excitation_matrix() { return this->excitation_matrix_; }
@@ -59,7 +59,7 @@ namespace fastEIT {
 
         // member
         std::shared_ptr<Mesh<BasisFunction>> mesh_;
-        std::shared_ptr<Electrodes> electrodes_;
+        std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes_;
         dtype::real sigma_ref_;
         std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
         std::shared_ptr<SparseMatrix> s_matrix_;
