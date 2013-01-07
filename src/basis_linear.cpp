@@ -14,16 +14,16 @@ fastEIT::basis::Linear::Linear(
     // calc coefficients with gauss
     std::array<std::array<dtype::real, nodes_per_element>, nodes_per_element> A;
     std::array<dtype::real, nodes_per_element> b;
-    for (int i = 0; i<nodes_per_element; ++i) {
-        b[i]=0.0;
+    for (dtype::index node = 0; node < nodes_per_element; ++node) {
+        b[node] = 0.0;
     }
-    b[one] = 1.0f;
+    b[one] = 1.0;
 
     // fill coefficients
-    for (int i = 0; i< nodes_per_element; i++) {
-        A[i][0] = 1.0;
-        A[i][1] = std::get<0>(this->nodes()[i]);
-        A[i][2] = std::get<1>(this->nodes()[i]);
+    for (dtype::index node = 0; node < nodes_per_element; ++node) {
+        A[node][0] = 1.0;
+        A[node][1] = std::get<0>(this->nodes()[node]);
+        A[node][2] = std::get<1>(this->nodes()[node]);
     }
 
     // calc coefficients
