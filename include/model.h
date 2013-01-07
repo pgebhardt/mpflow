@@ -16,11 +16,11 @@ namespace fastEIT {
     public:
         // constructor
         Model(std::shared_ptr<Mesh<BasisFunction>> mesh, std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes,
-            dtype::real sigmaRef, dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream);
+            dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
 
-        // calc excitaion components
-        void calcExcitationComponent(const std::shared_ptr<Matrix<dtype::real>> pattern, dtype::size harmonic,
-            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> component);
+        // calc nodal current density
+        void calcNodalCurrentDensity(const std::shared_ptr<Matrix<dtype::real>> current_density, dtype::size component,
+            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> nodal_current_density);
 
         // update model
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
@@ -31,7 +31,7 @@ namespace fastEIT {
         dtype::real sigma_ref() const { return this->sigma_ref_; }
         const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
         const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const { return this->excitation_matrix_; }
-        dtype::size num_harmonics() const { return this->num_harmonics_; }
+        dtype::size components_count() const { return this->components_count_; }
         const std::shared_ptr<SparseMatrix> s_matrix() const { return this->s_matrix_; }
         const std::shared_ptr<SparseMatrix> r_matrix() const { return this->r_matrix_; }
         const std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() const { return this->connectivity_matrix_; }
@@ -44,7 +44,7 @@ namespace fastEIT {
         dtype::real sigma_ref() { return this->sigma_ref_; }
         std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
         std::shared_ptr<Matrix<dtype::real>> excitation_matrix() { return this->excitation_matrix_; }
-        dtype::size num_harmonics() { return this->num_harmonics_; }
+        dtype::size components_count() { return this->components_count_; }
         std::shared_ptr<SparseMatrix> s_matrix() { return this->s_matrix_; }
         std::shared_ptr<SparseMatrix> r_matrix() { return this->r_matrix_; }
         std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() { return this->connectivity_matrix_; }
@@ -68,7 +68,7 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::index>> connectivity_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix_;
-        dtype::size num_harmonics_;
+        dtype::size components_count_;
     };
 
     // special functions

@@ -39,10 +39,10 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
         math::square(BasisFunction::nodes_per_element), stream);
 
     // create matrices
-    for (dtype::index harmonic = 0; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
+    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
             this->model()->electrodes()->drive_count() + this->model()->electrodes()->measurement_count(), stream));
-        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
+        this->current_density_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
             this->model()->electrodes()->drive_count() + this->model()->electrodes()->measurement_count(), stream));
     }
 
@@ -68,8 +68,8 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
     pattern->copyToDevice(stream);
 
     // calc excitation components
-    for (dtype::index harmonic = 0; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
-        this->model()->calcExcitationComponent(pattern, harmonic, handle, stream, this->excitation(harmonic));
+    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
+        this->model()->calcNodalCurrentDensity(pattern, component, handle, stream, this->current_density(component));
     }
 
     // calc voltage calculation matrix
@@ -173,13 +173,13 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
     this->model()->update(gamma, handle, stream);
 
     // solve for ground mode
-    this->numeric_solver()->solve(this->model()->system_matrix(0), this->excitation(0),
+    this->numeric_solver()->solve(this->model()->system_matrix(0), this->current_density(0),
         steps, true, stream, this->potential(0));
 
     // solve for higher harmonics
-    for (dtype::index harmonic = 1; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
-        this->numeric_solver()->solve(this->model()->system_matrix(harmonic), this->excitation(harmonic),
-            steps, false, stream, this->potential(harmonic));
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+        this->numeric_solver()->solve(this->model()->system_matrix(component), this->current_density(component),
+            steps, false, stream, this->potential(component));
     }
 
     // calc jacobian
@@ -187,8 +187,8 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
         this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
         this->model()->electrodes()->drive_count(), this->model()->electrodes()->measurement_count(),
         this->model()->sigma_ref(), false, stream, this->jacobian());
-    for (dtype::index harmonic = 1; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
-        forward::calcJacobian<BasisFunction>(gamma, this->potential(harmonic),
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+        forward::calcJacobian<BasisFunction>(gamma, this->potential(component),
             this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
             this->model()->electrodes()->drive_count(), this->model()->electrodes()->measurement_count(),
             this->model()->sigma_ref(), true, stream, this->jacobian());
@@ -207,11 +207,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
 
     // add harmonic voltages
     beta = 1.0f;
-    for (dtype::index harmonic = 1; harmonic < this->model()->num_harmonics() + 1; ++harmonic) {
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation()->data_rows(),
             this->model()->electrodes()->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
             this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows(),
-            this->potential(harmonic)->device_data(), this->potential(harmonic)->data_rows(), &beta,
+            this->potential(component)->device_data(), this->potential(component)->data_rows(), &beta,
             this->voltage()->device_data(), this->voltage()->data_rows());
     }
 

@@ -34,8 +34,8 @@ namespace fastEIT {
         const std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) const {
             return this->potential_[index];
         }
-        const std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) const {
-            return this->excitation_[index];
+        const std::shared_ptr<Matrix<dtype::real>> current_density(dtype::index index) const {
+            return this->current_density_[index];
         }
         const std::shared_ptr<Matrix<dtype::real>> voltage_calculation() const {
             return this->voltage_calculation_;
@@ -52,8 +52,8 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
             return this->potential_[index];
         }
-        std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) {
-            return this->excitation_[index];
+        std::shared_ptr<Matrix<dtype::real>> current_density(dtype::index index) {
+            return this->current_density_[index];
         }
         std::shared_ptr<Matrix<dtype::real>> voltage_calculation() { return this->voltage_calculation_; }
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() {
@@ -70,7 +70,7 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> jacobian_;
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
-        std::vector<std::shared_ptr<Matrix<dtype::real>>> excitation_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> current_density_;
         std::shared_ptr<Matrix<dtype::real>> voltage_calculation_;
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
     };

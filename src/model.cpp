@@ -12,14 +12,17 @@ template <
 >
 fastEIT::Model<BasisFunction>::Model(std::shared_ptr<Mesh<BasisFunction>> mesh,
     std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes, dtype::real sigmaRef,
-    dtype::size numHarmonics, cublasHandle_t handle, cudaStream_t stream)
-    : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), num_harmonics_(numHarmonics) {
+    dtype::size components_count, cublasHandle_t handle, cudaStream_t stream)
+    : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), components_count_(components_count) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("Model::Model: mesh == nullptr");
     }
     if (electrodes == nullptr) {
         throw std::invalid_argument("Model::Model: electrodes == nullptr");
+    }
+    if (components_count == 0) {
+        throw std::invalid_argument("Model::Model: components_count == 0");
     }
     if (handle == NULL) {
         throw std::invalid_argument("Model::Model: handle == NULL");
@@ -81,7 +84,7 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
     this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream);
     this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream);
 
-    for (dtype::index harmonic = 0; harmonic < this->num_harmonics() + 1; ++harmonic) {
+    for (dtype::index component = 0; component < this->components_count(); ++component) {
         this->system_matrices_.push_back(std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream));
     }
 }
@@ -214,13 +217,13 @@ void fastEIT::Model<BasisFunction>::update(const std::shared_ptr<Matrix<dtype::r
 
     // create system matrices for all harmonics
     dtype::real alpha = 0.0f;
-    for (dtype::index harmonic = 0; harmonic < this->num_harmonics() + 1; ++harmonic) {
+    for (dtype::index component = 0; component < this->components_count(); ++component) {
         // calc alpha
-        alpha = fastEIT::math::square(2.0f * harmonic * M_PI / this->mesh()->height());
+        alpha = fastEIT::math::square(2.0f * component * M_PI / this->mesh()->height());
 
         // init system matrix with 2d system matrix
         if (cublasScopy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size,
-            this->s_matrix()->values(), 1, this->system_matrix(harmonic)->values(), 1)
+            this->s_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -228,7 +231,7 @@ void fastEIT::Model<BasisFunction>::update(const std::shared_ptr<Matrix<dtype::r
 
         // add alpha * residualMatrix
         if (cublasSaxpy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size, &alpha,
-            this->r_matrix()->values(), 1, this->system_matrix(harmonic)->values(), 1)
+            this->r_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "Model::update: calc system matrices for all harmonics");
@@ -300,37 +303,40 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
     this->excitation_matrix()->copyToDevice(stream);
 }
 
-// calc excitaion components
+// calc nodal current density
 template <
     class BasisFunction
 >
-void fastEIT::Model<BasisFunction>::calcExcitationComponent(const std::shared_ptr<Matrix<dtype::real>> pattern,
-    dtype::size harmonic, cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> component) {
+void fastEIT::Model<BasisFunction>::calcNodalCurrentDensity(const std::shared_ptr<Matrix<dtype::real>> current_density,
+    dtype::size component, cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> nodal_current_density) {
     // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::calcExcitationComponents: handle == NULL");
+    if (current_density == nullptr) {
+        throw std::invalid_argument("Model::calcNodalCurrentDensity: current_density == nullptr");
     }
-    if (component == nullptr) {
-        throw std::invalid_argument("Model::calcExcitationComponents: components == nullptr");
+    if (nodal_current_density == nullptr) {
+        throw std::invalid_argument("Model::calcNodalCurrentDensity: nodal_current_density == nullptr");
+    }
+    if (handle == NULL) {
+        throw std::invalid_argument("Model::calcNodalCurrentDensity: handle == NULL");
     }
 
     // calc excitation matrices
     // Run multiply once more to avoid cublas error
     try {
-        component->multiply(this->excitation_matrix(), pattern, handle, stream);
+        nodal_current_density->multiply(this->excitation_matrix(), current_density, handle, stream);
     }
     catch(const std::exception& e) {
-        component->multiply(this->excitation_matrix(), pattern, handle, stream);
+        nodal_current_density->multiply(this->excitation_matrix(), current_density, handle, stream);
     }
 
     // calc fourier coefficients for current pattern
-    if (harmonic == 0) {
+    if (component == 0) {
         // calc ground mode
-        component->scalarMultiply(1.0f / this->mesh()->height(), stream);
+        nodal_current_density->scalarMultiply(1.0f / this->mesh()->height(), stream);
     } else {
-        component->scalarMultiply(
-            2.0f * sin(harmonic * M_PI * this->electrodes()->height() / this->mesh()->height()) /
-            (harmonic * M_PI * this->electrodes()->height()), stream);
+        nodal_current_density->scalarMultiply(
+            2.0f * sin(component * M_PI * this->electrodes()->height() / this->mesh()->height()) /
+            (component * M_PI * this->electrodes()->height()), stream);
     }
 }
 
