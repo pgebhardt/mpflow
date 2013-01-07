@@ -14,6 +14,7 @@ namespace fastEIT {
         typedef unsigned int size;
         typedef float real;
         typedef int index;
+        typedef std::tuple<real, real> coordinate;
     }
 }
 
