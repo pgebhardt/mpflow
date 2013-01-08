@@ -41,6 +41,15 @@ namespace fastEIT {
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
                 : Source(drive_pattern, measurement_pattern) { }
         };
+
+        // voltage source
+        class Voltage : public Source {
+        public:
+            // constructor
+            Voltage(std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
+                : Source(drive_pattern, measurement_pattern) { }
+        };
     }
 }
 
