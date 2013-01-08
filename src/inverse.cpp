@@ -101,7 +101,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
 
     // copy measuredVoltage to dVoltage
     if (cublasScopy(handle, this->dvoltage()->data_rows(),
-        calculated_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
+        measured_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
             "InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
@@ -110,7 +110,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
     // substract calculatedVoltage
     dtype::real alpha = -1.0f;
     if (cublasSaxpy(handle, this->dvoltage()->data_rows(), &alpha,
-        measured_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
+        calculated_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
             "Model::calcExcitation: substract calculatedVoltage");

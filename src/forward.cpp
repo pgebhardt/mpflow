@@ -62,10 +62,13 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
         for (dtype::index column = 0; column < this->model()->electrodes()->measurement_count(); ++column) {
             (*pattern)(row, column + this->model()->electrodes()->drive_count()) =
-                (*this->model()->electrodes()->measurement_pattern())(row, column);
+                -(*this->model()->electrodes()->measurement_pattern())(row, column);
         }
     }
     pattern->copyToDevice(stream);
+
+    // turn sign of pattern for correct current direction
+    pattern->scalarMultiply(-1.0, stream);
 
     // calc excitation components
     for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
@@ -73,13 +76,13 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
     }
 
     // calc voltage calculation matrix
-    dtype::real alpha = -1.0f, beta = 0.0f;
+    dtype::real alpha = 1.0, beta = 0.0;
 
     // one prerun for cublas
     cublasSetStream(handle, stream);
     cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
         this->model()->electrodes()->measurement_pattern()->data_columns(),
-        this->model()->excitation_matrix()->data_rows(), 
+        this->model()->excitation_matrix()->data_rows(),
         this->model()->electrodes()->measurement_pattern()->data_rows(), &alpha,
         this->model()->electrodes()->measurement_pattern()->device_data(),
         this->model()->electrodes()->measurement_pattern()->data_rows(),
@@ -90,7 +93,7 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
 
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
         this->model()->electrodes()->measurement_pattern()->data_columns(),
-        this->model()->excitation_matrix()->data_rows(), 
+        this->model()->excitation_matrix()->data_rows(),
         this->model()->electrodes()->measurement_pattern()->data_rows(), &alpha,
         this->model()->electrodes()->measurement_pattern()->device_data(),
         this->model()->electrodes()->measurement_pattern()->data_rows(),
@@ -193,6 +196,9 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
             this->model()->electrodes()->drive_count(), this->model()->electrodes()->measurement_count(),
             this->model()->sigma_ref(), true, stream, this->jacobian());
     }
+
+    // turn sign of jacobian, because of voltage jacobian
+    this->jacobian()->scalarMultiply(-1.0, stream);
 
     // set stream
     cublasSetStream(handle, stream);

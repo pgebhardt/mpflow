@@ -290,7 +290,7 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
             if (integration_start < integration_end) {
                 // calc elements
                 for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
-                    (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) -=
+                    (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) +=
                         BasisFunction::integrateBoundaryEdge(
                             node_parameter, node, integration_start, integration_end) /
                         this->electrodes()->width();

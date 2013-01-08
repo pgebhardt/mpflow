@@ -68,10 +68,10 @@ static __global__ void calcJacobianKernel(const fastEIT::dtype::real* drivePhi,
 
     // set matrix element
     if (additiv == true) {
-        jacobian[row + column * rows] += -element;
+        jacobian[row + column * rows] += element;
     }
     else {
-        jacobian[row + column * rows] = -element;
+        jacobian[row + column * rows] = element;
     }
 }
 
