@@ -293,7 +293,7 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
                     (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) +=
                         BasisFunction::integrateBoundaryEdge(
                             node_parameter, node, integration_start, integration_end) /
-                        this->electrodes()->width();
+                        std::get<0>(this->electrodes()->shape());
                 }
             }
         }
@@ -335,8 +335,8 @@ void fastEIT::Model<BasisFunction>::calcNodalCurrentDensity(const std::shared_pt
         nodal_current_density->scalarMultiply(1.0f / this->mesh()->height(), stream);
     } else {
         nodal_current_density->scalarMultiply(
-            2.0f * sin(component * M_PI * this->electrodes()->height() / this->mesh()->height()) /
-            (component * M_PI * this->electrodes()->height()), stream);
+            2.0f * sin(component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
+            (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
     }
 }
 

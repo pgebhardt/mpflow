@@ -29,16 +29,16 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
 
     // create numeric_solver_type solver
     this->numeric_solver_ = std::make_shared<numeric_solver_type>(this->model()->mesh()->nodes()->rows(),
-        this->model()->electrodes()->drive_count() + this->model()->electrodes()->measurement_count(), stream);
+        this->source()->drive_count() + this->source()->measurement_count(), stream);
 
     // create matrices
     this->jacobian_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->electrodes()->measurement_pattern()->data_columns() *
-        this->model()->electrodes()->drive_pattern()->data_columns(),
+        this->source()->measurement_pattern()->data_columns() *
+        this->source()->drive_pattern()->data_columns(),
         this->model()->mesh()->elements()->rows(), stream);
-    this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->model()->electrodes()->measurement_count(),
-        this->model()->electrodes()->drive_count(), stream);
-    this->voltage_calculation_ = std::make_shared<Matrix<dtype::real>>(this->model()->electrodes()->measurement_count(),
+    this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
+        this->source()->drive_count(), stream);
+    this->voltage_calculation_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
         this->model()->mesh()->nodes()->rows(), stream);
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
         math::square(model_type::basis_function_type::nodes_per_element), stream);
@@ -46,28 +46,28 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
     // create matrices
     for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
-            this->model()->electrodes()->drive_count() + this->model()->electrodes()->measurement_count(), stream));
+            this->source()->drive_count() + this->source()->measurement_count(), stream));
         this->current_density_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
-            this->model()->electrodes()->drive_count() + this->model()->electrodes()->measurement_count(), stream));
+            this->source()->drive_count() + this->source()->measurement_count(), stream));
     }
 
     // create pattern matrix
     auto pattern = std::make_shared<Matrix<dtype::real>>(this->model()->electrodes()->count(),
-        this->model()->electrodes()->drive_count() + this->model()->electrodes()->measurement_count(), stream);
+        this->source()->drive_count() + this->source()->measurement_count(), stream);
 
     // fill pattern matrix with drive pattern
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->model()->electrodes()->drive_count(); ++column) {
-            (*pattern)(row, column) = (*this->model()->electrodes()->drive_pattern())(row, column);
+        for (dtype::index column = 0; column < this->source()->drive_count(); ++column) {
+            (*pattern)(row, column) = (*this->source()->drive_pattern())(row, column);
         }
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->model()->electrodes()->measurement_count(); ++column) {
-            (*pattern)(row, column + this->model()->electrodes()->drive_count()) =
-                -(*this->model()->electrodes()->measurement_pattern())(row, column);
+        for (dtype::index column = 0; column < this->source()->measurement_count(); ++column) {
+            (*pattern)(row, column + this->source()->drive_count()) =
+                -(*this->source()->measurement_pattern())(row, column);
         }
     }
     pattern->copyToDevice(stream);
@@ -86,22 +86,22 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
     // one prerun for cublas
     cublasSetStream(handle, stream);
     cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        this->model()->electrodes()->measurement_pattern()->data_columns(),
+        this->source()->measurement_pattern()->data_columns(),
         this->model()->excitation_matrix()->data_rows(),
-        this->model()->electrodes()->measurement_pattern()->data_rows(), &alpha,
-        this->model()->electrodes()->measurement_pattern()->device_data(),
-        this->model()->electrodes()->measurement_pattern()->data_rows(),
+        this->source()->measurement_pattern()->data_rows(), &alpha,
+        this->source()->measurement_pattern()->device_data(),
+        this->source()->measurement_pattern()->data_rows(),
         this->model()->excitation_matrix()->device_data(),
         this->model()->excitation_matrix()->data_rows(),
         &beta, this->voltage_calculation()->device_data(),
         this->voltage_calculation()->data_rows());
 
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        this->model()->electrodes()->measurement_pattern()->data_columns(),
+        this->source()->measurement_pattern()->data_columns(),
         this->model()->excitation_matrix()->data_rows(),
-        this->model()->electrodes()->measurement_pattern()->data_rows(), &alpha,
-        this->model()->electrodes()->measurement_pattern()->device_data(),
-        this->model()->electrodes()->measurement_pattern()->data_rows(),
+        this->source()->measurement_pattern()->data_rows(), &alpha,
+        this->source()->measurement_pattern()->device_data(),
+        this->source()->measurement_pattern()->data_rows(),
         this->model()->excitation_matrix()->device_data(),
         this->model()->excitation_matrix()->data_rows(),
         &beta, this->voltage_calculation()->device_data(),
@@ -197,12 +197,12 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
     // calc jacobian
     forward::calcJacobian<model_type>(gamma, this->potential(0),
         this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
-        this->model()->electrodes()->drive_count(), this->model()->electrodes()->measurement_count(),
+        this->source()->drive_count(), this->source()->measurement_count(),
         this->model()->sigma_ref(), false, stream, this->jacobian());
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         forward::calcJacobian<model_type>(gamma, this->potential(component),
             this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
-            this->model()->electrodes()->drive_count(), this->model()->electrodes()->measurement_count(),
+            this->source()->drive_count(), this->source()->measurement_count(),
             this->model()->sigma_ref(), true, stream, this->jacobian());
     }
 
@@ -215,7 +215,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
     // add voltage
     dtype::real alpha = 1.0f, beta = 0.0f;
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation()->data_rows(),
-        this->model()->electrodes()->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
+        this->source()->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
         this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows(),
         this->potential(0)->device_data(), this->potential(0)->data_rows(), &beta,
         this->voltage()->device_data(), this->voltage()->data_rows());
@@ -224,7 +224,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
     beta = 1.0f;
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation()->data_rows(),
-            this->model()->electrodes()->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
+            this->source()->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
             this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows(),
             this->potential(component)->device_data(), this->potential(component)->data_rows(), &beta,
             this->voltage()->device_data(), this->voltage()->data_rows());

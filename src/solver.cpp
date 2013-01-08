@@ -13,24 +13,27 @@ template <
 fastEIT::Solver<model_type, source_type>::Solver(std::shared_ptr<model_type> model,
     std::shared_ptr<source_type> source, dtype::real regularization_factor,
     cublasHandle_t handle, cudaStream_t stream)
-    : model_(model) {
+    : model_(model), source_(source) {
     // check input
     if (model == nullptr) {
         throw std::invalid_argument("Solver::Solver: model == nullptr");
+    }
+    if (source == nullptr) {
+        throw std::invalid_argument("Solver::Solver: source == nullptr");
     }
     if (handle == NULL) {
         throw std::invalid_argument("Solver::Solver: handle == NULL");
     }
 
     // create forward solver
-    this->forward_solver_ = std::make_shared<ForwardSolver<numeric::SparseConjugate, model_type, source_type>>(
-        this->model(), source, handle, stream);
+    this->forward_solver_ = std::make_shared<ForwardSolver<numeric::SparseConjugate,
+        model_type, source_type>>(this->model(), source, handle, stream);
 
     // create inverse solver
     this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
         this->model()->mesh()->elements()->rows(),
-        this->model()->electrodes()->measurement_pattern()->data_columns() *
-        this->model()->electrodes()->drive_pattern()->data_columns(),
+        this->source()->measurement_pattern()->data_columns() *
+        this->source()->drive_pattern()->data_columns(),
         regularization_factor, handle, stream);
 
     // create matrices
@@ -39,11 +42,11 @@ fastEIT::Solver<model_type, source_type>::Solver(std::shared_ptr<model_type> mod
     this->gamma_ = std::make_shared<Matrix<dtype::real>>(
         this->model()->mesh()->elements()->rows(), 1, stream);
     this->measured_voltage_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->electrodes()->measurement_count(),
-        this->model()->electrodes()->drive_count(), stream);
+        this->source()->measurement_count(),
+        this->source()->drive_count(), stream);
     this->calibration_voltage_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->electrodes()->measurement_count(),
-        this->model()->electrodes()->drive_count(), stream);
+        this->source()->measurement_count(),
+        this->source()->drive_count(), stream);
 }
 
 // pre solve for accurate initial jacobian

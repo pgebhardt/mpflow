@@ -37,6 +37,7 @@ namespace fastEIT {
 
         // accessors
         const std::shared_ptr<model_type> model() const { return this->model_; }
+        const std::shared_ptr<source_type> source() const { return this->source_; }
         const std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type, source_type>> forward_solver() const {
             return this->forward_solver_;
         }
@@ -50,6 +51,7 @@ namespace fastEIT {
 
         // mutators
         std::shared_ptr<model_type> model() { return this->model_; }
+        std::shared_ptr<source_type> source() { return this->source_; }
         std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type, source_type>> forward_solver() {
             return this->forward_solver_;
         }
@@ -64,6 +66,7 @@ namespace fastEIT {
     private:
         // member
         std::shared_ptr<model_type> model_;
+        std::shared_ptr<source_type> source_;
         std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type, source_type>> forward_solver_;
         std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
