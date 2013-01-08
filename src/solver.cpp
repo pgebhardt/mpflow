@@ -160,3 +160,4 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_typ
 
 // specialization
 template class fastEIT::Solver<fastEIT::Model<fastEIT::basis::Linear>, fastEIT::source::Current>;
+template class fastEIT::Solver<fastEIT::Model<fastEIT::basis::Linear>, fastEIT::source::Voltage>;

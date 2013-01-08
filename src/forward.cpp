@@ -242,6 +242,29 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     return forward_solver_->voltage();
 }
 
+// forward solving for current source
+template <
+    class forward_solver_type
+>
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourcePolicy<
+    fastEIT::source::Voltage, forward_solver_type>::solve(
+    const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // check input
+    if (gamma == nullptr) {
+        throw std::invalid_argument("ForwardSolver::solve: gamma == nullptr");
+    }
+    if (handle == NULL) {
+        throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
+    }
+
+    // not implemented
+    // TODO
+    throw std::logic_error("forward::SourcePolicy<Voltage>::solve: not implemented");
+
+    return forward_solver_->voltage();
+}
+
 // calc jacobian
 template <
     class model_type
@@ -291,6 +314,13 @@ template void fastEIT::forward::calcJacobian<fastEIT::Model<fastEIT::basis::Line
 
 template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
     fastEIT::Model<fastEIT::basis::Linear>, fastEIT::source::Current>;
+template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
+    fastEIT::Model<fastEIT::basis::Linear>, fastEIT::source::Voltage>;
+
+// source specialisation
 template class fastEIT::forward::SourcePolicy<fastEIT::source::Current,
     fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
     fastEIT::Model<fastEIT::basis::Linear>, fastEIT::source::Current>>;
+template class fastEIT::forward::SourcePolicy<fastEIT::source::Voltage,
+    fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
+    fastEIT::Model<fastEIT::basis::Linear>, fastEIT::source::Voltage>>;

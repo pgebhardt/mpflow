@@ -109,6 +109,25 @@ namespace fastEIT {
             forward_solver_type* forward_solver_;
         };
 
+        // specialisation for voltage source
+        template <
+            class forward_solver_type
+        >
+        class SourcePolicy<fastEIT::source::Voltage, forward_solver_type> {
+        public:
+            // constructor
+            SourcePolicy(forward_solver_type* forward_solver)
+                : forward_solver_(forward_solver) { }
+
+            // forward solving
+            std::shared_ptr<Matrix<dtype::real>> solve(
+                const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps,
+                cublasHandle_t handle, cudaStream_t stream);
+
+        private:
+            forward_solver_type* forward_solver_;
+        };
+
         // calc jacobian
         template <
             class model_type
