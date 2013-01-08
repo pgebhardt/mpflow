@@ -10,7 +10,7 @@
 namespace fastEIT {
     // forward declaration
     namespace forward {
-        template <class, class> class SolverSpecialization;
+        template <class, class> class SourcePolicy;
     }
 
     // forward solver class definition
@@ -20,16 +20,11 @@ namespace fastEIT {
         class source_type
     >
     class ForwardSolver
-        : public forward::SolverSpecialization<source_type,
+        : public forward::SourcePolicy<source_type,
             ForwardSolver<numeric_solver_type, model_type, source_type>> {
     public:
         // constructor
         ForwardSolver(std::shared_ptr<model_type> model, std::shared_ptr<source_type> source,
-            cublasHandle_t handle, cudaStream_t stream);
-
-        // forward solving
-        std::shared_ptr<Matrix<dtype::real>> solve(
-            const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps,
             cublasHandle_t handle, cudaStream_t stream);
 
         // accessors
@@ -92,21 +87,23 @@ namespace fastEIT {
             class source_type,
             class forward_solver_type
         >
-        class SolverSpecialization {
+        class SourcePolicy {
         };
 
         // specialisation for current source
         template <
             class forward_solver_type
         >
-        class SolverSpecialization<fastEIT::source::Current, forward_solver_type> {
+        class SourcePolicy<fastEIT::source::Current, forward_solver_type> {
         public:
             // constructor
-            SolverSpecialization(forward_solver_type* forward_solver)
+            SourcePolicy(forward_solver_type* forward_solver)
                 : forward_solver_(forward_solver) { }
 
-            // test function
-            void test() { std::cout << "Test" << std::endl; }
+            // forward solving
+            std::shared_ptr<Matrix<dtype::real>> solve(
+                const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps,
+                cublasHandle_t handle, cudaStream_t stream);
 
         private:
             forward_solver_type* forward_solver_;
