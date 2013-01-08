@@ -15,7 +15,9 @@ template <
 fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSolver(
     std::shared_ptr<model_type> model, std::shared_ptr<source_type> source,
     cublasHandle_t handle, cudaStream_t stream)
-    : model_(model), source_(source) {
+    : forward::SolverSpecialization<source_type,
+        ForwardSolver<numeric_solver_type, model_type, source_type>>(this),
+        model_(model), source_(source) {
     // check input
     if (model == nullptr) {
         throw std::invalid_argument("ForwardSolver::ForwardSolver: model == nullptr");

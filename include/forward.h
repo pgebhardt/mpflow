@@ -8,13 +8,20 @@
 
 // namespace fastEIT
 namespace fastEIT {
+    // forward declaration
+    namespace forward {
+        template <class, class> class SolverSpecialization;
+    }
+
     // forward solver class definition
     template <
         class numeric_solver_type,
         class model_type,
         class source_type
     >
-    class ForwardSolver {
+    class ForwardSolver
+        : public forward::SolverSpecialization<source_type,
+            ForwardSolver<numeric_solver_type, model_type, source_type>> {
     public:
         // constructor
         ForwardSolver(std::shared_ptr<model_type> model, std::shared_ptr<source_type> source,
@@ -79,8 +86,32 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
     };
 
-    // helper functions
     namespace forward {
+        // forward solver specialisation
+        template <
+            class source_type,
+            class forward_solver_type
+        >
+        class SolverSpecialization {
+        };
+
+        // specialisation for current source
+        template <
+            class forward_solver_type
+        >
+        class SolverSpecialization<fastEIT::source::Current, forward_solver_type> {
+        public:
+            // constructor
+            SolverSpecialization(forward_solver_type* forward_solver)
+                : forward_solver_(forward_solver) { }
+
+            // test function
+            void test() { std::cout << "Test" << std::endl; }
+
+        private:
+            forward_solver_type* forward_solver_;
+        };
+
         // calc jacobian
         template <
             class model_type
