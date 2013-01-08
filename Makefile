@@ -28,7 +28,7 @@ LDFLAGS += -lc++
 endif
 
 # Object files
-_OBJ = matrix.o sparse_matrix.o mesh.o electrodes.o basis_linear.o basis_quadratic.o model.o conjugate.o sparse_conjugate.o forward.o inverse.o solver.o
+_OBJ = matrix.o sparse_matrix.o mesh.o electrodes.o basis_linear.o basis_quadratic.o source.o model.o conjugate.o sparse_conjugate.o forward.o inverse.o solver.o
 OBJ = $(patsubst %, $(BUILD)/%, $(_OBJ))
 
 # Cuda object files
@@ -36,7 +36,7 @@ _CUOBJ = matrix_kernel.cu_o sparse_matrix_kernel.cu_o model_kernel.cu_o conjugat
 CUOBJ = $(patsubst %, $(BUILD)/%, $(_CUOBJ))
 
 # Dependencies
-_DEPS = fasteit.h dtype.h constants.h cuda_error.h math.h matrix.h matrix_kernel.h sparse_matrix.h sparse_matrix_kernel.h mesh.h basis.h electrodes.h model.h model_kernel.h conjugate.h conjugate_kernel.h sparse_conjugate.h forward.h forward_kernel.h inverse.h solver.h
+_DEPS = fasteit.h dtype.h constants.h cuda_error.h math.h matrix.h matrix_kernel.h sparse_matrix.h sparse_matrix_kernel.h mesh.h basis.h electrodes.h source.h model.h model_kernel.h conjugate.h conjugate_kernel.h sparse_conjugate.h forward.h forward_kernel.h inverse.h solver.h
 DEPS = $(patsubst %, $(INCLUDES)/%, $(_DEPS))
 
 # Library

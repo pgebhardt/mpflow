@@ -34,6 +34,7 @@
 #include "basis.h"
 #include "mesh.h"
 #include "electrodes.h"
+#include "source.h"
 #include "model.h"
 #include "conjugate.h"
 #include "sparse_conjugate.h"
