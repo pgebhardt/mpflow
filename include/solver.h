@@ -10,13 +10,13 @@
 namespace fastEIT {
     // solver class definition
     template <
-        class ModelType,
-        class SourceType
+        class model_type,
+        class source_type
     >
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<ModelType> model, std::shared_ptr<SourceType> source,
+        Solver(std::shared_ptr<model_type> model, std::shared_ptr<source_type> source,
             dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian
@@ -36,8 +36,8 @@ namespace fastEIT {
             cudaStream_t stream);
 
         // accessors
-        const std::shared_ptr<ModelType> model() const { return this->model_; }
-        const std::shared_ptr<ForwardSolver<numeric::SparseConjugate, ModelType, SourceType>> forward_solver() const {
+        const std::shared_ptr<model_type> model() const { return this->model_; }
+        const std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type, source_type>> forward_solver() const {
             return this->forward_solver_;
         }
         const std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver() const {
@@ -49,8 +49,8 @@ namespace fastEIT {
         const std::shared_ptr<Matrix<dtype::real>> calibration_voltage() const { return this->calibration_voltage_; }
 
         // mutators
-        std::shared_ptr<ModelType> model() { return this->model_; }
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate, ModelType, SourceType>> forward_solver() {
+        std::shared_ptr<model_type> model() { return this->model_; }
+        std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type, source_type>> forward_solver() {
             return this->forward_solver_;
         }
         std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver() {
@@ -63,8 +63,8 @@ namespace fastEIT {
 
     private:
         // member
-        std::shared_ptr<ModelType> model_;
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate, ModelType, SourceType>> forward_solver_;
+        std::shared_ptr<model_type> model_;
+        std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type, source_type>> forward_solver_;
         std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
         std::shared_ptr<Matrix<dtype::real>> gamma_;
