@@ -38,7 +38,7 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
         this->model()->mesh()->elements()->rows(), stream);
     this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
         this->source()->drive_count(), stream);
-    this->voltage_calculation_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
+    this->electrode_attachment_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
         this->model()->mesh()->nodes()->rows(), stream);
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
         math::square(model_type::basis_function_type::nodes_per_element), stream);
@@ -93,8 +93,8 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
         this->source()->measurement_pattern()->data_rows(),
         this->model()->excitation_matrix()->device_data(),
         this->model()->excitation_matrix()->data_rows(),
-        &beta, this->voltage_calculation()->device_data(),
-        this->voltage_calculation()->data_rows());
+        &beta, this->electrode_attachment()->device_data(),
+        this->electrode_attachment()->data_rows());
 
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
         this->source()->measurement_pattern()->data_columns(),
@@ -104,8 +104,8 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
         this->source()->measurement_pattern()->data_rows(),
         this->model()->excitation_matrix()->device_data(),
         this->model()->excitation_matrix()->data_rows(),
-        &beta, this->voltage_calculation()->device_data(),
-        this->voltage_calculation()->data_rows())
+        &beta, this->electrode_attachment()->device_data(),
+        this->electrode_attachment()->data_rows())
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
     }
@@ -214,18 +214,18 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
 
     // add voltage
     dtype::real alpha = 1.0f, beta = 0.0f;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation()->data_rows(),
-        this->source()->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
-        this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows(),
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrode_attachment()->data_rows(),
+        this->source()->drive_count(), this->electrode_attachment()->data_columns(), &alpha,
+        this->electrode_attachment()->device_data(), this->electrode_attachment()->data_rows(),
         this->potential(0)->device_data(), this->potential(0)->data_rows(), &beta,
         this->voltage()->device_data(), this->voltage()->data_rows());
 
     // add harmonic voltages
     beta = 1.0f;
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
-        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->voltage_calculation()->data_rows(),
-            this->source()->drive_count(), this->voltage_calculation()->data_columns(), &alpha,
-            this->voltage_calculation()->device_data(), this->voltage_calculation()->data_rows(),
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrode_attachment()->data_rows(),
+            this->source()->drive_count(), this->electrode_attachment()->data_columns(), &alpha,
+            this->electrode_attachment()->device_data(), this->electrode_attachment()->data_rows(),
             this->potential(component)->device_data(), this->potential(component)->data_rows(), &beta,
             this->voltage()->device_data(), this->voltage()->data_rows());
     }
