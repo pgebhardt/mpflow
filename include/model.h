@@ -25,6 +25,9 @@ namespace fastEIT {
         // update model
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
 
+        // basis function type
+        typedef BasisFunction basis_function_type;
+
         // accessors
         const std::shared_ptr<Mesh<BasisFunction>> mesh() const { return this->mesh_; }
         const std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes() const { return this->electrodes_; }

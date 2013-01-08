@@ -33,7 +33,14 @@ namespace fastEIT {
             std::shared_ptr<Matrix<dtype::real>> measurement_pattern_;
         };
 
-
+        // current source
+        class Current : public Source {
+        public:
+            // constructor
+            Current(std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
+                : Source(drive_pattern, measurement_pattern) { }
+        };
     }
 }
 

@@ -8,22 +8,27 @@
 
 // create forward_solver
 template <
-    class BasisFunction,
-    class NumericSolver
+    class numeric_solver_type,
+    class model_type,
+    class source_type
 >
-fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
-    std::shared_ptr<Model<BasisFunction>> model, cublasHandle_t handle, cudaStream_t stream)
-    : model_(model) {
+fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSolver(
+    std::shared_ptr<model_type> model, std::shared_ptr<source_type> source,
+    cublasHandle_t handle, cudaStream_t stream)
+    : model_(model), source_(source) {
     // check input
     if (model == nullptr) {
         throw std::invalid_argument("ForwardSolver::ForwardSolver: model == nullptr");
+    }
+    if (source == nullptr) {
+        throw std::invalid_argument("ForwardSolver::ForwardSolver: source == nullptr");
     }
     if (handle == NULL) {
         throw std::invalid_argument("ForwardSolver::ForwardSolver: handle == NULL");
     }
 
-    // create NumericSolver solver
-    this->numeric_solver_ = std::make_shared<NumericSolver>(this->model()->mesh()->nodes()->rows(),
+    // create numeric_solver_type solver
+    this->numeric_solver_ = std::make_shared<numeric_solver_type>(this->model()->mesh()->nodes()->rows(),
         this->model()->electrodes()->drive_count() + this->model()->electrodes()->measurement_count(), stream);
 
     // create matrices
@@ -36,7 +41,7 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
     this->voltage_calculation_ = std::make_shared<Matrix<dtype::real>>(this->model()->electrodes()->measurement_count(),
         this->model()->mesh()->nodes()->rows(), stream);
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
-        math::square(BasisFunction::nodes_per_element), stream);
+        math::square(model_type::basis_function_type::nodes_per_element), stream);
 
     // create matrices
     for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
@@ -111,10 +116,11 @@ fastEIT::ForwardSolver<BasisFunction, NumericSolver>::ForwardSolver(
 
 // init jacobian calculation matrix
 template <
-    class BasisFunction,
-    class NumericSolver
+    class numeric_solver_type,
+    class model_type,
+    class source_type
 >
-void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculationMatrix(
+void fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::initJacobianCalculationMatrix(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -122,9 +128,11 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
     }
 
     // variables
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> nodes;
-    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element> nodes_coordinates;
-    std::array<std::shared_ptr<BasisFunction>, BasisFunction::nodes_per_element> basis_functions;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
+        model_type::basis_function_type::nodes_per_element> nodes;
+    std::array<std::tuple<dtype::real, dtype::real>, model_type::basis_function_type::nodes_per_element> nodes_coordinates;
+    std::array<std::shared_ptr<typename model_type::basis_function_type>,
+        model_type::basis_function_type::nodes_per_element> basis_functions;
 
     // fill connectivity and elementalJacobianMatrix
     for (dtype::index element = 0; element < this->model()->mesh()->elements()->rows(); ++element) {
@@ -132,21 +140,21 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
         nodes = this->model()->mesh()->elementNodes(element);
 
         // extract nodes coordinates
-        for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
+        for (dtype::index node = 0; node < model_type::basis_function_type::nodes_per_element; ++node) {
             nodes_coordinates[node] = std::get<1>(nodes[node]);
         }
 
         // calc corresponding basis functions
-        for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
-            basis_functions[node] = std::make_shared<BasisFunction>(
+        for (dtype::index node = 0; node < model_type::basis_function_type::nodes_per_element; ++node) {
+            basis_functions[node] = std::make_shared<typename model_type::basis_function_type>(
                 nodes_coordinates, node);
         }
 
         // fill matrix
-        for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
-            for (dtype::index j = 0; j < BasisFunction::nodes_per_element; ++j) {
+        for (dtype::index i = 0; i < model_type::basis_function_type::nodes_per_element; ++i) {
+            for (dtype::index j = 0; j < model_type::basis_function_type::nodes_per_element; ++j) {
                 // set elementalJacobianMatrix element
-                (*this->elemental_jacobian_matrix())(element, i + j * BasisFunction::nodes_per_element) =
+                (*this->elemental_jacobian_matrix())(element, i + j * model_type::basis_function_type::nodes_per_element) =
                     basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
             }
         }
@@ -158,10 +166,11 @@ void fastEIT::ForwardSolver<BasisFunction, NumericSolver>::initJacobianCalculati
 
 // forward solving
 template <
-    class BasisFunction,
-    class NumericSolver
+    class numeric_solver_type,
+    class model_type,
+    class source_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<BasisFunction, NumericSolver>::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::solve(
     const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
@@ -186,12 +195,12 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
     }
 
     // calc jacobian
-    forward::calcJacobian<BasisFunction>(gamma, this->potential(0),
+    forward::calcJacobian<model_type>(gamma, this->potential(0),
         this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
         this->model()->electrodes()->drive_count(), this->model()->electrodes()->measurement_count(),
         this->model()->sigma_ref(), false, stream, this->jacobian());
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
-        forward::calcJacobian<BasisFunction>(gamma, this->potential(component),
+        forward::calcJacobian<model_type>(gamma, this->potential(component),
             this->model()->mesh()->elements(), this->elemental_jacobian_matrix(),
             this->model()->electrodes()->drive_count(), this->model()->electrodes()->measurement_count(),
             this->model()->sigma_ref(), true, stream, this->jacobian());
@@ -226,7 +235,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<Ba
 
 // calc jacobian
 template <
-    class BasisFunction
+    class model_type
 >
 void fastEIT::forward::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gamma,
     const std::shared_ptr<Matrix<dtype::real>> potential,
@@ -257,7 +266,7 @@ void fastEIT::forward::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> g
     dim3 threads(matrix::block_size, matrix::block_size);
 
     // calc jacobian
-    forwardKernel::calcJacobian<BasisFunction::nodes_per_element>(blocks, threads, stream,
+    forwardKernel::calcJacobian<model_type::basis_function_type::nodes_per_element>(blocks, threads, stream,
         potential->device_data(), &potential->device_data()[drive_count * potential->data_rows()],
         elements->device_data(), elemental_jacobian_matrix->device_data(),
         gamma->device_data(), sigma_ref, jacobian->data_rows(), jacobian->data_columns(),
@@ -266,9 +275,10 @@ void fastEIT::forward::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> g
 }
 
 // specialisation
-template void fastEIT::forward::calcJacobian<fastEIT::basis::Linear>(
+template void fastEIT::forward::calcJacobian<fastEIT::Model<fastEIT::basis::Linear>>(
     const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
     const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
 
-template class fastEIT::ForwardSolver<fastEIT::basis::Linear, fastEIT::numeric::SparseConjugate>;
+template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
+    fastEIT::Model<fastEIT::basis::Linear>, fastEIT::source::Current>;
