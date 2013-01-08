@@ -16,3 +16,13 @@ fastEIT::source::Source::Source(std::shared_ptr<Matrix<dtype::real>> drive_patte
         throw std::invalid_argument("Source::Source: measurement_pattern == nullptr");
     }
 }
+
+fastEIT::source::Current::Current(dtype::real current,
+    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
+    : Source(drive_pattern, measurement_pattern), current_(current) {
+    // check input
+    if (current <= 0.0) {
+        throw std::invalid_argument("Current::Current: current <= 0.0");
+    }
+}

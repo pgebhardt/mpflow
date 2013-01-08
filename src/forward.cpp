@@ -230,6 +230,9 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
             this->voltage()->device_data(), this->voltage()->data_rows());
     }
 
+    // scale for current
+    this->voltage()->scalarMultiply(this->source()->current(), stream);
+
     return this->voltage();
 }
 

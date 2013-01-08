@@ -37,9 +37,15 @@ namespace fastEIT {
         class Current : public Source {
         public:
             // constructor
-            Current(std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-                std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
-                : Source(drive_pattern, measurement_pattern) { }
+            Current(dtype::real current, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
+
+            // accessors
+            dtype::real current() const { return this->current_; }
+
+        private:
+            // member
+            dtype::real current_;
         };
 
         // voltage source
