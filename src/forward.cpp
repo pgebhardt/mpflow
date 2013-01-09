@@ -51,36 +51,12 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
             this->source()->drive_count() + this->source()->measurement_count(), stream));
         this->current_density_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
             this->source()->drive_count() + this->source()->measurement_count(), stream));
+        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
+            this->source()->drive_count() + this->source()->measurement_count(), stream));
     }
 
-    // create pattern matrix
-    auto pattern = std::make_shared<Matrix<dtype::real>>(this->model()->electrodes()->count(),
-        this->source()->drive_count() + this->source()->measurement_count(), stream);
-
-    // fill pattern matrix with drive pattern
-    for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->source()->drive_count(); ++column) {
-            (*pattern)(row, column) = (*this->source()->drive_pattern())(row, column);
-        }
-    }
-
-    // fill pattern matrix with measurment pattern and turn sign of measurment
-    // for correct current pattern
-    for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->source()->measurement_count(); ++column) {
-            (*pattern)(row, column + this->source()->drive_count()) =
-                -(*this->source()->measurement_pattern())(row, column);
-        }
-    }
-    pattern->copyToDevice(stream);
-
-    // turn sign of pattern for correct current direction
-    pattern->scalarMultiply(-1.0, stream);
-
-    // calc excitation components
-    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
-        this->model()->calcNodalCurrentDensity(pattern, component, handle, stream, this->current_density(component));
-    }
+    // init excitation matrix
+    this->initExcitationMatrix(handle, stream);
 
     // calc voltage calculation matrix
     dtype::real alpha = 1.0, beta = 0.0;
@@ -166,6 +142,64 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::initJ
     this->elemental_jacobian_matrix()->copyToDevice(stream);
 }
 
+// init excitation Matrix for current source
+template <
+    class forward_solver_type
+>
+void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
+    forward_solver_type>::initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream) {
+    if (handle == NULL) {
+        throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
+    }
+
+    // create pattern matrix
+    auto pattern = std::make_shared<Matrix<dtype::real>>(forward_solver_->model()->electrodes()->count(),
+        forward_solver_->source()->drive_count() + forward_solver_->source()->measurement_count(), stream);
+
+    // fill pattern matrix with drive pattern
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
+        for (dtype::index column = 0; column < forward_solver_->source()->drive_count(); ++column) {
+            (*pattern)(row, column) = (*forward_solver_->source()->drive_pattern())(row, column);
+        }
+    }
+
+    // fill pattern matrix with measurment pattern and turn sign of measurment
+    // for correct current pattern
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
+        for (dtype::index column = 0; column < forward_solver_->source()->measurement_count(); ++column) {
+            (*pattern)(row, column + forward_solver_->source()->drive_count()) =
+                -(*forward_solver_->source()->measurement_pattern())(row, column);
+        }
+    }
+    pattern->copyToDevice(stream);
+
+    // turn sign of pattern for correct current direction
+    pattern->scalarMultiply(-1.0, stream);
+
+    // calc excitation components
+    for (dtype::index component = 0; component < forward_solver_->model()->components_count() + 1; ++component) {
+        forward_solver_->model()->calcNodalCurrentDensity(pattern, component, handle, stream, forward_solver_->excitation(component));
+
+        // set current density to excitation
+        forward_solver_->current_density(component)->copy(forward_solver_->excitation(component), stream);
+    }
+}
+
+// init excitation Matrix for voltage source
+template <
+    class forward_solver_type
+>
+void fastEIT::forward::SourcePolicy<fastEIT::source::Voltage,
+    forward_solver_type>::initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream) {
+    if (handle == NULL) {
+        throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
+    }
+
+    // not implemented
+    // TODO
+    throw std::logic_error("forward::SourcePolicy<Voltage>::initExcitationMatrix: not implemented");
+}
+
 // forward solving for current source
 template <
     class forward_solver_type
@@ -187,14 +221,14 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
 
     // solve for ground mode
     forward_solver_->numeric_solver()->solve(forward_solver_->model()->system_matrix(0),
-        forward_solver_->current_density(0), steps, true, stream,
+        forward_solver_->excitation(0), steps, true, stream,
         forward_solver_->potential(0));
 
     // solve for higher harmonics
     for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
         forward_solver_->numeric_solver()->solve(
             forward_solver_->model()->system_matrix(component),
-            forward_solver_->current_density(component),
+            forward_solver_->excitation(component),
             steps, false, stream, forward_solver_->potential(component));
     }
 
