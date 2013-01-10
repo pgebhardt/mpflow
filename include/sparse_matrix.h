@@ -19,6 +19,9 @@ namespace fastEIT {
         SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream);
         virtual ~SparseMatrix();
 
+        // convert to matrix
+        std::shared_ptr<Matrix<dtype::real>> toMatrix(cudaStream_t stream);
+
         // matrix multiply
         void multiply(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream,
             std::shared_ptr<Matrix<dtype::real>> result) const;

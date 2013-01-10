@@ -69,6 +69,38 @@ void fastEIT::sparseMatrixKernel::convert(dim3 blocks, dim3 threads, cudaStream_
     CudaCheckError();
 }
 
+// convert to matrix kernel
+static __global__ void convertToMatrixKernel(const fastEIT::dtype::real* values,
+    const fastEIT::dtype::index* column_ids, fastEIT::dtype::size density,
+    fastEIT::dtype::size rows, fastEIT::dtype::real* matrix) {
+    // get row id
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // expand sparse matrix
+    fastEIT::dtype::index column_id = -1;
+    for (fastEIT::dtype::index column = 0; column < density; ++column) {
+        // get column id
+        column_id = column_ids[row * fastEIT::sparseMatrix::block_size + column];
+
+        // set matrix value
+        if (column_id != -1) {
+            matrix[row + column_id * rows] = values[
+                row * fastEIT::sparseMatrix::block_size + column];
+        }
+    }
+}
+
+// convert to matrix kernel wrapper
+void fastEIT::sparseMatrixKernel::convertToMatrix(dim3 blocks, dim3 threads,
+    cudaStream_t stream, const dtype::real* values, const dtype::index* column_ids,
+    dtype::size density, dtype::size rows, dtype::real* matrix) {
+    // call cuda kernel
+    convertToMatrixKernel<<<blocks, threads, 0, stream>>>(values, column_ids,
+        density, rows, matrix);
+
+    CudaCheckError();
+}
+
 // sparse matrix multiply kernel
 static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
     const fastEIT::dtype::index* columnIds, const fastEIT::dtype::real* matrix,

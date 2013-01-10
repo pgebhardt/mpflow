@@ -97,6 +97,21 @@ void fastEIT::SparseMatrix::convert(const std::shared_ptr<Matrix<dtype::real>> m
     this->density() = (*maxCount)(0, 0);
 }
 
+// convert to matrix
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::SparseMatrix::toMatrix(
+    cudaStream_t stream) {
+    // create empty matrix
+    auto matrix = std::make_shared<Matrix<dtype::real>>(this->rows(),
+        this->columns(), stream);
+
+    // convert to matrix
+    sparseMatrixKernel::convertToMatrix(this->data_rows() / fastEIT::matrix::block_size,
+        fastEIT::matrix::block_size, stream, this->values(), this->column_ids(),
+        this->density(), matrix->data_rows(), matrix->device_data());
+
+    return matrix;
+}
+
 // sparse matrix multiply
 void fastEIT::SparseMatrix::multiply(const std::shared_ptr<Matrix<dtype::real>> matrix,
     cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> result) const {

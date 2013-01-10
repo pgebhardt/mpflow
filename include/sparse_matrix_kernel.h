@@ -16,6 +16,11 @@ namespace fastEIT {
             dtype::real* values, dtype::index* columnIds,
             dtype::index* elementCount);
 
+        // convert to matrix kernel
+        void convertToMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+            const dtype::real* values, const dtype::index* column_ids,
+            dtype::size density, dtype::size rows, dtype::real* matrix);
+
         // sparse matrix multiply kernel
         void multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
             const dtype::real* values, const dtype::index* columnIds,
