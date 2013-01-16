@@ -14,21 +14,27 @@ namespace fastEIT {
         class Source {
         protected:
             // constructor
-            Source(dtype::size drive_count, dtype::size measurement_count)
-                : drive_count_(drive_count), measurement_count_(measurement_count) { }
+            Source(std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
 
         public:
             // destructor
             virtual ~Source() { }
 
             // accessors
-            dtype::size drive_count() const { return this->drive_count_; }
-            dtype::size measurement_count() const { return this->measurement_count_; }
+            const std::shared_ptr<Matrix<dtype::real>> drive_pattern() const {
+                return this->drive_pattern_;
+            }
+            const std::shared_ptr<Matrix<dtype::real>> measurement_pattern() const {
+                return this->measurement_pattern_;
+            }
+            dtype::size drive_count() const { return this->drive_pattern()->columns(); }
+            dtype::size measurement_count() const { return this->measurement_pattern()->columns(); }
 
         private:
             // member
-            dtype::size drive_count_;
-            dtype::size measurement_count_;
+            std::shared_ptr<Matrix<dtype::real>> drive_pattern_;
+            std::shared_ptr<Matrix<dtype::real>> measurement_pattern_;
         };
 
         // current source
@@ -40,26 +46,25 @@ namespace fastEIT {
 
             // accessors
             dtype::real current() const { return this->current_; }
-            const std::shared_ptr<Matrix<dtype::real>> drive_pattern() const {
-                return this->drive_pattern_;
-            }
-            const std::shared_ptr<Matrix<dtype::real>> measurement_pattern() {
-                return this->measurement_pattern_;
-            }
 
         private:
             // member
             dtype::real current_;
-            std::shared_ptr<Matrix<dtype::real>> drive_pattern_;
-            std::shared_ptr<Matrix<dtype::real>> measurement_pattern_;
         };
 
         // voltage source
         class Voltage : public Source {
         public:
             // constructor
-            Voltage(dtype::size drive_count, dtype::size measurement_count)
-                : Source(drive_count, measurement_count) { }
+            Voltage(dtype::real voltage, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
+
+            // accessors
+            dtype::real voltage() const { return this->voltage_; }
+
+        private:
+            // member
+            dtype::real voltage_;
         };
     }
 }
