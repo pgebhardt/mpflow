@@ -21,6 +21,11 @@ namespace fastEIT {
             dtype::real sigma_ref, dtype::size rows, dtype::size columns,
             dtype::size phi_rows, dtype::size element_count, dtype::size drive_count,
             dtype::size measurment_count, bool additiv, dtype::real* jacobian);
+
+        // apply boundary condition
+        void applyBoundaryCondition(dim3 blocks, dim3 threads, cudaStream_t stream,
+            const dtype::real* boundary, dtype::real* values, dtype::index* column_ids,
+            dtype::size density);
     }
 }
 

@@ -308,11 +308,72 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
         throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
     }
 
-    // not implemented
-    // TODO
-    throw std::logic_error("forward::SourcePolicy<Voltage>::solve: not implemented");
+    // update system matrix
+    forward_solver_->model()->update(gamma, handle, stream);
 
-    return forward_solver_->voltage();
+    // solve
+    for (dtype::index component = 0; component < forward_solver_->model()->components_count(); ++component) {
+        // apply boundary condition
+        forwardKernel::applyBoundaryCondition(
+            forward_solver_->model()->system_matrix(component)->data_rows() / matrix::block_size, matrix::block_size, stream,
+            forward_solver_->excitation(component)->device_data(),
+            forward_solver_->model()->system_matrix(component)->values(),
+            forward_solver_->model()->system_matrix(component)->column_ids(),
+            forward_solver_->model()->system_matrix(component)->density());
+
+        // calc potential
+        forward_solver_->numeric_solver()->solve(
+            forward_solver_->model()->system_matrix(component),
+            forward_solver_->excitation(component),
+            steps, false, stream, forward_solver_->model()->potential(component));
+
+        // calc current_density
+        forward_solver_->model()->system_matrix(component)->multiply(
+            forward_solver_->model()->potential(component), stream,
+            forward_solver_->model()->current_density(component));
+    }
+
+    auto temp = forward_solver_->model()->system_matrix(0)->toMatrix(stream);
+    temp->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+    matrix::savetxt("system_matrix.txt", temp);
+
+    /* // calc jacobian
+    forward::calcJacobian<typename decltype(forward_solver_->forward_solver_->model())::element_type>(
+        gamma, forward_solver_->model()->potential(0), forward_solver_->model()->mesh()->elements(),
+        forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
+        forward_solver_->model()->source()->measurement_count(), forward_solver_->model()->sigma_ref(),
+        false, stream, forward_solver_->jacobian());
+    for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
+        forward::calcJacobian<typename decltype(forward_solver_->forward_solver_->model())::element_type>(
+            gamma, forward_solver_->model()->potential(component), forward_solver_->model()->mesh()->elements(),
+            forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
+            forward_solver_->model()->source()->measurement_count(), forward_solver_->model()->sigma_ref(),
+            true, stream, forward_solver_->jacobian());
+    }*/
+
+    // set stream
+    cublasSetStream(handle, stream);
+
+    // add current
+    dtype::real alpha = 1.0f, beta = 0.0f;
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, forward_solver_->electrode_attachment()->data_rows(),
+        forward_solver_->model()->source()->drive_count(), forward_solver_->electrode_attachment()->data_columns(), &alpha,
+        forward_solver_->electrode_attachment()->device_data(), forward_solver_->electrode_attachment()->data_rows(),
+        forward_solver_->model()->current_density(0)->device_data(), forward_solver_->model()->current_density(0)->data_rows(), &beta,
+        forward_solver_->current()->device_data(), forward_solver_->current()->data_rows());
+
+    // add harmonic voltages
+    beta = 1.0f;
+    for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, forward_solver_->electrode_attachment()->data_rows(),
+            forward_solver_->model()->source()->drive_count(), forward_solver_->electrode_attachment()->data_columns(), &alpha,
+            forward_solver_->electrode_attachment()->device_data(), forward_solver_->electrode_attachment()->data_rows(),
+            forward_solver_->model()->current_density(component)->device_data(), forward_solver_->model()->current_density(component)->data_rows(), &beta,
+            forward_solver_->current()->device_data(), forward_solver_->current()->data_rows());
+    }
+
+    return forward_solver_->current();
 }
 
 // calc jacobian

@@ -94,6 +94,43 @@ void fastEIT::forwardKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_
     CudaCheckError();
 }
 
+// apply boundary condition kernel
+static __global__ void applyBoundaryConditionKernel(
+    const fastEIT::dtype::real* boundary, fastEIT::dtype::real* values,
+    fastEIT::dtype::index* column_ids, fastEIT::dtype::size density) {
+    // get row
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // get boundary value
+    fastEIT::dtype::real boundary_value = boundary[row];
+
+    // check boundary value
+    if (boundary_value == 0.0f) {
+        return;
+    }
+
+    // clear row
+    fastEIT::dtype::index column_id;
+    for (fastEIT::dtype::index column = 0; column < density; ++column) {
+        // get column id
+        column_ids[row * fastEIT::sparseMatrix::block_size + column] = -1;
+        values[row * fastEIT::sparseMatrix::block_size + column] = column_id == 0.0f;
+    }
+
+    // set value
+    column_ids[row * fastEIT::sparseMatrix::block_size] = row;
+    values[row * fastEIT::sparseMatrix::block_size] = 1.0f;
+}
+
+// apply boundary condition wrapper
+void fastEIT::forwardKernel::applyBoundaryCondition(dim3 blocks, dim3 threads, cudaStream_t stream,
+    const dtype::real* boundary, dtype::real* values, dtype::index* column_ids,
+    dtype::size density) {
+    // call cuda kernel
+    applyBoundaryConditionKernel<<<blocks, threads, 0, stream>>>(
+        boundary, values, column_ids, density);
+}
+
 // template specialisation
 template void fastEIT::forwardKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
