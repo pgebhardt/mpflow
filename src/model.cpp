@@ -321,40 +321,29 @@ void fastEIT::Model<basis_function_type, source_type>::initExcitationMatrix(cuda
     this->excitation_matrix()->copyToDevice(stream);
 }
 
-// calc nodal current density
+// calc excitation component
 template <
     class basis_function_type,
     class source_type
 >
-void fastEIT::Model<basis_function_type, source_type>::calcNodalCurrentDensity(const std::shared_ptr<Matrix<dtype::real>> current_density,
-    dtype::size component, cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> nodal_current_density) {
+void fastEIT::Model<basis_function_type, source_type>::calcExcitationComponent(
+    std::shared_ptr<Matrix<dtype::real>> excitation,
+    dtype::size component, cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (current_density == nullptr) {
-        throw std::invalid_argument("Model::calcNodalCurrentDensity: current_density == nullptr");
-    }
-    if (nodal_current_density == nullptr) {
-        throw std::invalid_argument("Model::calcNodalCurrentDensity: nodal_current_density == nullptr");
+    if (excitation == nullptr) {
+        throw std::invalid_argument("Model::calcNodalCurrentDensity: excitation == nullptr");
     }
     if (handle == NULL) {
         throw std::invalid_argument("Model::calcNodalCurrentDensity: handle == NULL");
     }
 
-    // calc excitation matrices
-    // Run multiply once more to avoid cublas error
-    try {
-        nodal_current_density->multiply(this->excitation_matrix(), current_density, handle, stream);
-    }
-    catch(const std::exception& e) {
-        nodal_current_density->multiply(this->excitation_matrix(), current_density, handle, stream);
-    }
-
-    // calc fourier coefficients for current pattern
+    // calc fourier coefficients for excitaion
     if (component == 0) {
         // calc ground mode
-        nodal_current_density->scalarMultiply(1.0f / this->mesh()->height(), stream);
+        excitation->scalarMultiply(1.0f / this->mesh()->height(), stream);
     } else {
-        nodal_current_density->scalarMultiply(
-            2.0f * sin(component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
+        excitation->scalarMultiply(2.0f * sin(
+            component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
             (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
     }
 }

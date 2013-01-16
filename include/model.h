@@ -22,9 +22,9 @@ namespace fastEIT {
             std::shared_ptr<template_source_type> source, dtype::real sigmaRef,
             dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
 
-        // calc nodal current density
-        void calcNodalCurrentDensity(const std::shared_ptr<Matrix<dtype::real>> current_density, dtype::size component,
-            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> nodal_current_density);
+        // calc excitation component
+        void calcExcitationComponent(std::shared_ptr<Matrix<dtype::real>> excitation,
+            dtype::size component, cublasHandle_t handle, cudaStream_t stream);
 
         // update model
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);

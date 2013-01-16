@@ -139,10 +139,17 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
 
     // calc excitation components
     for (dtype::index component = 0; component < forward_solver_->model()->components_count() + 1; ++component) {
-        forward_solver_->model()->calcNodalCurrentDensity(pattern, component, handle, stream, forward_solver_->excitation(component));
+        // calc nodal excitation
+        forward_solver_->excitation(component)->multiply(forward_solver_->model()->excitation_matrix(),
+            pattern, handle, stream);
+
+        // fourier transform excitation
+        forward_solver_->model()->calcExcitationComponent(forward_solver_->excitation(component),
+            component, handle, stream);
 
         // set current density to excitation
-        forward_solver_->model()->current_density(component)->copy(forward_solver_->excitation(component), stream);
+        forward_solver_->model()->current_density(component)->copy(
+            forward_solver_->excitation(component), stream);
     }
 
     // calc voltage calculation matrix
