@@ -333,12 +333,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
             forward_solver_->model()->current_density(component));
     }
 
-    auto temp = forward_solver_->model()->system_matrix(0)->toMatrix(stream);
-    temp->copyToHost(stream);
-    cudaStreamSynchronize(stream);
-    matrix::savetxt("system_matrix.txt", temp);
-
-    /* // calc jacobian
+    // calc jacobian
     forward::calcJacobian<typename decltype(forward_solver_->forward_solver_->model())::element_type>(
         gamma, forward_solver_->model()->potential(0), forward_solver_->model()->mesh()->elements(),
         forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
@@ -350,7 +345,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
             forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
             forward_solver_->model()->source()->measurement_count(), forward_solver_->model()->sigma_ref(),
             true, stream, forward_solver_->jacobian());
-    }*/
+    }
 
     // set stream
     cublasSetStream(handle, stream);
