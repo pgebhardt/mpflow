@@ -10,13 +10,17 @@
 namespace fastEIT {
     // model class definition
     template <
-        class basis_function_type
+        class template_basis_function_type,
+        class template_source_type
     >
     class Model {
     public:
         // constructor
-        Model(std::shared_ptr<Mesh<basis_function_type>> mesh, std::shared_ptr<Electrodes<Mesh<basis_function_type>>> electrodes,
-            dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
+        Model(
+            std::shared_ptr<Mesh<template_basis_function_type>> mesh,
+            std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes,
+            std::shared_ptr<template_source_type> source, dtype::real sigmaRef,
+            dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
 
         // calc nodal current density
         void calcNodalCurrentDensity(const std::shared_ptr<Matrix<dtype::real>> current_density, dtype::size component,
@@ -25,12 +29,13 @@ namespace fastEIT {
         // update model
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
 
-        // basis function type
-        typedef basis_function_type basis_function;
+        // type defs
+        typedef template_basis_function_type basis_function_type;
+        typedef template_source_type source_type;
 
         // accessors
-        const std::shared_ptr<Mesh<basis_function_type>> mesh() const { return this->mesh_; }
-        const std::shared_ptr<Electrodes<Mesh<basis_function_type>>> electrodes() const { return this->electrodes_; }
+        const std::shared_ptr<Mesh<template_basis_function_type>> mesh() const { return this->mesh_; }
+        const std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes() const { return this->electrodes_; }
         dtype::real sigma_ref() const { return this->sigma_ref_; }
         const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
         const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const { return this->excitation_matrix_; }
@@ -42,8 +47,8 @@ namespace fastEIT {
         const std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() const { return this->elemental_r_matrix_; }
 
         // mutators
-        std::shared_ptr<Mesh<basis_function_type>> mesh() { return this->mesh_; }
-        std::shared_ptr<Electrodes<Mesh<basis_function_type>>> electrodes() { return this->electrodes_; }
+        std::shared_ptr<Mesh<template_basis_function_type>> mesh() { return this->mesh_; }
+        std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes() { return this->electrodes_; }
         dtype::real sigma_ref() { return this->sigma_ref_; }
         std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
         std::shared_ptr<Matrix<dtype::real>> excitation_matrix() { return this->excitation_matrix_; }
@@ -61,8 +66,9 @@ namespace fastEIT {
         void initExcitationMatrix(cudaStream_t stream);
 
         // member
-        std::shared_ptr<Mesh<basis_function_type>> mesh_;
-        std::shared_ptr<Electrodes<Mesh<basis_function_type>>> electrodes_;
+        std::shared_ptr<Mesh<template_basis_function_type>> mesh_;
+        std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes_;
+        std::shared_ptr<source_type> source_;
         dtype::real sigma_ref_;
         std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
         std::shared_ptr<SparseMatrix> s_matrix_;
