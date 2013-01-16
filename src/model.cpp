@@ -8,10 +8,10 @@
 
 // create solver model
 template <
-    class BasisFunction
+    class basis_function_type
 >
-fastEIT::Model<BasisFunction>::Model(std::shared_ptr<Mesh<BasisFunction>> mesh,
-    std::shared_ptr<Electrodes<Mesh<BasisFunction>>> electrodes, dtype::real sigmaRef,
+fastEIT::Model<basis_function_type>::Model(std::shared_ptr<Mesh<basis_function_type>> mesh,
+    std::shared_ptr<Electrodes<Mesh<basis_function_type>>> electrodes, dtype::real sigmaRef,
     dtype::size components_count, cublasHandle_t handle, cudaStream_t stream)
     : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef), components_count_(components_count) {
     // check input
@@ -50,9 +50,9 @@ fastEIT::Model<BasisFunction>::Model(std::shared_ptr<Mesh<BasisFunction>> mesh,
 
 // create sparse matrices
 template <
-    class BasisFunction
+    class basis_function_type
 >
-void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::Model<basis_function_type>::createSparseMatrices(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
         throw std::invalid_argument("Model::createSparseMatrices: handle == NULL");
@@ -64,14 +64,14 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
 
     // calc generate empty system matrix
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> nodes;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, basis_function_type::nodes_per_element> nodes;
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
         // get nodes for element
         nodes = this->mesh()->elementNodes(element);
 
         // set system matrix elements
-        for (dtype::index i = 0; i < BasisFunction::nodes_per_element; ++i) {
-            for (dtype::index j = 0; j < BasisFunction::nodes_per_element; ++j) {
+        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i) {
+            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
                 (*system_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
             }
         }
@@ -91,9 +91,9 @@ void fastEIT::Model<BasisFunction>::createSparseMatrices(cublasHandle_t handle, 
 
 // init model
 template <
-    class BasisFunction
+    class basis_function_type
 >
-void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == NULL) {
         throw std::invalid_argument("Model::init: handle == NULL");
@@ -126,9 +126,9 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
     this->connectivity_matrix()->copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> nodes;
-    std::array<std::tuple<dtype::real, dtype::real>, BasisFunction::nodes_per_element> nodes_coordinates;
-    std::array<std::shared_ptr<BasisFunction>, BasisFunction::nodes_per_element> basis_functions;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, basis_function_type::nodes_per_element> nodes;
+    std::array<std::tuple<dtype::real, dtype::real>, basis_function_type::nodes_per_element> nodes_coordinates;
+    std::array<std::shared_ptr<basis_function_type>, basis_function_type::nodes_per_element> basis_functions;
     dtype::real temp;
 
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
@@ -136,19 +136,19 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
         nodes = this->mesh()->elementNodes(element);
 
         // extract coordinates
-        for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
+        for (dtype::index node = 0; node < basis_function_type::nodes_per_element; ++node) {
             nodes_coordinates[node] = std::get<1>(nodes[node]);
         }
 
         // calc corresponding basis functions
-        for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
-            basis_functions[node] = std::make_shared<BasisFunction>(
+        for (dtype::index node = 0; node < basis_function_type::nodes_per_element; ++node) {
+            basis_functions[node] = std::make_shared<basis_function_type>(
                 nodes_coordinates, node);
         }
 
         // set connectivity and elemental residual matrix elements
-        for (dtype::index i = 0; i < BasisFunction::nodes_per_element; i++) {
-            for (dtype::index j = 0; j < BasisFunction::nodes_per_element; j++) {
+        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; i++) {
+            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++) {
                 // get current element count
                 temp = (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
 
@@ -197,9 +197,9 @@ void fastEIT::Model<BasisFunction>::init(cublasHandle_t handle, cudaStream_t str
 
 // update model
 template <
-    class BasisFunction
+    class basis_function_type
 >
-void fastEIT::Model<BasisFunction>::update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
+void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (handle == NULL) {
@@ -241,14 +241,14 @@ void fastEIT::Model<BasisFunction>::update(const std::shared_ptr<Matrix<dtype::r
 
 // init exitation matrix
 template <
-    class BasisFunction
+    class basis_function_type
 >
-void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
+void fastEIT::Model<basis_function_type>::initExcitationMatrix(cudaStream_t stream) {
     // fill exitation_matrix matrix
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_edge> nodes;
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, basis_function_type::nodes_per_edge> nodes;
 
     // needed arrays
-    std::array<dtype::real, BasisFunction::nodes_per_edge> node_parameter;
+    std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
     dtype::real integration_start, integration_end;
 
     // calc excitaion matrix
@@ -271,7 +271,7 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
         dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
 
         // calc node parameter centered to node 0
-        for (dtype::size i = 0; i < BasisFunction::nodes_per_edge; ++i) {
+        for (dtype::size i = 0; i < basis_function_type::nodes_per_edge; ++i) {
             node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
                 parameter_offset);
         }
@@ -289,9 +289,9 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
             // integrat boundary if integration_start is left of integration_end
             if (integration_start < integration_end) {
                 // calc elements
-                for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
+                for (dtype::index node = 0; node < basis_function_type::nodes_per_edge; ++node) {
                     (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) +=
-                        BasisFunction::integrateBoundaryEdge(
+                        basis_function_type::integrateBoundaryEdge(
                             node_parameter, node, integration_start, integration_end) /
                         std::get<0>(this->electrodes()->shape());
                 }
@@ -305,9 +305,9 @@ void fastEIT::Model<BasisFunction>::initExcitationMatrix(cudaStream_t stream) {
 
 // calc nodal current density
 template <
-    class BasisFunction
+    class basis_function_type
 >
-void fastEIT::Model<BasisFunction>::calcNodalCurrentDensity(const std::shared_ptr<Matrix<dtype::real>> current_density,
+void fastEIT::Model<basis_function_type>::calcNodalCurrentDensity(const std::shared_ptr<Matrix<dtype::real>> current_density,
     dtype::size component, cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> nodal_current_density) {
     // check input
     if (current_density == nullptr) {

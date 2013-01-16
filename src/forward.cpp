@@ -43,7 +43,7 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::ForwardSol
     this->electrode_attachment_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
         this->model()->mesh()->nodes()->rows(), stream);
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
-        math::square(model_type::basis_function_type::nodes_per_element), stream);
+        math::square(model_type::basis_function::nodes_per_element), stream);
 
     // create matrices
     for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
@@ -107,10 +107,10 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::initJ
 
     // variables
     std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
-        model_type::basis_function_type::nodes_per_element> nodes;
-    std::array<std::tuple<dtype::real, dtype::real>, model_type::basis_function_type::nodes_per_element> nodes_coordinates;
-    std::array<std::shared_ptr<typename model_type::basis_function_type>,
-        model_type::basis_function_type::nodes_per_element> basis_functions;
+        model_type::basis_function::nodes_per_element> nodes;
+    std::array<std::tuple<dtype::real, dtype::real>, model_type::basis_function::nodes_per_element> nodes_coordinates;
+    std::array<std::shared_ptr<typename model_type::basis_function>,
+        model_type::basis_function::nodes_per_element> basis_functions;
 
     // fill connectivity and elementalJacobianMatrix
     for (dtype::index element = 0; element < this->model()->mesh()->elements()->rows(); ++element) {
@@ -118,21 +118,21 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type, source_type>::initJ
         nodes = this->model()->mesh()->elementNodes(element);
 
         // extract nodes coordinates
-        for (dtype::index node = 0; node < model_type::basis_function_type::nodes_per_element; ++node) {
+        for (dtype::index node = 0; node < model_type::basis_function::nodes_per_element; ++node) {
             nodes_coordinates[node] = std::get<1>(nodes[node]);
         }
 
         // calc corresponding basis functions
-        for (dtype::index node = 0; node < model_type::basis_function_type::nodes_per_element; ++node) {
-            basis_functions[node] = std::make_shared<typename model_type::basis_function_type>(
+        for (dtype::index node = 0; node < model_type::basis_function::nodes_per_element; ++node) {
+            basis_functions[node] = std::make_shared<typename model_type::basis_function>(
                 nodes_coordinates, node);
         }
 
         // fill matrix
-        for (dtype::index i = 0; i < model_type::basis_function_type::nodes_per_element; ++i) {
-            for (dtype::index j = 0; j < model_type::basis_function_type::nodes_per_element; ++j) {
+        for (dtype::index i = 0; i < model_type::basis_function::nodes_per_element; ++i) {
+            for (dtype::index j = 0; j < model_type::basis_function::nodes_per_element; ++j) {
                 // set elementalJacobianMatrix element
-                (*this->elemental_jacobian_matrix())(element, i + j * model_type::basis_function_type::nodes_per_element) =
+                (*this->elemental_jacobian_matrix())(element, i + j * model_type::basis_function::nodes_per_element) =
                     basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
             }
         }
@@ -332,7 +332,7 @@ void fastEIT::forward::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> g
     dim3 threads(matrix::block_size, matrix::block_size);
 
     // calc jacobian
-    forwardKernel::calcJacobian<model_type::basis_function_type::nodes_per_element>(blocks, threads, stream,
+    forwardKernel::calcJacobian<model_type::basis_function::nodes_per_element>(blocks, threads, stream,
         potential->device_data(), &potential->device_data()[drive_count * potential->data_rows()],
         elements->device_data(), elemental_jacobian_matrix->device_data(),
         gamma->device_data(), sigma_ref, jacobian->data_rows(), jacobian->data_columns(),
