@@ -27,8 +27,8 @@ fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
     // create inverse solver
     this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
         this->model()->mesh()->elements()->rows(),
-        this->model()->source()->measurement_pattern()->data_columns() *
-        this->model()->source()->drive_pattern()->data_columns(),
+        math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
+        math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
         regularization_factor, handle, stream);
 
     // create matrices

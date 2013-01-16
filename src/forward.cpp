@@ -30,8 +30,8 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
 
     // create matrices
     this->jacobian_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->source()->measurement_pattern()->data_columns() *
-        this->model()->source()->drive_pattern()->data_columns(),
+        math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
+        math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
         this->model()->mesh()->elements()->rows(), stream);
     this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
         this->model()->source()->drive_count(), stream);
@@ -47,36 +47,6 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
 
     // init excitation matrix
     this->initExcitationMatrix(handle, stream);
-
-    // calc voltage calculation matrix
-    dtype::real alpha = 1.0, beta = 0.0;
-
-    // one prerun for cublas
-    cublasSetStream(handle, stream);
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        this->model()->source()->measurement_pattern()->data_columns(),
-        this->model()->excitation_matrix()->data_rows(),
-        this->model()->source()->measurement_pattern()->data_rows(), &alpha,
-        this->model()->source()->measurement_pattern()->device_data(),
-        this->model()->source()->measurement_pattern()->data_rows(),
-        this->model()->excitation_matrix()->device_data(),
-        this->model()->excitation_matrix()->data_rows(),
-        &beta, this->electrode_attachment()->device_data(),
-        this->electrode_attachment()->data_rows());
-
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        this->model()->source()->measurement_pattern()->data_columns(),
-        this->model()->excitation_matrix()->data_rows(),
-        this->model()->source()->measurement_pattern()->data_rows(), &alpha,
-        this->model()->source()->measurement_pattern()->device_data(),
-        this->model()->source()->measurement_pattern()->data_rows(),
-        this->model()->excitation_matrix()->device_data(),
-        this->model()->excitation_matrix()->data_rows(),
-        &beta, this->electrode_attachment()->device_data(),
-        this->electrode_attachment()->data_rows())
-        != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
-    }
 
     // init jacobian calculation matrix
     this->initJacobianCalculationMatrix(handle, stream);
@@ -171,6 +141,36 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
 
         // set current density to excitation
         forward_solver_->model()->current_density(component)->copy(forward_solver_->excitation(component), stream);
+    }
+
+    // calc voltage calculation matrix
+    dtype::real alpha = 1.0, beta = 0.0;
+
+    // one prerun for cublas
+    cublasSetStream(handle, stream);
+    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
+        forward_solver_->model()->source()->measurement_pattern()->data_columns(),
+        forward_solver_->model()->excitation_matrix()->data_rows(),
+        forward_solver_->model()->source()->measurement_pattern()->data_rows(), &alpha,
+        forward_solver_->model()->source()->measurement_pattern()->device_data(),
+        forward_solver_->model()->source()->measurement_pattern()->data_rows(),
+        forward_solver_->model()->excitation_matrix()->device_data(),
+        forward_solver_->model()->excitation_matrix()->data_rows(),
+        &beta, forward_solver_->electrode_attachment()->device_data(),
+        forward_solver_->electrode_attachment()->data_rows());
+
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
+        forward_solver_->model()->source()->measurement_pattern()->data_columns(),
+        forward_solver_->model()->excitation_matrix()->data_rows(),
+        forward_solver_->model()->source()->measurement_pattern()->data_rows(), &alpha,
+        forward_solver_->model()->source()->measurement_pattern()->device_data(),
+        forward_solver_->model()->source()->measurement_pattern()->data_rows(),
+        forward_solver_->model()->excitation_matrix()->device_data(),
+        forward_solver_->model()->excitation_matrix()->data_rows(),
+        &beta, forward_solver_->electrode_attachment()->device_data(),
+        forward_solver_->electrode_attachment()->data_rows())
+        != CUBLAS_STATUS_SUCCESS) {
+        throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
     }
 }
 
