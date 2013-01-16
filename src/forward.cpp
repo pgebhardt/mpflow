@@ -47,6 +47,21 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
             this->model()->source()->drive_count() + this->model()->source()->measurement_count(), stream));
     }
 
+    // calc electrodes attachement matrix
+    dtype::real alpha = 1.0, beta = 0.0;
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
+        this->model()->source()->measurement_pattern()->data_columns(),
+        this->model()->excitation_matrix()->data_rows(),
+        this->model()->source()->measurement_pattern()->data_rows(), &alpha,
+        this->model()->source()->measurement_pattern()->device_data(),
+        this->model()->source()->measurement_pattern()->data_rows(),
+        this->model()->excitation_matrix()->device_data(),
+        this->model()->excitation_matrix()->data_rows(),
+        &beta, this->electrode_attachment()->device_data(),
+        this->electrode_attachment()->data_rows())
+        != CUBLAS_STATUS_SUCCESS) {
+        throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
+    }
     // init excitation matrix
     this->initExcitationMatrix(handle, stream);
 
@@ -151,36 +166,6 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
         forward_solver_->model()->current_density(component)->copy(
             forward_solver_->excitation(component), stream);
     }
-
-    // calc voltage calculation matrix
-    dtype::real alpha = 1.0, beta = 0.0;
-
-    // one prerun for cublas
-    cublasSetStream(handle, stream);
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        forward_solver_->model()->source()->measurement_pattern()->data_columns(),
-        forward_solver_->model()->excitation_matrix()->data_rows(),
-        forward_solver_->model()->source()->measurement_pattern()->data_rows(), &alpha,
-        forward_solver_->model()->source()->measurement_pattern()->device_data(),
-        forward_solver_->model()->source()->measurement_pattern()->data_rows(),
-        forward_solver_->model()->excitation_matrix()->device_data(),
-        forward_solver_->model()->excitation_matrix()->data_rows(),
-        &beta, forward_solver_->electrode_attachment()->device_data(),
-        forward_solver_->electrode_attachment()->data_rows());
-
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        forward_solver_->model()->source()->measurement_pattern()->data_columns(),
-        forward_solver_->model()->excitation_matrix()->data_rows(),
-        forward_solver_->model()->source()->measurement_pattern()->data_rows(), &alpha,
-        forward_solver_->model()->source()->measurement_pattern()->device_data(),
-        forward_solver_->model()->source()->measurement_pattern()->data_rows(),
-        forward_solver_->model()->excitation_matrix()->device_data(),
-        forward_solver_->model()->excitation_matrix()->data_rows(),
-        &beta, forward_solver_->electrode_attachment()->device_data(),
-        forward_solver_->electrode_attachment()->data_rows())
-        != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
-    }
 }
 
 // init excitation Matrix for voltage source
@@ -193,9 +178,42 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Voltage,
         throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
     }
 
-    // not implemented
-    // TODO
-    throw std::logic_error("forward::SourcePolicy<Voltage>::initExcitationMatrix: not implemented");
+    // create pattern matrix
+    auto pattern = std::make_shared<Matrix<dtype::real>>(forward_solver_->model()->electrodes()->count(),
+        forward_solver_->model()->source()->drive_count() + forward_solver_->model()->source()->measurement_count(), stream);
+
+    // fill pattern matrix with drive pattern
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
+        for (dtype::index column = 0; column < forward_solver_->model()->source()->drive_count(); ++column) {
+            (*pattern)(row, column) = (*forward_solver_->model()->source()->drive_pattern())(row, column);
+        }
+    }
+
+    // fill pattern matrix with measurment pattern and turn sign of measurment
+    // for correct current pattern
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
+        for (dtype::index column = 0; column < forward_solver_->model()->source()->measurement_count(); ++column) {
+            (*pattern)(row, column + forward_solver_->model()->source()->drive_count()) =
+                -(*forward_solver_->model()->source()->measurement_pattern())(row, column);
+        }
+    }
+    pattern->copyToDevice(stream);
+
+    // calc excitation components
+    for (dtype::index component = 0; component < forward_solver_->model()->components_count() + 1; ++component) {
+        // calc nodal excitation
+        forward_solver_->excitation(component)->multiply(forward_solver_->model()->excitation_matrix(),
+            pattern, handle, stream);
+
+        // fourier transform excitation
+        forward_solver_->model()->calcExcitationComponent(forward_solver_->excitation(component),
+            component, handle, stream);
+
+        // multiply by voltage
+        forward_solver_->excitation(component)->scalarMultiply(
+            forward_solver_->model()->source()->voltage(), stream);
+    }
+
 }
 
 // forward solving for current source
