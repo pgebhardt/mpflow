@@ -42,13 +42,12 @@ void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStre
 
     // correct size to block size
     if ((this->rows() % matrix::block_size != 0) && (this->rows() != 1)) {
-        this->data_rows_ = (this->rows() / matrix::block_size + 1) *
-            matrix::block_size;
+        this->data_rows_ = math::roundTo(this->rows(), matrix::block_size);
     }
     if ((this->columns() % matrix::block_size != 0) && (this->columns() != 1)) {
-        this->data_columns_ = (this->columns() / matrix::block_size + 1) *
-            matrix::block_size;
+        this->data_columns_ = math::roundTo(this->columns(), matrix::block_size);
     }
+
 
     // create matrices
     if (cudaMalloc((void**)&this->values_, sizeof(dtype::real) *

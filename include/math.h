@@ -66,6 +66,11 @@ namespace fastEIT {
             return angle * std::get<0>(polar_point);
         }
 
+        // round to size
+        static inline dtype::size roundTo(dtype::size size, dtype::size block_size) {
+            return (size / block_size + 1) * block_size;
+        }
+
         // simple gauss elemination
         template <
             class type,
