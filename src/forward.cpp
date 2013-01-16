@@ -35,6 +35,8 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
         this->model()->mesh()->elements()->rows(), stream);
     this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
         this->model()->source()->drive_count(), stream);
+    this->current_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
+        this->model()->source()->drive_count(), stream);
     this->electrode_attachment_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
         this->model()->mesh()->nodes()->rows(), stream);
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
