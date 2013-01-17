@@ -188,7 +188,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
 
     // solve for ground mode
     forward_solver_->numeric_solver()->solve(forward_solver_->model()->system_matrix(0),
-        forward_solver_->excitation(0), steps, true, stream,
+        forward_solver_->excitation(0), steps, false, stream,
         forward_solver_->model()->potential(0));
 
     // solve for higher harmonics

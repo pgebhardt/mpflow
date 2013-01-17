@@ -129,3 +129,38 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
     return (coefficients[0] * end + 0.5 * coefficients[1] * math::square(end)) -
         (coefficients[0] * start + 0.5 * coefficients[1] * math::square(start));
 }
+
+// integrate edge with basis
+fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdgeWithBasis(
+    std::array<dtype::real, nodes_per_edge> nodes, dtype::index one_1,
+    dtype::index one_2, dtype::real start, dtype::real end) {
+    // crop integration interval to function definition
+    start = std::min(std::max(nodes[0], start), nodes[nodes_per_edge - 1]);
+    end = std::min(std::max(nodes[0], end), nodes[nodes_per_edge - 1]);
+
+    // calc coefficients for basis function
+    std::array<std::array<dtype::real, nodes_per_edge>, 2> coefficients;
+
+    if (one_1 == 0) {
+        coefficients[0][0] = 1.0;
+        coefficients[0][1] = -1.0 / nodes[1];
+    } else {
+        coefficients[0][0] = 0.0;
+        coefficients[0][1] = 1.0 / nodes[1];
+    }
+    if (one_2 == 0) {
+        coefficients[1][0] = 1.0;
+        coefficients[1][1] = -1.0 / nodes[1];
+    } else {
+        coefficients[1][0] = 0.0;
+        coefficients[1][1] = 1.0 / nodes[1];
+    }
+
+    // calc integral
+    return (coefficients[0][0] * coefficients[1][0] * end +
+        coefficients[0][1] * coefficients[1][1] * math::square(end) * end / 3.0 +
+        math::square(end) * (coefficients[0][0] * coefficients[1][1] + coefficients[1][0] * coefficients[0][1]) / 2.0) -
+        (coefficients[0][0] * coefficients[1][0] * start +
+        coefficients[0][1] * coefficients[1][1] * math::square(start) * start / 3.0 +
+        math::square(start) * (coefficients[0][0] * coefficients[1][1] + coefficients[1][0] * coefficients[0][1]) / 2.0);
+}

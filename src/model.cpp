@@ -288,21 +288,25 @@ std::tuple<std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::shared_p
             integration_end = math::circleParameter(
                 std::get<1>(this->electrodes()->coordinates()[electrode]), parameter_offset);
 
-            // calc z matrix element
-            for (dtype::index i = 0; i < basis_function_type::nodes_per_edge; ++i) {
-                for (dtype::index j = 0; j < basis_function_type::nodes_per_edge; ++j) {
-                    // calc z matrix element
-                    // TODO
-                    (*this->z_matrix())(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
-                        0.0 / this->electrodes()->impedance();
+            // intgrate if integration_start is left of integration_end
+            if (integration_start < integration_end) {
+                // calc z matrix element
+                for (dtype::index i = 0; i < basis_function_type::nodes_per_edge; ++i) {
+                    for (dtype::index j = 0; j < basis_function_type::nodes_per_edge; ++j) {
+                        // calc z matrix element
+                        (*this->z_matrix())(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
+                            basis_function_type::integrateBoundaryEdgeWithBasis(
+                                node_parameter, i, j, integration_start, integration_end) /
+                            this->electrodes()->impedance();
 
+                    }
+
+                    // calc w matrix element
+                    (*w_matrix)(std::get<0>(nodes[i]), electrode) -=
+                        basis_function_type::integrateBoundaryEdge(
+                            node_parameter, i, integration_start, integration_end) /
+                        this->electrodes()->impedance();
                 }
-
-                // calc w matrix element
-                (*w_matrix)(std::get<0>(nodes[i]), electrode) -=
-                    basis_function_type::integrateBoundaryEdge(
-                        node_parameter, i, integration_start, integration_end) /
-                    this->electrodes()->impedance();
             }
         }
     }
@@ -339,10 +343,10 @@ void fastEIT::Model<basis_function_type, source_type>::update(const std::shared_
     dtype::real alpha = 0.0f;
     for (dtype::index component = 0; component < this->components_count(); ++component) {
         // calc alpha
-        alpha = fastEIT::math::square(2.0f * component * M_PI / this->mesh()->height());
+        alpha = math::square(2.0f * component * M_PI / this->mesh()->height());
 
         // update system matrix
-        modelKernel::updateSystemMatrix(this->s_matrix()->rows() / matrix::block_size, matrix::block_size, stream,
+        modelKernel::updateSystemMatrix(this->s_matrix()->data_rows() / matrix::block_size, matrix::block_size, stream,
             this->s_matrix()->values(), this->r_matrix()->values(), this->s_matrix()->column_ids(),
             this->z_matrix()->device_data(), this->s_matrix()->density(), alpha,
             this->z_matrix()->data_rows(), this->system_matrix(component)->values());
