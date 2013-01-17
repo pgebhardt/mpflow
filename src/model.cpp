@@ -68,34 +68,17 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
     auto gamma = std::make_shared<Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
 
     // init elemental matrices
-    this->initElementalMatrices(stream);
+    auto common_element_matrix = this->initElementalMatrices(stream);
 
     // init complete electrode model
-    this->initCEMMatrices(stream);
+    std::shared_ptr<Matrix<dtype::real>> w_matrix, d_matrix;
+    std::tie(w_matrix, d_matrix) = this->initCEMMatrices(stream);
 
     // update r and s matrices
     model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->r_matrix());
-
-    // determine nodes with common element
-    auto common_element_matrix = std::make_shared<Matrix<dtype::real>>(
-        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
-        basis_function_type::nodes_per_element> nodes;
-
-    for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
-        // get nodes for element
-        nodes = this->mesh()->elementNodes(element);
-
-        // set system matrix elements
-        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i) {
-            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
-                (*common_element_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
-            }
-        }
-    }
 
     // assamble initial system matrices
     auto system_matrix = std::make_shared<Matrix<dtype::real>>(
@@ -111,10 +94,6 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
     }
 
     // fill w and wT
-    auto w_matrix = this->w_matrix()->toMatrix(stream);
-    w_matrix->copyToHost(stream);
-    cudaStreamSynchronize(stream);
-
     for (dtype::index node = 0; node < this->mesh()->nodes()->rows(); ++node) {
         for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
             (*system_matrix)(node, electrode + this->mesh()->nodes()->rows()) =
@@ -126,10 +105,6 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
     }
 
     // fill d matrix
-    auto d_matrix = this->d_matrix()->toMatrix(stream);
-    d_matrix->copyToHost(stream);
-    cudaStreamSynchronize(stream);
-
     for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
         (*system_matrix)(electrode + this->mesh()->nodes()->rows(), electrode + this->mesh()->nodes()->rows()) =
             (*d_matrix)(electrode, electrode);
@@ -189,7 +164,8 @@ template <
     class basis_function_type,
     class source_type
 >
-void fastEIT::Model<basis_function_type, source_type>::initElementalMatrices(cudaStream_t stream) {
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_function_type, source_type>::initElementalMatrices(
+    cudaStream_t stream) {
     // create intermediate matrices
     auto element_count = std::make_shared<Matrix<dtype::index>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
@@ -297,6 +273,8 @@ void fastEIT::Model<basis_function_type, source_type>::initElementalMatrices(cud
         this->elemental_s_matrix());
     model::reduceMatrix(elemental_r_matrix, this->s_matrix(), stream,
         this->elemental_r_matrix());
+
+    return common_element_matrix;
 }
 
 // init complete electrode model boundary conditions
@@ -304,10 +282,9 @@ template <
     class basis_function_type,
     class source_type
 >
-void fastEIT::Model<basis_function_type, source_type>::initCEMMatrices(cudaStream_t stream) {
+std::tuple<std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>>
+    fastEIT::Model<basis_function_type, source_type>::initCEMMatrices(cudaStream_t stream) {
     // create matrices
-    auto z_matrix = std::make_shared<Matrix<dtype::real>>(
-        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     auto w_matrix = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->electrodes()->count(), stream);
     auto d_matrix = std::make_shared<Matrix<dtype::real>>(
@@ -355,7 +332,7 @@ void fastEIT::Model<basis_function_type, source_type>::initCEMMatrices(cudaStrea
                 for (dtype::index j = 0; j < basis_function_type::nodes_per_edge; ++j) {
                     // calc z matrix element
                     // TODO
-                    (*z_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
+                    (*this->z_matrix())(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
                         0.0 / this->electrodes()->impedance();
 
                 }
@@ -368,20 +345,15 @@ void fastEIT::Model<basis_function_type, source_type>::initCEMMatrices(cudaStrea
             }
         }
     }
-    z_matrix->copyToDevice(stream);
-    w_matrix->copyToDevice(stream);
+    this->z_matrix()->copyToDevice(stream);
 
     // init d matrix
     for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
         (*d_matrix)(electrode, electrode) = std::get<0>(this->electrodes()->shape()) /
             this->electrodes()->impedance();
     }
-    d_matrix->copyToDevice(stream);
 
-    // create sparse matrices
-    this->z_matrix_ = std::make_shared<SparseMatrix>(z_matrix, stream);
-    this->w_matrix_ = std::make_shared<SparseMatrix>(w_matrix, stream);
-    this->d_matrix_ = std::make_shared<SparseMatrix>(d_matrix, stream);
+    return std::make_tuple(w_matrix, d_matrix);
 }
 
 // calc excitation component
