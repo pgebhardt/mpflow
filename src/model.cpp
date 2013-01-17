@@ -42,6 +42,8 @@ fastEIT::Model<basis_function_type, source_type>::Model(
         sparseMatrix::block_size * matrix::block_size, stream);
     this->elemental_r_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
         sparseMatrix::block_size * matrix::block_size, stream);
+    this->z_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
+        this->mesh()->nodes()->rows(), stream);
 
     for (dtype::index component = 0; component < this->components_count() + 1; ++component) {
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(
@@ -69,6 +71,7 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
 
     // init elemental matrices
     auto common_element_matrix = this->initElementalMatrices(stream);
+
 
     // init complete electrode model
     std::shared_ptr<Matrix<dtype::real>> w_matrix, d_matrix;
@@ -114,48 +117,6 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
     system_matrix->copyToDevice(stream);
     for (dtype::index component = 0; component < this->components_count(); ++component) {
         this->system_matrices_.push_back(std::make_shared<SparseMatrix>(system_matrix, stream));
-    }
-}
-
-// update model
-template <
-    class basis_function_type,
-    class source_type
->
-void fastEIT::Model<basis_function_type, source_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
-    cudaStream_t stream) {
-    // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::init: handle == NULL");
-    }
-
-    // update matrices
-    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->s_matrix());
-    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->r_matrix());
-
-    // create system matrices for all components
-    for (dtype::index component = 0; component < this->components_count(); ++component) {
-
-        /* // calc alpha
-        alpha = fastEIT::math::square(2.0f * component * M_PI / this->mesh()->height());
-
-        // init system matrix with 2d system matrix
-        if (cublasScopy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size,
-            this->s_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
-            != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error(
-                "Model::update: calc system matrices for all harmonics");
-        }
-
-        // add alpha * residualMatrix
-        if (cublasSaxpy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size, &alpha,
-            this->r_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
-            != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error(
-                "Model::update: calc system matrices for all harmonics");
-        }*/
     }
 }
 
@@ -354,6 +315,38 @@ std::tuple<std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::shared_p
     }
 
     return std::make_tuple(w_matrix, d_matrix);
+}
+
+// update model
+template <
+    class basis_function_type,
+    class source_type
+>
+void fastEIT::Model<basis_function_type, source_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // check input
+    if (handle == NULL) {
+        throw std::invalid_argument("Model::init: handle == NULL");
+    }
+
+    // update matrices
+    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->s_matrix());
+    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->r_matrix());
+
+    // create system matrices for all components
+    dtype::real alpha = 0.0f;
+    for (dtype::index component = 0; component < this->components_count(); ++component) {
+        // calc alpha
+        alpha = fastEIT::math::square(2.0f * component * M_PI / this->mesh()->height());
+
+        // update system matrix
+        modelKernel::updateSystemMatrix(this->s_matrix()->rows() / matrix::block_size, matrix::block_size, stream,
+            this->s_matrix()->values(), this->r_matrix()->values(), this->s_matrix()->column_ids(),
+            this->z_matrix()->device_data(), this->s_matrix()->density(), alpha,
+            this->z_matrix()->data_rows(), this->system_matrix(component)->values());
+    }
 }
 
 // calc excitation component
