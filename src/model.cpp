@@ -182,6 +182,9 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
 
     // init complete electrode model
     this->initCEMMatrices(stream);
+
+    // update model
+    this->update(gamma, handle, stream);
 }
 
 // update model
@@ -201,6 +204,9 @@ void fastEIT::Model<basis_function_type, source_type>::update(const std::shared_
         this->sigma_ref(), stream, this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->r_matrix());
+
+    // assamble system matrices
+    // TODO
 
     // set cublas stream
     cublasSetStream(handle, stream);
