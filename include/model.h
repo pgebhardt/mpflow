@@ -40,9 +40,6 @@ namespace fastEIT {
         const std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) const {
             return this->potential_[index];
         }
-        const std::shared_ptr<Matrix<dtype::real>> current_density(dtype::index index) const {
-            return this->current_density_[index];
-        }
         const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
         const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const { return this->excitation_matrix_; }
         const std::shared_ptr<SparseMatrix> s_matrix() const { return this->s_matrix_; }
@@ -62,9 +59,6 @@ namespace fastEIT {
         std::shared_ptr<source_type> source() { return this->source_; }
         std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
             return this->potential_[index];
-        }
-        std::shared_ptr<Matrix<dtype::real>> current_density(dtype::index index) {
-            return this->current_density_[index];
         }
         std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
         std::shared_ptr<Matrix<dtype::real>> excitation_matrix() { return this->excitation_matrix_; }
@@ -91,7 +85,6 @@ namespace fastEIT {
         std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes_;
         std::shared_ptr<source_type> source_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
-        std::vector<std::shared_ptr<Matrix<dtype::real>>> current_density_;
         std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
         std::shared_ptr<SparseMatrix> s_matrix_;
         std::shared_ptr<SparseMatrix> r_matrix_;

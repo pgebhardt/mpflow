@@ -161,10 +161,6 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
         // fourier transform excitation
         forward_solver_->model()->calcExcitationComponent(forward_solver_->excitation(component),
             component, handle, stream);
-
-        // set current density to excitation
-        forward_solver_->model()->current_density(component)->copy(
-            forward_solver_->excitation(component), stream);
     }
 }
 

@@ -51,8 +51,6 @@ fastEIT::Model<basis_function_type, source_type>::Model(
     for (dtype::index component = 0; component < this->components_count() + 1; ++component) {
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
             this->source()->drive_count() + this->source()->measurement_count(), stream));
-        this->current_density_.push_back(std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-            this->source()->drive_count() + this->source()->measurement_count(), stream));
     }
 
     // init model
