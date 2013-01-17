@@ -1,6 +1,6 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #ifndef FASTEIT_INCLUDE_ELECTRODES_H
@@ -16,7 +16,7 @@ namespace fastEIT {
     // constructer and destructor
     public:
         Electrodes(dtype::size count, std::tuple<dtype::real, dtype::real> shape,
-            const std::shared_ptr<mesh_type> mesh);
+            dtype::real impedance, const std::shared_ptr<mesh_type> mesh);
         virtual ~Electrodes() { }
 
     public:
@@ -27,6 +27,7 @@ namespace fastEIT {
             return this->coordinates_;
         }
         const std::tuple<dtype::real, dtype::real> shape() const { return this->shape_; }
+        dtype::real impedance() const { return this->impedance_; }
 
     // member
     private:
@@ -34,6 +35,7 @@ namespace fastEIT {
         std::vector<std::tuple<std::tuple<dtype::real, dtype::real>,
             std::tuple<dtype::real, dtype::real>>> coordinates_;
         std::tuple<dtype::real, dtype::real> shape_;
+        dtype::real impedance_;
     };
 }
 

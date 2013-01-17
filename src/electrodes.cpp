@@ -1,6 +1,6 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include "../include/fasteit.h"
@@ -10,8 +10,9 @@ template <
     class mesh_type
 >
 fastEIT::Electrodes<mesh_type>::Electrodes(dtype::size count,
-    std::tuple<dtype::real, dtype::real> shape, const std::shared_ptr<mesh_type> mesh)
-    : count_(count), shape_(shape) {
+    std::tuple<dtype::real, dtype::real> shape, dtype::real impedance,
+    const std::shared_ptr<mesh_type> mesh)
+    : count_(count), shape_(shape), impedance_(impedance) {
     // check input
     if (count == 0) {
         throw std::invalid_argument("Electrodes::Electrodes: count == 0");
@@ -21,6 +22,9 @@ fastEIT::Electrodes<mesh_type>::Electrodes(dtype::size count,
     }
     if (std::get<1>(shape) <= 0.0) {
         throw std::invalid_argument("Electrodes::Electrodes: height <= 0.0");
+    }
+    if (impedance <= 0.0) {
+        throw std::invalid_argument("Electrodes::Electrodes: impedance <= 0.0");
     }
     if (mesh == nullptr) {
         throw std::invalid_argument("Electrodes::Electrodes: mesh == nullptr");
