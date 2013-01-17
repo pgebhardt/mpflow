@@ -216,30 +216,34 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     // turn sign of jacobian, because of voltage jacobian
     forward_solver_->jacobian()->scalarMultiply(-1.0, stream);
 
-    // set stream
-    cublasSetStream(handle, stream);
+    // calc voltage
+    dim3 blocks(forward_solver_->voltage()->data_rows() / matrix::block_size,
+        forward_solver_->voltage()->data_columns() / matrix::block_size);
+    dim3 threads(matrix::block_size, matrix::block_size);
 
-    /* // add voltage
-    // TODO
-    dtype::real alpha = 1.0f, beta = 0.0f;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, forward_solver_->electrode_attachment()->data_rows(),
-        forward_solver_->model()->source()->drive_count(), forward_solver_->electrode_attachment()->data_columns(), &alpha,
-        forward_solver_->electrode_attachment()->device_data(), forward_solver_->electrode_attachment()->data_rows(),
-        forward_solver_->model()->potential(0)->device_data(), forward_solver_->model()->potential(0)->data_rows(), &beta,
-        forward_solver_->voltage()->device_data(), forward_solver_->voltage()->data_rows());
+    forwardKernel::calcVoltage(blocks, threads, stream,
+        forward_solver_->model()->potential(0)->device_data(),
+        forward_solver_->model()->mesh()->nodes()->rows(),
+        forward_solver_->model()->potential(0)->data_rows(),
+        forward_solver_->model()->source()->measurement_pattern()->device_data(),
+        forward_solver_->model()->source()->measurement_pattern()->data_rows(),
+        false,
+        forward_solver_->voltage()->device_data(),
+        forward_solver_->voltage()->data_rows());
 
-    // add harmonic voltages
-    beta = 1.0f;
     for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
-        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, forward_solver_->electrode_attachment()->data_rows(),
-            forward_solver_->model()->source()->drive_count(), forward_solver_->electrode_attachment()->data_columns(), &alpha,
-            forward_solver_->electrode_attachment()->device_data(), forward_solver_->electrode_attachment()->data_rows(),
-            forward_solver_->model()->potential(component)->device_data(), forward_solver_->model()->potential(component)->data_rows(), &beta,
-            forward_solver_->voltage()->device_data(), forward_solver_->voltage()->data_rows());
-    }*/
-
+        forwardKernel::calcVoltage(blocks, threads, stream,
+            forward_solver_->model()->potential(component)->device_data(),
+            forward_solver_->model()->mesh()->nodes()->rows(),
+            forward_solver_->model()->potential(component)->data_rows(),
+            forward_solver_->model()->source()->measurement_pattern()->device_data(),
+            forward_solver_->model()->source()->measurement_pattern()->data_rows(),
+            true,
+            forward_solver_->voltage()->device_data(),
+            forward_solver_->voltage()->data_rows());
+    }
     // scale for current
-    forward_solver_->voltage()->scalarMultiply(forward_solver_->model()->source()->current(), stream);
+    // forward_solver_->voltage()->scalarMultiply(forward_solver_->model()->source()->current(), stream);
 
     return forward_solver_->voltage();
 }
