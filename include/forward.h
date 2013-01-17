@@ -37,9 +37,6 @@ namespace fastEIT {
         const std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) const {
             return this->excitation_[index];
         }
-        const std::shared_ptr<Matrix<dtype::real>> electrode_attachment() const {
-            return this->electrode_attachment_;
-        }
         const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() const {
             return this->elemental_jacobian_matrix_;
         }
@@ -53,7 +50,6 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) {
             return this->excitation_[index];
         }
-        std::shared_ptr<Matrix<dtype::real>> electrode_attachment() { return this->electrode_attachment_; }
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() {
             return this->elemental_jacobian_matrix_;
         }
@@ -69,7 +65,6 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::shared_ptr<Matrix<dtype::real>> current_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> excitation_;
-        std::shared_ptr<Matrix<dtype::real>> electrode_attachment_;
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
     };
 

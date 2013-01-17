@@ -25,8 +25,10 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
     }
 
     // create numeric_solver_type solver
-    this->numeric_solver_ = std::make_shared<numeric_solver_type>(this->model()->mesh()->nodes()->rows(),
-        this->model()->source()->drive_count() + this->model()->source()->measurement_count(), stream);
+    this->numeric_solver_ = std::make_shared<numeric_solver_type>(
+        this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
+        this->model()->source()->drive_count() + this->model()->source()->measurement_count(),
+        stream);
 
     // create matrices
     this->jacobian_ = std::make_shared<Matrix<dtype::real>>(
@@ -37,31 +39,15 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
         this->model()->source()->drive_count(), stream);
     this->current_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
         this->model()->source()->drive_count(), stream);
-    this->electrode_attachment_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
-        this->model()->mesh()->nodes()->rows(), stream);
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
         math::square(model_type::basis_function_type::nodes_per_element), stream);
 
     for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
-        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->nodes()->rows(),
+        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(
+            this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
             this->model()->source()->drive_count() + this->model()->source()->measurement_count(), stream));
     }
 
-    // calc electrodes attachement matrix
-    dtype::real alpha = 1.0, beta = 0.0;
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        this->model()->source()->measurement_pattern()->data_columns(),
-        this->model()->excitation_matrix()->data_rows(),
-        this->model()->source()->measurement_pattern()->data_rows(), &alpha,
-        this->model()->source()->measurement_pattern()->device_data(),
-        this->model()->source()->measurement_pattern()->data_rows(),
-        this->model()->excitation_matrix()->device_data(),
-        this->model()->excitation_matrix()->data_rows(),
-        &beta, this->electrode_attachment()->device_data(),
-        this->electrode_attachment()->data_rows())
-        != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
-    }
     // init excitation matrix
     this->initExcitationMatrix(handle, stream);
 
@@ -147,18 +133,20 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
                 -(*forward_solver_->model()->source()->measurement_pattern())(row, column);
         }
     }
-    pattern->copyToDevice(stream);
-
-    // turn sign of pattern for correct current direction
-    pattern->scalarMultiply(-1.0, stream);
 
     // calc excitation components
     for (dtype::index component = 0; component < forward_solver_->model()->components_count() + 1; ++component) {
-        // calc nodal excitation
-        forward_solver_->excitation(component)->multiply(forward_solver_->model()->excitation_matrix(),
-            pattern, handle, stream);
+        // set excitation
+        for (dtype::index row = 0; row < pattern->rows(); ++row) {
+            for (dtype::index column = 0; column < pattern->columns(); ++column) {
+                (*forward_solver_->excitation(component))(
+                    forward_solver_->model()->mesh()->nodes()->rows() + row, column) =
+                    (*pattern)(row, column);
+            }
+        }
+        forward_solver_->excitation(component)->copyToDevice(stream);
 
-        // fourier transform excitation
+        // fourier transform pattern
         forward_solver_->model()->calcExcitationComponent(forward_solver_->excitation(component),
             component, handle, stream);
     }
@@ -231,7 +219,8 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     // set stream
     cublasSetStream(handle, stream);
 
-    // add voltage
+    /* // add voltage
+    // TODO
     dtype::real alpha = 1.0f, beta = 0.0f;
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, forward_solver_->electrode_attachment()->data_rows(),
         forward_solver_->model()->source()->drive_count(), forward_solver_->electrode_attachment()->data_columns(), &alpha,
@@ -247,7 +236,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
             forward_solver_->electrode_attachment()->device_data(), forward_solver_->electrode_attachment()->data_rows(),
             forward_solver_->model()->potential(component)->device_data(), forward_solver_->model()->potential(component)->data_rows(), &beta,
             forward_solver_->voltage()->device_data(), forward_solver_->voltage()->data_rows());
-    }
+    }*/
 
     // scale for current
     forward_solver_->voltage()->scalarMultiply(forward_solver_->model()->source()->current(), stream);
