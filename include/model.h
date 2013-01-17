@@ -41,7 +41,6 @@ namespace fastEIT {
             return this->potential_[index];
         }
         const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
-        const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const { return this->excitation_matrix_; }
         const std::shared_ptr<SparseMatrix> s_matrix() const { return this->s_matrix_; }
         const std::shared_ptr<SparseMatrix> r_matrix() const { return this->r_matrix_; }
         const std::shared_ptr<SparseMatrix> z_matrix() const { return this->z_matrix_; }
@@ -61,7 +60,6 @@ namespace fastEIT {
             return this->potential_[index];
         }
         std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
-        std::shared_ptr<Matrix<dtype::real>> excitation_matrix() { return this->excitation_matrix_; }
         std::shared_ptr<SparseMatrix> s_matrix() { return this->s_matrix_; }
         std::shared_ptr<SparseMatrix> r_matrix() { return this->r_matrix_; }
         std::shared_ptr<SparseMatrix> z_matrix() { return this->z_matrix_; }
@@ -76,8 +74,6 @@ namespace fastEIT {
     private:
         // init methods
         void init(cublasHandle_t handle, cudaStream_t stream);
-        void createSparseMatrices(cublasHandle_t handle, cudaStream_t stream);
-        void initExcitationMatrix(cudaStream_t stream);
         void initCEMMatrices(cudaStream_t stream);
 
         // member
@@ -91,7 +87,6 @@ namespace fastEIT {
         std::shared_ptr<SparseMatrix> z_matrix_;
         std::shared_ptr<SparseMatrix> w_matrix_;
         std::shared_ptr<SparseMatrix> d_matrix_;
-        std::shared_ptr<Matrix<dtype::real>> excitation_matrix_;
         std::shared_ptr<Matrix<dtype::index>> connectivity_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix_;

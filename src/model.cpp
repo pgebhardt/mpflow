@@ -35,12 +35,7 @@ fastEIT::Model<basis_function_type, source_type>::Model(
         throw std::invalid_argument("Model::Model: handle == NULL");
     }
 
-    // create sparse matrices
-    this->createSparseMatrices(handle, stream);
-
     // create matrices
-    this->excitation_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-        this->electrodes()->count(), stream);
     this->connectivity_matrix_ = std::make_shared<Matrix<dtype::index>>(this->mesh()->nodes()->rows(),
         sparseMatrix::block_size * matrix::block_size, stream);
     this->elemental_s_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
@@ -55,51 +50,6 @@ fastEIT::Model<basis_function_type, source_type>::Model(
 
     // init model
     this->init(handle, stream);
-
-    // init excitaion matrix
-    this->initExcitationMatrix(stream);
-}
-
-// create sparse matrices
-template <
-    class basis_function_type,
-    class source_type
->
-void fastEIT::Model<basis_function_type, source_type>::createSparseMatrices(cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::createSparseMatrices: handle == NULL");
-    }
-
-    // calc initial system matrix
-    // create matrices
-    auto system_matrix = std::make_shared<Matrix<dtype::real>>(
-        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-
-    // calc generate empty system matrix
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, basis_function_type::nodes_per_element> nodes;
-    for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
-        // get nodes for element
-        nodes = this->mesh()->elementNodes(element);
-
-        // set system matrix elements
-        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i) {
-            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
-                (*system_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
-            }
-        }
-    }
-
-    // copy matrix to device
-    system_matrix->copyToDevice(stream);
-
-    // create sparse matrices
-    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream);
-    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream);
-
-    for (dtype::index component = 0; component < this->components_count(); ++component) {
-        this->system_matrices_.push_back(std::make_shared<fastEIT::SparseMatrix>(system_matrix, stream));
-    }
 }
 
 // init model
@@ -191,6 +141,28 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
     elemental_s_matrix->copyToDevice(stream);
     elemental_r_matrix->copyToDevice(stream);
 
+    // determine nodes with common element
+    auto common_element_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
+    for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
+        // get nodes for element
+        nodes = this->mesh()->elementNodes(element);
+
+        // set system matrix elements
+        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i) {
+            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
+                (*common_element_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
+            }
+        }
+    }
+
+    // copy matrix to device
+    common_element_matrix->copyToDevice(stream);
+
+    // create sparse matrices
+    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix>(common_element_matrix, stream);
+    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix>(common_element_matrix, stream);
+
     // reduce matrices
     model::reduceMatrix(connectivity_matrix, this->s_matrix(), stream,
         this->connectivity_matrix());
@@ -207,6 +179,9 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
         this->sigma_ref(), stream, this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->r_matrix());
+
+    // init complete electrode model
+    this->initCEMMatrices(stream);
 }
 
 // update model
@@ -252,71 +227,6 @@ void fastEIT::Model<basis_function_type, source_type>::update(const std::shared_
                 "Model::update: calc system matrices for all harmonics");
         }
     }
-}
-
-// init exitation matrix
-template <
-    class basis_function_type,
-    class source_type
->
-void fastEIT::Model<basis_function_type, source_type>::initExcitationMatrix(cudaStream_t stream) {
-    // fill exitation_matrix matrix
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, basis_function_type::nodes_per_edge> nodes;
-
-    // needed arrays
-    std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
-    dtype::real integration_start, integration_end;
-
-    // calc excitaion matrix
-    for (dtype::index boundary_element = 0;
-        boundary_element < this->mesh()->boundary()->rows();
-        ++boundary_element) {
-        // get boundary nodes
-        nodes = this->mesh()->boundaryNodes(boundary_element);
-
-        // sort nodes by parameter
-        std::sort(nodes.begin(), nodes.end(),
-            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
-                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
-                -> bool {
-                    return math::circleParameter(std::get<1>(b),
-                        math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
-        });
-
-        // calc parameter offset
-        dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
-
-        // calc node parameter centered to node 0
-        for (dtype::size i = 0; i < basis_function_type::nodes_per_edge; ++i) {
-            node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
-                parameter_offset);
-        }
-
-        // integrate basis function for each electrode
-        for (dtype::index electrode = 0;
-            electrode < this->electrodes()->count();
-            ++electrode) {
-            // calc integration interval centered to node 0
-            integration_start = math::circleParameter(
-                std::get<0>(this->electrodes()->coordinates()[electrode]), parameter_offset);
-            integration_end = math::circleParameter(
-                std::get<1>(this->electrodes()->coordinates()[electrode]), parameter_offset);
-
-            // integrat boundary if integration_start is left of integration_end
-            if (integration_start < integration_end) {
-                // calc elements
-                for (dtype::index node = 0; node < basis_function_type::nodes_per_edge; ++node) {
-                    (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) +=
-                        basis_function_type::integrateBoundaryEdge(
-                            node_parameter, node, integration_start, integration_end) /
-                        std::get<0>(this->electrodes()->shape());
-                }
-            }
-        }
-    }
-
-    // upload matrix
-    this->excitation_matrix()->copyToDevice(stream);
 }
 
 // init complete electrode model boundary conditions
