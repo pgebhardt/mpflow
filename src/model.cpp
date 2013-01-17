@@ -321,6 +321,91 @@ void fastEIT::Model<basis_function_type, source_type>::initExcitationMatrix(cuda
     this->excitation_matrix()->copyToDevice(stream);
 }
 
+// init complete electrode model boundary conditions
+template <
+    class basis_function_type,
+    class source_type
+>
+void fastEIT::Model<basis_function_type, source_type>::initCEMMatrices(cudaStream_t stream) {
+    // create matrices
+    auto z_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
+    auto w_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows(), this->electrodes()->count(), stream);
+    auto d_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->electrodes()->count(), this->electrodes()->count(), stream);
+
+    // needed arrays
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, basis_function_type::nodes_per_edge> nodes;
+    std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
+    dtype::real integration_start, integration_end;
+
+    // init z and w matrices
+    for (dtype::index boundary_element = 0;
+        boundary_element < this->mesh()->boundary()->rows();
+        ++boundary_element) {
+        // get boundary nodes
+        nodes = this->mesh()->boundaryNodes(boundary_element);
+
+        // sort nodes by parameter
+        std::sort(nodes.begin(), nodes.end(),
+            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
+                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
+                -> bool {
+                    return math::circleParameter(std::get<1>(b),
+                        math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
+        });
+
+        // calc parameter offset
+        dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
+
+        // calc node parameter centered to node 0
+        for (dtype::size i = 0; i < basis_function_type::nodes_per_edge; ++i) {
+            node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
+                parameter_offset);
+        }
+
+        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+            // calc integration interval centered to node 0
+            integration_start = math::circleParameter(
+                std::get<0>(this->electrodes()->coordinates()[electrode]), parameter_offset);
+            integration_end = math::circleParameter(
+                std::get<1>(this->electrodes()->coordinates()[electrode]), parameter_offset);
+
+            // calc z matrix element
+            for (dtype::index i = 0; i < basis_function_type::nodes_per_edge; ++i) {
+                for (dtype::index j = 0; j < basis_function_type::nodes_per_edge; ++j) {
+                    // calc z matrix element
+                    // TODO
+                    (*z_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
+                        0.0 / this->electrodes()->impedance();
+
+                }
+
+                // calc w matrix element
+                (*w_matrix)(std::get<0>(nodes[i]), electrode) -=
+                    basis_function_type::integrateBoundaryEdge(
+                        node_parameter, i, integration_start, integration_end) /
+                    this->electrodes()->impedance();
+            }
+        }
+    }
+    z_matrix->copyToDevice(stream);
+    w_matrix->copyToDevice(stream);
+
+    // init d matrix
+    for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+        (*d_matrix)(electrode, electrode) = std::get<0>(this->electrodes()->shape()) /
+            this->electrodes()->impedance();
+    }
+    d_matrix->copyToDevice(stream);
+
+    // create sparse matrices
+    this->z_matrix_ = std::make_shared<SparseMatrix>(z_matrix, stream);
+    this->w_matrix_ = std::make_shared<SparseMatrix>(w_matrix, stream);
+    this->d_matrix_ = std::make_shared<SparseMatrix>(d_matrix, stream);
+}
+
 // calc excitation component
 template <
     class basis_function_type,
