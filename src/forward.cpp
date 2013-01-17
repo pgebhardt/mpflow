@@ -130,7 +130,7 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
         for (dtype::index column = 0; column < forward_solver_->model()->source()->measurement_count(); ++column) {
             (*pattern)(row, column + forward_solver_->model()->source()->drive_count()) =
-                -(*forward_solver_->model()->source()->measurement_pattern())(row, column);
+                (*forward_solver_->model()->source()->measurement_pattern())(row, column);
         }
     }
 
@@ -217,9 +217,12 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     forward_solver_->jacobian()->scalarMultiply(-1.0, stream);
 
     // calc voltage
-    dim3 blocks(forward_solver_->voltage()->data_rows() / matrix::block_size,
+    // TODO
+    /*dim3 blocks(forward_solver_->voltage()->data_rows() / matrix::block_size,
         forward_solver_->voltage()->data_columns() / matrix::block_size);
-    dim3 threads(matrix::block_size, matrix::block_size);
+    dim3 threads(matrix::block_size, matrix::block_size);*/
+    dim3 blocks(forward_solver_->voltage()->rows(), forward_solver_->voltage()->columns());
+    dim3 threads(1, 1);
 
     forwardKernel::calcVoltage(blocks, threads, stream,
         forward_solver_->model()->potential(0)->device_data(),

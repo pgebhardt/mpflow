@@ -97,7 +97,7 @@ void fastEIT::forwardKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_
 // calc voltage kernel
 static __global__ void calcVoltageKernel(const fastEIT::dtype::real* potential,
     fastEIT::dtype::size offset, fastEIT::dtype::size rows, const fastEIT::dtype::real* pattern,
-    fastEIT::dtype::size pattern_rows, bool additiv, 
+    fastEIT::dtype::size pattern_rows, bool additiv,
     fastEIT::dtype::real* voltage, fastEIT::dtype::size voltage_rows) {
     // get ids
     fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
