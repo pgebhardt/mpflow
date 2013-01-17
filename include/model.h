@@ -74,6 +74,7 @@ namespace fastEIT {
     private:
         // init methods
         void init(cublasHandle_t handle, cudaStream_t stream);
+        void initElementalMatrices(cudaStream_t stream);
         void initCEMMatrices(cudaStream_t stream);
 
         // member

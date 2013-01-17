@@ -63,6 +63,132 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
         throw std::invalid_argument("Model::init: handle == NULL");
     }
 
+    // create gamma
+    auto gamma = std::make_shared<Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
+
+    // init elemental matrices
+    this->initElementalMatrices(stream);
+
+    // init complete electrode model
+    this->initCEMMatrices(stream);
+
+    // update r and s matrices
+    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->s_matrix());
+    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->r_matrix());
+
+    // determine nodes with common element
+    auto common_element_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
+    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
+        basis_function_type::nodes_per_element> nodes;
+
+    for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
+        // get nodes for element
+        nodes = this->mesh()->elementNodes(element);
+
+        // set system matrix elements
+        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i) {
+            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
+                (*common_element_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
+            }
+        }
+    }
+
+    // assamble initial system matrices
+    auto system_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows() + this->electrodes()->count(),
+        this->mesh()->nodes()->rows() + this->electrodes()->count(),
+        stream);
+
+    // fill s + r + z
+    for (dtype::index row = 0; row < this->mesh()->nodes()->rows(); ++row) {
+        for (dtype::index column = 0; column < this->mesh()->nodes()->rows(); ++column) {
+            (*system_matrix)(row, column) = (*common_element_matrix)(row, column);
+        }
+    }
+
+    // fill w and wT
+    auto w_matrix = this->w_matrix()->toMatrix(stream);
+    w_matrix->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+
+    for (dtype::index node = 0; node < this->mesh()->nodes()->rows(); ++node) {
+        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+            (*system_matrix)(node, electrode + this->mesh()->nodes()->rows()) =
+                (*w_matrix)(node, electrode);
+
+            (*system_matrix)(electrode + this->mesh()->nodes()->rows(), node) =
+                (*w_matrix)(node, electrode);
+        }
+    }
+
+    // fill d matrix
+    auto d_matrix = this->d_matrix()->toMatrix(stream);
+    d_matrix->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+
+    for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+        (*system_matrix)(electrode + this->mesh()->nodes()->rows(), electrode + this->mesh()->nodes()->rows()) =
+            (*d_matrix)(electrode, electrode);
+    }
+
+    // create sparse matrices
+    system_matrix->copyToDevice(stream);
+    for (dtype::index component = 0; component < this->components_count(); ++component) {
+        this->system_matrices_.push_back(std::make_shared<SparseMatrix>(system_matrix, stream));
+    }
+}
+
+// update model
+template <
+    class basis_function_type,
+    class source_type
+>
+void fastEIT::Model<basis_function_type, source_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // check input
+    if (handle == NULL) {
+        throw std::invalid_argument("Model::init: handle == NULL");
+    }
+
+    // update matrices
+    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->s_matrix());
+    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
+        this->sigma_ref(), stream, this->r_matrix());
+
+    // create system matrices for all components
+    for (dtype::index component = 0; component < this->components_count(); ++component) {
+
+        /* // calc alpha
+        alpha = fastEIT::math::square(2.0f * component * M_PI / this->mesh()->height());
+
+        // init system matrix with 2d system matrix
+        if (cublasScopy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size,
+            this->s_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
+            != CUBLAS_STATUS_SUCCESS) {
+            throw std::logic_error(
+                "Model::update: calc system matrices for all harmonics");
+        }
+
+        // add alpha * residualMatrix
+        if (cublasSaxpy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size, &alpha,
+            this->r_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
+            != CUBLAS_STATUS_SUCCESS) {
+            throw std::logic_error(
+                "Model::update: calc system matrices for all harmonics");
+        }*/
+    }
+}
+
+// init elemental matrices
+template <
+    class basis_function_type,
+    class source_type
+>
+void fastEIT::Model<basis_function_type, source_type>::initElementalMatrices(cudaStream_t stream) {
     // create intermediate matrices
     auto element_count = std::make_shared<Matrix<dtype::index>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
@@ -170,69 +296,6 @@ void fastEIT::Model<basis_function_type, source_type>::init(cublasHandle_t handl
         this->elemental_s_matrix());
     model::reduceMatrix(elemental_r_matrix, this->s_matrix(), stream,
         this->elemental_r_matrix());
-
-    // create gamma
-    auto gamma = std::make_shared<Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
-
-    // update matrices
-    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->s_matrix());
-    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->r_matrix());
-
-    // init complete electrode model
-    this->initCEMMatrices(stream);
-
-    // update model
-    this->update(gamma, handle, stream);
-}
-
-// update model
-template <
-    class basis_function_type,
-    class source_type
->
-void fastEIT::Model<basis_function_type, source_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
-    cudaStream_t stream) {
-    // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::init: handle == NULL");
-    }
-
-    // update matrices
-    model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->s_matrix());
-    model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->r_matrix());
-
-    // assamble system matrices
-    // TODO
-
-    // set cublas stream
-    cublasSetStream(handle, stream);
-
-    // create system matrices for all harmonics
-    dtype::real alpha = 0.0f;
-    for (dtype::index component = 0; component < this->components_count(); ++component) {
-        // calc alpha
-        alpha = fastEIT::math::square(2.0f * component * M_PI / this->mesh()->height());
-
-        // init system matrix with 2d system matrix
-        if (cublasScopy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size,
-            this->s_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
-            != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error(
-                "Model::update: calc system matrices for all harmonics");
-        }
-
-        // add alpha * residualMatrix
-        if (cublasSaxpy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size, &alpha,
-            this->r_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
-            != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error(
-                "Model::update: calc system matrices for all harmonics");
-        }
-    }
 }
 
 // init complete electrode model boundary conditions
