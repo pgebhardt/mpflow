@@ -26,6 +26,9 @@ namespace fastEIT {
         ForwardSolver(std::shared_ptr<model_type> model,
             cublasHandle_t handle, cudaStream_t stream);
 
+        // init excitation Matrix
+        void initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream);
+
         // accessors
         const std::shared_ptr<numeric_solver_type> numeric_solver() const {
             return this->numeric_solver_;
@@ -87,9 +90,6 @@ namespace fastEIT {
             SourcePolicy(forward_solver_type* forward_solver)
                 : forward_solver_(forward_solver) { }
 
-            // init excitation Matrix
-            void initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream);
-
             // forward solving
             std::shared_ptr<Matrix<dtype::real>> solve(
                 const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps,
@@ -108,9 +108,6 @@ namespace fastEIT {
             // constructor
             SourcePolicy(forward_solver_type* forward_solver)
                 : forward_solver_(forward_solver) { }
-
-            // init excitation Matrix
-            void initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream);
 
             // forward solving
             std::shared_ptr<Matrix<dtype::real>> solve(

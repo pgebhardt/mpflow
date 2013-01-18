@@ -104,69 +104,55 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initJacobianCalcul
     this->elemental_jacobian_matrix()->copyToDevice(stream);
 }
 
-// init excitation Matrix for current source
+// init excitation Matrix
 template <
-    class forward_solver_type
+    class numeric_solver_type,
+    class model_type
 >
-void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
-    forward_solver_type>::initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initExcitationMatrix(
+    cublasHandle_t handle, cudaStream_t stream) {
     if (handle == NULL) {
-        throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
+        throw std::invalid_argument("ForwardSolver::initExcitationMatrix: handle == NULL");
     }
 
     // create pattern matrix
-    auto pattern = std::make_shared<Matrix<dtype::real>>(forward_solver_->model()->electrodes()->count(),
-        forward_solver_->model()->source()->drive_count() + forward_solver_->model()->source()->measurement_count(), stream);
+    auto pattern = std::make_shared<Matrix<dtype::real>>(this->model()->electrodes()->count(),
+        this->model()->source()->drive_count() + this->model()->source()->measurement_count(), stream);
 
     // fill pattern matrix with drive pattern
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < forward_solver_->model()->source()->drive_count(); ++column) {
+        for (dtype::index column = 0; column < this->model()->source()->drive_count(); ++column) {
             (*pattern)(row, column) = 
-                (*forward_solver_->model()->source()->drive_pattern())(row, column) *
-                forward_solver_->model()->source()->current();
+                (*this->model()->source()->drive_pattern())(row, column) *
+                this->model()->source()->value();
         }
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < forward_solver_->model()->source()->measurement_count(); ++column) {
-            (*pattern)(row, column + forward_solver_->model()->source()->drive_count()) =
-                (*forward_solver_->model()->source()->measurement_pattern())(row, column);
+        for (dtype::index column = 0; column < this->model()->source()->measurement_count(); ++column) {
+            (*pattern)(row, column + this->model()->source()->drive_count()) =
+                (*this->model()->source()->measurement_pattern())(row, column);
         }
     }
 
     // calc excitation components
-    for (dtype::index component = 0; component < forward_solver_->model()->components_count() + 1; ++component) {
+    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
         // set excitation
         for (dtype::index row = 0; row < pattern->rows(); ++row) {
             for (dtype::index column = 0; column < pattern->columns(); ++column) {
-                (*forward_solver_->excitation(component))(
-                    forward_solver_->model()->mesh()->nodes()->rows() + row, column) =
+                (*this->excitation(component))(
+                    this->model()->mesh()->nodes()->rows() + row, column) =
                     (*pattern)(row, column);
             }
         }
-        forward_solver_->excitation(component)->copyToDevice(stream);
+        this->excitation(component)->copyToDevice(stream);
 
         // fourier transform pattern
-        forward_solver_->model()->calcExcitationComponent(forward_solver_->excitation(component),
+        this->model()->calcExcitationComponent(this->excitation(component),
             component, handle, stream);
     }
-}
-
-// init excitation Matrix for voltage source
-template <
-    class forward_solver_type
->
-void fastEIT::forward::SourcePolicy<fastEIT::source::Voltage,
-    forward_solver_type>::initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream) {
-    if (handle == NULL) {
-        throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
-    }
-
-    // not implemented yet
-    // TODO
-    throw std::logic_error("ForwardSolver::initExcitationMatrix::Voltage: not implemented yet!");
 }
 
 // forward solving for current source
