@@ -247,7 +247,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     return forward_solver_->voltage();
 }
 
-// forward solving for current source
+// forward solving for voltage source
 template <
     class forward_solver_type
 >
