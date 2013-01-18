@@ -120,7 +120,7 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initExcitationMatr
     // fill pattern matrix with drive pattern
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
         for (dtype::index column = 0; column < this->model()->source()->drive_count(); ++column) {
-            (*pattern)(row, column) = 
+            (*pattern)(row, column) =
                 (*this->model()->source()->drive_pattern())(row, column) *
                 this->model()->source()->value();
         }
@@ -153,7 +153,42 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initExcitationMatr
     }
 }
 
-// forward solving for current source
+// apply pattern
+template <
+    class numeric_solver_type,
+    class model_type
+>
+void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPattern(
+    std::shared_ptr<Matrix<dtype::real>> result, cudaStream_t stream) {
+    // check input
+    if (result == nullptr) {
+        throw std::invalid_argument("forward::applyPattern: result == nullptr");
+    }
+
+    // apply pattern
+    dim3 blocks(result->rows(), result->columns());
+    dim3 threads(1, 1);
+
+    forwardKernel::calcVoltage(blocks, threads, stream,
+        this->model()->potential(0)->device_data(),
+        this->model()->mesh()->nodes()->rows(),
+        this->model()->potential(0)->data_rows(),
+        this->model()->source()->measurement_pattern()->device_data(),
+        this->model()->source()->measurement_pattern()->data_rows(),
+        true, result->device_data(), result->data_rows());
+
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+        forwardKernel::calcVoltage(blocks, threads, stream,
+            this->model()->potential(component)->device_data(),
+            this->model()->mesh()->nodes()->rows(),
+            this->model()->potential(component)->data_rows(),
+            this->model()->source()->measurement_pattern()->device_data(),
+            this->model()->source()->measurement_pattern()->data_rows(),
+            true, result->device_data(), result->data_rows());
+    }
+}
+
+// forward solving
 template <
     class numeric_solver_type,
     class model_type
@@ -199,35 +234,23 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
             true, stream, this->jacobian());
     }
 
-    // turn sign of jacobian, because of voltage jacobian
-    this->jacobian()->scalarMultiply(-1.0, stream);
+    // current source specific tasks
+    if (this->model()->source()->type() == "current") {
+        // turn sign of jacobian, because of voltage jacobian
+        this->jacobian()->scalarMultiply(-1.0, stream);
 
-    // calc voltage
-    dim3 blocks(this->voltage()->rows(), this->voltage()->columns());
-    dim3 threads(1, 1);
+        // calc voltage
+        this->applyMeasurementPattern(this->voltage(), stream);
 
-    forwardKernel::calcVoltage(blocks, threads, stream,
-        this->model()->potential(0)->device_data(),
-        this->model()->mesh()->nodes()->rows(),
-        this->model()->potential(0)->data_rows(),
-        this->model()->source()->measurement_pattern()->device_data(),
-        this->model()->source()->measurement_pattern()->data_rows(),
-        false,
-        this->voltage()->device_data(),
-        this->voltage()->data_rows());
+        return this->voltage();
+    } else if (this->model()->source()->type() == "voltage") {
+        // calc current
+        this->applyMeasurementPattern(this->current(), stream);
 
-    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
-        forwardKernel::calcVoltage(blocks, threads, stream,
-            this->model()->potential(component)->device_data(),
-            this->model()->mesh()->nodes()->rows(),
-            this->model()->potential(component)->data_rows(),
-            this->model()->source()->measurement_pattern()->device_data(),
-            this->model()->source()->measurement_pattern()->data_rows(),
-            true,
-            this->voltage()->device_data(),
-            this->voltage()->data_rows());
+        return this->current();
     }
 
+    // default result
     return this->voltage();
 }
 

@@ -290,18 +290,26 @@ std::tuple<std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::shared_p
                 for (dtype::index i = 0; i < basis_function_type::nodes_per_edge; ++i) {
                     for (dtype::index j = 0; j < basis_function_type::nodes_per_edge; ++j) {
                         // calc z matrix element
-                        (*this->z_matrix())(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
-                            basis_function_type::integrateBoundaryEdgeWithBasis(
-                                node_parameter, i, j, integration_start, integration_end) /
-                            this->electrodes()->impedance();
-
+                        if (this->source()->type() == "current") {
+                            (*this->z_matrix())(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
+                                basis_function_type::integrateBoundaryEdgeWithBasis(
+                                    node_parameter, i, j, integration_start, integration_end) /
+                                this->electrodes()->impedance();
+                        }
                     }
 
                     // calc w matrix element
-                    (*w_matrix)(std::get<0>(nodes[i]), electrode) -=
-                        basis_function_type::integrateBoundaryEdge(
-                            node_parameter, i, integration_start, integration_end) /
-                        this->electrodes()->impedance();
+                    if (this->source()->type() == "current") {
+                        (*w_matrix)(std::get<0>(nodes[i]), electrode) -=
+                            basis_function_type::integrateBoundaryEdge(
+                                node_parameter, i, integration_start, integration_end) /
+                            this->electrodes()->impedance();
+                    } else if (this->source()->type() == "voltage") {
+                        (*w_matrix)(std::get<0>(nodes[i]), electrode) +=
+                            basis_function_type::integrateBoundaryEdge(
+                                node_parameter, i, integration_start, integration_end) /
+                            std::get<0>(this->electrodes()->shape());
+                    }
                 }
             }
         }
@@ -309,9 +317,16 @@ std::tuple<std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::shared_p
     this->z_matrix()->copyToDevice(stream);
 
     // init d matrix
-    for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
-        (*d_matrix)(electrode, electrode) = std::get<0>(this->electrodes()->shape()) /
-            this->electrodes()->impedance();
+    if (this->source()->type() == "current") {
+        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+            (*d_matrix)(electrode, electrode) = std::get<0>(this->electrodes()->shape()) /
+                this->electrodes()->impedance();
+        }
+    } else if (this->source()->type() == "voltage") {
+        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+            (*d_matrix)(electrode, electrode) = this->electrodes()->impedance() /
+                std::get<0>(this->electrodes()->shape());
+        }
     }
 
     return std::make_tuple(w_matrix, d_matrix);

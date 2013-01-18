@@ -22,6 +22,10 @@ namespace fastEIT {
         // init excitation Matrix
         void initExcitationMatrix(cublasHandle_t handle, cudaStream_t stream);
 
+        // apply pattern
+        void applyMeasurementPattern(std::shared_ptr<Matrix<dtype::real>> result,
+            cudaStream_t stream);
+
         // forward solving
         std::shared_ptr<Matrix<dtype::real>> solve(
             const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps,
