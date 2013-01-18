@@ -13,9 +13,7 @@ template <
 >
 fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
     std::shared_ptr<model_type> model, cublasHandle_t handle, cudaStream_t stream)
-    : forward::SourcePolicy<typename model_type::source_type,
-        ForwardSolver<numeric_solver_type, model_type>>(this),
-        model_(model) {
+    : model_(model) {
     // check input
     if (model == nullptr) {
         throw std::invalid_argument("ForwardSolver::ForwardSolver: model == nullptr");
@@ -157,10 +155,10 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initExcitationMatr
 
 // forward solving for current source
 template <
-    class forward_solver_type
+    class numeric_solver_type,
+    class model_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourcePolicy<
-    fastEIT::source::Current, forward_solver_type>::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<numeric_solver_type, model_type>::solve(
     const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
@@ -172,88 +170,65 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     }
 
     // update system matrix
-    forward_solver_->model()->update(gamma, handle, stream);
+    this->model()->update(gamma, handle, stream);
 
     // solve for ground mode
-    forward_solver_->numeric_solver()->solve(forward_solver_->model()->system_matrix(0),
-        forward_solver_->excitation(0), steps, true, stream,
-        forward_solver_->model()->potential(0));
+    this->numeric_solver()->solve(this->model()->system_matrix(0),
+        this->excitation(0), steps, true, stream,
+        this->model()->potential(0));
 
     // solve for higher harmonics
-    for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
-        forward_solver_->numeric_solver()->solve(
-            forward_solver_->model()->system_matrix(component),
-            forward_solver_->excitation(component),
-            steps, false, stream, forward_solver_->model()->potential(component));
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+        this->numeric_solver()->solve(
+            this->model()->system_matrix(component),
+            this->excitation(component),
+            steps, false, stream, this->model()->potential(component));
     }
 
     // calc jacobian
-    forward::calcJacobian<typename decltype(forward_solver_->model())::element_type>(
-        gamma, forward_solver_->model()->potential(0), forward_solver_->model()->mesh()->elements(),
-        forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
-        forward_solver_->model()->source()->measurement_count(), forward_solver_->model()->sigma_ref(),
-        false, stream, forward_solver_->jacobian());
-    for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
-        forward::calcJacobian<typename decltype(forward_solver_->model())::element_type>(
-            gamma, forward_solver_->model()->potential(component), forward_solver_->model()->mesh()->elements(),
-            forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
-            forward_solver_->model()->source()->measurement_count(), forward_solver_->model()->sigma_ref(),
-            true, stream, forward_solver_->jacobian());
+    forward::calcJacobian<typename decltype(this->model())::element_type>(
+        gamma, this->model()->potential(0), this->model()->mesh()->elements(),
+        this->elemental_jacobian_matrix(), this->model()->source()->drive_count(),
+        this->model()->source()->measurement_count(), this->model()->sigma_ref(),
+        false, stream, this->jacobian());
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+        forward::calcJacobian<typename decltype(this->model())::element_type>(
+            gamma, this->model()->potential(component), this->model()->mesh()->elements(),
+            this->elemental_jacobian_matrix(), this->model()->source()->drive_count(),
+            this->model()->source()->measurement_count(), this->model()->sigma_ref(),
+            true, stream, this->jacobian());
     }
 
     // turn sign of jacobian, because of voltage jacobian
-    forward_solver_->jacobian()->scalarMultiply(-1.0, stream);
+    this->jacobian()->scalarMultiply(-1.0, stream);
 
     // calc voltage
-    dim3 blocks(forward_solver_->voltage()->rows(), forward_solver_->voltage()->columns());
+    dim3 blocks(this->voltage()->rows(), this->voltage()->columns());
     dim3 threads(1, 1);
 
     forwardKernel::calcVoltage(blocks, threads, stream,
-        forward_solver_->model()->potential(0)->device_data(),
-        forward_solver_->model()->mesh()->nodes()->rows(),
-        forward_solver_->model()->potential(0)->data_rows(),
-        forward_solver_->model()->source()->measurement_pattern()->device_data(),
-        forward_solver_->model()->source()->measurement_pattern()->data_rows(),
+        this->model()->potential(0)->device_data(),
+        this->model()->mesh()->nodes()->rows(),
+        this->model()->potential(0)->data_rows(),
+        this->model()->source()->measurement_pattern()->device_data(),
+        this->model()->source()->measurement_pattern()->data_rows(),
         false,
-        forward_solver_->voltage()->device_data(),
-        forward_solver_->voltage()->data_rows());
+        this->voltage()->device_data(),
+        this->voltage()->data_rows());
 
-    for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         forwardKernel::calcVoltage(blocks, threads, stream,
-            forward_solver_->model()->potential(component)->device_data(),
-            forward_solver_->model()->mesh()->nodes()->rows(),
-            forward_solver_->model()->potential(component)->data_rows(),
-            forward_solver_->model()->source()->measurement_pattern()->device_data(),
-            forward_solver_->model()->source()->measurement_pattern()->data_rows(),
+            this->model()->potential(component)->device_data(),
+            this->model()->mesh()->nodes()->rows(),
+            this->model()->potential(component)->data_rows(),
+            this->model()->source()->measurement_pattern()->device_data(),
+            this->model()->source()->measurement_pattern()->data_rows(),
             true,
-            forward_solver_->voltage()->device_data(),
-            forward_solver_->voltage()->data_rows());
+            this->voltage()->device_data(),
+            this->voltage()->data_rows());
     }
 
-    return forward_solver_->voltage();
-}
-
-// forward solving for voltage source
-template <
-    class forward_solver_type
->
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourcePolicy<
-    fastEIT::source::Voltage, forward_solver_type>::solve(
-    const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
-    cudaStream_t stream) {
-    // check input
-    if (gamma == nullptr) {
-        throw std::invalid_argument("ForwardSolver::solve: gamma == nullptr");
-    }
-    if (handle == NULL) {
-        throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
-    }
-
-    // not implemented yet
-    // TODO
-    throw std::logic_error("ForwardSolver::solve::Voltage: not implemented yet!");
-
-    return forward_solver_->current();
+    return this->voltage();
 }
 
 // calc jacobian
@@ -298,24 +273,10 @@ void fastEIT::forward::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> g
 }
 
 // specialisation
-template void fastEIT::forward::calcJacobian<fastEIT::Model<fastEIT::basis::Linear, fastEIT::source::Current>>(
-    const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
-    const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
-    dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
-template void fastEIT::forward::calcJacobian<fastEIT::Model<fastEIT::basis::Linear, fastEIT::source::Voltage>>(
+template void fastEIT::forward::calcJacobian<fastEIT::Model<fastEIT::basis::Linear>>(
     const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
     const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
 
 template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-    fastEIT::Model<fastEIT::basis::Linear, fastEIT::source::Current>>;
-template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-    fastEIT::Model<fastEIT::basis::Linear, fastEIT::source::Voltage>>;
-
-// source specialisation
-template class fastEIT::forward::SourcePolicy<fastEIT::source::Current,
-    fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-    fastEIT::Model<fastEIT::basis::Linear, fastEIT::source::Current>>>;
-template class fastEIT::forward::SourcePolicy<fastEIT::source::Voltage,
-    fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-    fastEIT::Model<fastEIT::basis::Linear, fastEIT::source::Voltage>>>;
+    fastEIT::Model<fastEIT::basis::Linear>>;

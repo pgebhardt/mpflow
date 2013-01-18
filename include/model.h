@@ -10,8 +10,7 @@
 namespace fastEIT {
     // model class definition
     template <
-        class template_basis_function_type,
-        class template_source_type
+        class template_basis_function_type
     >
     class Model {
     public:
@@ -19,7 +18,7 @@ namespace fastEIT {
         Model(
             std::shared_ptr<Mesh<template_basis_function_type>> mesh,
             std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes,
-            std::shared_ptr<template_source_type> source, dtype::real sigmaRef,
+            std::shared_ptr<source::Source> source, dtype::real sigmaRef,
             dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
 
         // calc excitation component
@@ -31,12 +30,11 @@ namespace fastEIT {
 
         // type defs
         typedef template_basis_function_type basis_function_type;
-        typedef template_source_type source_type;
 
         // accessors
         const std::shared_ptr<Mesh<template_basis_function_type>> mesh() const { return this->mesh_; }
         const std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes() const { return this->electrodes_; }
-        const std::shared_ptr<source_type> source() const { return this->source_; }
+        const std::shared_ptr<source::Source> source() const { return this->source_; }
         const std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) const {
             return this->potential_[index];
         }
@@ -53,7 +51,7 @@ namespace fastEIT {
         // mutators
         std::shared_ptr<Mesh<template_basis_function_type>> mesh() { return this->mesh_; }
         std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes() { return this->electrodes_; }
-        std::shared_ptr<source_type> source() { return this->source_; }
+        std::shared_ptr<source::Source> source() { return this->source_; }
         std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
             return this->potential_[index];
         }
@@ -76,7 +74,7 @@ namespace fastEIT {
         // member
         std::shared_ptr<Mesh<template_basis_function_type>> mesh_;
         std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes_;
-        std::shared_ptr<source_type> source_;
+        std::shared_ptr<source::Source> source_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
         std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
         std::shared_ptr<SparseMatrix> s_matrix_;
