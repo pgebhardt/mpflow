@@ -14,7 +14,7 @@ namespace fastEIT {
         class Source {
         protected:
             // constructor
-            Source(std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+            Source(dtype::real value, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
 
         public:
@@ -30,11 +30,13 @@ namespace fastEIT {
             }
             dtype::size drive_count() const { return this->drive_pattern()->columns(); }
             dtype::size measurement_count() const { return this->measurement_pattern()->columns(); }
+            dtype::real value() const { return this->value_; }
 
         private:
             // member
             std::shared_ptr<Matrix<dtype::real>> drive_pattern_;
             std::shared_ptr<Matrix<dtype::real>> measurement_pattern_;
+            dtype::real value_;
         };
 
         // current source
@@ -43,13 +45,6 @@ namespace fastEIT {
             // constructor
             Current(dtype::real current, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
-
-            // accessors
-            dtype::real current() const { return this->current_; }
-
-        private:
-            // member
-            dtype::real current_;
         };
 
         // voltage source
@@ -58,13 +53,6 @@ namespace fastEIT {
             // constructor
             Voltage(dtype::real voltage, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
-
-            // accessors
-            dtype::real voltage() const { return this->voltage_; }
-
-        private:
-            // member
-            dtype::real voltage_;
         };
     }
 }

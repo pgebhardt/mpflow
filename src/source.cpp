@@ -5,9 +5,10 @@
 
 #include "../include/fasteit.h"
 
-fastEIT::source::Source::Source(std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+fastEIT::source::Source::Source(dtype::real value,
+    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
-    : drive_pattern_(drive_pattern), measurement_pattern_(measurement_pattern) {
+    : drive_pattern_(drive_pattern), measurement_pattern_(measurement_pattern), value_(value) {
     // check input
     if (drive_pattern == nullptr) {
         throw std::invalid_argument("Source::Source: drive_pattern == nullptr");
@@ -20,19 +21,11 @@ fastEIT::source::Source::Source(std::shared_ptr<Matrix<dtype::real>> drive_patte
 fastEIT::source::Current::Current(dtype::real current,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
-    : Source(drive_pattern, measurement_pattern), current_(current) {
-    // check input
-    if (current <= 0.0) {
-        throw std::invalid_argument("Current::Current: current <= 0.0");
-    }
+    : Source(current, drive_pattern, measurement_pattern) {
 }
 
 fastEIT::source::Voltage::Voltage(dtype::real voltage,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
-    : Source(drive_pattern, measurement_pattern), voltage_(voltage) {
-    // check input
-    if (voltage <= 0.0) {
-        throw std::invalid_argument("Voltage::Voltage: voltage <= 0.0");
-    }
+    : Source(voltage, drive_pattern, measurement_pattern) {
 }
