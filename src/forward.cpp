@@ -121,8 +121,11 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initExcitationMatr
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
         for (dtype::index column = 0; column < this->model()->source()->drive_count(); ++column) {
             (*pattern)(row, column) =
+                (*this->model()->source()->drive_pattern())(row, column) >= 0.0 ?
                 (*this->model()->source()->drive_pattern())(row, column) *
-                this->model()->source()->value();
+                std::get<0>(this->model()->source()->value()) :
+                (*this->model()->source()->drive_pattern())(row, column) *
+                std::get<1>(this->model()->source()->value());
         }
     }
 
@@ -209,8 +212,9 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
 
     // solve for ground mode
     this->numeric_solver()->solve(this->model()->system_matrix(0),
-        this->excitation(0), steps, true, stream,
-        this->model()->potential(0));
+        this->excitation(0), steps,
+        this->model()->source()->type() == "current" ? true : false,
+        stream, this->model()->potential(0));
 
     // solve for higher harmonics
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
