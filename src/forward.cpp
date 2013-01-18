@@ -121,7 +121,9 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
     // fill pattern matrix with drive pattern
     for (dtype::index row = 0; row < pattern->rows(); ++row) {
         for (dtype::index column = 0; column < forward_solver_->model()->source()->drive_count(); ++column) {
-            (*pattern)(row, column) = (*forward_solver_->model()->source()->drive_pattern())(row, column);
+            (*pattern)(row, column) = 
+                (*forward_solver_->model()->source()->drive_pattern())(row, column) *
+                forward_solver_->model()->source()->current();
         }
     }
 
@@ -141,7 +143,7 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
             for (dtype::index column = 0; column < pattern->columns(); ++column) {
                 (*forward_solver_->excitation(component))(
                     forward_solver_->model()->mesh()->nodes()->rows() + row, column) =
-                    (*pattern)(row, column) * forward_solver_->model()->source()->current();
+                    (*pattern)(row, column);
             }
         }
         forward_solver_->excitation(component)->copyToDevice(stream);
@@ -200,13 +202,13 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     }
 
     // calc jacobian
-    forward::calcJacobian<typename decltype(forward_solver_->forward_solver_->model())::element_type>(
+    forward::calcJacobian<typename decltype(forward_solver_->model())::element_type>(
         gamma, forward_solver_->model()->potential(0), forward_solver_->model()->mesh()->elements(),
         forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
         forward_solver_->model()->source()->measurement_count(), forward_solver_->model()->sigma_ref(),
         false, stream, forward_solver_->jacobian());
     for (dtype::index component = 1; component < forward_solver_->model()->components_count(); ++component) {
-        forward::calcJacobian<typename decltype(forward_solver_->forward_solver_->model())::element_type>(
+        forward::calcJacobian<typename decltype(forward_solver_->model())::element_type>(
             gamma, forward_solver_->model()->potential(component), forward_solver_->model()->mesh()->elements(),
             forward_solver_->elemental_jacobian_matrix(), forward_solver_->model()->source()->drive_count(),
             forward_solver_->model()->source()->measurement_count(), forward_solver_->model()->sigma_ref(),
