@@ -415,7 +415,7 @@ void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermedia
     // reduce matrix
     modelKernel::reduceMatrix<type>(blocks, threads, stream,
         intermediateMatrix->device_data(), shape->column_ids(), matrix->data_rows(),
-        shape->density(), matrix->device_data());
+        matrix->device_data());
 }
 
 // update matrix
@@ -445,7 +445,7 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
     // execute kernel
     modelKernel::updateMatrix(blocks, threads, stream,
         connectivityMatrix->device_data(), elements->device_data(), gamma->device_data(),
-        sigmaRef, connectivityMatrix->data_rows(), matrix->density(), matrix->values());
+        sigmaRef, connectivityMatrix->data_rows(), matrix->values());
 }
 
 // specialisation
