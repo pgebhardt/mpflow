@@ -305,7 +305,7 @@ std::tuple<std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::shared_p
                                 node_parameter, i, integration_start, integration_end) /
                             this->electrodes()->impedance();
                     } else if (this->source()->type() == "voltage") {
-                        (*w_matrix)(std::get<0>(nodes[i]), electrode) +=
+                        (*w_matrix)(std::get<0>(nodes[i]), electrode) -=
                             basis_function_type::integrateBoundaryEdge(
                                 node_parameter, i, integration_start, integration_end) /
                             std::get<0>(this->electrodes()->shape());
