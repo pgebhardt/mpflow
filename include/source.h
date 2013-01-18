@@ -14,7 +14,8 @@ namespace fastEIT {
         class Source {
         protected:
             // constructor
-            Source(dtype::real value, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+            Source(std::string type, dtype::real value,
+                std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
 
         public:
@@ -22,6 +23,7 @@ namespace fastEIT {
             virtual ~Source() { }
 
             // accessors
+            const std::string& type() const { return this->type_; }
             const std::shared_ptr<Matrix<dtype::real>> drive_pattern() const {
                 return this->drive_pattern_;
             }
@@ -34,6 +36,7 @@ namespace fastEIT {
 
         private:
             // member
+            std::string type_;
             std::shared_ptr<Matrix<dtype::real>> drive_pattern_;
             std::shared_ptr<Matrix<dtype::real>> measurement_pattern_;
             dtype::real value_;
