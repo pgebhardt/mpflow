@@ -141,7 +141,7 @@ void fastEIT::forward::SourcePolicy<fastEIT::source::Current,
             for (dtype::index column = 0; column < pattern->columns(); ++column) {
                 (*forward_solver_->excitation(component))(
                     forward_solver_->model()->mesh()->nodes()->rows() + row, column) =
-                    (*pattern)(row, column);
+                    (*pattern)(row, column) * forward_solver_->model()->source()->current();
             }
         }
         forward_solver_->excitation(component)->copyToDevice(stream);
@@ -217,10 +217,6 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
     forward_solver_->jacobian()->scalarMultiply(-1.0, stream);
 
     // calc voltage
-    // TODO
-    /*dim3 blocks(forward_solver_->voltage()->data_rows() / matrix::block_size,
-        forward_solver_->voltage()->data_columns() / matrix::block_size);
-    dim3 threads(matrix::block_size, matrix::block_size);*/
     dim3 blocks(forward_solver_->voltage()->rows(), forward_solver_->voltage()->columns());
     dim3 threads(1, 1);
 
@@ -245,8 +241,6 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::forward::SourceP
             forward_solver_->voltage()->device_data(),
             forward_solver_->voltage()->data_rows());
     }
-    // scale for current
-    // forward_solver_->voltage()->scalarMultiply(forward_solver_->model()->source()->current(), stream);
 
     return forward_solver_->voltage();
 }
