@@ -21,10 +21,6 @@ namespace fastEIT {
             std::shared_ptr<source::Source> source, dtype::real sigmaRef,
             dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
 
-        // calc excitation component
-        void calcExcitationComponent(std::shared_ptr<Matrix<dtype::real>> excitation,
-            dtype::size component, cublasHandle_t handle, cudaStream_t stream);
-
         // update model
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
 
@@ -37,6 +33,9 @@ namespace fastEIT {
         const std::shared_ptr<source::Source> source() const { return this->source_; }
         const std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) const {
             return this->potential_[index];
+        }
+        const std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) const {
+            return this->excitation_[index];
         }
         const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
         const std::shared_ptr<SparseMatrix> s_matrix() const { return this->s_matrix_; }
@@ -55,6 +54,9 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
             return this->potential_[index];
         }
+        std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) {
+            return this->excitation_[index];
+        }
         std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
         std::shared_ptr<SparseMatrix> s_matrix() { return this->s_matrix_; }
         std::shared_ptr<SparseMatrix> r_matrix() { return this->r_matrix_; }
@@ -70,12 +72,14 @@ namespace fastEIT {
         void init(cublasHandle_t handle, cudaStream_t stream);
         std::shared_ptr<Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
         std::tuple<std::shared_ptr<Matrix<dtype::real>>, std::shared_ptr<Matrix<dtype::real>>> initCEMMatrices(cudaStream_t stream);
+        void initExcitation(cublasHandle_t handle, cudaStream_t);
 
         // member
         std::shared_ptr<Mesh<template_basis_function_type>> mesh_;
         std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes_;
         std::shared_ptr<source::Source> source_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> excitation_;
         std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
         std::shared_ptr<SparseMatrix> s_matrix_;
         std::shared_ptr<SparseMatrix> r_matrix_;

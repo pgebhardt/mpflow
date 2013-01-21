@@ -48,6 +48,10 @@ fastEIT::Model<basis_function_type>::Model(
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->mesh()->nodes()->rows() + this->electrodes()->count(),
             this->source()->drive_count() + this->source()->measurement_count(), stream));
+
+        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(
+            this->mesh()->nodes()->rows() + this->electrodes()->count(),
+            this->source()->drive_count() + this->source()->measurement_count(), stream));
     }
 
     // init model
@@ -116,6 +120,9 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
     for (dtype::index component = 0; component < this->components_count(); ++component) {
         this->system_matrices_.push_back(std::make_shared<SparseMatrix>(system_matrix, stream));
     }
+
+    // init excitation
+    this->initExcitation(handle, stream);
 }
 
 // init elemental matrices
@@ -333,6 +340,66 @@ std::tuple<std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::shared_p
     return std::make_tuple(w_matrix, d_matrix);
 }
 
+// init excitation
+template <
+    class basis_function_type
+>
+void fastEIT::Model<basis_function_type>::initExcitation(cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if (handle == NULL) {
+        throw std::invalid_argument("Model::initExcitation: handle == NULL");
+    }
+
+    // create pattern matrix
+    auto pattern = std::make_shared<Matrix<dtype::real>>(this->electrodes()->count(),
+        this->source()->drive_count() + this->source()->measurement_count(), stream);
+
+    // fill pattern matrix with drive pattern
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
+        for (dtype::index column = 0; column < this->source()->drive_count(); ++column) {
+            (*pattern)(row, column) =
+                (*this->source()->drive_pattern())(row, column) >= 0.0 ?
+                (*this->source()->drive_pattern())(row, column) *
+                std::get<0>(this->source()->value()) :
+                (*this->source()->drive_pattern())(row, column) *
+                std::get<1>(this->source()->value());
+        }
+    }
+
+    // fill pattern matrix with measurment pattern and turn sign of measurment
+    // for correct current pattern
+    for (dtype::index row = 0; row < pattern->rows(); ++row) {
+        for (dtype::index column = 0; column < this->source()->measurement_count(); ++column) {
+            (*pattern)(row, column + this->source()->drive_count()) =
+                (*this->source()->measurement_pattern())(row, column);
+        }
+    }
+
+    // calc excitation components
+    for (dtype::index component = 0; component < this->components_count() + 1; ++component) {
+        // set excitation
+        for (dtype::index row = 0; row < pattern->rows(); ++row) {
+            for (dtype::index column = 0; column < pattern->columns(); ++column) {
+                (*this->excitation(component))(
+                    this->mesh()->nodes()->rows() + row, column) =
+                    (*pattern)(row, column);
+            }
+        }
+        this->excitation(component)->copyToDevice(stream);
+
+        // fourier transform pattern
+        if (component == 0) {
+            // calc ground mode
+            this->excitation(component)->scalarMultiply(1.0f / this->mesh()->height(), stream);
+        } else {
+            this->excitation(component)->scalarMultiply(2.0f * sin(
+                component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
+                (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
+        }
+    }
+
+}
+
 // update model
 template <
     class basis_function_type
@@ -361,32 +428,6 @@ void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dt
             this->s_matrix()->values(), this->r_matrix()->values(), this->s_matrix()->column_ids(),
             this->z_matrix()->device_data(), this->s_matrix()->density(), alpha,
             this->z_matrix()->data_rows(), this->system_matrix(component)->values());
-    }
-}
-
-// calc excitation component
-template <
-    class basis_function_type
->
-void fastEIT::Model<basis_function_type>::calcExcitationComponent(
-    std::shared_ptr<Matrix<dtype::real>> excitation,
-    dtype::size component, cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if (excitation == nullptr) {
-        throw std::invalid_argument("Model::calcNodalCurrentDensity: excitation == nullptr");
-    }
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::calcNodalCurrentDensity: handle == NULL");
-    }
-
-    // calc fourier coefficients for excitaion
-    if (component == 0) {
-        // calc ground mode
-        excitation->scalarMultiply(1.0f / this->mesh()->height(), stream);
-    } else {
-        excitation->scalarMultiply(2.0f * sin(
-            component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
-            (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
     }
 }
 

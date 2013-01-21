@@ -40,15 +40,6 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(this->model()->mesh()->elements()->rows(),
         math::square(model_type::basis_function_type::nodes_per_element), stream);
 
-    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
-        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(
-            this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
-            this->model()->source()->drive_count() + this->model()->source()->measurement_count(), stream));
-    }
-
-    // init excitation matrix
-    this->initExcitationMatrix(handle, stream);
-
     // init jacobian calculation matrix
     this->initJacobianCalculationMatrix(handle, stream);
 }
@@ -100,60 +91,6 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initJacobianCalcul
 
     // upload to device
     this->elemental_jacobian_matrix()->copyToDevice(stream);
-}
-
-// init excitation Matrix
-template <
-    class numeric_solver_type,
-    class model_type
->
-void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initExcitationMatrix(
-    cublasHandle_t handle, cudaStream_t stream) {
-    if (handle == NULL) {
-        throw std::invalid_argument("ForwardSolver::initExcitationMatrix: handle == NULL");
-    }
-
-    // create pattern matrix
-    auto pattern = std::make_shared<Matrix<dtype::real>>(this->model()->electrodes()->count(),
-        this->model()->source()->drive_count() + this->model()->source()->measurement_count(), stream);
-
-    // fill pattern matrix with drive pattern
-    for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->model()->source()->drive_count(); ++column) {
-            (*pattern)(row, column) =
-                (*this->model()->source()->drive_pattern())(row, column) >= 0.0 ?
-                (*this->model()->source()->drive_pattern())(row, column) *
-                std::get<0>(this->model()->source()->value()) :
-                (*this->model()->source()->drive_pattern())(row, column) *
-                std::get<1>(this->model()->source()->value());
-        }
-    }
-
-    // fill pattern matrix with measurment pattern and turn sign of measurment
-    // for correct current pattern
-    for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->model()->source()->measurement_count(); ++column) {
-            (*pattern)(row, column + this->model()->source()->drive_count()) =
-                (*this->model()->source()->measurement_pattern())(row, column);
-        }
-    }
-
-    // calc excitation components
-    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
-        // set excitation
-        for (dtype::index row = 0; row < pattern->rows(); ++row) {
-            for (dtype::index column = 0; column < pattern->columns(); ++column) {
-                (*this->excitation(component))(
-                    this->model()->mesh()->nodes()->rows() + row, column) =
-                    (*pattern)(row, column);
-            }
-        }
-        this->excitation(component)->copyToDevice(stream);
-
-        // fourier transform pattern
-        this->model()->calcExcitationComponent(this->excitation(component),
-            component, handle, stream);
-    }
 }
 
 // apply pattern
@@ -212,7 +149,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
 
     // solve for ground mode
     this->numeric_solver()->solve(this->model()->system_matrix(0),
-        this->excitation(0), steps,
+        this->model()->excitation(0), steps,
         this->model()->source()->type() == "current" ? true : false,
         stream, this->model()->potential(0));
 
@@ -220,7 +157,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         this->numeric_solver()->solve(
             this->model()->system_matrix(component),
-            this->excitation(component),
+            this->model()->excitation(component),
             steps, false, stream, this->model()->potential(component));
     }
 
