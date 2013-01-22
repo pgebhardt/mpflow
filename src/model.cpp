@@ -354,25 +354,43 @@ void fastEIT::Model<basis_function_type>::initExcitation(cublasHandle_t handle, 
     auto pattern = std::make_shared<Matrix<dtype::real>>(this->electrodes()->count(),
         this->source()->drive_count() + this->source()->measurement_count(), stream);
 
+    // dc offset of electrodes
+    std::vector<dtype::real> electrode_offset;
+    dtype::real offset = 0.0;;
+
     // fill pattern matrix with drive pattern
-    for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->source()->drive_count(); ++column) {
+    for (dtype::index column = 0; column < this->source()->drive_count(); ++column) {
+        // reset offset
+        offset = 0.0;
+
+        for (dtype::index row = 0; row < pattern->rows(); ++row) {
             (*pattern)(row, column) =
-                (*this->source()->drive_pattern())(row, column) >= 0.0 ?
-                (*this->source()->drive_pattern())(row, column) *
-                std::get<0>(this->source()->value()) :
-                (*this->source()->drive_pattern())(row, column) *
-                std::get<1>(this->source()->value());
+                (*this->source()->drive_pattern())(row, column) * this->source()->value();
+
+            // add value to offset
+            offset += (*pattern)(row, column);
         }
+
+        // calc offset for current pattern
+        electrode_offset.push_back(offset / this->electrodes()->count());
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index row = 0; row < pattern->rows(); ++row) {
-        for (dtype::index column = 0; column < this->source()->measurement_count(); ++column) {
+    for (dtype::index column = 0; column < this->source()->measurement_count(); ++column) {
+        // reset offset
+        offset = 0.0;
+
+        for (dtype::index row = 0; row < pattern->rows(); ++row) {
             (*pattern)(row, column + this->source()->drive_count()) =
                 (*this->source()->measurement_pattern())(row, column);
+
+            // add value to offset
+            offset += (*pattern)(row, column);
         }
+
+        // calc offset for current pattern
+        electrode_offset.push_back(offset / this->electrodes()->count());
     }
 
     // calc excitation components
@@ -382,7 +400,7 @@ void fastEIT::Model<basis_function_type>::initExcitation(cublasHandle_t handle, 
             for (dtype::index column = 0; column < pattern->columns(); ++column) {
                 (*this->excitation(component))(
                     this->mesh()->nodes()->rows() + row, column) =
-                    (*pattern)(row, column);
+                    (*pattern)(row, column) - electrode_offset[column];
             }
         }
         this->excitation(component)->copyToDevice(stream);

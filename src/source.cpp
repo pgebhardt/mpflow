@@ -6,7 +6,7 @@
 #include "../include/fasteit.h"
 
 fastEIT::source::Source::Source(std::string type,
-    std::tuple<dtype::real, dtype::real> value,
+    dtype::real value,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
     : type_(type), drive_pattern_(drive_pattern), measurement_pattern_(measurement_pattern), value_(value) {
@@ -20,14 +20,14 @@ fastEIT::source::Source::Source(std::string type,
 }
 
 fastEIT::source::Current::Current(
-    std::tuple<dtype::real, dtype::real> current,
+    dtype::real current,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
     : Source("current", current, drive_pattern, measurement_pattern) {
 }
 
 fastEIT::source::Voltage::Voltage(
-    std::tuple<dtype::real, dtype::real> voltage,
+    dtype::real voltage,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern)
     : Source("voltage", voltage, drive_pattern, measurement_pattern) {
