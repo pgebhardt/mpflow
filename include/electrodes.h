@@ -26,7 +26,8 @@ namespace fastEIT {
             std::tuple<dtype::real, dtype::real>>>& coordinates() const {
             return this->coordinates_;
         }
-        const std::tuple<dtype::real, dtype::real> shape() const { return this->shape_; }
+        std::tuple<dtype::real, dtype::real> shape() const { return this->shape_; }
+        dtype::real area() const { return std::get<0>(this->shape()) * std::get<1>(this->shape()); }
         dtype::real impedance() const { return this->impedance_; }
 
     // member
