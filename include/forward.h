@@ -21,7 +21,7 @@ namespace fastEIT {
 
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<Matrix<dtype::real>> result,
-            cudaStream_t stream);
+            cublasHandle_t handle, cudaStream_t stream);
 
         // forward solving
         std::shared_ptr<Matrix<dtype::real>> solve(

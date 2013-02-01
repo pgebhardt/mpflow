@@ -23,8 +23,7 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
     }
 
     // create numeric_solver_type solver
-    this->numeric_solver_ = std::make_shared<numeric_solver_type>(
-        this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
+    this->numeric_solver_ = std::make_shared<numeric_solver_type>(this->model()->mesh()->nodes()->rows(),
         this->model()->source()->drive_count() + this->model()->source()->measurement_count(),
         stream);
 
@@ -99,32 +98,34 @@ template <
     class model_type
 >
 void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPattern(
-    std::shared_ptr<Matrix<dtype::real>> result, cudaStream_t stream) {
+    std::shared_ptr<Matrix<dtype::real>> result, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
         throw std::invalid_argument("forward::applyPattern: result == nullptr");
     }
+    if (handle == NULL) {
+        throw std::invalid_argument("forward::applyPattern: handle == NULL");
+    }
 
-    // apply pattern
-    dim3 blocks(result->rows(), result->columns());
-    dim3 threads(1, 1);
+    // set stream
+    cublasSetStream(handle, stream);
 
-    forwardKernel::calcVoltage(blocks, threads, stream,
-        this->model()->potential(0)->device_data(),
-        this->model()->mesh()->nodes()->rows(),
-        this->model()->potential(0)->data_rows(),
-        this->model()->source()->measurement_pattern()->device_data(),
-        this->model()->source()->measurement_pattern()->data_rows(),
-        true, result->device_data(), result->data_rows());
+    // add voltage
+    dtype::real alpha = 1.0f, beta = 0.0f;
+    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->model()->excitation_matrix()->data_columns(),
+        this->model()->source()->drive_count(), this->model()->excitation_matrix()->data_rows(), &alpha,
+        this->model()->excitation_matrix()->device_data(), this->model()->excitation_matrix()->data_rows(),
+        this->model()->potential(0)->device_data(), this->model()->potential(0)->data_rows(), &beta,
+        result->device_data(), result->data_rows());
 
+    // add harmonic voltages
+    beta = 1.0f;
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
-        forwardKernel::calcVoltage(blocks, threads, stream,
-            this->model()->potential(component)->device_data(),
-            this->model()->mesh()->nodes()->rows(),
-            this->model()->potential(component)->data_rows(),
-            this->model()->source()->measurement_pattern()->device_data(),
-            this->model()->source()->measurement_pattern()->data_rows(),
-            true, result->device_data(), result->data_rows());
+        cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->model()->excitation_matrix()->data_columns(),
+            this->model()->source()->drive_count(), this->model()->excitation_matrix()->data_rows(), &alpha,
+            this->model()->excitation_matrix()->device_data(), this->model()->excitation_matrix()->data_rows(),
+            this->model()->potential(component)->device_data(), this->model()->potential(component)->data_rows(), &beta,
+            result->device_data(), result->data_rows());
     }
 }
 
@@ -181,12 +182,12 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
         this->jacobian()->scalarMultiply(-1.0, stream);
 
         // calc voltage
-        this->applyMeasurementPattern(this->voltage(), stream);
+        this->applyMeasurementPattern(this->voltage(), handle, stream);
 
         return this->voltage();
     } else if (this->model()->source()->type() == "voltage") {
         // calc current
-        this->applyMeasurementPattern(this->current(), stream);
+        this->applyMeasurementPattern(this->current(), handle, stream);
 
         return this->current();
     }
