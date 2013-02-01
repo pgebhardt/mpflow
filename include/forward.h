@@ -39,6 +39,9 @@ namespace fastEIT {
         const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() const {
             return this->elemental_jacobian_matrix_;
         }
+        const std::shared_ptr<Matrix<dtype::real>> electrode_attachment_matrix() const {
+            return this->electrode_attachment_matrix_;
+        }
 
         // mutators
         std::shared_ptr<numeric_solver_type> numeric_solver() { return this->numeric_solver_; }
@@ -48,6 +51,9 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> current() { return this->current_; }
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() {
             return this->elemental_jacobian_matrix_;
+        }
+        std::shared_ptr<Matrix<dtype::real>> electrode_attachment_matrix() {
+            return this->electrode_attachment_matrix_;
         }
 
     private:
@@ -61,6 +67,7 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::shared_ptr<Matrix<dtype::real>> current_;
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
+        std::shared_ptr<Matrix<dtype::real>> electrode_attachment_matrix_;
     };
 
     namespace forward {
