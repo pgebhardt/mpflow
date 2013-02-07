@@ -41,6 +41,11 @@ env.Append(
     LIBS=['cudart', 'cublas'],
 )
 
+# MacOS specific stuff
+if env['PLATFORM'] == 'darwin':
+    env['CXXFLAGS'] += ['-stdlib=libc++']
+    env['LIBS'] += ['c++']
+
 # add build target to env
 libfasteit = CudaLibrary('fasteit', env)
 

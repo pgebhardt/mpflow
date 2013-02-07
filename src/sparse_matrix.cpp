@@ -10,8 +10,8 @@
 fastEIT::SparseMatrix::SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> matrix,
     cudaStream_t stream) {
     // check input
-    if (matrix == NULL) {
-        throw std::invalid_argument("SparseMatrix::SparseMatrix: matrix == NULL");
+    if (matrix == nullptr) {
+        throw std::invalid_argument("SparseMatrix::SparseMatrix: matrix == nullptr");
     }
 
     // create empty sparse matrix
@@ -37,8 +37,8 @@ void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStre
     this->data_rows_ = rows;
     this->data_columns_ = columns;
     this->density_ = 0;
-    this->values_ = NULL;
-    this->column_ids_ = NULL;
+    this->values_ = nullptr;
+    this->column_ids_ = nullptr;
 
     // correct size to block size
     if ((this->rows() % matrix::block_size != 0) && (this->rows() != 1)) {
@@ -73,8 +73,8 @@ fastEIT::SparseMatrix::~SparseMatrix() {
 void fastEIT::SparseMatrix::convert(const std::shared_ptr<Matrix<dtype::real>> matrix,
     cudaStream_t stream) {
     // check input
-    if (matrix == NULL) {
-        throw std::invalid_argument("SparseMatrix::convert: matrix == NULL");
+    if (matrix == nullptr) {
+        throw std::invalid_argument("SparseMatrix::convert: matrix == nullptr");
     }
 
     // create elementCount matrix
@@ -115,11 +115,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::SparseMatrix::to
 void fastEIT::SparseMatrix::multiply(const std::shared_ptr<Matrix<dtype::real>> matrix,
     cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> result) const {
     // check input
-    if (matrix == NULL) {
-        throw std::invalid_argument("SparseMatrix::multiply: matrix == NULL");
+    if (matrix == nullptr) {
+        throw std::invalid_argument("SparseMatrix::multiply: matrix == nullptr");
     }
-    if (result == NULL) {
-        throw std::invalid_argument("SparseMatrix::multiply: result == NULL");
+    if (result == nullptr) {
+        throw std::invalid_argument("SparseMatrix::multiply: result == nullptr");
     }
 
     // check size
