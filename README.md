@@ -4,6 +4,11 @@ fastEIT is an extensible GPU-based Impedance Tomography Solving Library. It uses
 
 ## Features
 
+* 2.5D based forward solver
+* linear and non-linear inverse solving
+* independent of numerical algorithms (CG is shiped)
+* high performance and proven accuracy
+
 ## System Requirements
 
 * NVIDIA CUDA ToolKit 5.0
@@ -11,6 +16,7 @@ fastEIT is an extensible GPU-based Impedance Tomography Solving Library. It uses
 * scons 2.2.0
 
 It has been tested on the following platforms:
+
 * OS X 10.7
 * Ubuntu Linux 12.04 x64
 * Fedora Linux 18 x64
