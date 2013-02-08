@@ -2,7 +2,7 @@
 
 fastEIT is an extensible GPU-based Impedance Tomography Solving Library. It uses CUDA 5.0 and C++11.
 
-[![CI](http://c64.est.ruhr-uni-bochum.de/projects/1/status?ref=master)](http://c64.est.ruhr-uni-bochum.de/projects/1?ref=master)
+![Build Status](http://c64.est.ruhr-uni-bochum.de/projects/1/status?ref=master)
 
 ## Features
 
