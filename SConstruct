@@ -30,6 +30,7 @@ def make_env(builddir,**kwargs):
 
 # create build environment
 env = make_env('build',)
+opts = Options('options.conf', ARGUMENTS)
 
 # set c compiler
 env.Replace(CXX='clang++')
@@ -48,6 +49,10 @@ if env['PLATFORM'] == 'darwin':
 
 # add build target to env
 libfasteit = CudaLibrary('fasteit', env)
+
+# add the installer options
+installer.AddOptions(opts)
+opts.Update(env)
 
 # create installer
 install = installer.Installer(env)
