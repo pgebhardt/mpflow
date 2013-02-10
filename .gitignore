@@ -5,3 +5,5 @@ bin
 .sconsign.dblite
 *.pyc
 *.swo
+.c9revisions
+.settings
