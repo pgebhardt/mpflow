@@ -94,6 +94,9 @@ opts.Update(env)
 # create tester
 tester = Tester(env, libfasteit.name)
 
+# set Default target
+env.Default(libfasteit.binary)
+
 # create installer
 install = installer.Installer(env)
 
