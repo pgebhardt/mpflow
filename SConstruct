@@ -76,7 +76,7 @@ env.Replace(CXX='clang++')
 env.Append(
     CXXFLAGS=['-std=c++11'],
     NVCCFLAGS=['-Xcompiler', '-fpic', '-m64', '-arch=sm_30', '--compiler-options', '-fno-strict-aliasing', '-use_fast_math', '--ptxas-options=-v', '-lineinfo'],
-    LIBS=['cudart', 'cublas'],
+    LIBS=['cudart', 'cublas', 'pthread'],
 )
 
 # MacOS specific stuff
