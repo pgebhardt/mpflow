@@ -28,7 +28,7 @@
 
 #include "dtype.h"
 #include "constants.h"
-#include "math.h"
+#include "mathematics.h"
 #include "matrix.h"
 #include "sparse_matrix.h"
 #include "basis.h"
