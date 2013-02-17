@@ -45,15 +45,16 @@ TEST(MatrixTest, Add) {
     // add on device
     A->add(B, nullptr);
 
-    // copy to host
-    A->copyToHost(nullptr);
-
     // add on CPU
     for (fastEIT::dtype::index row = 0; row < A->rows(); ++row) {
         for (fastEIT::dtype::index column = 0; column < A->columns(); ++column) {
              (*B)(row, column) += (*A)(row, column);
         }
     }
+
+    // copy to host
+    A->copyToHost(nullptr);
+    cudaStreamSynchronize(nullptr);
 
     // compare
     EXPECT_EQ(matrixCompare(A, B), 0);
