@@ -15,7 +15,7 @@ namespace fastEIT {
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<model_type> model, std::shared_ptr<source::Source> source,
+        Solver(std::shared_ptr<model_type> model, std::shared_ptr<source::Source<model_type>> source,
             dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian

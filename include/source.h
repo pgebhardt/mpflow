@@ -11,12 +11,16 @@ namespace fastEIT {
     // source namespace
     namespace source {
         // source base class
+        template <
+            class model_type
+        >
         class Source {
         protected:
             // constructor
-            Source(std::string type, dtype::real value,
+            Source(std::string type, dtype::real value, std::shared_ptr<model_type> model,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-                std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+                cublasHandle_t handle, cudaStream_t stream);
 
         public:
             // destructor
@@ -30,34 +34,72 @@ namespace fastEIT {
             const std::shared_ptr<Matrix<dtype::real>> measurement_pattern() const {
                 return this->measurement_pattern_;
             }
+            const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const {
+                return this->excitation_matrix_;
+            }
+            const std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) const {
+                return this->excitation_[index];
+            }
             dtype::size drive_count() const { return this->drive_pattern()->columns(); }
             dtype::size measurement_count() const { return this->measurement_pattern()->columns(); }
             dtype::real value() const { return this->value_; }
 
-        private:
+            // mutators
+            std::shared_ptr<Matrix<dtype::real>> excitation_matrix() {
+                return this->excitation_matrix_;
+            }
+            std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) {
+                return this->excitation_[index];
+            }
+
+        protected:
+            // init excitation
+            virtual void initExcitation(std::shared_ptr<model_type> model, cublasHandle_t handle,
+                cudaStream_t stream) = 0;
+
             // member
             std::string type_;
             std::shared_ptr<Matrix<dtype::real>> drive_pattern_;
             std::shared_ptr<Matrix<dtype::real>> measurement_pattern_;
+            std::shared_ptr<Matrix<dtype::real>> excitation_matrix_;
+            std::vector<std::shared_ptr<Matrix<dtype::real>>> excitation_;
             dtype::real value_;
         };
 
         // current source
-        class Current : public Source {
+        template <
+            class model_type
+        >
+        class Current : public Source<model_type> {
         public:
             // constructor
-            Current(dtype::real current,
+            Current(dtype::real current, std::shared_ptr<model_type> model,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-                std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+                cublasHandle_t handle, cudaStream_t stream);
+
+        protected:
+            // init excitation
+            virtual void initExcitation(std::shared_ptr<model_type> model, cublasHandle_t handle,
+                cudaStream_t stream);
         };
 
         // voltage source
-        class Voltage : public Source {
+        template <
+            class model_type
+        >
+        class Voltage : public Source<model_type> {
         public:
             // constructor
-            Voltage(dtype::real voltage,
+            Voltage(dtype::real voltage, std::shared_ptr<model_type> model,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-                std::shared_ptr<Matrix<dtype::real>> measurement_pattern);
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+                cublasHandle_t handle, cudaStream_t stream);
+
+        protected:
+            // init excitation
+            virtual void initExcitation(std::shared_ptr<model_type> model, cublasHandle_t handle,
+                cudaStream_t stream);
         };
     }
 }
