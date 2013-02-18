@@ -18,8 +18,8 @@ namespace fastEIT {
         Model(
             std::shared_ptr<Mesh<template_basis_function_type>> mesh,
             std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes,
-            std::shared_ptr<source::Source> source, dtype::real sigmaRef,
-            dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
+            dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
+            cudaStream_t stream);
 
         // update model
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
@@ -30,7 +30,6 @@ namespace fastEIT {
         // accessors
         const std::shared_ptr<Mesh<template_basis_function_type>> mesh() const { return this->mesh_; }
         const std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes() const { return this->electrodes_; }
-        const std::shared_ptr<source::Source> source() const { return this->source_; }
         const std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) const {
             return this->potential_[index];
         }
@@ -50,7 +49,6 @@ namespace fastEIT {
         // mutators
         std::shared_ptr<Mesh<template_basis_function_type>> mesh() { return this->mesh_; }
         std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes() { return this->electrodes_; }
-        std::shared_ptr<source::Source> source() { return this->source_; }
         std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
             return this->potential_[index];
         }
@@ -76,7 +74,6 @@ namespace fastEIT {
         // member
         std::shared_ptr<Mesh<template_basis_function_type>> mesh_;
         std::shared_ptr<Electrodes<Mesh<template_basis_function_type>>> electrodes_;
-        std::shared_ptr<source::Source> source_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> excitation_;
         std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
