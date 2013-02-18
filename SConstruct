@@ -74,7 +74,7 @@ env.Replace(CXX='clang++')
 
 # set compiler flags
 env.Append(
-    CXXFLAGS=['-std=c++11'],
+    CXXFLAGS=['-std=c++11', ],
     NVCCFLAGS=['-Xcompiler', '-fpic', '-m64', '-arch=sm_30', '--compiler-options', '-fno-strict-aliasing', '-use_fast_math', '--ptxas-options=-v', '-lineinfo'],
     LIBS=['cudart', 'cublas', 'pthread', 'dl'],
 )
@@ -83,6 +83,11 @@ env.Append(
 if env['PLATFORM'] == 'darwin':
     env['CXXFLAGS'] += ['-stdlib=libc++']
     env['LIBS'] += ['c++']
+
+    # set rpath
+    env.Append(LINKFLAGS=['-Xlinker'])
+    for rpath in env['RPATH']:
+        env.Append(LINKFLAGS=['-rpath', rpath])
 
 # add build target to env
 libfasteit = CudaLibrary('fasteit', env)
