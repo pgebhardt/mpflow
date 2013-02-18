@@ -119,12 +119,14 @@ if env['PLATFORM'] == 'darwin':
     for rpath in env['RPATH']:
         env.Append(LINKFLAGS=['-rpath', rpath])
 
+# create tester
+tester = Tester(env, libfasteit.name)
+
+# MacOS specific insall name
+if env['PLATFORM'] == 'darwin':
     # set install name
     env.Append(LINKFLAGS=['-install_name',
         os.path.join(install._libdir, libfasteit.binary[0].path)])
-
-# create tester
-tester = Tester(env, libfasteit.name)
 
 # set Default target
 env.Default(libfasteit.binary)
