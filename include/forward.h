@@ -17,7 +17,8 @@ namespace fastEIT {
     public:
         // constructor
         ForwardSolver(std::shared_ptr<model_type> model,
-            cublasHandle_t handle, cudaStream_t stream);
+            std::shared_ptr<source::Source<model_type>> source, cublasHandle_t handle,
+            cudaStream_t stream);
 
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<Matrix<dtype::real>> result,
@@ -33,9 +34,13 @@ namespace fastEIT {
             return this->numeric_solver_;
         }
         const std::shared_ptr<model_type> model() const { return this->model_; }
+        const std::shared_ptr<source::Source<model_type>> source() const { return this->source_; }
         const std::shared_ptr<Matrix<dtype::real>> jacobian() const { return this->jacobian_; }
         const std::shared_ptr<Matrix<dtype::real>> voltage() const { return this->voltage_; }
         const std::shared_ptr<Matrix<dtype::real>> current() const { return this->current_; }
+        const std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) const {
+            return this->potential_[index];
+        }
         const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() const {
             return this->elemental_jacobian_matrix_;
         }
@@ -46,9 +51,13 @@ namespace fastEIT {
         // mutators
         std::shared_ptr<numeric_solver_type> numeric_solver() { return this->numeric_solver_; }
         std::shared_ptr<model_type> model() { return this->model_; }
+        std::shared_ptr<source::Source<model_type>> source() { return this->source_; }
         std::shared_ptr<Matrix<dtype::real>> jacobian() { return this->jacobian_; }
         std::shared_ptr<Matrix<dtype::real>> voltage() { return this->voltage_; }
         std::shared_ptr<Matrix<dtype::real>> current() { return this->current_; }
+        std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
+            return this->potential_[index];
+        }
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() {
             return this->elemental_jacobian_matrix_;
         }
@@ -63,9 +72,11 @@ namespace fastEIT {
         // member
         std::shared_ptr<numeric_solver_type> numeric_solver_;
         std::shared_ptr<model_type> model_;
+        std::shared_ptr<source::Source<model_type>> source_;
         std::shared_ptr<Matrix<dtype::real>> jacobian_;
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::shared_ptr<Matrix<dtype::real>> current_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
         std::shared_ptr<Matrix<dtype::real>> electrode_attachment_matrix_;
     };
