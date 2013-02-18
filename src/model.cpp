@@ -13,9 +13,9 @@ template <
 fastEIT::Model<basis_function_type>::Model(
     std::shared_ptr<Mesh<basis_function_type>> mesh,
     std::shared_ptr<Electrodes<Mesh<basis_function_type>>> electrodes,
-    std::shared_ptr<source::Source> source, dtype::real sigmaRef,
-    dtype::size components_count, cublasHandle_t handle, cudaStream_t stream)
-    : mesh_(mesh), electrodes_(electrodes), source_(source), sigma_ref_(sigmaRef),
+    dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
+    cudaStream_t stream)
+    : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef),
         components_count_(components_count) {
     // check input
     if (mesh == nullptr) {
@@ -23,9 +23,6 @@ fastEIT::Model<basis_function_type>::Model(
     }
     if (electrodes == nullptr) {
         throw std::invalid_argument("Model::Model: electrodes == nullptr");
-    }
-    if (source == nullptr) {
-        throw std::invalid_argument("Model::Model: source == nullptr");
     }
     if (components_count == 0) {
         throw std::invalid_argument("Model::Model: components_count == 0");
@@ -35,27 +32,12 @@ fastEIT::Model<basis_function_type>::Model(
     }
 
     // create matrices
-    this->excitation_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-        this->electrodes()->count(), stream);
     this->connectivity_matrix_ = std::make_shared<Matrix<dtype::index>>(this->mesh()->nodes()->rows(),
         sparseMatrix::block_size * matrix::block_size, stream);
     this->elemental_s_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
         sparseMatrix::block_size * matrix::block_size, stream);
     this->elemental_r_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
         sparseMatrix::block_size * matrix::block_size, stream);
-
-    for (dtype::index component = 0; component < this->components_count() + 1; ++component) {
-        this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-            this->source()->drive_count() + this->source()->measurement_count(), stream));
-
-        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-            this->source()->drive_count() + this->source()->measurement_count(), stream));
-    }
-
-    // TODO
-    if (this->source()->type() == "voltage") {
-        throw std::logic_error("Model::Model: Voltage sources not implemented yet!");
-    }
 
     // init model
     this->init(handle, stream);
@@ -84,9 +66,6 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
 
     // update model
     this->update(gamma, handle, stream);
-
-    // init excitation
-    this->initExcitation(handle, stream);
 }
 
 // init elemental matrices
@@ -204,129 +183,6 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
         this->elemental_r_matrix());
 
     return common_element_matrix;
-}
-
-// init excitation
-template <
-    class basis_function_type
->
-void fastEIT::Model<basis_function_type>::initExcitation(cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::initExcitation: handle == NULL");
-    }
-
-    // needed arrays
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
-        basis_function_type::nodes_per_edge> nodes;
-    std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
-    dtype::real integration_start, integration_end;
-
-    // calc excitation matrix
-    for (dtype::index boundary_element = 0;
-        boundary_element < this->mesh()->boundary()->rows();
-        ++boundary_element) {
-        // get boundary nodes
-        nodes = this->mesh()->boundaryNodes(boundary_element);
-
-        // sort nodes by parameter
-        std::sort(nodes.begin(), nodes.end(),
-            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
-                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
-                -> bool {
-                    return math::circleParameter(std::get<1>(b),
-                        math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
-        });
-
-        // calc parameter offset
-        dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
-
-        // calc node parameter centered to node 0
-        for (dtype::size i = 0; i < basis_function_type::nodes_per_edge; ++i) {
-            node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
-                parameter_offset);
-        }
-
-        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
-            // calc integration interval centered to node 0
-            integration_start = math::circleParameter(
-                std::get<0>(this->electrodes()->coordinates()[electrode]), parameter_offset);
-            integration_end = math::circleParameter(
-                std::get<1>(this->electrodes()->coordinates()[electrode]), parameter_offset);
-
-            // intgrate if integration_start is left of integration_end
-            if (integration_start < integration_end) {
-                // calc element
-                for (dtype::index node = 0; node < basis_function_type::nodes_per_edge; ++node) {
-                    (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) +=
-                        basis_function_type::integrateBoundaryEdge(
-                            node_parameter, node, integration_start, integration_end) /
-                        std::get<0>(this->electrodes()->shape());
-                }
-            }
-        }
-    }
-    this->excitation_matrix()->copyToDevice(stream);
-
-    // create pattern matrix
-    auto pattern = std::make_shared<Matrix<dtype::real>>(this->electrodes()->count(),
-        this->source()->drive_count() + this->source()->measurement_count(), stream);
-
-    // dc offset of electrodes
-    std::vector<dtype::real> electrode_offset;
-    dtype::real offset = 0.0;;
-
-    // fill pattern matrix with drive pattern
-    for (dtype::index column = 0; column < this->source()->drive_count(); ++column) {
-        // reset offset
-        offset = 0.0;
-
-        for (dtype::index row = 0; row < pattern->rows(); ++row) {
-            (*pattern)(row, column) =
-                (*this->source()->drive_pattern())(row, column) * this->source()->value();
-
-            // add value to offset
-            offset += (*pattern)(row, column);
-        }
-
-        // calc offset for current pattern
-        electrode_offset.push_back(offset / this->electrodes()->count());
-    }
-
-    // fill pattern matrix with measurment pattern and turn sign of measurment
-    // for correct current pattern
-    for (dtype::index column = 0; column < this->source()->measurement_count(); ++column) {
-        // reset offset
-        offset = 0.0;
-
-        for (dtype::index row = 0; row < pattern->rows(); ++row) {
-            (*pattern)(row, column + this->source()->drive_count()) =
-                (*this->source()->measurement_pattern())(row, column);
-
-            // add value to offset
-            offset += (*pattern)(row, column);
-        }
-
-        // calc offset for current pattern
-        electrode_offset.push_back(offset / this->electrodes()->count());
-    }
-    pattern->copyToDevice(stream);
-
-    // calc excitation components
-    for (dtype::index component = 0; component < this->components_count() + 1; ++component) {
-        // set excitation
-        this->excitation(component)->multiply(this->excitation_matrix(), pattern, handle, stream);
-
-        // fourier transform pattern
-        if (component == 0) {
-            // calc ground mode
-            this->excitation(component)->scalarMultiply(1.0f / this->mesh()->height(), stream);
-        } else {
-            this->excitation(component)->scalarMultiply(2.0f * sin(
-                component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
-                (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
-        }
-    }
 }
 
 // update model

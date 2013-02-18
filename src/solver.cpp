@@ -10,7 +10,8 @@ template <
     class model_type
 >
 fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
-    dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
+    std::shared_ptr<source::Source<model_type>> source, dtype::real regularization_factor,
+    cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
@@ -22,13 +23,13 @@ fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
 
     // create forward solver
     this->forward_solver_ = std::make_shared<ForwardSolver<numeric::SparseConjugate,
-        model_type>>(this->model(), handle, stream);
+        model_type>>(this->model(), source, handle, stream);
 
     // create inverse solver
     this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
         this->model()->mesh()->elements()->rows(),
-        math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
-        math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
+        math::roundTo(this->forward_solver()->source()->measurement_count(), matrix::block_size) *
+        math::roundTo(this->forward_solver()->source()->drive_count(), matrix::block_size),
         regularization_factor, handle, stream);
 
     // create matrices
@@ -37,11 +38,11 @@ fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
     this->gamma_ = std::make_shared<Matrix<dtype::real>>(
         this->model()->mesh()->elements()->rows(), 1, stream);
     this->measured_voltage_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->source()->measurement_count(),
-        this->model()->source()->drive_count(), stream);
+        this->forward_solver()->source()->measurement_count(),
+        this->forward_solver()->source()->drive_count(), stream);
     this->calibration_voltage_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->source()->measurement_count(),
-        this->model()->source()->drive_count(), stream);
+        this->forward_solver()->source()->measurement_count(),
+        this->forward_solver()->source()->drive_count(), stream);
 }
 
 // pre solve for accurate initial jacobian
