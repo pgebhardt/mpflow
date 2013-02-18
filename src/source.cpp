@@ -12,8 +12,8 @@ fastEIT::source::Source<model_type>::Source(std::string type, dtype::real value,
     std::shared_ptr<model_type> model, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
     cudaStream_t stream)
-    : type_(type), drive_pattern_(drive_pattern), measurement_pattern_(measurement_pattern),
-        value_(value) {
+    : type_(type), model_(model), drive_pattern_(drive_pattern),
+        measurement_pattern_(measurement_pattern), value_(value) {
     // check input
     if (drive_pattern == nullptr) {
         throw std::invalid_argument("Source::Source: drive_pattern == nullptr");
@@ -29,43 +29,31 @@ fastEIT::source::Source<model_type>::Source(std::string type, dtype::real value,
     }
 
     // create matrices
+    this->pattern_ = std::make_shared<Matrix<dtype::real>>(
+        this->model()->electrodes()->count(), this->drive_count() + this->measurement_count(), stream);
+    this->elemental_pattern_[0] = std::make_shared<Matrix<dtype::real>>(
+        this->model()->electrodes()->count(), this->drive_count() + this->measurement_count(), stream);
+    this->elemental_pattern_[1] = std::make_shared<Matrix<dtype::real>>(
+        this->model()->electrodes()->count(), this->drive_count() + this->measurement_count(), stream);
     this->excitation_matrix_ = std::make_shared<Matrix<dtype::real>>(
-        model->mesh()->nodes()->rows(), model->electrodes()->count(), stream);
+        this->model()->mesh()->nodes()->rows(), this->model()->electrodes()->count(), stream);
 
     // excitation matrices
     for (dtype::index component = 0;
-        component < model->components_count() + 1;
+        component < this->model()->components_count() + 1;
         ++component) {
         this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(
-            model->mesh()->nodes()->rows(),
+            this->model()->mesh()->nodes()->rows(),
             this->drive_count() + this->measurement_count(), stream));
     }
 }
 
-// current source
+// init excitation matrix and pattern
 template <
     class model_type
 >
-fastEIT::source::Current<model_type>::Current(
-    dtype::real current, std::shared_ptr<model_type> model,
-    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
-    cublasHandle_t handle, cudaStream_t stream)
-    : Source<model_type>("current", current, model, drive_pattern,
-        measurement_pattern, handle, stream) {
-
-    // init excitation matrix
-    this->initExcitation(model, handle, stream);
-}
-
-template <
-    class model_type
->
-void fastEIT::source::Current<model_type>::initExcitation(std::shared_ptr<model_type> model,
-    cublasHandle_t handle, cudaStream_t stream) {
-    if (model == nullptr) {
-        throw std::invalid_argument("Current::initExcitation: model == nullptr");
-    }
+void fastEIT::source::Source<model_type>::initExcitation(cublasHandle_t handle,
+    cudaStream_t stream) {
     if (handle == NULL) {
         throw std::invalid_argument("Current::initExcitation: handle == NULL");
     }
@@ -78,10 +66,10 @@ void fastEIT::source::Current<model_type>::initExcitation(std::shared_ptr<model_
 
     // calc excitation matrix
     for (dtype::index boundary_element = 0;
-        boundary_element < model->mesh()->boundary()->rows();
+        boundary_element < this->model()->mesh()->boundary()->rows();
         ++boundary_element) {
         // get boundary nodes
-        nodes = model->mesh()->boundaryNodes(boundary_element);
+        nodes = this->model()->mesh()->boundaryNodes(boundary_element);
 
         // sort nodes by parameter
         std::sort(nodes.begin(), nodes.end(),
@@ -101,13 +89,13 @@ void fastEIT::source::Current<model_type>::initExcitation(std::shared_ptr<model_
                 parameter_offset);
         }
 
-        for (dtype::index electrode = 0; electrode < model->electrodes()->count(); ++electrode) {
+        for (dtype::index electrode = 0; electrode < this->model()->electrodes()->count(); ++electrode) {
             // calc integration interval centered to node 0
             integration_start = math::circleParameter(
-                std::get<0>(model->electrodes()->coordinates()[electrode]),
+                std::get<0>(this->model()->electrodes()->coordinates()[electrode]),
                 parameter_offset);
             integration_end = math::circleParameter(
-                std::get<1>(model->electrodes()->coordinates()[electrode]),
+                std::get<1>(this->model()->electrodes()->coordinates()[electrode]),
                 parameter_offset);
 
             // intgrate if integration_start is left of integration_end
@@ -119,70 +107,82 @@ void fastEIT::source::Current<model_type>::initExcitation(std::shared_ptr<model_
                     (*this->excitation_matrix())(std::get<0>(nodes[node]), electrode) +=
                         model_type::basis_function_type::integrateBoundaryEdge(
                             node_parameter, node, integration_start, integration_end) /
-                        std::get<0>(model->electrodes()->shape());
+                        std::get<0>(this->model()->electrodes()->shape());
                 }
             }
         }
     }
     this->excitation_matrix()->copyToDevice(stream);
 
-    // create pattern matrix
-    auto pattern = std::make_shared<Matrix<dtype::real>>(model->electrodes()->count(),
-        this->drive_count() + this->measurement_count(), stream);
-
-    // dc offset of electrodes
-    std::vector<dtype::real> electrode_offset;
-    dtype::real offset = 0.0;;
-
     // fill pattern matrix with drive pattern
     for (dtype::index column = 0; column < this->drive_count(); ++column) {
-        // reset offset
-        offset = 0.0;
-
-        for (dtype::index row = 0; row < pattern->rows(); ++row) {
-            (*pattern)(row, column) =
-                (*this->drive_pattern())(row, column) * this->value();
-
-            // add value to offset
-            offset += (*pattern)(row, column);
+        for (dtype::index row = 0; row < this->model()->electrodes()->count(); ++row) {
+            (*this->elemental_pattern(0))(row, column) =
+                (*this->drive_pattern())(row, column);
         }
-
-        // calc offset for current pattern
-        electrode_offset.push_back(offset / model->electrodes()->count());
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
     for (dtype::index column = 0; column < this->measurement_count(); ++column) {
-        // reset offset
-        offset = 0.0;
-
-        for (dtype::index row = 0; row < pattern->rows(); ++row) {
-            (*pattern)(row, column + this->drive_count()) =
+        for (dtype::index row = 0; row < this->model()->electrodes()->count(); ++row) {
+            (*this->elemental_pattern(1))(row, column + this->drive_count()) =
                 (*this->measurement_pattern())(row, column);
-
-            // add value to offset
-            offset += (*pattern)(row, column);
         }
-
-        // calc offset for current pattern
-        electrode_offset.push_back(offset / model->electrodes()->count());
     }
-    pattern->copyToDevice(stream);
+    this->elemental_pattern(0)->copyToDevice(stream);
+    this->elemental_pattern(1)->copyToDevice(stream);
 
+    // update excitation
+    this->updateExcitation(handle, stream);
+}
+
+// current source
+template <
+    class model_type
+>
+fastEIT::source::Current<model_type>::Current(
+    dtype::real current, std::shared_ptr<model_type> model,
+    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    cublasHandle_t handle, cudaStream_t stream)
+    : Source<model_type>("current", current, model, drive_pattern,
+        measurement_pattern, handle, stream) {
+
+    // init excitation matrix
+    this->initExcitation(handle, stream);
+}
+
+// update excitation
+template <
+    class model_type
+>
+void fastEIT::source::Current<model_type>::updateExcitation(
+    cublasHandle_t handle, cudaStream_t stream) {
+    if (handle == NULL) {
+        throw std::invalid_argument("Current::updateExcitation: handle == NULL");
+    }
+
+    // calc pattern
+    this->pattern()->copy(this->elemental_pattern(0), stream);
+    this->pattern()->scalarMultiply(this->value(), stream);
+    this->pattern()->add(this->elemental_pattern(1), stream);
+
+    // update excitation
     // calc excitation components
-    for (dtype::index component = 0; component < model->components_count() + 1; ++component) {
+    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
         // set excitation
-        this->excitation(component)->multiply(this->excitation_matrix(), pattern, handle, stream);
+        this->excitation(component)->multiply(this->excitation_matrix(),
+            this->pattern(), handle, stream);
 
         // fourier transform pattern
         if (component == 0) {
             // calc ground mode
-            this->excitation(component)->scalarMultiply(1.0f / model->mesh()->height(), stream);
+            this->excitation(component)->scalarMultiply(1.0f / this->model()->mesh()->height(), stream);
         } else {
             this->excitation(component)->scalarMultiply(2.0f * sin(
-                component * M_PI * std::get<1>(model->electrodes()->shape()) / model->mesh()->height()) /
-                (component * M_PI * std::get<1>(model->electrodes()->shape())), stream);
+                component * M_PI * std::get<1>(this->model()->electrodes()->shape()) / this->model()->mesh()->height()) /
+                (component * M_PI * std::get<1>(this->model()->electrodes()->shape())), stream);
         }
     }
 }
@@ -199,22 +199,16 @@ fastEIT::source::Voltage<model_type>::Voltage(
         measurement_pattern, handle, stream) {
 
     // init excitation matrix
-    this->initExcitation(model, handle, stream);
+    this->initExcitation(handle, stream);
 }
 
+// update excitation
 template <
     class model_type
 >
-void fastEIT::source::Voltage<model_type>::initExcitation(std::shared_ptr<model_type> model,
+void fastEIT::source::Voltage<model_type>::updateExcitation(
     cublasHandle_t handle, cudaStream_t stream) {
-    if (model == nullptr) {
-        throw std::invalid_argument("Voltage::initExcitation: model == nullptr");
-    }
-    if (handle == NULL) {
-        throw std::invalid_argument("Voltage::initExcitation: handle == NULL");
-    }
 }
-
 // specialisation
 template class fastEIT::source::Current<fastEIT::Model<fastEIT::basis::Linear>>;
 template class fastEIT::source::Voltage<fastEIT::Model<fastEIT::basis::Linear>>;

@@ -26,13 +26,28 @@ namespace fastEIT {
             // destructor
             virtual ~Source() { }
 
+            // update excitation
+            virtual void updateExcitation(cublasHandle_t handle, cudaStream_t stream) = 0;
+
+        protected:
+            // init excitation
+            void initExcitation(cublasHandle_t handle, cudaStream_t stream);
+
+        public:
             // accessors
             const std::string& type() const { return this->type_; }
+            const std::shared_ptr<model_type> model() const { return this->model_; }
             const std::shared_ptr<Matrix<dtype::real>> drive_pattern() const {
                 return this->drive_pattern_;
             }
             const std::shared_ptr<Matrix<dtype::real>> measurement_pattern() const {
                 return this->measurement_pattern_;
+            }
+            const std::shared_ptr<Matrix<dtype::real>> pattern() const {
+                return this->pattern_;
+            }
+            const std::shared_ptr<Matrix<dtype::real>> elemental_pattern(dtype::index index) const {
+                return this->elemental_pattern_[index];
             }
             const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const {
                 return this->excitation_matrix_;
@@ -45,6 +60,13 @@ namespace fastEIT {
             dtype::real value() const { return this->value_; }
 
             // mutators
+            std::shared_ptr<model_type> model() { return this->model_; }
+            std::shared_ptr<Matrix<dtype::real>> pattern() {
+                return this->pattern_;
+            }
+            std::shared_ptr<Matrix<dtype::real>> elemental_pattern(dtype::index index) {
+                return this->elemental_pattern_[index];
+            }
             std::shared_ptr<Matrix<dtype::real>> excitation_matrix() {
                 return this->excitation_matrix_;
             }
@@ -52,15 +74,14 @@ namespace fastEIT {
                 return this->excitation_[index];
             }
 
-        protected:
-            // init excitation
-            virtual void initExcitation(std::shared_ptr<model_type> model, cublasHandle_t handle,
-                cudaStream_t stream) = 0;
-
+        private:
             // member
             std::string type_;
+            std::shared_ptr<model_type> model_;
             std::shared_ptr<Matrix<dtype::real>> drive_pattern_;
             std::shared_ptr<Matrix<dtype::real>> measurement_pattern_;
+            std::shared_ptr<Matrix<dtype::real>> pattern_;
+            std::array<std::shared_ptr<Matrix<dtype::real>>, 2> elemental_pattern_;
             std::shared_ptr<Matrix<dtype::real>> excitation_matrix_;
             std::vector<std::shared_ptr<Matrix<dtype::real>>> excitation_;
             dtype::real value_;
@@ -78,10 +99,8 @@ namespace fastEIT {
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
                 cublasHandle_t handle, cudaStream_t stream);
 
-        protected:
-            // init excitation
-            virtual void initExcitation(std::shared_ptr<model_type> model, cublasHandle_t handle,
-                cudaStream_t stream);
+            // update excitation
+            virtual void updateExcitation(cublasHandle_t handle, cudaStream_t stream);
         };
 
         // voltage source
@@ -96,10 +115,8 @@ namespace fastEIT {
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
                 cublasHandle_t handle, cudaStream_t stream);
 
-        protected:
-            // init excitation
-            virtual void initExcitation(std::shared_ptr<model_type> model, cublasHandle_t handle,
-                cudaStream_t stream);
+            // update excitation
+            virtual void updateExcitation(cublasHandle_t handle, cudaStream_t stream);
         };
     }
 }
