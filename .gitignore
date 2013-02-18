@@ -7,3 +7,6 @@ bin
 *.swo
 .c9revisions
 .settings
+build_test
+*.o
+build_test
