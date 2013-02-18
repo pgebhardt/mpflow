@@ -121,8 +121,7 @@ if env['PLATFORM'] == 'darwin':
 
     # set install name
     env.Append(LINKFLAGS=['-install_name',
-        os.path.abspath(
-            os.path.join(install._libdir, libfasteit.binary[0].path))])
+        os.path.join(install._libdir, libfasteit.binary[0].path)])
 
 # create tester
 tester = Tester(env, libfasteit.name)
