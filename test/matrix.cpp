@@ -296,3 +296,22 @@ TEST_F(MatrixTest, Max) {
         std::invalid_argument);
 };
 
+TEST_F(MatrixTest, LoadSaveTxt) {
+    // create matrix
+    auto A = randomMatrix(32, 32, nullptr);
+
+    // create stringstream
+    std::stringstream sstream;
+
+    // save matrix to stream
+    EXPECT_NO_THROW(fastEIT::matrix::savetxt(A, &sstream));
+
+    // load matrix from stream
+    std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> B = nullptr;
+    EXPECT_NO_THROW({
+        B = fastEIT::matrix::loadtxt<fastEIT::dtype::real>(&sstream, nullptr);
+    });
+
+    // compare matrices
+    EXPECT_EQ(matrixCompare(A, B), 0);
+};
