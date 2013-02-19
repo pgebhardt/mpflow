@@ -202,3 +202,97 @@ TEST_F(MatrixTest, VectorDotProduct) {
         B->vectorDotProduct(D, A, nullptr),
         std::invalid_argument);
 }
+
+TEST_F(MatrixTest, Sum) {
+    // create matrices
+    auto A = randomMatrix(32, 16, nullptr);
+    auto B = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(32, 16, nullptr);
+    auto C = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(16, 16, nullptr);
+
+    // sum
+    EXPECT_NO_THROW(B->sum(A, nullptr));
+
+    // sum on CPU
+    for (fastEIT::dtype::index row = 1; row < A->rows(); ++row)
+    for (fastEIT::dtype::index column = 0; column < A->columns(); ++column) {
+        (*A)(0, column) += (*A)(row, column);
+    }
+
+    // copy to host
+    B->copyToHost(nullptr);
+    cudaStreamSynchronize(nullptr);
+
+    // compare first row
+    for (fastEIT::dtype::index column = 0; column < A->columns(); ++column) {
+        EXPECT_LT(std::abs((*B)(0, column) - (*A)(0, column)), 1e-3);
+    }
+
+    // expect error
+    EXPECT_THROW(
+        C->sum(A, nullptr),
+        std::invalid_argument);
+    EXPECT_THROW(
+        A->sum(C, nullptr),
+        std::invalid_argument);
+};
+
+TEST_F(MatrixTest, Min) {
+    // create matrices
+    auto A = randomMatrix(32, 1, nullptr);
+    auto B = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(32, 1, nullptr);
+    auto C = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(16, 1, nullptr);
+
+    // sum
+    EXPECT_NO_THROW(B->min(A, nullptr));
+
+    // sum on CPU
+    for (fastEIT::dtype::index row = 1; row < A->rows(); ++row) {
+        (*A)(0, 0) = std::min((*A)(0, 0), (*A)(row, 0));
+    }
+
+    // copy to host
+    B->copyToHost(nullptr);
+    cudaStreamSynchronize(nullptr);
+
+    // compare first element
+    EXPECT_EQ((*B)(0, 0), (*A)(0, 0));
+
+    // expect error
+    EXPECT_THROW(
+        C->min(A, nullptr),
+        std::invalid_argument);
+    EXPECT_THROW(
+        A->min(C, nullptr),
+        std::invalid_argument);
+};
+
+TEST_F(MatrixTest, Max) {
+    // create matrices
+    auto A = randomMatrix(32, 1, nullptr);
+    auto B = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(32, 1, nullptr);
+    auto C = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(16, 1, nullptr);
+
+    // sum
+    EXPECT_NO_THROW(B->max(A, nullptr));
+
+    // sum on CPU
+    for (fastEIT::dtype::index row = 1; row < A->rows(); ++row) {
+        (*A)(0, 0) = std::max((*A)(0, 0), (*A)(row, 0));
+    }
+
+    // copy to host
+    B->copyToHost(nullptr);
+    cudaStreamSynchronize(nullptr);
+
+    // compare first element
+    EXPECT_EQ((*B)(0, 0), (*A)(0, 0));
+
+    // expect error
+    EXPECT_THROW(
+        C->max(A, nullptr),
+        std::invalid_argument);
+    EXPECT_THROW(
+        A->max(C, nullptr),
+        std::invalid_argument);
+};
+
