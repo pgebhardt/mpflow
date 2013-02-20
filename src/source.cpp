@@ -92,10 +92,10 @@ void fastEIT::source::Source<model_type>::initExcitation(cublasHandle_t handle,
         for (dtype::index electrode = 0; electrode < this->model()->electrodes()->count(); ++electrode) {
             // calc integration interval centered to node 0
             integration_start = math::circleParameter(
-                std::get<0>(this->model()->electrodes()->coordinates()[electrode]),
+                std::get<0>(this->model()->electrodes()->coordinates(electrode)),
                 parameter_offset);
             integration_end = math::circleParameter(
-                std::get<1>(this->model()->electrodes()->coordinates()[electrode]),
+                std::get<1>(this->model()->electrodes()->coordinates(electrode)),
                 parameter_offset);
 
             // intgrate if integration_start is left of integration_end
