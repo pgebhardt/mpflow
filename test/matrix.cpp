@@ -1,6 +1,6 @@
 #include <random>
 #include "gtest/gtest.h"
-#include "../include/fasteit.h"
+#include "fasteit/fasteit.h"
 
 // test class
 class MatrixTest :
