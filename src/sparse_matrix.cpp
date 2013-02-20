@@ -15,14 +15,14 @@ fastEIT::SparseMatrix::SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> m
     }
 
     // create empty sparse matrix
-    this->init(matrix->rows(), matrix->columns(), stream);
+    this->init(matrix->rows(), matrix->columns());
 
     // convert to sparse_matrix
     this->convert(matrix, stream);
 }
 
 // create empty sparse matrix
-void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns, cudaStream_t stream) {
+void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns) {
     // check input
     if (rows == 0) {
         throw std::invalid_argument("SparseMatrix::init: rows == 0");

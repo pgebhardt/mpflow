@@ -12,8 +12,8 @@ namespace fastEIT {
     class SparseMatrix {
     public:
         // constructor and destructor
-        SparseMatrix(dtype::size rows, dtype::size columns, cudaStream_t stream) {
-            this->init(rows, columns, stream);
+        SparseMatrix(dtype::size rows, dtype::size columns, cudaStream_t) {
+            this->init(rows, columns);
         }
 
         SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream);
@@ -42,7 +42,7 @@ namespace fastEIT {
 
     private:
         // init empty sparse matrix
-        void init(dtype::size rows, dtype::size columns, cudaStream_t stream);
+        void init(dtype::size rows, dtype::size columns);
 
         // convert to sparse matrix
         void convert(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream);
