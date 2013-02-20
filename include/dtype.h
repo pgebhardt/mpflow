@@ -14,6 +14,9 @@ namespace fastEIT {
         typedef unsigned int size;
         typedef float real;
         typedef unsigned int index;
+
+        // invalid index
+        static const index invalid_index = (index)(-1);
     }
 }
 

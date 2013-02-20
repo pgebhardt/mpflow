@@ -30,7 +30,7 @@ static __global__ void convertKernel(const fastEIT::dtype::real* matrix,
     // init values and columnIds
     for (fastEIT::dtype::index j = 0; j < fastEIT::sparseMatrix::block_size; j++) {
         values[i * fastEIT::sparseMatrix::block_size + j] = 0.0f;
-        columnIds[i * fastEIT::sparseMatrix::block_size + j] = -1;
+        columnIds[i * fastEIT::sparseMatrix::block_size + j] = fastEIT::dtype::invalid_index;
     }
 
     // search non-zero elements
@@ -77,13 +77,13 @@ static __global__ void convertToMatrixKernel(const fastEIT::dtype::real* values,
     fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // expand sparse matrix
-    fastEIT::dtype::index column_id = -1;
+    fastEIT::dtype::index column_id = fastEIT::dtype::invalid_index;
     for (fastEIT::dtype::index column = 0; column < density; ++column) {
         // get column id
         column_id = column_ids[row * fastEIT::sparseMatrix::block_size + column];
 
         // set matrix value
-        if (column_id != -1) {
+        if (column_id != fastEIT::dtype::invalid_index) {
             matrix[row + column_id * rows] = values[
                 row * fastEIT::sparseMatrix::block_size + column];
         }
@@ -112,7 +112,7 @@ static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
 
     // calc result
     fastEIT::dtype::real res = 0.0f;
-    fastEIT::dtype::index id = -1;
+    fastEIT::dtype::index id = fastEIT::dtype::invalid_index;
 
     // read column ids to local memory
     __shared__ fastEIT::dtype::index columnId[
@@ -121,7 +121,7 @@ static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
         fastEIT::sparseMatrix::block_size * fastEIT::sparseMatrix::block_size];
 
     columnId[threadIdx.x * fastEIT::sparseMatrix::block_size + threadIdx.y] = row < rows ?
-        columnIds[row * fastEIT::sparseMatrix::block_size + threadIdx.y] : -1;
+        columnIds[row * fastEIT::sparseMatrix::block_size + threadIdx.y] : fastEIT::dtype::invalid_index;
     value[threadIdx.x * fastEIT::sparseMatrix::block_size + threadIdx.y] = row < rows ?
         values[row * fastEIT::sparseMatrix::block_size + threadIdx.y] : 0.0f;
 
@@ -137,7 +137,7 @@ static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
         // get column id
         id = columnId[threadIdx.x * fastEIT::sparseMatrix::block_size + j];
 
-         res += id != -1 ? matrix[id + column * rows] *
+         res += id != fastEIT::dtype::invalid_index ? matrix[id + column * rows] *
             value[threadIdx.x * fastEIT::sparseMatrix::block_size + j] : 0.0f;
     }
 
