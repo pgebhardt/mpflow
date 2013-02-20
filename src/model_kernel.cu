@@ -29,7 +29,7 @@ static __global__ void reduceMatrixKernel(const type* intermediateMatrix,
     fastEIT::dtype::index columnId = systemMatrixColumnIds[row * fastEIT::sparseMatrix::block_size + column];
 
     // check column id
-    if (columnId == -1) {
+    if (columnId == fastEIT::dtype::invalid_index) {
         return;
     }
 
@@ -73,13 +73,13 @@ static __global__ void updateMatrixKernel(const fastEIT::dtype::index* connectiv
 
     // calc residual matrix element
     fastEIT::dtype::real value = 0.0f;
-    fastEIT::dtype::index elementId = -1;
+    fastEIT::dtype::index elementId = fastEIT::dtype::invalid_index;
     for (fastEIT::dtype::index k = 0; k < fastEIT::matrix::block_size; ++k) {
         // get element id
         elementId = connectivityMatrix[row +
             (column + k * fastEIT::sparseMatrix::block_size) * rows];
 
-        value += elementId != -1 ? elementalMatrix[row +
+        value += elementId != fastEIT::dtype::invalid_index ? elementalMatrix[row +
             (column + k * fastEIT::sparseMatrix::block_size) * rows] *
             sigmaRef * exp10f(gamma[elementId] / 10.0f) : 0.0f;
     }

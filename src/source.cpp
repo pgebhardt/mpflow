@@ -207,7 +207,7 @@ template <
     class model_type
 >
 void fastEIT::source::Voltage<model_type>::updateExcitation(
-    cublasHandle_t handle, cudaStream_t stream) {
+    cublasHandle_t, cudaStream_t) {
 }
 // specialisation
 template class fastEIT::source::Current<fastEIT::Model<fastEIT::basis::Linear>>;

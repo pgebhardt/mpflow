@@ -9,18 +9,22 @@
 #define CudaSafeCall(err)   __cudaSafeCall(err, __FILE__, __LINE__)
 #define CudaCheckError()    __cudaCheckError(__FILE__, __LINE__)
 
+#ifndef CUDA_ERROR_CHECK
+
+inline void __cudaSafeCall(cudaError, const char*, const int) { }
+inline void __cudaCheckError(const char*, const int) { }
+
+#else
+
 inline void __cudaSafeCall(cudaError err, const char *file, const int line) {
-#ifdef CUDA_ERROR_CHECK
     if (cudaSuccess != err) {
         fprintf(stderr, "cudaSafeCall() failed at %s:%i : %s\n",
                  file, line, cudaGetErrorString(err));
         exit(-1);
     }
-#endif
 }
 
 inline void __cudaCheckError( const char *file, const int line ) {
-#ifdef CUDA_ERROR_CHECK
     // More careful checking. However, this will affect performance.
     // Comment away if needed.
     cudaStreamSynchronize(NULL);
@@ -31,5 +35,6 @@ inline void __cudaCheckError( const char *file, const int line ) {
                  file, line, cudaGetErrorString(err));
         exit(-1);
     }
-#endif
 }
+
+#endif

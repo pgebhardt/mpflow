@@ -16,8 +16,8 @@ template<
     class type
 >
 fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
-    : host_data_(nullptr), device_data_(nullptr), rows_(rows), data_rows_(rows),
-        columns_(columns), data_columns_(columns) {
+    : host_data_(nullptr), device_data_(nullptr), rows_(rows), columns_(columns),
+        data_rows_(rows), data_columns_(columns) {
     // check input
     if (rows == 0) {
         throw std::invalid_argument("Matrix::Matrix: rows == 0");
@@ -169,9 +169,8 @@ void fastEIT::Matrix<type>::add(const std::shared_ptr<Matrix<type>> value,
 template <
     class type
 >
-void fastEIT::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>> A,
-    const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle,
-    cudaStream_t stream) {
+void fastEIT::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>,
+    const std::shared_ptr<Matrix<type>>, cublasHandle_t, cudaStream_t) {
     throw std::logic_error("Matrix::multiply: not supported dtype");
 }
 
