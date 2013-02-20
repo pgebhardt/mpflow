@@ -8,11 +8,11 @@
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-#include "../include/cuda_error.h"
+#include "fasteit/cuda_error.h"
 
-#include "../include/dtype.h"
-#include "../include/constants.h"
-#include "../include/conjugate_kernel.h"
+#include "fasteit/dtype.h"
+#include "fasteit/constants.h"
+#include "fasteit/conjugate_kernel.h"
 
 // add scalar kernel
 static __global__ void addScalarKernel(const fastEIT::dtype::real* scalar,

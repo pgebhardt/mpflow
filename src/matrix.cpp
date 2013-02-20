@@ -8,8 +8,8 @@
 #include <iostream>
 #include <fstream>
 
-#include "../include/fasteit.h"
-#include "../include/matrix_kernel.h"
+#include "fasteit/fasteit.h"
+#include "fasteit/matrix_kernel.h"
 
 // create new matrix
 template<

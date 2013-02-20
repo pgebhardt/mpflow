@@ -3,7 +3,7 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.h"
+#include "fasteit/fasteit.h"
 
 template <
     class model_type

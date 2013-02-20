@@ -4,7 +4,7 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include <cmath>
-#include "../include/fasteit.h"
+#include "fasteit/fasteit.h"
 
 // create basis class
 fastEIT::basis::Linear::Linear(

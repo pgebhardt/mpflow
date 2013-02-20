@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.h"
-#include "../include/forward_kernel.h"
+#include "fasteit/fasteit.h"
+#include "fasteit/forward_kernel.h"
 
 // create forward_solver
 template <

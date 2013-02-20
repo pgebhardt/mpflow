@@ -13,7 +13,6 @@ class Tester:
             'test/gmock/include',
             'test/gtest',
             'test/gmock',
-            'include'
         ])
 
         # unset -Werror flag (google test produces warnings)
@@ -84,7 +83,7 @@ opts.Update(env)
 # create installer
 install = installer.Installer(env)
 install.AddLibrary(libfasteit.binary)
-install.AddHeaders('include', '*.h', basedir=libfasteit.name)
+install.AddHeaders('include/fasteit/', '*.h', basedir=libfasteit.name)
 
 # set c compiler
 env.Replace(CXX='clang++')
@@ -107,6 +106,12 @@ env.Append(
         '-use_fast_math',
         '--ptxas-options=-v',
         '-lineinfo',
+        ],
+    CPPPATH=[
+        'include',
+        ],
+    NVCCINC=[
+        '-Iinclude',
         ],
     LIBS=[
         'cudart',

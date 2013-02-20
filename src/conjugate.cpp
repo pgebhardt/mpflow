@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.h"
-#include "../include/conjugate_kernel.h"
+#include "fasteit/fasteit.h"
+#include "fasteit/conjugate_kernel.h"
 
 // create conjugate solver
 fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle,

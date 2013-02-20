@@ -3,7 +3,7 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.h"
+#include "fasteit/fasteit.h"
 
 // create electrodes class
 fastEIT::Electrodes::Electrodes(dtype::size count,

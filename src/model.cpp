@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.h"
-#include "../include/model_kernel.h"
+#include "fasteit/fasteit.h"
+#include "fasteit/model_kernel.h"
 
 // create solver model
 template <

@@ -3,8 +3,8 @@
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "../include/fasteit.h"
-#include "../include/sparse_matrix_kernel.h"
+#include "fasteit/fasteit.h"
+#include "fasteit/sparse_matrix_kernel.h"
 
 // create new sparse matrix
 fastEIT::SparseMatrix::SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> matrix,
