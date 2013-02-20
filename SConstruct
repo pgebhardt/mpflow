@@ -16,6 +16,10 @@ class Tester:
             'include'
         ])
 
+        # unset -Werror flag (google test produces warnings)
+        if '-Werror' in self.env['CXXFLAGS']:
+            self.env['CXXFLAGS'].remove('-Werror')
+
         # change VariantDir
         self.env.VariantDir('{}_test'.format(self.env["BUILDDIR"]), 'test', duplicate=0)
 
@@ -89,6 +93,9 @@ env.Replace(CXX='clang++')
 env.Append(
     CXXFLAGS=[
         '-std=c++11',
+        '-W',
+        '-Wall',
+        '-Werror',
         ],
     NVCCFLAGS=[
         '-Xcompiler',

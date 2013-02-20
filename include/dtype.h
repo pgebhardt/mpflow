@@ -13,7 +13,7 @@ namespace fastEIT {
         // basic scalar types
         typedef unsigned int size;
         typedef float real;
-        typedef int index;
+        typedef unsigned int index;
     }
 }
 
