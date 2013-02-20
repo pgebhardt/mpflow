@@ -13,8 +13,8 @@ template <
 fastEIT::Mesh<BasisFunction>::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes,
     std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
     dtype::real radius, dtype::real height)
-    : radius_(radius), height_(height), nodes_(nodes), elements_(elements),
-        boundary_(boundary) {
+    : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
+        height_(height) {
     // check input
     if (radius <= 0.0f) {
         throw std::invalid_argument("radius <= 0.0");
@@ -35,8 +35,8 @@ template <>
 fastEIT::Mesh<fastEIT::basis::Quadratic>::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes,
     std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
     dtype::real radius, dtype::real height)
-    : radius_(radius), height_(height), nodes_(nodes), elements_(elements),
-        boundary_(boundary) {
+    : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
+        height_(height) {
     // check input
     if (radius <= 0.0f) {
         throw std::invalid_argument("radius <= 0.0");
@@ -170,7 +170,7 @@ fastEIT::mesh::quadraticMeshFromLinear(
                         (*nodes_old)(current_edge[0][1],1));
 
                     // create array with x and y coords
-                    std::array<fastEIT::dtype::real, 2> midpoint = {node_x , node_y};
+                    std::array<fastEIT::dtype::real, 2> midpoint = {{node_x, node_y}};
 
                     // append new midpoint to existing nodes
                     new_calc_nodes.push_back(midpoint);
