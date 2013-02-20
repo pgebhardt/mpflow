@@ -9,26 +9,29 @@
 // namespace fastEIT
 namespace fastEIT {
     // Electrodes class definition
-    template <
-        class mesh_type
-    >
     class Electrodes {
     // constructer and destructor
     public:
         Electrodes(dtype::size count, std::tuple<dtype::real, dtype::real> shape,
-            dtype::real impedance, const std::shared_ptr<mesh_type> mesh);
+            dtype::real impedance);
         virtual ~Electrodes() { }
 
     public:
         // accessor
         dtype::size count() const { return this->count_; }
-        const std::vector<std::tuple<std::tuple<dtype::real, dtype::real>,
-            std::tuple<dtype::real, dtype::real>>>& coordinates() const {
-            return this->coordinates_;
+        const std::tuple<std::tuple<dtype::real, dtype::real>,
+            std::tuple<dtype::real, dtype::real>>& coordinates(dtype::index index) const {
+            return this->coordinates_[index];
         }
         std::tuple<dtype::real, dtype::real> shape() const { return this->shape_; }
         dtype::real area() const { return std::get<0>(this->shape()) * std::get<1>(this->shape()); }
         dtype::real impedance() const { return this->impedance_; }
+
+        // mutators
+        std::tuple<std::tuple<dtype::real, dtype::real>,
+            std::tuple<dtype::real, dtype::real>>& coordinates(dtype::index index) {
+            return this->coordinates_[index];
+        }
 
     // member
     private:
@@ -38,6 +41,14 @@ namespace fastEIT {
         std::tuple<dtype::real, dtype::real> shape_;
         dtype::real impedance_;
     };
+
+    // electrodes helper
+    namespace electrodes {
+        // create electrodes on circular boundary
+        std::shared_ptr<Electrodes> circularBoundary(dtype::size count,
+            std::tuple<dtype::real, dtype::real> shape, dtype::real impedance,
+            dtype::real boundary_radius);
+    }
 }
 
 #endif
