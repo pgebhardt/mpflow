@@ -28,6 +28,12 @@ fastEIT::Electrodes::Electrodes(dtype::size count,
 std::shared_ptr<fastEIT::Electrodes> fastEIT::electrodes::circularBoundary(
     dtype::size count, std::tuple<dtype::real, dtype::real> shape,
     dtype::real impedance, dtype::real boundary_radius) {
+    // check radius
+    if (boundary_radius <= 0.0) {
+        throw std::invalid_argument(
+            "fastEIT::electrodes::circularBoundary: boundary_radius <= 0.0");
+    }
+
     // create electrodes
     auto electrodes = std::make_shared<Electrodes>(count, shape, impedance);
 
