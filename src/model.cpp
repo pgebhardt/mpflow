@@ -11,8 +11,7 @@ template <
     class basis_function_type
 >
 fastEIT::Model<basis_function_type>::Model(
-    std::shared_ptr<Mesh<basis_function_type>> mesh,
-    std::shared_ptr<Electrodes<Mesh<basis_function_type>>> electrodes,
+    std::shared_ptr<Mesh<basis_function_type>> mesh, std::shared_ptr<Electrodes> electrodes,
     dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
     cudaStream_t stream)
     : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef),
