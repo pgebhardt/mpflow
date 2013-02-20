@@ -1,4 +1,4 @@
-// fastECT
+// fastEIT
 //
 // Copyright (C) 2012  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
@@ -19,7 +19,7 @@ namespace fastEIT {
         // constructor and destructor
         protected:
             Basis(std::array<std::tuple<dtype::real, dtype::real>, template_nodes_per_element> nodes,
-                dtype::index one) {
+                dtype::index) {
                 // init member
                 this->nodes_ = nodes;
                 for (dtype::real& coefficient : this->coefficients()) {
