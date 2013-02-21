@@ -1,4 +1,4 @@
-from testedLibrary import TestedLibrary
+import sconshelper
 
 # create environment
 env = Environment()
@@ -10,7 +10,7 @@ env.Tool('cuda')
 env.Replace(CXX='clang++')
 
 # create librarty
-TestedLibrary(name='fasteit', env=env, arguments=ARGUMENTS,
+sconshelper.Library(name='fasteit', env=env, arguments=ARGUMENTS,
     source_suffix=['cu'],
     NVCCFLAGS=[
         '-Xcompiler',
