@@ -9,8 +9,9 @@ env.Tool('cuda')
 # use clang++
 env.Replace(CXX='clang++')
 
-# set flags
-env.Append(
+# create librarty
+TestedLibrary(name='fasteit', env=env, arguments=ARGUMENTS,
+    source_suffix=['cu'],
     NVCCFLAGS=[
         '-Xcompiler',
         '-fpic',
@@ -32,7 +33,3 @@ env.Append(
         'dl'
         ],
     )
-
-# create librarty
-TestedLibrary(name='fasteit',
-    env=env, arguments=ARGUMENTS, source_suffix=['cu'])
