@@ -1,101 +1,16 @@
-import installer
-import os
-
-# google test tester
-class Tester:
-    def __init__(self, env, name):
-        # copy environment
-        self.env = env.Clone()
-
-        # set googletest flags
-        self.env.Append(CPPPATH=[
-            'test/gtest/include',
-            'test/gmock/include',
-            'test/gtest',
-            'test/gmock',
-        ])
-
-        # unset -Werror flag (google test produces warnings)
-        if '-Werror' in self.env['CXXFLAGS']:
-            self.env['CXXFLAGS'].remove('-Werror')
-
-        # change VariantDir
-        self.env.VariantDir('{}_test'.format(self.env["BUILDDIR"]), 'test', duplicate=0)
-
-        # create binary
-        self.binary = self.env.Program(
-            '{}_test/test'.format(self.env['BUILDDIR']),
-            [
-                Glob('{}/*.cu'.format(env["BUILDDIR"])),
-                Glob('{}/*.cpp'.format(self.env["BUILDDIR"])),
-                Glob('{}_test/*.cpp'.format(self.env["BUILDDIR"])),
-                Glob('{}_test/gtest/src/gtest-all.cc'.format(self.env["BUILDDIR"])),
-                Glob('{}_test/gmock/src/gmock-all.cc'.format(self.env["BUILDDIR"])),
-            ],
-        )
-
-        # set alias
-        test_alias = self.env.Alias('test', self.binary, self.binary[0].abspath)
-        AlwaysBuild(test_alias)
-
-        # set binary to Default
-        self.env.Default(None)
-
-# cuda librarty
-class CudaLibrary:
-    def __init__(self, name, env):
-        self.binary = env.SharedLibrary(
-            'lib{}'.format(name),
-            [
-                Glob('{}/*.cu'.format(env["BUILDDIR"])),
-                Glob('{}/*.cpp'.format(env["BUILDDIR"])),
-            ],
-        )
-
-        # save name
-        self.name = name
-
+from testedLibrary import TestedLibrary
 
 # create environment
-def make_env(builddir,**kwargs):
-    env = Environment(**kwargs)
+env = Environment()
 
-    # add cuda tools
-    env.Tool('cuda')
+# use cuda tools
+env.Tool('cuda')
 
-    # set builddir
-    env.Append(BUILDDIR=builddir)
-    env.VariantDir(env["BUILDDIR"], 'src', duplicate=0)
-
-    return env
-
-# create build environment
-env = make_env('build',)
-
-# add build target to env
-libfasteit = CudaLibrary('fasteit', env)
-
-# add the installer options
-opts = Options('options.conf', ARGUMENTS)
-installer.AddOptions(opts)
-opts.Update(env)
-
-# create installer
-install = installer.Installer(env)
-install.AddLibrary(libfasteit.binary)
-install.AddHeaders('include/fasteit/', '*.h', basedir=libfasteit.name)
-
-# set c compiler
+# use clang++
 env.Replace(CXX='clang++')
 
-# set compiler flags
+# set flags
 env.Append(
-    CXXFLAGS=[
-        '-std=c++11',
-        '-W',
-        '-Wall',
-        '-Werror',
-        ],
     NVCCFLAGS=[
         '-Xcompiler',
         '-fpic',
@@ -107,9 +22,6 @@ env.Append(
         '--ptxas-options=-v',
         '-lineinfo',
         ],
-    CPPPATH=[
-        'include',
-        ],
     NVCCINC=[
         '-Iinclude',
         ],
@@ -119,26 +31,8 @@ env.Append(
         'pthread',
         'dl'
         ],
-)
+    )
 
-# MacOS specific stuff
-if env['PLATFORM'] == 'darwin':
-    env['CXXFLAGS'] += ['-stdlib=libc++']
-    env['LIBS'] += ['c++']
-
-    # set rpath
-    env.Append(LINKFLAGS=['-Xlinker'])
-    for rpath in env['RPATH']:
-        env.Append(LINKFLAGS=['-rpath', rpath])
-
-# create tester
-tester = Tester(env, libfasteit.name)
-
-# MacOS specific insall name
-if env['PLATFORM'] == 'darwin':
-    # set install name
-    env.Append(LINKFLAGS=['-install_name',
-        os.path.join(install._libdir, libfasteit.binary[0].path)])
-
-# set Default target
-env.Default(libfasteit.binary)
+# create librarty
+TestedLibrary(name='fasteit',
+    env=env, arguments=ARGUMENTS, source_suffix=['cu'])

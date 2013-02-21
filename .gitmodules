@@ -4,3 +4,6 @@
 [submodule "test/gtest"]
 	path = test/gtest
 	url = http://git.chromium.org/external/googletest.git
+[submodule "testedLibrary"]
+	path = testedLibrary
+	url = https://github.com/schansge/testedLibrary.git
