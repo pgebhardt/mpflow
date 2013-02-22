@@ -7,66 +7,41 @@
 #include <iostream>
 
 // create mesh class
-template <
-    class BasisFunction
->
-fastEIT::Mesh<BasisFunction>::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes,
-    std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
-    dtype::real radius, dtype::real height)
+fastEIT::Mesh::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes, std::shared_ptr<Matrix<dtype::index>> elements,
+    std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height)
     : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
         height_(height) {
     // check input
+    if (nodes == nullptr) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: nodes == nullptr");
+    }
+    if (nodes->columns() != 2) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: nodes->columns() != 2");
+    }
+    if (elements == nullptr) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: elements == nullptr");
+    }
+    if (boundary == nullptr) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: boundary == nullptr");
+    }
     if (radius <= 0.0f) {
-        throw std::invalid_argument("radius <= 0.0");
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: radius <= 0.0");
     }
     if (height <= 0.0f) {
-        throw std::invalid_argument("height <= 0.0");
-    }
-    if (elements->columns() != BasisFunction::nodes_per_element) {
-        throw std::invalid_argument("elements.count() != BasisFunction::nodes_per_element");
-    }
-    if (boundary->columns() != BasisFunction::nodes_per_edge) {
-        throw std::invalid_argument("boundary.count() != BasisFunction::nodes_per_edge");
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: height <= 0.0");
     }
 }
 
-// create quadratic mesh
-template <>
-fastEIT::Mesh<fastEIT::basis::Quadratic>::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes,
-    std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
-    dtype::real radius, dtype::real height)
-    : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
-        height_(height) {
-    // check input
-    if (radius <= 0.0f) {
-        throw std::invalid_argument("radius <= 0.0");
-    }
-    if (height <= 0.0f) {
-        throw std::invalid_argument("height <= 0.0");
-    }
-    if (elements->columns() != fastEIT::basis::Linear::nodes_per_element) {
-        throw std::invalid_argument("elements.count() != BasisFunction::nodes_per_element");
-    }
-    if (boundary->columns() != fastEIT::basis::Linear::nodes_per_edge) {
-        throw std::invalid_argument("boundary.count() != BasisFunction::nodes_per_edge");
-    }
-
-    std::tie(this->nodes_, this->elements_, this->boundary_) =
-        mesh::quadraticMeshFromLinear(this->nodes(), this->elements(), this->boundary());
-}
-
-template <
-    class BasisFunction
->
-std::array<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>,
-    BasisFunction::nodes_per_element> fastEIT::Mesh<BasisFunction>::elementNodes(dtype::index element) const {
+std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>>
+    fastEIT::Mesh::elementNodes(dtype::index element) const {
     // result array
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_element> result;
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> result(
+        this->elements()->columns());
 
     // get node index and coordinate
     dtype::index index = -1;
     std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
-    for (dtype::index node = 0; node < BasisFunction::nodes_per_element; ++node) {
+    for (dtype::index node = 0; node < this->elements()->columns(); ++node) {
         // get index
         index = (*this->elements())(element, node);
 
@@ -81,18 +56,16 @@ std::array<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fa
     return result;
 }
 
-template <
-    class BasisFunction
->
-std::array<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>,
-    BasisFunction::nodes_per_edge> fastEIT::Mesh<BasisFunction>::boundaryNodes(dtype::index element) const {
-    // result array
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, BasisFunction::nodes_per_edge> result;
+std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>>
+    fastEIT::Mesh::boundaryNodes(dtype::index element) const {
+    // result vector
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> result(
+        this->boundary()->columns());
 
     // get node index and coordinate
     dtype::index index = -1;
     std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
-    for (dtype::index node = 0; node < BasisFunction::nodes_per_edge; ++node) {
+    for (dtype::index node = 0; node < this->boundary()->columns(); ++node) {
         // get index
         index = (*this->boundary())(element, node);
 
@@ -105,6 +78,17 @@ std::array<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fa
     }
 
     return result;
+}
+
+// create mesh for quadratic basis function
+std::shared_ptr<fastEIT::Mesh> fastEIT::mesh::quadraticBasis(std::shared_ptr<Matrix<dtype::real>> nodes,
+    std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
+    dtype::real radius, dtype::real height) {
+    // create quadratic grid
+    std::tie(nodes, elements, boundary) = quadraticMeshFromLinear(nodes, elements, boundary);
+
+    // create mesh
+    return std::make_shared<Mesh>(nodes, elements, boundary, radius, height);
 }
 
 // function create quadratic mesh from linear
@@ -257,7 +241,3 @@ fastEIT::mesh::quadraticMeshFromLinear(
     // return quadratic mesh matrices
     return std::make_tuple(nodes_new, elements_new, boundary_new);
 }
-
-// class specialisations
-template class fastEIT::Mesh<fastEIT::basis::Linear>;
-template class fastEIT::Mesh<fastEIT::basis::Quadratic>;

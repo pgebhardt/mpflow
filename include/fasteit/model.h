@@ -15,10 +15,9 @@ namespace fastEIT {
     class Model {
     public:
         // constructor
-        Model(
-            std::shared_ptr<Mesh<template_basis_function_type>> mesh,
-            std::shared_ptr<Electrodes> electrodes, dtype::real sigmaRef,
-            dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
+        Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+            dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
+            cudaStream_t stream);
 
         // update model
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
@@ -27,7 +26,7 @@ namespace fastEIT {
         typedef template_basis_function_type basis_function_type;
 
         // accessors
-        const std::shared_ptr<Mesh<template_basis_function_type>> mesh() const { return this->mesh_; }
+        const std::shared_ptr<Mesh> mesh() const { return this->mesh_; }
         const std::shared_ptr<Electrodes> electrodes() const { return this->electrodes_; }
         const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
         const std::shared_ptr<SparseMatrix> s_matrix() const { return this->s_matrix_; }
@@ -39,7 +38,7 @@ namespace fastEIT {
         dtype::size components_count() const { return this->components_count_; }
 
         // mutators
-        std::shared_ptr<Mesh<template_basis_function_type>> mesh() { return this->mesh_; }
+        std::shared_ptr<Mesh> mesh() { return this->mesh_; }
         std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
         std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
         std::shared_ptr<SparseMatrix> s_matrix() { return this->s_matrix_; }
@@ -57,7 +56,7 @@ namespace fastEIT {
         void initExcitation(cublasHandle_t handle, cudaStream_t);
 
         // member
-        std::shared_ptr<Mesh<template_basis_function_type>> mesh_;
+        std::shared_ptr<Mesh> mesh_;
         std::shared_ptr<Electrodes> electrodes_;
         std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
         std::shared_ptr<SparseMatrix> s_matrix_;

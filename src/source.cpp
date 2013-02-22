@@ -59,8 +59,7 @@ void fastEIT::source::Source<model_type>::initExcitation(cublasHandle_t handle,
     }
 
     // needed arrays
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
-        model_type::basis_function_type::nodes_per_edge> nodes;
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<dtype::real, model_type::basis_function_type::nodes_per_edge> node_parameter;
     dtype::real integration_start, integration_end;
 
@@ -84,7 +83,7 @@ void fastEIT::source::Source<model_type>::initExcitation(cublasHandle_t handle,
         dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
 
         // calc node parameter centered to node 0
-        for (dtype::size i = 0; i < model_type::basis_function_type::nodes_per_edge; ++i) {
+        for (dtype::size i = 0; i < nodes.size(); ++i) {
             node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
                 parameter_offset);
         }

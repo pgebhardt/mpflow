@@ -11,7 +11,7 @@ template <
     class basis_function_type
 >
 fastEIT::Model<basis_function_type>::Model(
-    std::shared_ptr<Mesh<basis_function_type>> mesh, std::shared_ptr<Electrodes> electrodes,
+    std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
     cudaStream_t stream)
     : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef),
@@ -100,7 +100,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     this->connectivity_matrix()->copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>, basis_function_type::nodes_per_element> nodes;
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<std::tuple<dtype::real, dtype::real>, basis_function_type::nodes_per_element> nodes_coordinates;
     std::array<std::shared_ptr<basis_function_type>, basis_function_type::nodes_per_element> basis_functions;
     dtype::real temp;

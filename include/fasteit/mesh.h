@@ -9,9 +9,6 @@
 // namespace fastEIT
 namespace fastEIT {
     // mesh class definition
-    template <
-        class BasisFunction
-    >
     class Mesh {
     public:
         // constructor
@@ -19,10 +16,10 @@ namespace fastEIT {
             std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height);
 
         // helper methods
-        std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
-            BasisFunction::nodes_per_element> elementNodes(dtype::index element) const;
-        std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
-            BasisFunction::nodes_per_edge> boundaryNodes(dtype::index element) const;
+        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
+            elementNodes(dtype::index element) const;
+        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
+            boundaryNodes(dtype::index element) const;
 
         // accessors
         const std::shared_ptr<Matrix<dtype::real>> nodes() const { return this->nodes_; }
@@ -49,6 +46,11 @@ namespace fastEIT {
 
     // mesh helper
     namespace mesh {
+        // create mesh for quadratic basis function
+        std::shared_ptr<fastEIT::Mesh> quadraticBasis(std::shared_ptr<Matrix<dtype::real>> nodes,
+            std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
+            dtype::real radius, dtype::real height);
+
         // quadratic mesh from linear
         std::tuple<
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,

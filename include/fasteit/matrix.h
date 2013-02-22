@@ -47,7 +47,7 @@ namespace fastEIT {
         const type& operator() (dtype::index i, dtype::index j) const {
             // check index
             if ((i >= this->rows()) || (j >= this->columns())) {
-                throw std::logic_error("fastEIT::Matrix::operator(): index out of range");
+                throw std::invalid_argument("fastEIT::Matrix::operator(): index out of range");
             }
 
             return this->host_data_[i + j * this->data_rows()];
@@ -58,7 +58,7 @@ namespace fastEIT {
         type& operator() (dtype::index i, dtype::index j) {
             // check index
             if ((i >= this->rows()) || (j >= this->columns())) {
-                throw std::logic_error("fastEIT::Matrix::operator(): index out of range");
+                throw std::invalid_argument("fastEIT::Matrix::operator(): index out of range");
             }
 
             return this->host_data_[i + j * this->data_rows()];
