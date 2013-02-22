@@ -136,6 +136,6 @@ void fastEIT::SparseMatrix::multiply(const std::shared_ptr<Matrix<dtype::real>> 
 
     // execute kernel
     sparseMatrixKernel::multiply(blocks, threads, stream, this->values(), this->column_ids(),
-        matrix->device_data(), result->data_rows(), result->data_columns(), this->density(),
-        result->device_data());
+        matrix->device_data(), result->data_rows(), matrix->data_rows(),
+        result->data_columns(), this->density(), result->device_data());
 }

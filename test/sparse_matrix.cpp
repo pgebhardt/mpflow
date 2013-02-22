@@ -1,3 +1,4 @@
+#include <random>
 #include "gtest/gtest.h"
 #include "fasteit/fasteit.h"
 
@@ -87,4 +88,97 @@ TEST_F(SparseMatrixTest, Convert) {
     cudaStreamSynchronize(nullptr);
 
     EXPECT_EQ(matrixCompare(dense, convert), 0);
+
+    // density over block size
+    dense = randomMatrix(10, fastEIT::sparseMatrix::block_size * 2, nullptr);
+
+    // convert to sparse matrix
+    sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(dense, nullptr);
+
+    // convert to matrix and compare
+    convert = sparse_matrix->toMatrix(nullptr);
+
+    // copy to host
+    convert->copyToHost(nullptr);
+    cudaStreamSynchronize(nullptr);
+
+    EXPECT_NE(matrixCompare(dense, convert), 0);
 }
+
+TEST_F(SparseMatrixTest, MatrixVectorMultiply) {
+    // create matrices
+    auto matrix = randomMatrix(20, 10, nullptr);
+    auto vector = randomMatrix(10, 1, nullptr);
+
+    // create sparse matrix
+    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(matrix, nullptr);
+
+    // multiply
+    auto result_GPU = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(20, 1, nullptr);
+    EXPECT_NO_THROW(sparse_matrix->multiply(vector, nullptr, result_GPU));
+
+    // multiply on CPU
+    auto result_CPU = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(20, 1, nullptr);
+    for (fastEIT::dtype::index row = 0; row < result_CPU->rows(); ++row)
+    for (fastEIT::dtype::index column = 0; column < result_CPU->columns(); ++column)
+    for (fastEIT::dtype::index i = 0; i < matrix->columns(); ++i) {
+        (*result_CPU)(row, column) += (*matrix)(row, i) * (*vector)(i, column);
+    }
+
+    // copy result to host
+    result_GPU->copyToHost(nullptr);
+    cudaStreamSynchronize(nullptr);
+
+    // compare
+    EXPECT_EQ(matrixCompare(result_GPU, result_CPU), 0);
+
+    // multiply with wrong size
+    EXPECT_THROW(
+        sparse_matrix->multiply(vector, nullptr,
+            std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(10, 2, nullptr)),
+        std::invalid_argument);
+    EXPECT_THROW(
+        sparse_matrix->multiply(
+            std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(10, 2, nullptr),
+            nullptr, result_GPU),
+        std::invalid_argument);
+};
+
+TEST_F(SparseMatrixTest, MatrixMatrixMultiply) {
+    // create matrices
+    auto matrix = randomMatrix(20, 10, nullptr);
+    auto vector = randomMatrix(10, 4, nullptr);
+
+    // create sparse matrix
+    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(matrix, nullptr);
+
+    // multiply
+    auto result_GPU = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(20, 4, nullptr);
+    EXPECT_NO_THROW(sparse_matrix->multiply(vector, nullptr, result_GPU));
+
+    // multiply on CPU
+    auto result_CPU = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(20, 4, nullptr);
+    for (fastEIT::dtype::index row = 0; row < result_CPU->rows(); ++row)
+    for (fastEIT::dtype::index column = 0; column < result_CPU->columns(); ++column)
+    for (fastEIT::dtype::index i = 0; i < matrix->columns(); ++i) {
+        (*result_CPU)(row, column) += (*matrix)(row, i) * (*vector)(i, column);
+    }
+
+    // copy result to host
+    result_GPU->copyToHost(nullptr);
+    cudaStreamSynchronize(nullptr);
+
+    // compare
+    EXPECT_EQ(matrixCompare(result_GPU, result_CPU), 0);
+
+    // multiply with wrong size
+    EXPECT_THROW(
+        sparse_matrix->multiply(vector, nullptr,
+            std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(10, 1, nullptr)),
+        std::invalid_argument);
+    EXPECT_THROW(
+        sparse_matrix->multiply(
+            std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(1, 40, nullptr),
+            nullptr, result_GPU),
+        std::invalid_argument);
+};
