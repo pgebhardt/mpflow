@@ -89,8 +89,7 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initJacobianCalcul
     }
 
     // variables
-    std::array<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>,
-        model_type::basis_function_type::nodes_per_element> nodes;
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<std::tuple<dtype::real, dtype::real>, model_type::basis_function_type::nodes_per_element> nodes_coordinates;
     std::array<std::shared_ptr<typename model_type::basis_function_type>,
         model_type::basis_function_type::nodes_per_element> basis_functions;
