@@ -45,16 +45,22 @@ namespace fastEIT {
         dtype::size data_rows() const { return this->data_rows_; }
         dtype::size data_columns() const { return this->data_columns_; }
         const type& operator() (dtype::index i, dtype::index j) const {
-            assert(i < this->rows());
-            assert(j < this->columns());
+            // check index
+            if ((i >= this->rows()) || (j >= this->columns())) {
+                throw std::logic_error("fastEIT::Matrix::operator(): index out of range");
+            }
+
             return this->host_data_[i + j * this->data_rows()];
         }
 
         // mutators
         type* device_data() { return this->device_data_; }
         type& operator() (dtype::index i, dtype::index j) {
-            assert(i < this->rows());
-            assert(j < this->columns());
+            // check index
+            if ((i >= this->rows()) || (j >= this->columns())) {
+                throw std::logic_error("fastEIT::Matrix::operator(): index out of range");
+            }
+
             return this->host_data_[i + j * this->data_rows()];
         }
         type* host_data() { return this->host_data_; }
