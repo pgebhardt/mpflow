@@ -90,8 +90,8 @@ TEST_F(MatrixTest, Access) {
     // check access
     EXPECT_NO_THROW((*A)(9, 8));
     EXPECT_NO_THROW((*A)(3, 7));
-    EXPECT_THROW((*A)(10, 7), std::logic_error);
-    EXPECT_THROW((*A)(1, 17), std::logic_error);
+    EXPECT_THROW((*A)(10, 7), std::invalid_argument);
+    EXPECT_THROW((*A)(1, 17), std::invalid_argument);
 };
 
 TEST_F(MatrixTest, Copy) {

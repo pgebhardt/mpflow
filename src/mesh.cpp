@@ -12,14 +12,23 @@ fastEIT::Mesh::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes, std::shared_ptr<
     : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
         height_(height) {
     // check input
-    if (radius <= 0.0f) {
-        throw std::invalid_argument("radius <= 0.0");
-    }
-    if (height <= 0.0f) {
-        throw std::invalid_argument("height <= 0.0");
+    if (nodes == nullptr) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: nodes == nullptr");
     }
     if (nodes->columns() != 2) {
         throw std::invalid_argument("fastEIT::Mesh::Mesh: nodes->columns() != 2");
+    }
+    if (elements == nullptr) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: elements == nullptr");
+    }
+    if (boundary == nullptr) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: boundary == nullptr");
+    }
+    if (radius <= 0.0f) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: radius <= 0.0");
+    }
+    if (height <= 0.0f) {
+        throw std::invalid_argument("fastEIT::Mesh::Mesh: height <= 0.0");
     }
 }
 
