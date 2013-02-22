@@ -81,6 +81,11 @@ TEST_F(MatrixTest, Constructor) {
     // check member
     EXPECT_EQ(A->rows(), 10U);
     EXPECT_EQ(A->columns(), 12U);
+};
+
+TEST_F(MatrixTest, Access) {
+    // create matrix
+    auto A = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(10, 12, nullptr);
 
     // check access
     EXPECT_NO_THROW((*A)(9, 8));
