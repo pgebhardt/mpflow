@@ -63,6 +63,37 @@ protected:
     cublasHandle_t handle_;
 };
 
+TEST_F(MatrixTest, Constructor) {
+    // create matrices with invalid size
+    EXPECT_THROW(
+        std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(32, 0, nullptr),
+        std::invalid_argument);
+    EXPECT_THROW(
+        std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(0, 32, nullptr),
+        std::invalid_argument);
+
+    // create correct matrix
+    std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> A = nullptr;
+    EXPECT_NO_THROW({
+        A = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(10, 12, nullptr);
+    });
+
+    // check member
+    EXPECT_EQ(A->rows(), 10U);
+    EXPECT_EQ(A->columns(), 12U);
+};
+
+TEST_F(MatrixTest, Access) {
+    // create matrix
+    auto A = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(10, 12, nullptr);
+
+    // check access
+    EXPECT_NO_THROW((*A)(9, 8));
+    EXPECT_NO_THROW((*A)(3, 7));
+    EXPECT_THROW((*A)(10, 7), std::logic_error);
+    EXPECT_THROW((*A)(1, 17), std::logic_error);
+};
+
 TEST_F(MatrixTest, Copy) {
     // create matrices
     auto A = randomMatrix(32, 48, nullptr);
