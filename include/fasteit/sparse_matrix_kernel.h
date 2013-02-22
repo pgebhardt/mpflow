@@ -24,8 +24,8 @@ namespace fastEIT {
         // sparse matrix multiply kernel
         void multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
             const dtype::real* values, const dtype::index* columnIds,
-            const dtype::real* matrix, dtype::size rows, dtype::size columns,
-            dtype::size density, dtype::real* result);
+            const dtype::real* matrix, dtype::size result_rows, dtype::size matrix_rows,
+            dtype::size columns, dtype::size density, dtype::real* result);
     }
 }
 

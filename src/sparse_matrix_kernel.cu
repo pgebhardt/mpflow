@@ -104,8 +104,8 @@ void fastEIT::sparseMatrixKernel::convertToMatrix(dim3 blocks, dim3 threads,
 // sparse matrix multiply kernel
 static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
     const fastEIT::dtype::index* columnIds, const fastEIT::dtype::real* matrix,
-    fastEIT::dtype::size rows, fastEIT::dtype::size columns,
-    fastEIT::dtype::size density, fastEIT::dtype::real* result) {
+    fastEIT::dtype::size result_rows, fastEIT::dtype::size matrix_rows,
+    fastEIT::dtype::size columns, fastEIT::dtype::size density, fastEIT::dtype::real* result) {
     // get ids
     fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
@@ -120,15 +120,15 @@ static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
     __shared__ fastEIT::dtype::real value[
         fastEIT::sparseMatrix::block_size * fastEIT::sparseMatrix::block_size];
 
-    columnId[threadIdx.x * fastEIT::sparseMatrix::block_size + threadIdx.y] = row < rows ?
+    columnId[threadIdx.x * fastEIT::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
         columnIds[row * fastEIT::sparseMatrix::block_size + threadIdx.y] : fastEIT::dtype::invalid_index;
-    value[threadIdx.x * fastEIT::sparseMatrix::block_size + threadIdx.y] = row < rows ?
+    value[threadIdx.x * fastEIT::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
         values[row * fastEIT::sparseMatrix::block_size + threadIdx.y] : 0.0f;
 
     __syncthreads();
 
     // check ids
-    if ((row >= rows) || (column >= columns)) {
+    if ((row >= result_rows) || (column >= columns)) {
         return;
     }
 
@@ -137,22 +137,22 @@ static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
         // get column id
         id = columnId[threadIdx.x * fastEIT::sparseMatrix::block_size + j];
 
-         res += id != fastEIT::dtype::invalid_index ? matrix[id + column * rows] *
+         res += id != fastEIT::dtype::invalid_index ? matrix[id + column * matrix_rows] *
             value[threadIdx.x * fastEIT::sparseMatrix::block_size + j] : 0.0f;
     }
 
     // set result
-    result[row + column * rows] = res;
+    result[row + column * result_rows] = res;
 }
 
 // sparse matrix multiply kernel wrapper
 void fastEIT::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::real* values, const dtype::index* columnIds,
-    const dtype::real* matrix, dtype::size rows, dtype::size columns,
-    dtype::size density, dtype::real* result) {
+    const dtype::real* matrix, dtype::size result_rows, dtype::size matrix_rows,
+    dtype::size columns, dtype::size density, dtype::real* result) {
     // call cuda kernel
     multiplyKernel<<<blocks, threads, 0, stream>>>(values, columnIds, matrix,
-        rows, columns, density, result);
+        result_rows, matrix_rows, columns, density, result);
 
     CudaCheckError();
 }
