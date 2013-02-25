@@ -72,8 +72,6 @@ def main():
     # init sys
     sys.setrecursionlimit(10000)
 
-    print test('arg1', 'arg2')
-
     # arguments
     args = [
         'std::get<0>(this->nodes()[0])',
