@@ -1,13 +1,7 @@
 *.swp
 build
-bin
 .DS_Store
 .sconsign.dblite
 *.pyc
 *.swo
-.c9revisions
-.settings
 build_test
-*.o
-build_test
-libfasteit.*

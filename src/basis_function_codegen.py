@@ -1,4 +1,5 @@
 from sympy import *
+from mako.template import Template
 import sys
 
 class CppExpression(object):
@@ -100,85 +101,91 @@ class CppExpression(object):
 
 
 def main():
+    # init sys
+    sys.setrecursionlimit(10000)
+
     # sympy symbols
     x1, y1, x2, y2, x3, y3 = symbols('x1, y1, x2, y2, x3, y3')
-    ai, bi, ci, di, ei, fi = symbols('ai, bi, ci, di, ei, fi')
-    aj, bj, cj, dj, ej, fj = symbols('aj, bj, cj, dj, ej, fj')
-
-    # cpp symbols
-    x1_cpp = CppExpression('std::get<0>(self->nodes()[0])')
-    y1_cpp = CppExpression('std::get<1>(self->nodes()[0])')
-    x2_cpp = CppExpression('std::get<0>(self->nodes()[1])')
-    y2_cpp = CppExpression('std::get<1>(self->nodes()[1])')
-    x3_cpp = CppExpression('std::get<0>(self->nodes()[2])')
-    y3_cpp = CppExpression('std::get<1>(self->nodes()[2])')
-    ai_cpp = CppExpression('self->coefficients()[0]')
-    bi_cpp = CppExpression('self->coefficients()[1]')
-    ci_cpp = CppExpression('self->coefficients()[2]')
-    di_cpp = CppExpression('self->coefficients()[3]')
-    ei_cpp = CppExpression('self->coefficients()[4]')
-    fi_cpp = CppExpression('self->coefficients()[5]')
-    aj_cpp = CppExpression('other->coefficients()[0]')
-    bj_cpp = CppExpression('other->coefficients()[1]')
-    cj_cpp = CppExpression('other->coefficients()[2]')
-    dj_cpp = CppExpression('other->coefficients()[3]')
-    ej_cpp = CppExpression('other->coefficients()[4]')
-    fj_cpp = CppExpression('other->coefficients()[5]')
-
-    # sympy expression
-    # area
-    sys.setrecursionlimit(10000)
+    ai, bi, ci = symbols('ai, bi, ci')
+    aj, bj, cj = symbols('aj, bj, cj')
     l1, l2, l3 = symbols('l1, l2, l3')
     x, y = symbols('x, y')
     l3 = 1 - l1 -l2
-    
-    #ui = ai + bi * x + ci * y + di * x ** 2 + ei * x * y + fi * y ** 2
-    #uj = aj + bj * x + cj * y + dj * x ** 2 + ej * x * y + fj * y ** 2
+
+    # cpp symbols
+    x1_cpp = CppExpression('std::get<0>(this->nodes()[0])')
+    y1_cpp = CppExpression('std::get<1>(this->nodes()[0])')
+    x2_cpp = CppExpression('std::get<0>(this->nodes()[1])')
+    y2_cpp = CppExpression('std::get<1>(this->nodes()[1])')
+    x3_cpp = CppExpression('std::get<0>(this->nodes()[2])')
+    y3_cpp = CppExpression('std::get<1>(this->nodes()[2])')
+    ai_cpp = CppExpression('this->coefficients()[0]')
+    bi_cpp = CppExpression('this->coefficients()[1]')
+    ci_cpp = CppExpression('this->coefficients()[2]')
+    aj_cpp = CppExpression('other->coefficients()[0]')
+    bj_cpp = CppExpression('other->coefficients()[1]')
+    cj_cpp = CppExpression('other->coefficients()[2]')
+
+    # basis function
     ui = ai + bi * x + ci * y
     uj = aj + bj * x + cj * y
 
-    f = ui * uj
-    fdiff = ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)
+    # integrals to calculate
+    integrals = [ui * uj, ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)]
 
-    f = f.subs(x, l1 * x1 + l2 * x2 + (1 - l1 - l2) * x3)
-    f = f.subs(y, l1 * y1 + l2 * y2 + (1 - l1 - l2) * y3)
-    fdiff = fdiff.subs(x, l1 * x1 + l2 * x2 + (1 - l1 - l2) * x3)
-    fdiff = fdiff.subs(y, l1 * y1 + l2 * y2 + (1 - l1 - l2) * y3)
+    # substitute barycentric coordinats
+    for i in range(len(integrals)):
+        integrals[i] = integrals[i].subs(x, l1 * x1 + l2 * x2 + (1 - l1 - l2) * x3)
+        integrals[i] = integrals[i].subs(y, l1 * y1 + l2 * y2 + (1 - l1 - l2) * y3)
 
+    # area
+    area = 0.5 * Abs((x2 - x1) * (y3 -y1) - (x3 -x1) * (y2 - y1))
 
-    A = 0.5 * Abs((x2 - x1) * (y3 -y1) - (x3 -x1) * (y2 - y1))
+    # integrate
+    for i in range(len(integrals)):
+        integrals[i] = 2.0 * area * integrate(
+            integrate(integrals[i], (l1, 0.0, 1.0 - l2)),
+            (l2, 0.0, 1.0))
 
-    #expression = integrate(f, (l1, 0, 1-l2))
-    expression = integrate(fdiff, (l1, 0, 1-l2))
-    print 'erster schritt'
-    expression= 2 * A * integrate(expression, (l2, 0, 1))
-    print 'zweiter schritt'
+    # create cpp expressions
+    for i in range(len(integrals)):
+        integrals[i] = lambdify((x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj),
+            integrals[i], modules=CppExpression)
 
-    # integral
-    # expression = a + b * x1 + c * y1
-    # create lambda function of expression
-    lambda_function = lambdify((x1, y1, x2, y2, x3, y3, ai, bi, ci, di, ei, fi, aj, bj, cj, dj, ej, fj), expression, modules=CppExpression)
+    # evaluate expressions
+    for i in range(len(integrals)):
+        # print evaluated expression
+        expression = integrals[i](
+            x1_cpp, y1_cpp, x2_cpp,
+            y2_cpp, x3_cpp, y3_cpp,
+            ai_cpp, bi_cpp, ci_cpp,
+            aj_cpp, bj_cpp, cj_cpp,
+            )
 
-    # print evaluated expression
-    file = open('integrategradientwithbasis.txt', 'w')
-    expression = lambda_function(x1_cpp, y1_cpp, x2_cpp, y2_cpp, x3_cpp, y3_cpp, ai_cpp, bi_cpp, ci_cpp, di_cpp, ei_cpp, fi_cpp, aj_cpp, bj_cpp, cj_cpp, dj_cpp, ej_cpp, fj_cpp)
+        # generate cpp code
+        cppcode = [('integral', str(expression))]
+        while True:
+            if expression.subexpression is not None:
+                cppcode.append((expression.subexpression[0], str(expression.subexpression[1])))
 
-    cppcode = [('integral', str(expression))]
+                expression = expression.subexpression[1]
 
-    while True:
-        if expression.subexpression is not None:
-            cppcode.append((expression.subexpression[0], str(expression.subexpression[1])))
+            else:
+                break
 
-            expression = expression.subexpression[1]
+        # write string to list
+        integrals[i] = ''
+        for code in reversed(cppcode):
+            integrals[i] += 'fastEIT::dtype::real {} = {};\n\n'.format(code[0], code[1])
 
-        else:
-            break
-
-    for code in reversed(cppcode):
-        file.write('dtype::real {} = {};\n\n'.format(code[0], code[1]))
-
+    # apply to template
+    file = open('src/basis_linear.cpp', 'w')
+    template = Template(filename='src/basis_linear.cpp.mako')
+    file.write(template.render(
+        integrateWithBasis=integrals[0],
+        integrateGradientWithBasis=integrals[1],
+        ))
     file.close()
-
 
 if __name__ == '__main__':
     main()
