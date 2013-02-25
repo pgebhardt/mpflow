@@ -4,14 +4,33 @@ from codegen import *
 import sys
 import os
 
+def integrateOnTriangle(expression, x, y, points):
+    # create coordinats
+    l1, l2, l3 = symbols('l1, l2, l3')
+    l3 = 1 - l1 -l2
+
+    # substitute coordinats
+    expression = expression.subs(x,
+        l1 * points[0][0] + l2 * points[1][0] + (1 - l1 - l2) * points[2][0])
+    expression = expression.subs(y,
+        l1 * points[0][1] + l2 * points[1][1] + (1 - l1 - l2) * points[2][1])
+
+    # calc area
+    area = 0.5 * Abs(
+        (points[1][0] - points[0][0]) * (points[2][1] - points[0][1]) -
+        (points[2][0] - points[0][0]) * (points[1][1] - points[0][1]))
+
+    # calc integral
+    return 2.0 * area * integrate(
+        integrate(expression, (l1, 0.0, 1.0 - l2)),
+        (l2, 0.0, 1.0))
+
 @kernel(dtype='fastEIT::dtype::real',
     name='fastEIT::basis::Linear::integrateWithBasis',
     custom_args=['const std::shared_ptr<Linear> other'])
 def integrateWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
     # create coordinats
     x, y = symbols('x, y')
-    l1, l2, l3 = symbols('l1, l2, l3')
-    l3 = 1 - l1 -l2
 
     # basis function
     ui = ai + bi * x + ci * y
@@ -20,17 +39,9 @@ def integrateWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
     # integral
     integral = ui * uj
 
-    # substitute coordinats
-    integral = integral.subs(x, l1 * x1 + l2 * x2 + (1 - l1 - l2) * x3)
-    integral = integral.subs(y, l1 * y1 + l2 * y2 + (1 - l1 - l2) * y3)
-
-    # calc area
-    area = 0.5 * Abs((x2 - x1) * (y3 -y1) - (x3 -x1) * (y2 - y1))
-
-    # calc integral
-    return 2.0 * area * integrate(
-        integrate(integral, (l1, 0.0, 1.0 - l2)),
-        (l2, 0.0, 1.0))
+    # integrate on triangle
+    return integrateOnTriangle(integral, x, y,
+        [[x1, y1], [x2, y2], [x3, y3]])
 
 @kernel(dtype='fastEIT::dtype::real',
     name='fastEIT::basis::Linear::integrateGradientWithBasis',
@@ -38,8 +49,6 @@ def integrateWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
 def integrateGradientWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
     # create coordinats
     x, y = symbols('x, y')
-    l1, l2, l3 = symbols('l1, l2, l3')
-    l3 = 1 - l1 -l2
 
     # basis function
     ui = ai + bi * x + ci * y
@@ -47,18 +56,9 @@ def integrateGradientWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
 
     # integral
     integral = ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)
-
-    # substitute coordinats
-    integral = integral.subs(x, l1 * x1 + l2 * x2 + (1 - l1 - l2) * x3)
-    integral = integral.subs(y, l1 * y1 + l2 * y2 + (1 - l1 - l2) * y3)
-
-    # calc area
-    area = 0.5 * Abs((x2 - x1) * (y3 -y1) - (x3 -x1) * (y2 - y1))
-
-    # calc integral
-    return 2.0 * area * integrate(
-        integrate(integral, (l1, 0.0, 1.0 - l2)),
-        (l2, 0.0, 1.0))
+    # integrate on triangle
+    return integrateOnTriangle(integral, x, y,
+        [[x1, y1], [x2, y2], [x3, y3]])
 
 @kernel(dtype='fastEIT::dtype::real',
     header=False)
@@ -71,6 +71,8 @@ def integrateBoundaryEdge(a, b, start, end):
 def main():
     # init sys
     sys.setrecursionlimit(10000)
+
+    print test('arg1', 'arg2')
 
     # arguments
     args = [

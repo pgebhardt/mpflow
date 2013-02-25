@@ -4,11 +4,12 @@ from symbolic import symbolic
 from mako.template import Template
 import os
 
-def kernel(dtype='float', header=True, custom_args=None, name=''):
+def kernel(dtype='float', header=True, custom_args=None, name=None):
     # load kernel template
     template = Template(
         filename=os.path.join(os.path.dirname(__file__),
         'kernel.mako'))
+
     # decorator
     def decorator(function):
         # symbolice function
@@ -38,7 +39,7 @@ def kernel(dtype='float', header=True, custom_args=None, name=''):
             return template.render(
                 dtype=dtype,
                 header=header,
-                name=name,
+                name=name if name is not None else function.func_name,
                 custom_args=custom_args,
                 args=args,
                 subexpressions=subexpressions,
