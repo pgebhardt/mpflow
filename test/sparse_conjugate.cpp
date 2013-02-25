@@ -65,7 +65,7 @@ TEST(SparseConjugateTest, Solve) {
     // check result
     for (fastEIT::dtype::real row = 0; row < x->rows(); ++row)
     for (fastEIT::dtype::real column = 0; column < x->columns(); ++column) {
-        EXPECT_LT(std::fabs((*x)(row, column) - (*x0)(row, column)), 1e-6);
+        EXPECT_LT(std::fabs((*x)(row, column) - (*x0)(row, column)), 1e-6f);
     }
 
     // check error
