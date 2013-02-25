@@ -27,9 +27,9 @@ fastEIT::basis::Linear::Linear(
 
     // fill coefficients
     for (dtype::index node = 0; node < nodes_per_element; ++node) {
-        A[node][0] = ((((std::get<0>(this->nodes()[node])) * 0.0) + ((std::get<1>(this->nodes()[node])) * 0.0)) + 1.0);
-        A[node][1] = ((((std::get<0>(this->nodes()[node])) * 1.0) + ((std::get<1>(this->nodes()[node])) * 0.0)) + 0.0);
-        A[node][2] = ((((std::get<0>(this->nodes()[node])) * 0.0) + ((std::get<1>(this->nodes()[node])) * 1.0)) + 0.0);
+        A[node][0] = 1.0;
+        A[node][1] = (1.0 * (std::get<0>(this->nodes()[node])));
+        A[node][2] = (1.0 * (std::get<1>(this->nodes()[node])));
     }
 
     // calc coefficients

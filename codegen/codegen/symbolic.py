@@ -3,23 +3,26 @@ from expression import CppExpression
 
 def symbolic(function):
     def func(*args):
-        # create symbols
         symargs, expargs = [], []
+        args = [arg for arg in args]
         for i in range(len(args)):
-            # create expressions
-            if isinstance(args[i], str):
-                expargs.append(CppExpression(args[i]))
-            else:
-                expargs.append(args[i])
-
-            # create symbols
+            # create symbol
+            symbol = args[i]
             if not isinstance(args[i], Symbol):
-                symargs.append(Symbol('tmpsymbol_{}'.format(i)))
-            else:
-                symargs.append(args[i])
+                symbol = Symbol('tmpsymbol_{}'.format(i))
 
-        # lambdify
-        lambda_function = lambdify(symargs, function(*symargs),
+            # create expressions
+            expression = args[i]
+            if isinstance(args[i], str):
+                expression = CppExpression(args[i])
+                args[i] = symbol
+
+            # add to lists
+            expargs.append(expression)
+            symargs.append(symbol)
+
+        # create lambda function
+        lambda_function = lambdify(symargs, function(*args),
             modules=CppExpression)
 
         # evaluate expression
