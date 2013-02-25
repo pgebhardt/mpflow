@@ -60,6 +60,14 @@ def integrateGradientWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
         integrate(integral, (l1, 0.0, 1.0 - l2)),
         (l2, 0.0, 1.0))
 
+@kernel(dtype='fastEIT::dtype::real',
+    header=False)
+def integrateBoundaryEdge(a, b, start, end):
+    # create coordinats
+    x = Symbol('x')
+
+    return integrate(a + b * x, (x, start, end))
+
 def main():
     # init sys
     sys.setrecursionlimit(10000)
@@ -80,17 +88,18 @@ def main():
         'other->coefficients()[2]',
         ]
 
-    # integrate
-    integrals = {}
-    integrals['integrateWithBasis'] = integrateWithBasis(*args)
-    integrals['integrateGradientWithBasis'] = integrateGradientWithBasis(*args)
-
     # apply to template
     file = open(os.path.join('src', 'basis_linear.cpp'), 'w')
     template = Template(filename=os.path.join('codegen', 'templates', 'basis_linear.cpp.mako'))
     file.write(template.render(
-        integrateWithBasis=integrals['integrateWithBasis'],
-        integrateGradientWithBasis=integrals['integrateGradientWithBasis'],
+        integrateWithBasis=integrateWithBasis(*args),
+        integrateGradientWithBasis=integrateGradientWithBasis(*args),
+        integrateBoundaryEdge=integrateBoundaryEdge(
+            'coefficients[0]',
+            'coefficients[1]',
+            'start',
+            'end',
+            ),
         ))
     file.close()
 

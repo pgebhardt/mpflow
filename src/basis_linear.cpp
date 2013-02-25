@@ -82,7 +82,7 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
         coefficients[1] = 1.0 / nodes[1];
     }
 
-    // calc integral
-    return (coefficients[0] * end + 0.5 * coefficients[1] * math::square(end)) -
-        (coefficients[0] * start + 0.5 * coefficients[1] * math::square(start));
+    fastEIT::dtype::real result_integrateBoundaryEdge = (((((-(coefficients[0])) * (start)) + ((coefficients[0]) * (end))) - (((coefficients[1]) * ((start) * (start))) / 2.0)) + (((coefficients[1]) * ((end) * (end))) / 2.0));
+    return result_integrateBoundaryEdge;
+
 }
