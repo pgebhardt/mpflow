@@ -11,3 +11,4 @@ build_test
 *.o
 build_test
 libfasteit.*
+src/basis_linear.cpp

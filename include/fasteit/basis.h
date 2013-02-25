@@ -66,9 +66,6 @@ namespace fastEIT {
             static dtype::real integrateBoundaryEdge(
                 std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
                 dtype::real start, dtype::real end);
-            static dtype::real integrateBoundaryEdgeWithBasis(
-                std::array<dtype::real, nodes_per_edge> nodes, dtype::index one_1,
-                dtype::index one_2, dtype::real start, dtype::real end);
 
             // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);

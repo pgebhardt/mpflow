@@ -134,9 +134,9 @@ def main():
     integrals = [ui * uj, ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)]
 
     # substitute barycentric coordinats
-    for f in integrals:
-        f = f.subs(x, l1 * x1 + l2 * x2 + (1 - l1 - l2) * x3)
-        f = f.subs(y, l1 * y1 + l2 * y2 + (1 - l1 - l2) * y3)
+    for i in range(len(integrals)):
+        integrals[i] = integrals[i].subs(x, l1 * x1 + l2 * x2 + (1 - l1 - l2) * x3)
+        integrals[i] = integrals[i].subs(y, l1 * y1 + l2 * y2 + (1 - l1 - l2) * y3)
 
     # area
     area = 0.5 * Abs((x2 - x1) * (y3 -y1) - (x3 -x1) * (y2 - y1))
@@ -177,6 +177,15 @@ def main():
         integrals[i] = ''
         for code in reversed(cppcode):
             integrals[i] += 'fastEIT::dtype::real {} = {};\n\n'.format(code[0], code[1])
+
+    # apply to template
+    file = open('src/basis_linear.cpp', 'w')
+    template = Template(filename='src/basis_linear.cpp.mako')
+    file.write(template.render(
+        integrateWithBasis=integrals[0],
+        integrateGradientWithBasis=integrals[1],
+        ))
+    file.close()
 
 if __name__ == '__main__':
     main()
