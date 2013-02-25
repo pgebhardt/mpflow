@@ -11,6 +11,12 @@ fastEIT::basis::Linear::Linear(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
     dtype::index one)
     : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
+    // check one
+    if (one > nodes_per_element) {
+        throw std::invalid_argument(
+            "fastEIT::basis::Linear::Linear: one > nodes_per_element");
+    }
+
     // calc coefficients with gauss
     std::array<std::array<dtype::real, nodes_per_element>, nodes_per_element> A;
     std::array<dtype::real, nodes_per_element> b;
