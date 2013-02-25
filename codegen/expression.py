@@ -20,7 +20,7 @@ class CppExpression(object):
             self.depth = 0
 
     def __str__(self):
-        return '{}'.format(self.expression)
+        return '({})'.format(self.expression)
 
     def __pos__(self):
         return CppExpression('+{}'.format(self), self.depth + 1, self.subexpression)
@@ -35,25 +35,25 @@ class CppExpression(object):
         if isinstance(value, int):
             value = float(value)
 
-        return CppExpression('({} + {})'.format(self, value), self.depth + 1, self.subexpression)
+        return CppExpression('{} + {}'.format(self, value), self.depth + 1, self.subexpression)
 
     def __radd__(self, value):
         if isinstance(value, int):
             value = float(value)
 
-        return CppExpression('({} + {})'.format(value, self), self.depth + 1, self.subexpression)
+        return CppExpression('{} + {}'.format(value, self), self.depth + 1, self.subexpression)
 
     def __sub__(self, value):
         if isinstance(value, int):
             value = float(value)
 
-        return CppExpression('({} - {})'.format(self, value), self.depth + 1, self.subexpression)
+        return CppExpression('{} - {}'.format(self, value), self.depth + 1, self.subexpression)
 
     def __rsub__(self, value):
         if isinstance(value, int):
             value = float(value)
 
-        return CppExpression('({} - {})'.format(value, self), self.depth + 1, self.subexpression)
+        return CppExpression('{} - {}'.format(value, self), self.depth + 1, self.subexpression)
 
     def __mul__(self, value):
         if isinstance(value, int):
