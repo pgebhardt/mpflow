@@ -47,30 +47,10 @@ fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
 }
 
 // integrate with basis
-fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
-    const std::shared_ptr<Linear> other) {
-    // check input
-    if (other == nullptr) {
-        throw std::invalid_argument("basis::Linear::integrateWithBasis: other == nullptr");
-    }
-
-    // compute integral
-    ${integrateWithBasis}
-    return integral;
-}
+${integrateWithBasis}
 
 // integrate gradient with basis
-fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
-    const std::shared_ptr<Linear> other) {
-    // check input
-    if (other == nullptr) {
-        throw std::invalid_argument("basis::Linear::integrateGradientWithBasis: other == nullptr");
-    }
-
-    // compute integral
-    ${integrateGradientWithBasis}
-    return integral;
-}
+${integrateGradientWithBasis}
 
 // integrate edge
 fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
@@ -90,7 +70,5 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
         coefficients[1] = 1.0 / nodes[1];
     }
 
-    // calc integral
-    return (coefficients[0] * end + 0.5 * coefficients[1] * math::square(end)) -
-        (coefficients[0] * start + 0.5 * coefficients[1] * math::square(start));
+${integrateBoundaryEdge}
 }
