@@ -38,13 +38,12 @@ fastEIT::basis::Linear::Linear(
 
 // evaluate basis function
 fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
-    std::tuple<dtype::real, dtype::real> point) {
-    // calc result
-    return
-        this->coefficients()[0] +
-        this->coefficients()[1] * std::get<0>(point) +
-        this->coefficients()[2] * std::get<1>(point);
+    std::tuple<dtype::real, dtype::real> point
+    ) {
+    fastEIT::dtype::real result_basis = ((((std::get<0>(point)) * (this->coefficients()[1])) + ((std::get<1>(point)) * (this->coefficients()[2]))) + (this->coefficients()[0]));
+    return result_basis;
 }
+
 
 // integrate with basis
 fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
@@ -82,7 +81,7 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
         coefficients[1] = 1.0 / nodes[1];
     }
 
-    fastEIT::dtype::real result_integrateBoundaryEdge = (((((-(coefficients[0])) * (start)) + ((coefficients[0]) * (end))) - (((coefficients[1]) * ((start) * (start))) / 2.0)) + (((coefficients[1]) * ((end) * (end))) / 2.0));
+    float result_integrateBoundaryEdge = (((((-(coefficients[0])) * (start)) + ((coefficients[0]) * (end))) - (((coefficients[1]) * ((start) * (start))) / 2.0)) + (((coefficients[1]) * ((end) * (end))) / 2.0));
     return result_integrateBoundaryEdge;
 
 }

@@ -37,14 +37,7 @@ fastEIT::basis::Linear::Linear(
 }
 
 // evaluate basis function
-fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
-    std::tuple<dtype::real, dtype::real> point) {
-    // calc result
-    return
-        this->coefficients()[0] +
-        this->coefficients()[1] * std::get<0>(point) +
-        this->coefficients()[2] * std::get<1>(point);
-}
+${evaluate}
 
 // integrate with basis
 ${integrateWithBasis}

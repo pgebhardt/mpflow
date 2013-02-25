@@ -4,46 +4,50 @@ from symbolic import symbolic
 from mako.template import Template
 import os
 
-def kernel(dtype='float', header=True, custom_args=None, name=None):
+def kernel(function):
     # load kernel template
     template = Template(
         filename=os.path.join(os.path.dirname(__file__),
         'kernel.mako'))
 
-    # decorator
-    def decorator(function):
-        # symbolice function
-        sym = symbolic(function)
+    # symbolice function
+    sym = symbolic(function)
 
-        # kernel
-        def func(*args):
-            # get expression
-            expression = sym(*args)
+    # kernel
+    def func(*args, **kargs):
+        # set default kargs
+        kargs.setdefault('dtype', 'float')
+        kargs.setdefault('header', True)
+        kargs.setdefault('custom_args', None)
+        kargs.setdefault('name', function.func_name)
 
-            # generate subexpressions
-            subexpressions = [
-                ('result_{}'.format(function.func_name),
-                str(expression)),
-                ]
-            while True:
-                if expression.subexpression is not None:
-                    subexpressions.append(
-                        (expression.subexpression[0],
-                        str(expression.subexpression[1])))
+        # get expression
+        expression = sym(*args)
 
-                    expression = expression.subexpression[1]
+        # generate subexpressions
+        subexpressions = [
+            ('result_{}'.format(function.func_name),
+            str(expression)),
+            ]
+        while True:
+            if expression.subexpression is not None:
+                subexpressions.append(
+                    (expression.subexpression[0],
+                    str(expression.subexpression[1])))
 
-                else:
-                    break
+                expression = expression.subexpression[1]
 
-            return template.render(
-                dtype=dtype,
-                header=header,
-                name=name if name is not None else function.func_name,
-                custom_args=custom_args,
-                args=args,
-                subexpressions=subexpressions,
-                )
+            else:
+                break
 
-        return func
-    return decorator
+        return template.render(
+            args=args,
+            subexpressions=subexpressions,
+            **kargs
+            )
+
+    # save intermediats
+    func.function = function
+    func.symbolic = sym
+
+    return func
