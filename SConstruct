@@ -12,6 +12,9 @@ env.Replace(CXX='clang++')
 # create librarty
 sconshelper.Library(name='fasteit', env=env, arguments=ARGUMENTS,
     source_suffix=['cu'],
+    CXXFLAGS=[
+        '-std=c++11',
+        ],
     NVCCFLAGS=[
         '-Xcompiler',
         '-fpic',
