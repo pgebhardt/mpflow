@@ -1,6 +1,7 @@
 from sympy import *
 from mako.template import Template
 import sys
+import os
 
 class CppExpression(object):
     def __init__(self, expression, depth=0, subexpression=None):
@@ -182,8 +183,8 @@ def main():
             integrals[i] += 'fastEIT::dtype::real {} = {};\n'.format(code[0], code[1])
 
     # apply to template
-    file = open('src/basis_linear.cpp', 'w')
-    template = Template(filename='src/basis_linear.cpp.mako')
+    file = open(os.path.join('src', 'basis_linear.cpp'), 'w')
+    template = Template(filename=os.path.join('codegen', 'templates', 'basis_linear.cpp.mako'))
     file.write(template.render(
         integrateWithBasis=integrals[0],
         integrateGradientWithBasis=integrals[1],
