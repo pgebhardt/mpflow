@@ -27,9 +27,9 @@ fastEIT::basis::Linear::Linear(
 
     // fill coefficients
     for (dtype::index node = 0; node < nodes_per_element; ++node) {
-        A[node][0] = 1.0;
-        A[node][1] = std::get<0>(this->nodes()[node]);
-        A[node][2] = std::get<1>(this->nodes()[node]);
+% for i in range(len(coefficients)):
+        A[node][${i}] = ${coefficients[i]};
+% endfor
     }
 
     // calc coefficients
@@ -37,14 +37,7 @@ fastEIT::basis::Linear::Linear(
 }
 
 // evaluate basis function
-fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
-    std::tuple<dtype::real, dtype::real> point) {
-    // calc result
-    return
-        this->coefficients()[0] +
-        this->coefficients()[1] * std::get<0>(point) +
-        this->coefficients()[2] * std::get<1>(point);
-}
+${evaluate}
 
 // integrate with basis
 ${integrateWithBasis}
