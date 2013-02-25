@@ -35,8 +35,8 @@ def integrateWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.function(x, y, ai, bi, ci)
-    uj = basis.function(x, y, aj, bj, cj)
+    ui = basis.symbolic(x, y, ai, bi, ci)
+    uj = basis.symbolic(x, y, aj, bj, cj)
 
     # integral
     integral = ui * uj
@@ -51,8 +51,8 @@ def integrateGradientWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.function(x, y, ai, bi, ci)
-    uj = basis.function(x, y, aj, bj, cj)
+    ui = basis.symbolic(x, y, ai, bi, ci)
+    uj = basis.symbolic(x, y, aj, bj, cj)
 
     # integral
     integral = ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)
@@ -92,6 +92,20 @@ def main():
     file = open(os.path.join('src', 'basis_linear.cpp'), 'w')
     template = Template(filename=os.path.join('codegen', 'templates', 'basis_linear.cpp.mako'))
     file.write(template.render(
+        coefficients=[
+            basis.symbolic(
+                'std::get<0>(this->nodes()[node])',
+                'std::get<1>(this->nodes()[node])',
+                1.0, 0.0, 0.0),
+            basis.symbolic(
+                'std::get<0>(this->nodes()[node])',
+                'std::get<1>(this->nodes()[node])',
+                0.0, 1.0, 0.0),
+            basis.symbolic(
+                'std::get<0>(this->nodes()[node])',
+                'std::get<1>(this->nodes()[node])',
+                0.0, 0.0, 1.0),
+            ],
         evaluate=basis(*[
                 'std::get<0>(point)',
                 'std::get<1>(point)',
@@ -101,18 +115,22 @@ def main():
             ],
             dtype='fastEIT::dtype::real',
             custom_args=['std::tuple<dtype::real, dtype::real> point'],
-            name='fastEIT::basis::Linear::evaluate'),
+            name='fastEIT::basis::Linear::evaluate'
+            ),
         integrateWithBasis=integrateWithBasis(*args,
             dtype='fastEIT::dtype::real',
             custom_args=['const std::shared_ptr<Linear> other'],
-            name='fastEIT::basis::Linear::integrateWithBasis'),
+            name='fastEIT::basis::Linear::integrateWithBasis'
+            ),
         integrateGradientWithBasis=integrateGradientWithBasis(*args,
             dtype='fastEIT::dtype::real',
             custom_args=['const std::shared_ptr<Linear> other'],
-            name='fastEIT::basis::Linear::integrateGradientWithBasis'),
+            name='fastEIT::basis::Linear::integrateGradientWithBasis'
+            ),
         integrateBoundaryEdge=integrateBoundaryEdge(
             'coefficients[0]', 'coefficients[1]', 'start', 'end',
-            header=False, name='fastEIT::basis::Linear::integrateBoundaryEdge'),
+            header=False, name='fastEIT::basis::Linear::integrateBoundaryEdge'
+            ),
         ))
     file.close()
 

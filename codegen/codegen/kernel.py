@@ -46,8 +46,7 @@ def kernel(function):
             **kargs
             )
 
-    # save intermediats
-    func.function = function
+    # save symbolic
     func.symbolic = sym
 
     return func

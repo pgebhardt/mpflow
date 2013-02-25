@@ -6,8 +6,17 @@ def symbolic(function):
         # create symbols
         symargs, expargs = [], []
         for i in range(len(args)):
-            symargs.append(Symbol('tmpsymbol_{}'.format(i)))
-            expargs.append(CppExpression(args[i]))
+            # create expressions
+            if isinstance(args[i], str):
+                expargs.append(CppExpression(args[i]))
+            else:
+                expargs.append(args[i])
+
+            # create symbols
+            if not isinstance(args[i], Symbol):
+                symargs.append(Symbol('tmpsymbol_{}'.format(i)))
+            else:
+                symargs.append(args[i])
 
         # lambdify
         lambda_function = lambdify(symargs, function(*symargs),
