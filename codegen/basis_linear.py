@@ -129,7 +129,7 @@ def main():
             ),
         integrateBoundaryEdge=integrateBoundaryEdge(
             'coefficients[0]', 'coefficients[1]', 'start', 'end',
-            header=False, name='fastEIT::basis::Linear::integrateBoundaryEdge'
+            header=False,
             ),
         ))
     file.close()
