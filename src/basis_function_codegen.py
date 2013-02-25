@@ -131,7 +131,10 @@ def main():
     uj = aj + bj * x + cj * y
 
     # integrals to calculate
-    integrals = [ui * uj, ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)]
+    integrals = [
+        ui * uj,
+        ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y),
+        ]
 
     # substitute barycentric coordinats
     for i in range(len(integrals)):
@@ -176,7 +179,7 @@ def main():
         # write string to list
         integrals[i] = ''
         for code in reversed(cppcode):
-            integrals[i] += 'fastEIT::dtype::real {} = {};\n\n'.format(code[0], code[1])
+            integrals[i] += 'fastEIT::dtype::real {} = {};\n'.format(code[0], code[1])
 
     # apply to template
     file = open('src/basis_linear.cpp', 'w')

@@ -56,7 +56,6 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
 
     // compute integral
     ${integrateWithBasis}
-
     return integral;
 }
 
@@ -70,7 +69,6 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
 
     // compute integral
     ${integrateGradientWithBasis}
-
     return integral;
 }
 
