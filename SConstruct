@@ -36,7 +36,3 @@ fasteit = sconshelper.Library(name='fasteit', env=env, arguments=ARGUMENTS,
         'dl'
         ],
     )
-
-# generate basis function
-codegen = env.Command('codegen', [], 'python src/basis_function_codegen.py')
-Depends('src', codegen)
