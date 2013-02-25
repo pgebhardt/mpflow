@@ -168,7 +168,7 @@ void fastEIT::numeric::conjugate::gemv(
     dim3 blocks(
         (matrix->data_rows() + 2 * matrix::block_size - 1) /
         (2 * matrix::block_size),
-        (matrix->data_rows() / (2 * matrix::block_size) +
+        ((matrix->data_rows() + 2 * matrix::block_size - 1 ) / (2 * matrix::block_size) +
         matrix::block_size - 1) / matrix::block_size);
     dim3 threads(2 * matrix::block_size, matrix::block_size);
 
