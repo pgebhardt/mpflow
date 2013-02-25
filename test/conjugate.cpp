@@ -65,7 +65,7 @@ TEST_F(ConjugateTest, Solve) {
 
     // check result
     for (fastEIT::dtype::real row = 0; row < x->rows(); ++row) {
-        EXPECT_LT(std::abs((*x)(row, 0) - (*x0)(row, 0)), 1e6);
+        EXPECT_LT(std::abs((*x)(row, 0) - (*x0)(row, 0)), 1e-6);
     }
 
     // check error
