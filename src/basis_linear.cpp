@@ -11,6 +11,12 @@ fastEIT::basis::Linear::Linear(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
     dtype::index one)
     : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
+    // check one
+    if (one > nodes_per_element) {
+        throw std::invalid_argument(
+            "fastEIT::basis::Linear::Linear: one > nodes_per_element");
+    }
+
     // calc coefficients with gauss
     std::array<std::array<dtype::real, nodes_per_element>, nodes_per_element> A;
     std::array<dtype::real, nodes_per_element> b;
@@ -48,43 +54,8 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
         throw std::invalid_argument("basis::Linear::integrateWithBasis: other == nullptr");
     }
 
-    // shorten variables
-    dtype::real x1 = std::get<0>(this->nodes()[0]);
-    dtype::real y1 = std::get<1>(this->nodes()[0]);
-    dtype::real x2 = std::get<0>(this->nodes()[1]);
-    dtype::real y2 = std::get<1>(this->nodes()[1]);
-    dtype::real x3 = std::get<0>(this->nodes()[2]);
-    dtype::real y3 = std::get<1>(this->nodes()[2]);
-
-    dtype::real ai = this->coefficients()[0];
-    dtype::real bi = this->coefficients()[1];
-    dtype::real ci = this->coefficients()[2];
-    dtype::real aj = other->coefficients()[0];
-    dtype::real bj = other->coefficients()[1];
-    dtype::real cj = other->coefficients()[2];
-
-    // calc area
-    dtype::real area = 0.5 * fabs((x2 - x1) * (y3 - y1) -
-        (x3 - x1) * (y2 - y1));
-
-    // calc integral
-    dtype::real integral = 2.0f * area *
-        (ai * (0.5f * aj + (1.0f / 6.0f) * bj * (x1 + x2 + x3) +
-        (1.0f / 6.0f) * cj * (y1 + y2 + y3)) +
-        bi * ((1.0f/ 6.0f) * aj * (x1 + x2 + x3) +
-        (1.0f / 12.0f) * bj * (
-            x1 * x1 + x1 * x2 + x1 * x3 + x2 * x2 + x2 * x3 + x3 * x3) +
-        (1.0f/ 24.0f) * cj * (
-            2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 +
-            2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)) +
-        ci * ((1.0f / 6.0f) * aj * (y1 + y2 + y3) +
-        (1.0f / 12.0f) * cj * (
-            y1 * y1 + y1 * y2 + y1 * y3 + y2 * y2 + y2 * y3 + y3 * y3) +
-        (1.0f / 24.0f) * bj * (
-            2.0f * x1 * y1 + x1 * y2 + x1 * y3 + x2 * y1 +
-            2.0f * x2 * y2 + x2 * y3 + x3 * y1 + x3 * y2 + 2.0f * x3 * y3)));
-
-    return integral;
+    // compute integral
+    return 1.0 * ((((((((((((((((((((((((((((((((((((((((((this->coefficients()[0] * other->coefficients()[0] / 2.0 + this->coefficients()[0] * other->coefficients()[1] * std::get<0>(this->nodes()[0]) / 6.0) + this->coefficients()[0] * other->coefficients()[1] * std::get<0>(this->nodes()[1]) / 6.0) + this->coefficients()[0] * other->coefficients()[1] * std::get<0>(this->nodes()[2]) / 6.0) + this->coefficients()[0] * other->coefficients()[2] * std::get<1>(this->nodes()[0]) / 6.0) + this->coefficients()[0] * other->coefficients()[2] * std::get<1>(this->nodes()[1]) / 6.0) + this->coefficients()[0] * other->coefficients()[2] * std::get<1>(this->nodes()[2]) / 6.0) + other->coefficients()[0] * this->coefficients()[1] * std::get<0>(this->nodes()[0]) / 6.0) + other->coefficients()[0] * this->coefficients()[1] * std::get<0>(this->nodes()[1]) / 6.0) + other->coefficients()[0] * this->coefficients()[1] * std::get<0>(this->nodes()[2]) / 6.0) + other->coefficients()[0] * this->coefficients()[2] * std::get<1>(this->nodes()[0]) / 6.0) + other->coefficients()[0] * this->coefficients()[2] * std::get<1>(this->nodes()[1]) / 6.0) + other->coefficients()[0] * this->coefficients()[2] * std::get<1>(this->nodes()[2]) / 6.0) + this->coefficients()[1] * other->coefficients()[1] * std::get<0>(this->nodes()[0]) * std::get<0>(this->nodes()[0]) / 12.0) + this->coefficients()[1] * other->coefficients()[1] * std::get<0>(this->nodes()[0]) * std::get<0>(this->nodes()[1]) / 12.0) + this->coefficients()[1] * other->coefficients()[1] * std::get<0>(this->nodes()[0]) * std::get<0>(this->nodes()[2]) / 12.0) + this->coefficients()[1] * other->coefficients()[1] * std::get<0>(this->nodes()[1]) * std::get<0>(this->nodes()[1]) / 12.0) + this->coefficients()[1] * other->coefficients()[1] * std::get<0>(this->nodes()[1]) * std::get<0>(this->nodes()[2]) / 12.0) + this->coefficients()[1] * other->coefficients()[1] * std::get<0>(this->nodes()[2]) * std::get<0>(this->nodes()[2]) / 12.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[0]) * std::get<1>(this->nodes()[0]) / 12.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[0]) * std::get<1>(this->nodes()[1]) / 24.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[0]) * std::get<1>(this->nodes()[2]) / 24.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[1]) * std::get<1>(this->nodes()[0]) / 24.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[1]) * std::get<1>(this->nodes()[1]) / 12.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[1]) * std::get<1>(this->nodes()[2]) / 24.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[2]) * std::get<1>(this->nodes()[0]) / 24.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[2]) * std::get<1>(this->nodes()[1]) / 24.0) + this->coefficients()[1] * other->coefficients()[2] * std::get<0>(this->nodes()[2]) * std::get<1>(this->nodes()[2]) / 12.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[0]) * std::get<1>(this->nodes()[0]) / 12.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[0]) * std::get<1>(this->nodes()[1]) / 24.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[0]) * std::get<1>(this->nodes()[2]) / 24.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[1]) * std::get<1>(this->nodes()[0]) / 24.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[1]) * std::get<1>(this->nodes()[1]) / 12.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[1]) * std::get<1>(this->nodes()[2]) / 24.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[2]) * std::get<1>(this->nodes()[0]) / 24.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[2]) * std::get<1>(this->nodes()[1]) / 24.0) + other->coefficients()[1] * this->coefficients()[2] * std::get<0>(this->nodes()[2]) * std::get<1>(this->nodes()[2]) / 12.0) + this->coefficients()[2] * other->coefficients()[2] * std::get<1>(this->nodes()[0]) * std::get<1>(this->nodes()[0]) / 12.0) + this->coefficients()[2] * other->coefficients()[2] * std::get<1>(this->nodes()[0]) * std::get<1>(this->nodes()[1]) / 12.0) + this->coefficients()[2] * other->coefficients()[2] * std::get<1>(this->nodes()[0]) * std::get<1>(this->nodes()[2]) / 12.0) + this->coefficients()[2] * other->coefficients()[2] * std::get<1>(this->nodes()[1]) * std::get<1>(this->nodes()[1]) / 12.0) + this->coefficients()[2] * other->coefficients()[2] * std::get<1>(this->nodes()[1]) * std::get<1>(this->nodes()[2]) / 12.0) + this->coefficients()[2] * other->coefficients()[2] * std::get<1>(this->nodes()[2]) * std::get<1>(this->nodes()[2]) / 12.0) * std::abs(((-std::get<0>(this->nodes()[0]) + std::get<0>(this->nodes()[1])) * (-std::get<1>(this->nodes()[0]) + std::get<1>(this->nodes()[2])) - (-std::get<0>(this->nodes()[0]) + std::get<0>(this->nodes()[2])) * (-std::get<1>(this->nodes()[0]) + std::get<1>(this->nodes()[1]))));
 }
 
 // integrate gradient with basis
@@ -95,16 +66,8 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
         throw std::invalid_argument("basis::Linear::integrateGradientWithBasis: other == nullptr");
     }
 
-    // calc area
-    dtype::real area = 0.5 * fabs(
-        (std::get<0>(this->nodes()[1]) - std::get<0>(this->nodes()[0])) *
-        (std::get<1>(this->nodes()[2]) - std::get<1>(this->nodes()[0])) -
-        (std::get<0>(this->nodes()[2]) - std::get<0>(this->nodes()[0])) *
-        (std::get<1>(this->nodes()[1]) - std::get<1>(this->nodes()[0])));
-
-    // calc integral
-    return area * (this->coefficients()[1] * other->coefficients()[1] +
-        this->coefficients()[2] * other->coefficients()[2]);
+    // compute integral
+    return 1.0 * (this->coefficients()[1] * other->coefficients()[1] / 2.0 + this->coefficients()[2] * other->coefficients()[2] / 2.0) * std::abs(((-std::get<0>(this->nodes()[0]) + std::get<0>(this->nodes()[1])) * (-std::get<1>(this->nodes()[0]) + std::get<1>(this->nodes()[2])) - (-std::get<0>(this->nodes()[0]) + std::get<0>(this->nodes()[2])) * (-std::get<1>(this->nodes()[0]) + std::get<1>(this->nodes()[1]))));
 }
 
 // integrate edge
