@@ -43,17 +43,12 @@ def coefficients(points, function):
     M = Matrix(M)
 
     # create vector
-    V = Matrix([0.0] * len(points))
+    V = 1.0 * eye(len(points))
 
     # calc coefficients
-    result = []
-    for i in range(len(points)):
-        V[i] = 1.0
-        C = M.inv() * V
-        result.append([c for c in C])
-        V[i] = 0.0
+    C = M.LUsolve(V)
 
-    return result
+    return C.transpose().tolist()
 
 @kernel
 def integrateWithBasis(points, ci, cj):
