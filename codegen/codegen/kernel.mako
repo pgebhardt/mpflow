@@ -11,18 +11,18 @@ ${dtype} ${name}(
     % else:
         % for i in range(len(args)):
             % if i != len(args) - 1:
-    ${args[i]},
+    ${dtype} ${args[i]},
             % else:
-    ${args[i]}
+    ${dtype} ${args[i]}
             % endif
         % endfor
     % endif
     ) {
 % endif
-% for subexpression in reversed(subexpressions):
-    ${dtype} ${subexpression[0]} = ${subexpression[1]};
+% for expression in reversed(expressions):
+    ${dtype} ${expression[0]} = ${expression[1]};
 % endfor
-    return ${subexpressions[0][0]};
+    return ${expressions[0][0]};
 % if header == True:
 }
 % endif

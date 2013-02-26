@@ -1,5 +1,4 @@
 from sympy import lambdify, Symbol
-from expression import CppExpression
 from symbolic import symbolic
 from mako.template import Template
 import os
@@ -25,24 +24,27 @@ def kernel(function):
         expression = sym(*args)
 
         # generate subexpressions
-        subexpressions = [
+        expressions = [
             ('result_{}'.format(function.func_name),
             str(expression)),
             ]
         while True:
-            if expression.subexpression is not None:
-                subexpressions.append(
+            if hasattr(expression, 'subexpression') and \
+                expression.subexpression is not None:
+                # get subexpression
+                expressions.append(
                     (expression.subexpression[0],
                     str(expression.subexpression[1])))
 
+                # go on step deeper
                 expression = expression.subexpression[1]
-
             else:
                 break
 
+        # render kernel template
         return template.render(
-            args=args,
-            subexpressions=subexpressions,
+            args=[arg for arg in args if isinstance(arg, str)],
+            expressions=expressions,
             **kargs
             )
 

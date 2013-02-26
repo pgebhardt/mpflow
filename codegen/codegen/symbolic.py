@@ -1,5 +1,5 @@
 from sympy import lambdify, Symbol
-from expression import CppExpression
+from expression import Expression
 
 def symbolic(function):
     def func(*args):
@@ -9,12 +9,13 @@ def symbolic(function):
             # create symbol
             symbol = args[i]
             if not isinstance(args[i], Symbol):
-                symbol = Symbol('tmpsymbol_{}'.format(i))
+                symbol = Symbol('tmpsymbol_{}_{}'.format(
+                    function.func_name, i))
 
             # create expressions
             expression = args[i]
             if isinstance(args[i], str):
-                expression = CppExpression(args[i])
+                expression = Expression(args[i])
                 args[i] = symbol
 
             # add to lists
@@ -23,7 +24,7 @@ def symbolic(function):
 
         # create lambda function
         lambda_function = lambdify(symargs, function(*args),
-            modules=CppExpression)
+            modules=Expression)
 
         # evaluate expression
         return lambda_function(*expargs)
