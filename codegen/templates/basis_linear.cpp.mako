@@ -19,7 +19,7 @@ fastEIT::basis::Linear::Linear(
             "fastEIT::basis::Linear::Linear: one > nodes_per_element");
     }
 
-    // calc coefficients with gauss
+    // calc coefficients
 % for i in range(len(coefficients)):
     if (one == ${i}) {
     % for j in range(len(coefficients[i])):
@@ -48,13 +48,13 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
 
     // calc coefficients for basis function
     std::array<dtype::real, nodes_per_edge> coefficients;
-    if (one == 0) {
-        coefficients[0] = 1.0;
-        coefficients[1] = -1.0 / nodes[1];
-    } else {
-        coefficients[0] = 0.0;
-        coefficients[1] = 1.0 / nodes[1];
+% for i in range(len(boundaryCoefficiens)):
+    if (one == ${i}) {
+    % for j in range(len(boundaryCoefficiens[i])):
+        coefficients[${j}] = ${boundaryCoefficiens[i][j]};
+    % endfor
     }
+% endfor
 
 ${integrateBoundaryEdge}
 }

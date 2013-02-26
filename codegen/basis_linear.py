@@ -30,7 +30,7 @@ def basis(point, coefficient):
     return coefficient[0] + coefficient[1] * point[0] + coefficient[2] * point[1]
 
 @symbolic
-def coefficients(points):
+def coefficients(points, function):
     # get matrix coefficients
     M = []
     for i in range(len(points)):
@@ -38,7 +38,7 @@ def coefficients(points):
         for j in range(len(points)):
             c = [0.0] * len(points)
             c[j] = 1.0
-            N.append(basis.symbolic.function(points[i], c))
+            N.append(function(points[i], c))
         M.append(N)
     M = Matrix(M)
 
@@ -109,7 +109,7 @@ def main():
     file = open(os.path.join('src', 'basis_linear.cpp'), 'w')
     template = Template(filename=os.path.join('codegen', 'templates', 'basis_linear.cpp.mako'))
     file.write(template.render(
-        coefficients=coefficients(args[0]),
+        coefficients=coefficients(args[0], basis.symbolic.function),
         evaluate=basis(['std::get<0>(point)', 'std::get<1>(point)'],
             ['this->coefficients()[0]', 'this->coefficients()[1]', 'this->coefficients()[2]'],
             dtype='fastEIT::dtype::real',
@@ -126,6 +126,8 @@ def main():
             custom_args=['const std::shared_ptr<Linear> other'],
             name='fastEIT::basis::Linear::integrateGradientWithBasis'
             ),
+        boundaryCoefficiens=coefficients(
+            ['nodes[0]', 'nodes[1]'], lambda x, c: c[0] + x * c[1]),
         integrateBoundaryEdge=integrateBoundaryEdge(
             'coefficients[0]', 'coefficients[1]', 'start', 'end',
             dtype='fastEIT::dtype::real', header=False,
