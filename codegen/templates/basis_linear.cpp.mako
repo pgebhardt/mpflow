@@ -6,6 +6,8 @@
 #include <cmath>
 #include "fasteit/fasteit.h"
 
+using namespace std;
+
 // create basis class
 fastEIT::basis::Linear::Linear(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,

@@ -1,8 +1,32 @@
-class Expression(object):
-    def __init__(self, expression, depth=0, subexpression=None):
-        # call base class init
-        super(Expression, self).__init__()
+class ExpressionMeta(type):
+    def __new__(mcs, name, bases, dict):
+        # get operations and constants
+        operations = dict['operations']
+        constants = dict['constants']
 
+        # create class
+        cls = type.__new__(mcs, name, bases, dict)
+
+        # create operation methods
+        for name, operation in operations:
+            # method generator
+            def makeMethod(f):
+                return lambda self, *args: cls(f.format(self, *args),
+                self.depth + 1, self.subexpression)
+
+            # generate method
+            setattr(cls, name, makeMethod(operation))
+
+        # set constants
+        for name, constant in constants:
+            setattr(cls, name, cls(constant))
+
+        return cls
+
+class Expression:
+    __metaclass__ = ExpressionMeta
+
+    def __init__(self, expression, depth=0, subexpression=None):
         # save expression
         self.expression = expression
 
@@ -22,75 +46,54 @@ class Expression(object):
     def __str__(self):
         return '({})'.format(self.expression)
 
-    def __pos__(self):
-        return Expression('+{}'.format(self), self.depth + 1, self.subexpression)
+    # constants
+    constants = [
+        ('pi', 'M_PI')
+    ]
 
-    def __neg__(self):
-        return Expression('-{}'.format(self), self.depth + 1, self.subexpression)
-
-    def __abs__(self):
-        return Expression('std::abs({})'.format(self), self.depth + 1, self.subexpression)
-
-    def __add__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} + {}'.format(self, value), self.depth + 1, self.subexpression)
-
-    def __radd__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} + {}'.format(value, self), self.depth + 1, self.subexpression)
-
-    def __sub__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} - {}'.format(self, value), self.depth + 1, self.subexpression)
-
-    def __rsub__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} - {}'.format(value, self), self.depth + 1, self.subexpression)
-
-    def __mul__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} * {}'.format(self, value), self.depth + 1, self.subexpression)
-
-    def __rmul__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} * {}'.format(value, self), self.depth + 1, self.subexpression)
-
-    def __truediv__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} / {}'.format(self, value), self.depth + 1, self.subexpression)
-
-    def __rtruediv__(self, value):
-        if isinstance(value, int):
-            value = float(value)
-
-        return Expression('{} / {}'.format(value, self), self.depth + 1, self.subexpression)
+    # operations
+    operations = [
+        ('__neg__','-{}'),
+        ('__sub__','{}-{}'),
+        ('__add__','{}+{}'),
+        ('__radd__','{1}+{0}'),
+        ('__mul__','{}*{}'),
+        ('__rmul__','{1}*{0}'),
+        ('__div__','{}/{}'),
+        ('__rdiv__','{1}/{0}'),
+        ('__floordiv__','(int){}/(int){}'),
+        ('__rfloordiv__','(int){1}/(int){0}'),
+        ('__mod__','(int){}%(int){}'),
+        ('__rmod__','(int){1}%(int){0}'),
+        ('__truediv__','{}/{}'),
+        ('__rtruediv__','{1}/{0}'),
+        ('__abs__', 'abs({})'),
+        ('Abs', 'abs({})'),
+        ('__getitem__','{}[{}]'),
+        ('__le__','{}<={}'),
+        ('__ge__','{}>={}'),
+        ('__lt__','{}<{}'),
+        ('__gt__','{}>{}'),
+        ('select','{}?{}:{}'),
+        ('assign','{}={}'),
+        ('cast','{1}({0})'),
+        ('floor','floor({})'),
+        ('clip','min(max({},(float){}),(float){})'),
+        ('cos','cos({})'),
+        ('sin','sin({})'),
+        ('pow','pow({},{})'),
+        ('sqrt','sqrt((float){})'),
+        ('gamma','tgamma({})'),
+    ]
 
     def __pow__(self, value):
         if not isinstance(value, int):
-            raise RuntimeError('invalid power')
+            raise self.pow(value)
 
         if value == 1:
             return self
 
         else:
-            return Expression('{} * {}'.format(self, self ** (value - 1)), self.depth + 1, self.subexpression)
-
-    def sin(self):
-        return Expression('sin({})'.format(self), self.depth + 1, self.subexpression)
-
-    def Abs(self):
-        return abs(self)
+            return Expression('{} * {}'.format(
+                self, self ** (value - 1)),
+                self.depth + 1, self.subexpression)
