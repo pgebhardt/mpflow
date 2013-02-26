@@ -1,22 +1,40 @@
 from sympy import lambdify, Symbol
 from expression import Expression
 
+def parseArgument(argument, name):
+    # string, expression argument
+    symbol, expression = None, None
+    if type(argument) in (str, unicode, Expression):
+        # create symbols
+        expression = Expression(argument)
+        symbol = Symbol(name, real=True)
+
+        # replace argument by symbol
+        argument = symbol
+
+    elif type(argument) is list:
+        newarg, symbol, expression = [], [], []
+        for i in range(len(argument)):
+            # parse argument
+            res = parseArgument(argument[i],
+                '{}_{}'.format(name, i))
+
+            # add args to lists
+            newarg.append(res[0])
+            if res[1] is not None:
+                symbol += res[1] if type(res[1]) is list else [res[1]]
+            if res[2] is not None:
+                expression += res[2] if type(res[2]) is list else [res[2]]
+
+        # replace argument by symbols
+        argument = newarg
+    return argument, symbol, expression
+
 def symbolic(function):
     def func(*args):
-        symargs, expargs = [], []
+        # parse arguments
         args = [arg for arg in args]
-        for i in range(len(args)):
-            if type(args[i]) in (str, unicode, Expression):
-                # create expression
-                expargs.append(Expression(args[i]))
-
-                # create symbol
-                symbol = Symbol('tmpsymbol_{}_{}'.format(
-                    function.func_name, i), real=True)
-                symargs.append(symbol)
-
-                # replace argument by symbol
-                args[i] = symbol
+        args, symargs, expargs = parseArgument(args, 'tempsymbol')
 
         # create lambda function
         lambda_function = lambdify(symargs, function(*args),
