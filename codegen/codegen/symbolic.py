@@ -6,16 +6,16 @@ def symbolic(function):
         symargs, expargs = [], []
         args = [arg for arg in args]
         for i in range(len(args)):
-            # create expression
             if type(args[i]) in (str, unicode, Expression):
+                # create expression
                 expargs.append(Expression(args[i]))
 
-            # create symbol
-            if type(args[i]) not in (float, int, long):
+                # create symbol
                 symbol = Symbol('tmpsymbol_{}_{}'.format(
-                    function.func_name, i))
-
+                    function.func_name, i), real=True)
                 symargs.append(symbol)
+
+                # replace argument by symbol
                 args[i] = symbol
 
         # create lambda function
