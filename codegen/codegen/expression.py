@@ -53,8 +53,10 @@ class Expression:
 
     # operations
     operations = [
+        ('__pos__','+{}'),
         ('__neg__','-{}'),
         ('__sub__','{}-{}'),
+        ('__rsub__','{1}-{0}'),
         ('__add__','{}+{}'),
         ('__radd__','{1}+{0}'),
         ('__mul__','{}*{}'),
@@ -92,8 +94,7 @@ class Expression:
 
         if value == 1:
             return self
-
         else:
-            return Expression('{} * {}'.format(
+            return Expression('{}*{}'.format(
                 self, self ** (value - 1)),
                 self.depth + 1, self.subexpression)
