@@ -1,5 +1,5 @@
 from sympy import lambdify, Symbol
-from symbolic import symbolic
+from mathcodegen import symbolic
 from mako.template import Template
 import os
 

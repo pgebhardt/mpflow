@@ -1,4 +1,5 @@
 from mako.template import Template
+from mathcodegen import symbolic
 from basis import *
 import sys, os
 

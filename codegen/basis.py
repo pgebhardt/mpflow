@@ -1,5 +1,6 @@
 from sympy import *
-from codegen import *
+from mathcodegen import symbolic
+from kernel import kernel
 
 def integrateOnTriangle(expression, x, y, points):
     # create coordinats
