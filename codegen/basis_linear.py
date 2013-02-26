@@ -35,8 +35,8 @@ def integrateWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.symbolic(x, y, ai, bi, ci)
-    uj = basis.symbolic(x, y, aj, bj, cj)
+    ui = basis.symbolic.function(x, y, ai, bi, ci)
+    uj = basis.symbolic.function(x, y, aj, bj, cj)
 
     # integral
     integral = ui * uj
@@ -51,8 +51,8 @@ def integrateGradientWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.symbolic(x, y, ai, bi, ci)
-    uj = basis.symbolic(x, y, aj, bj, cj)
+    ui = basis.symbolic.function(x, y, ai, bi, ci)
+    uj = basis.symbolic.function(x, y, aj, bj, cj)
 
     # integral
     integral = ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)
@@ -129,7 +129,7 @@ def main():
             ),
         integrateBoundaryEdge=integrateBoundaryEdge(
             'coefficients[0]', 'coefficients[1]', 'start', 'end',
-            header=False,
+            dtype='fastEIT::dtype::real', header=False,
             ),
         ))
     file.close()

@@ -11,7 +11,7 @@ class ExpressionMeta(type):
         for name, operation in operations:
             # method generator
             def makeMethod(f):
-                return lambda self, *args: cls(f.format(self, *args),
+                return lambda self, *args: cls(f.format(self, *map(cls, args)),
                 self.depth + 1, self.subexpression)
 
             # generate method
@@ -98,3 +98,28 @@ class Expression:
             return Expression('{}*{}'.format(
                 self, self ** (value - 1)),
                 self.depth + 1, self.subexpression)
+
+    def expand(self, dtype='float'):
+        # generate subexpressions
+        expressions = [('result', str(self.expression))]
+
+        # gather subexpressions
+        expression = self
+        while True:
+            if expression.subexpression is not None:
+                # get subexpression
+                expressions.append(
+                    (expression.subexpression[0],
+                        str(expression.subexpression[1])))
+
+                # go one setp deeper
+                expression = expression.subexpression[1]
+            else:
+                break
+
+        # create code
+        code = ''
+        for expression in reversed(expressions):
+            code += '{} {} = {};\n'.format(dtype, expression[0], expression[1])
+
+        return code

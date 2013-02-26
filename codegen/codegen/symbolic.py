@@ -6,27 +6,32 @@ def symbolic(function):
         symargs, expargs = [], []
         args = [arg for arg in args]
         for i in range(len(args)):
+            # create expression
+            if type(args[i]) in (str, unicode, Expression):
+                expargs.append(Expression(args[i]))
+
             # create symbol
-            symbol = args[i]
-            if not isinstance(args[i], Symbol):
+            if type(args[i]) not in (float, int, long):
                 symbol = Symbol('tmpsymbol_{}_{}'.format(
                     function.func_name, i))
 
-            # create expressions
-            expression = args[i]
-            if isinstance(args[i], str):
-                expression = Expression(args[i])
+                symargs.append(symbol)
                 args[i] = symbol
-
-            # add to lists
-            expargs.append(expression)
-            symargs.append(symbol)
 
         # create lambda function
         lambda_function = lambdify(symargs, function(*args),
             modules=Expression)
 
         # evaluate expression
-        return lambda_function(*expargs)
+        expression = lambda_function(*expargs)
+
+        # check type
+        if type(expression) is not Expression:
+            expression = Expression(expression)
+
+        return expression
+
+    # save function
+    func.function = function
 
     return func

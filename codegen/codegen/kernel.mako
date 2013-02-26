@@ -19,10 +19,8 @@ ${dtype} ${name}(
     % endif
     ) {
 % endif
-% for expression in reversed(expressions):
-    ${dtype} ${expression[0]} = ${expression[1]};
-% endfor
-    return ${expressions[0][0]};
+    ${expression}
+    return result;
 % if header == True:
 }
 % endif
