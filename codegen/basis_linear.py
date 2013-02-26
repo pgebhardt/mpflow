@@ -26,8 +26,34 @@ def integrateOnTriangle(expression, x, y, points):
         (l2, 0.0, 1.0))
 
 @kernel
-def basis(x, y, a, b, c):
-    return a + b * x + c * y
+def basis(point, coefficient):
+    return coefficient[0] + coefficient[1] * point[0] + coefficient[2] * point[1]
+
+@symbolic
+def coefficients(points):
+    # get matrix coefficients
+    M = []
+    for i in range(len(points)):
+        N = []
+        for j in range(len(points)):
+            c = [0.0] * len(points)
+            c[j] = 1.0
+            N.append(basis.symbolic.function(points[i], c))
+        M.append(N)
+    M = Matrix(M)
+
+    # create vector
+    V = Matrix([0.0] * len(points))
+
+    # calc coefficients
+    result = []
+    for i in range(len(points)):
+        V[i] = 1.0
+        C = M.inv() * V
+        result.append([c for c in C])
+        V[i] = 0.0
+
+    return result
 
 @kernel
 def integrateWithBasis(points, ci, cj):
@@ -35,8 +61,8 @@ def integrateWithBasis(points, ci, cj):
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.symbolic.function(x, y, ci[0], ci[1], ci[2])
-    uj = basis.symbolic.function(x, y, cj[0], cj[1], cj[2])
+    ui = basis.symbolic.function([x, y], ci)
+    uj = basis.symbolic.function([x, y], cj)
 
     # integral
     integral = ui * uj
@@ -50,8 +76,8 @@ def integrateGradientWithBasis(points, ci, cj):
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.symbolic.function(x, y, ci[0], ci[1], ci[2])
-    uj = basis.symbolic.function(x, y, cj[0], cj[1], cj[2])
+    ui = basis.symbolic.function([x, y], ci)
+    uj = basis.symbolic.function([x, y], cj)
 
     # integral
     integral = ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)
@@ -83,27 +109,9 @@ def main():
     file = open(os.path.join('src', 'basis_linear.cpp'), 'w')
     template = Template(filename=os.path.join('codegen', 'templates', 'basis_linear.cpp.mako'))
     file.write(template.render(
-        coefficients=[
-            basis.symbolic(
-                'std::get<0>(this->nodes()[node])',
-                'std::get<1>(this->nodes()[node])',
-                1.0, 0.0, 0.0),
-            basis.symbolic(
-                'std::get<0>(this->nodes()[node])',
-                'std::get<1>(this->nodes()[node])',
-                0.0, 1.0, 0.0),
-            basis.symbolic(
-                'std::get<0>(this->nodes()[node])',
-                'std::get<1>(this->nodes()[node])',
-                0.0, 0.0, 1.0),
-            ],
-        evaluate=basis(*[
-                'std::get<0>(point)',
-                'std::get<1>(point)',
-                'this->coefficients()[0]',
-                'this->coefficients()[1]',
-                'this->coefficients()[2]',
-            ],
+        coefficients=coefficients(args[0]),
+        evaluate=basis(['std::get<0>(point)', 'std::get<1>(point)'],
+            ['this->coefficients()[0]', 'this->coefficients()[1]', 'this->coefficients()[2]'],
             dtype='fastEIT::dtype::real',
             custom_args=['std::tuple<dtype::real, dtype::real> point'],
             name='fastEIT::basis::Linear::evaluate'

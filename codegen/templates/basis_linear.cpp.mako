@@ -20,22 +20,13 @@ fastEIT::basis::Linear::Linear(
     }
 
     // calc coefficients with gauss
-    std::array<std::array<dtype::real, nodes_per_element>, nodes_per_element> A;
-    std::array<dtype::real, nodes_per_element> b;
-    for (dtype::index node = 0; node < nodes_per_element; ++node) {
-        b[node] = 0.0;
-    }
-    b[one] = 1.0;
-
-    // fill coefficients
-    for (dtype::index node = 0; node < nodes_per_element; ++node) {
 % for i in range(len(coefficients)):
-        A[node][${i}] = ${coefficients[i]};
-% endfor
+    if (one == ${i}) {
+    % for j in range(len(coefficients[i])):
+        this->coefficients()[${j}] = ${coefficients[i][j]};
+    % endfor
     }
-
-    // calc coefficients
-    this->coefficients() = math::gaussElemination<dtype::real, nodes_per_element>(A, b);
+% endfor
 }
 
 // evaluate basis function
