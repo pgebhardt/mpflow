@@ -30,36 +30,34 @@ def basis(x, y, a, b, c):
     return a + b * x + c * y
 
 @kernel
-def integrateWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
+def integrateWithBasis(points, ci, cj):
     # create coordinats
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.symbolic.function(x, y, ai, bi, ci)
-    uj = basis.symbolic.function(x, y, aj, bj, cj)
+    ui = basis.symbolic.function(x, y, ci[0], ci[1], ci[2])
+    uj = basis.symbolic.function(x, y, cj[0], cj[1], cj[2])
 
     # integral
     integral = ui * uj
 
     # integrate on triangle
-    return integrateOnTriangle(integral, x, y,
-        [[x1, y1], [x2, y2], [x3, y3]])
+    return integrateOnTriangle(integral, x, y, points)
 
 @kernel
-def integrateGradientWithBasis(x1, y1, x2, y2, x3, y3, ai, bi, ci, aj, bj, cj):
+def integrateGradientWithBasis(points, ci, cj):
     # create coordinats
     x, y = symbols('x, y')
 
     # basis function
-    ui = basis.symbolic.function(x, y, ai, bi, ci)
-    uj = basis.symbolic.function(x, y, aj, bj, cj)
+    ui = basis.symbolic.function(x, y, ci[0], ci[1], ci[2])
+    uj = basis.symbolic.function(x, y, cj[0], cj[1], cj[2])
 
     # integral
     integral = ui.diff(x) * uj.diff(x) + ui.diff(y) * uj.diff(y)
 
     # integrate on triangle
-    return integrateOnTriangle(integral, x, y,
-        [[x1, y1], [x2, y2], [x3, y3]])
+    return integrateOnTriangle(integral, x, y, points)
 
 @kernel
 def integrateBoundaryEdge(a, b, start, end):
@@ -73,19 +71,12 @@ def main():
     sys.setrecursionlimit(10000)
 
     # arguments
-    args = [
-        'std::get<0>(this->nodes()[0])',
-        'std::get<1>(this->nodes()[0])',
-        'std::get<0>(this->nodes()[1])',
-        'std::get<1>(this->nodes()[1])',
-        'std::get<0>(this->nodes()[2])',
-        'std::get<1>(this->nodes()[2])',
-        'this->coefficients()[0]',
-        'this->coefficients()[1]',
-        'this->coefficients()[2]',
-        'other->coefficients()[0]',
-        'other->coefficients()[1]',
-        'other->coefficients()[2]',
+    args = [[
+        ['std::get<0>(this->nodes()[0])', 'std::get<1>(this->nodes()[0])'],
+        ['std::get<0>(this->nodes()[1])', 'std::get<1>(this->nodes()[1])'],
+        ['std::get<0>(this->nodes()[2])', 'std::get<1>(this->nodes()[2])']],
+        ['this->coefficients()[0]', 'this->coefficients()[1]', 'this->coefficients()[2]'],
+        ['other->coefficients()[0]', 'other->coefficients()[1]', 'other->coefficients()[2]'],
         ]
 
     # apply to template
