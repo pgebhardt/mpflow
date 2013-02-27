@@ -91,7 +91,7 @@ class Basis(object):
         # integrate on triangle
         return integrateOnTriangle(integral, x, y, points)
 
-    @kernel
+    @symbolic
     def integrateBoundaryEdge(self, coefficients, start, end):
         # create coordinats
         x = Symbol('x')
@@ -147,6 +147,5 @@ class Basis(object):
                 self.boundary_function),
             integrateBoundaryEdge=self.integrateBoundaryEdge(
                 ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
-                'start', 'end', dtype='fastEIT::dtype::real', header=False,
-                ),
+                'start', 'end').expand(),
             )

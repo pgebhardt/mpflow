@@ -19,8 +19,7 @@ ${dtype} ${name}(
     % endif
     ) {
 % endif
-    ${expression}
-    return result;
+    return ${expression};
 % if header == True:
 }
 % endif

@@ -23,7 +23,7 @@ fastEIT::basis::${name}::${name}(
 % for i in range(len(coefficients)):
     if (one == ${i}) {
     % for j in range(len(coefficients[i])):
-        this->coefficients()[${j}] = ${coefficients[i][j]};
+        this->coefficients()[${j}] = ${coefficients[i][j].expand()};
     % endfor
     }
 % endfor
@@ -51,10 +51,9 @@ fastEIT::dtype::real fastEIT::basis::${name}::integrateBoundaryEdge(
 % for i in range(len(boundaryCoefficiens)):
     if (one == ${i}) {
     % for j in range(len(boundaryCoefficiens[i])):
-        coefficients[${j}] = ${boundaryCoefficiens[i][j]};
+        coefficients[${j}] = ${boundaryCoefficiens[i][j].expand()};
     % endfor
     }
 % endfor
-
-${integrateBoundaryEdge}
+    return ${integrateBoundaryEdge};
 }
