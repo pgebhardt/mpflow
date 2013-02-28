@@ -96,14 +96,14 @@ class Basis(object):
         # integrate boundary_function symbolic
         @symbolic
         def integral(coefficients, start, end):
-            x = Symbol('x')
+            x = Symbol('x', real=True)
             return integrate(
                 self.boundary_function(x, coefficients),
                 (x, start, end))
 
         # clip integration interval to function definition
-        start = Expression.clip(start, nodes[0], nodes[self.nodes_per_edge - 1])
-        end = Expression.clip(end, nodes[0], nodes[self.nodes_per_edge - 1])
+        start = start.clip(nodes[0], nodes[self.nodes_per_edge - 1])
+        end = end.clip(nodes[0], nodes[self.nodes_per_edge - 1])
 
         return integral(coefficients, start, end)
 
