@@ -42,10 +42,6 @@ ${integrateGradientWithBasis}
 fastEIT::dtype::real fastEIT::basis::${name}::integrateBoundaryEdge(
     std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
-    // crop integration interval to function definition
-    start = std::min(std::max(nodes[0], start), nodes[nodes_per_edge - 1]);
-    end = std::min(std::max(nodes[0], end), nodes[nodes_per_edge - 1]);
-
     // calc coefficients for basis function
     std::array<dtype::real, nodes_per_edge> coefficients;
 % for i in range(len(boundaryCoefficiens)):

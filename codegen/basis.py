@@ -1,5 +1,5 @@
 from sympy import *
-from mathcodegen import symbolic
+from mathcodegen import *
 from kernel import kernel
 
 def integrateOnTriangle(expression, x, y, points):
@@ -91,14 +91,21 @@ class Basis(object):
         # integrate on triangle
         return integrateOnTriangle(integral, x, y, points)
 
-    @symbolic
-    def integrateBoundaryEdge(self, coefficients, start, end):
-        # create coordinats
-        x = Symbol('x')
+    @expressionize
+    def integrateBoundaryEdge(self, nodes, coefficients, start, end):
+        # integrate boundary_function symbolic
+        @symbolic
+        def integral(coefficients, start, end):
+            x = Symbol('x')
+            return integrate(
+                self.boundary_function(x, coefficients),
+                (x, start, end))
 
-        return integrate(
-            self.boundary_function(x, coefficients),
-            (x, start, end))
+        # clip integration interval to function definition
+        start = Expression.clip(start, nodes[0], nodes[self.nodes_per_edge - 1])
+        end = Expression.clip(end, nodes[0], nodes[self.nodes_per_edge - 1])
+
+        return integral(coefficients, start, end)
 
     def render(self, template):
         # arguments
@@ -146,6 +153,7 @@ class Basis(object):
                 ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 self.boundary_function),
             integrateBoundaryEdge=self.integrateBoundaryEdge(
+                ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 'start', 'end').expand(),
             )

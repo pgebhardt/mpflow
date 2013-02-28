@@ -89,10 +89,6 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
 fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
     std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
-    // crop integration interval to function definition
-    start = std::min(std::max(nodes[0], start), nodes[nodes_per_edge - 1]);
-    end = std::min(std::max(nodes[0], end), nodes[nodes_per_edge - 1]);
-
     // calc coefficients for basis function
     std::array<dtype::real, nodes_per_edge> coefficients;
     if (one == 0) {
@@ -112,6 +108,6 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
 });
     }
     return ({
-(((((-(coefficients[0]))*((start)))+(((coefficients[0])*((end)))))-((((coefficients[1])*(((start)*(start))))/(2))))+((((coefficients[1])*(((end)*(end))))/(2))));
+(((((-((coefficients[0])))*(((min(max((start),(float)((nodes[0]))),(float)((nodes[1])))))))+((((coefficients[0]))*(((min(max((end),(float)((nodes[0]))),(float)((nodes[1])))))))))-(((((coefficients[1]))*((((min(max((start),(float)((nodes[0]))),(float)((nodes[1])))))*((min(max((start),(float)((nodes[0]))),(float)((nodes[1]))))))))/(2))))+(((((coefficients[1]))*((((min(max((end),(float)((nodes[0]))),(float)((nodes[1])))))*((min(max((end),(float)((nodes[0]))),(float)((nodes[1]))))))))/(2))));
 });
 }
