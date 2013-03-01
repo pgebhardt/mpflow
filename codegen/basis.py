@@ -123,7 +123,12 @@ class Basis(object):
             name=self.name,
 
             # coefficients in constructor
-            coefficients=coefficients(points_args, self.basis_function),
+            #coefficients=coefficients(points_args, self.basis_function),
+            coefficients=[
+                expressionize(self.basis_function)(
+                    ['std::get<0>(this->nodes()[node])', 'std::get<1>(this->nodes()[node])'],
+                    [0.0] * i + [1.0] + [0.0] * (self.nodes_per_element - i - 1))
+                for i in range(self.nodes_per_element)],
 
             # evaluate basis function
             evaluate=self.evaluate(
