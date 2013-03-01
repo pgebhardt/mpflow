@@ -168,5 +168,5 @@ TEST(MeshTest, QuadraticBasis) {
     });
 
     // check count of nodes to prove no unneccessary nodes are created
-    EXPECT_EQ(mesh->nodes()->rows(), 13);
+    EXPECT_EQ(mesh->nodes()->rows(), 13U);
 };

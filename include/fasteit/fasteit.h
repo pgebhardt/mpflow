@@ -1,31 +1,13 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #ifndef FASTEIT_INCLUDE_FASTEIT_H
 #define FASTEIT_INCLUDE_FASTEIT_H
 
-#include <cstdlib>
-#include <cstdio>
-
-// std lib includes
-#include <assert.h>
-#include <stdexcept>
-#include <string>
-#include <istream>
-#include <iostream>
-#include <tuple>
-#include <array>
-#include <vector>
-#include <memory>
-#include <algorithm>
-
-// cuda includes
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
+#include "common.h"
 #include "cuda_error.h"
-
 #include "dtype.h"
 #include "constants.h"
 #include "mathematics.h"

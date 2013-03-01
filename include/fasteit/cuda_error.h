@@ -6,6 +6,9 @@
 // Define this to turn on error checking
 // #define CUDA_ERROR_CHECK
 
+#ifndef FASTEIT_INCLUDE_CUDA_ERROR_H
+#define FASTEIT_INCLUDE_CUDA_ERROR_H
+
 #define CudaSafeCall(err)   __cudaSafeCall(err, __FILE__, __LINE__)
 #define CudaCheckError()    __cudaCheckError(__FILE__, __LINE__)
 
@@ -36,5 +39,7 @@ inline void __cudaCheckError( const char *file, const int line ) {
         exit(-1);
     }
 }
+
+#endif
 
 #endif
