@@ -11,10 +11,10 @@ protected:
         std::array<std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>,
             fastEIT::basis::Quadratic::nodes_per_element> nodes = {{
                 std::make_tuple(0.0f, 0.0f),
-                std::make_tuple(1.0f, 0.0f),
-                std::make_tuple(0.0f, 1.0f),
                 std::make_tuple(0.5f, 0.0f),
+                std::make_tuple(1.0f, 0.0f),
                 std::make_tuple(0.5f, 0.5f),
+                std::make_tuple(0.0f, 1.0f),
                 std::make_tuple(0.0f, 0.5f)
             }};
 
@@ -36,10 +36,10 @@ TEST_F(BasisQuadraticTest, Constructor) {
     std::array<std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>,
         fastEIT::basis::Quadratic::nodes_per_element> nodes = {{
             std::make_tuple(0.0f, 0.0f),
-            std::make_tuple(1.0f, 0.0f),
-            std::make_tuple(0.0f, 1.0f),
             std::make_tuple(0.5f, 0.0f),
+            std::make_tuple(1.0f, 0.0f),
             std::make_tuple(0.5f, 0.5f),
+            std::make_tuple(0.0f, 1.0f),
             std::make_tuple(0.0f, 0.5f)
         }};
 
@@ -57,10 +57,10 @@ TEST_F(BasisQuadraticTest, Constructor) {
     EXPECT_FLOAT_EQ(basis->coefficients()[4], 2.0f);
     EXPECT_FLOAT_EQ(basis->coefficients()[5], 4.0f);
     EXPECT_EQ(basis->nodes()[0], std::make_tuple(0.0f, 0.0f));
-    EXPECT_EQ(basis->nodes()[1], std::make_tuple(1.0f, 0.0f));
-    EXPECT_EQ(basis->nodes()[2], std::make_tuple(0.0f, 1.0f));
-    EXPECT_EQ(basis->nodes()[3], std::make_tuple(0.5f, 0.0f));
-    EXPECT_EQ(basis->nodes()[4], std::make_tuple(0.5f, 0.5f));
+    EXPECT_EQ(basis->nodes()[1], std::make_tuple(0.5f, 0.0f));
+    EXPECT_EQ(basis->nodes()[2], std::make_tuple(1.0f, 0.0f));
+    EXPECT_EQ(basis->nodes()[3], std::make_tuple(0.5f, 0.5f));
+    EXPECT_EQ(basis->nodes()[4], std::make_tuple(0.0f, 1.0f));
     EXPECT_EQ(basis->nodes()[5], std::make_tuple(0.0f, 0.5f));
 
     // check error

@@ -44,10 +44,25 @@ namespace fastEIT {
 
             // foraward elemination
             for (fastEIT::dtype::size k = 0; k < n - 1; ++k) {
+                // find index of maximum pivot
+                auto pivot_index = k;
+                for (fastEIT::dtype::size i = k; i < n; ++i) {
+                    pivot_index = std::abs(matrix[i][k]) > std::abs(matrix[pivot_index][k]) ?
+                        i : pivot_index;
+                }
+
+                // swap rows
+                for (fastEIT::dtype::index i = 0; i < n; ++i) {
+                    std::tie(matrix[pivot_index][i], matrix[k][i]) =
+                        std::make_tuple(matrix[k][i], matrix[pivot_index][i]);
+                }
+                std::tie(excitation[pivot_index], excitation[k]) =
+                    std::make_tuple(excitation[k], excitation[pivot_index]);
+
                 for (fastEIT::dtype::size i = k + 1; i < n; ++i) {
                     x = matrix[i][k] / matrix[k][k];
 
-                    for (fastEIT::dtype::size j = k + 1; j < n; ++j) {
+                    for (fastEIT::dtype::size j = k; j < n; ++j) {
                         matrix[i][j] = matrix[i][j] - matrix[k][j] * x;
                     }
                     excitation[i] = excitation[i] - excitation[k] * x;
