@@ -293,3 +293,4 @@ template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const std::sha
     const std::shared_ptr<SparseMatrix>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::index>>);
 
 template class fastEIT::Model<fastEIT::basis::Linear>;
+template class fastEIT::Model<fastEIT::basis::Quadratic>;

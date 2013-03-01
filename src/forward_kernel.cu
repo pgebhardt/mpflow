@@ -99,3 +99,7 @@ template void fastEIT::forwardKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);
+template void fastEIT::forwardKernel::calcJacobian<6>(dim3, dim3, cudaStream_t,
+    const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
+    const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
+    dtype::size, dtype::size, bool, dtype::real*);

@@ -274,6 +274,12 @@ template void fastEIT::forward::calcJacobian<fastEIT::Model<fastEIT::basis::Line
     const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
     const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
+template void fastEIT::forward::calcJacobian<fastEIT::Model<fastEIT::basis::Quadratic>>(
+    const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
+    const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
+    dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
 
 template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
     fastEIT::Model<fastEIT::basis::Linear>>;
+template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
+    fastEIT::Model<fastEIT::basis::Quadratic>>;
