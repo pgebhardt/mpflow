@@ -138,3 +138,35 @@ TEST(MeshTest, BoundaryNodes) {
     // check error
     EXPECT_THROW(mesh->boundaryNodes(boundary->rows()), std::invalid_argument);
 };
+
+TEST(MeshTest, QuadraticBasis) {
+    // create a standard 2D mesh for linear basis functions
+    auto nodes = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(5, 2, nullptr);
+    std::tie((*nodes)(0, 0), (*nodes)(0, 1)) = std::make_tuple(0.0, 0.0);
+    std::tie((*nodes)(1, 0), (*nodes)(1, 1)) = std::make_tuple(0.0, 1.0);
+    std::tie((*nodes)(2, 0), (*nodes)(2, 1)) = std::make_tuple(1.0, 0.0);
+    std::tie((*nodes)(3, 0), (*nodes)(3, 1)) = std::make_tuple(0.0, -1.0);
+    std::tie((*nodes)(4, 0), (*nodes)(4, 1)) = std::make_tuple(-1.0, 0.0);
+
+    auto elements = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(4, 3, nullptr);
+    std::tie((*elements)(0, 0), (*elements)(0, 1), (*elements)(0, 2)) = std::make_tuple(0, 1, 2);
+    std::tie((*elements)(1, 0), (*elements)(1, 1), (*elements)(1, 2)) = std::make_tuple(0, 2, 3);
+    std::tie((*elements)(2, 0), (*elements)(2, 1), (*elements)(2, 2)) = std::make_tuple(0, 3, 4);
+    std::tie((*elements)(3, 0), (*elements)(3, 1), (*elements)(3, 2)) = std::make_tuple(0, 4, 1);
+
+    auto boundary = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(4, 2, nullptr);
+    std::tie((*boundary)(0, 0), (*boundary)(0, 1)) = std::make_tuple(1, 2);
+    std::tie((*boundary)(1, 0), (*boundary)(1, 1)) = std::make_tuple(2, 3);
+    std::tie((*boundary)(2, 0), (*boundary)(2, 1)) = std::make_tuple(3, 4);
+    std::tie((*boundary)(3, 0), (*boundary)(3, 1)) = std::make_tuple(4, 1);
+
+    // create mesh for quadratic basis functions
+    std::shared_ptr<fastEIT::Mesh> mesh = nullptr;
+    EXPECT_NO_THROW({
+        mesh = fastEIT::mesh::quadraticBasis(nodes, elements, boundary,
+            1.0, 1.0);
+    });
+
+    // check count of nodes to prove no unneccessary nodes are created
+    EXPECT_EQ(mesh->nodes()->rows(), 13);
+};
