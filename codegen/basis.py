@@ -33,16 +33,18 @@ def coefficients(points, function):
             c = [0.0] * len(points)
             c[j] = 1.0
             N.append(function(points[i], c))
-        M.append(N)
+        M.append(N + [0.0])
     M = Matrix(M)
 
-    # create vector
-    V = 1.0 * eye(len(points))
-
     # calc coefficients
-    C = M.LUsolve(V)
+    C = []
+    c = [Symbol('c_{}'.format(i)) for i in range(len(points))]
+    for i in range(len(points)):
+        M[i, len(points)] = 1.0
+        C.append(solve_linear_system(M, *c).values())
+        M[i, len(points)] = 0.0
 
-    return C.transpose().tolist()
+    return C
 
 class Basis(object):
     def __init__(self, name, nodes_per_element, nodes_per_edge,
@@ -123,7 +125,6 @@ class Basis(object):
             name=self.name,
 
             # coefficients in constructor
-            #coefficients=coefficients(points_args, self.basis_function),
             coefficients=[
                 expressionize(self.basis_function)(
                     ['std::get<0>(this->nodes()[node])', 'std::get<1>(this->nodes()[node])'],
