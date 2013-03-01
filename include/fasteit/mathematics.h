@@ -28,7 +28,7 @@ namespace fastEIT {
 
         // round to size
         inline dtype::size roundTo(dtype::size size, dtype::size block_size) {
-            return (size / block_size + 1) * block_size;
+            return size == 0 ? 0 : (size / block_size + 1) * block_size;
         }
 
         // simple gauss elemination
