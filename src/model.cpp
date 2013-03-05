@@ -76,26 +76,29 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     // create intermediate matrices
     auto element_count = std::make_shared<Matrix<dtype::index>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-    auto connectivity_matrix = std::make_shared<Matrix<dtype::index>>(
-        this->connectivity_matrix()->data_rows(),
-        element_count->data_columns() * fastEIT::matrix::block_size, stream);
-    auto elemental_s_matrix = std::make_shared<Matrix<dtype::real>>(
-        this->elemental_s_matrix()->data_rows(),
-        element_count->data_columns() * fastEIT::matrix::block_size, stream);
-    auto elemental_r_matrix = std::make_shared<Matrix<dtype::real>>(
-        this->elemental_r_matrix()->data_rows(),
-        element_count->data_columns() * fastEIT::matrix::block_size, stream);
+
+    std::vector<std::shared_ptr<Matrix<dtype::index>>> connectivity_matrices;
+    std::vector<std::shared_ptr<Matrix<dtype::real>>> elemental_s_matrices,
+        elemental_r_matrices;
+    for (dtype::index i = 0; i < matrix::block_size; ++i) {
+        connectivity_matrices.push_back(std::make_shared<Matrix<dtype::index>>(
+            this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
+        elemental_s_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
+            this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
+        elemental_r_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
+            this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
+    }
 
     // init connectivityMatrix
-    for (dtype::size i = 0; i < connectivity_matrix->rows(); ++i) {
-        for (dtype::size j = 0; j < connectivity_matrix->columns(); ++j) {
-            (*connectivity_matrix)(i, j) = -1;
+    for (dtype::index row = 0; row < this->mesh()->nodes()->rows(); ++row)
+    for (dtype::index column = 0; column < this->mesh()->nodes()->rows(); ++column) {
+        for (auto connectivity_matrix : connectivity_matrices) {
+            (*connectivity_matrix)(row, column) = dtype::invalid_index;
         }
     }
-    for (dtype::size i = 0; i < this->connectivity_matrix()->rows(); ++i) {
-        for (dtype::size j = 0; j < this->connectivity_matrix()->columns(); ++j) {
-            (*this->connectivity_matrix())(i, j) =  -1;
-        }
+    for (dtype::index row = 0; row < this->connectivity_matrix()->rows(); ++row)
+    for (dtype::index column = 0; column < this->connectivity_matrix()->columns(); ++column) {
+        (*this->connectivity_matrix())(row, column) = dtype::invalid_index;
     }
     this->connectivity_matrix()->copyToDevice(stream);
 
@@ -127,17 +130,15 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
                 temp = (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
 
                 // set connectivity element
-                (*connectivity_matrix)(std::get<0>(nodes[i]), std::get<0>(
-                    nodes[j]) + connectivity_matrix->data_rows() * temp) = element;
+                (*connectivity_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                    element;
 
                 // set elemental system element
-                (*elemental_s_matrix)(std::get<0>(nodes[i]), std::get<0>(
-                    nodes[j]) + connectivity_matrix->data_rows() * temp) =
+                (*elemental_s_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
                     basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
 
                 // set elemental residual element
-                (*elemental_r_matrix)(std::get<0>(nodes[i]), std::get<0>(
-                    nodes[j]) + connectivity_matrix->data_rows() * temp) =
+                (*elemental_r_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
                     basis_functions[i]->integrateWithBasis(basis_functions[j]);
 
                 // increment element count
@@ -147,9 +148,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     }
 
     // upload intermediate matrices
-    connectivity_matrix->copyToDevice(stream);
-    elemental_s_matrix->copyToDevice(stream);
-    elemental_r_matrix->copyToDevice(stream);
+    for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
+        connectivity_matrices[i]->copyToDevice(stream);
+        elemental_s_matrices[i]->copyToDevice(stream);
+        elemental_r_matrices[i]->copyToDevice(stream);
+    }
 
     // determine nodes with common element
     auto common_element_matrix = std::make_shared<Matrix<dtype::real>>(
@@ -174,12 +177,14 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
 
     // reduce matrices
-    model::reduceMatrix(connectivity_matrix, this->s_matrix(), stream,
-        this->connectivity_matrix());
-    model::reduceMatrix(elemental_s_matrix, this->s_matrix(), stream,
-        this->elemental_s_matrix());
-    model::reduceMatrix(elemental_r_matrix, this->s_matrix(), stream,
-        this->elemental_r_matrix());
+    for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
+        model::reduceMatrix(connectivity_matrices[i], this->s_matrix(), i, stream,
+            this->connectivity_matrix());
+        model::reduceMatrix(elemental_s_matrices[i], this->s_matrix(), i, stream,
+            this->elemental_s_matrix());
+        model::reduceMatrix(elemental_r_matrices[i], this->s_matrix(), i, stream,
+            this->elemental_r_matrix());
+    }
 
     return common_element_matrix;
 }
@@ -233,8 +238,8 @@ template <
     class type
 >
 void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
-    const std::shared_ptr<SparseMatrix<dtype::real>> shape, cudaStream_t stream,
-    std::shared_ptr<Matrix<type>> matrix) {
+    const std::shared_ptr<SparseMatrix<dtype::real>> shape, dtype::index offset,
+    cudaStream_t stream, std::shared_ptr<Matrix<type>> matrix) {
     // check input
     if (intermediateMatrix == nullptr) {
         throw std::invalid_argument("model::reduceMatrix: intermediateMatrix == nullptr");
@@ -253,7 +258,7 @@ void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermedia
     // reduce matrix
     modelKernel::reduceMatrix<type>(blocks, threads, stream,
         intermediateMatrix->device_data(), shape->column_ids(), matrix->data_rows(),
-        matrix->device_data());
+        offset, matrix->device_data());
 }
 
 // update matrix
@@ -288,9 +293,11 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
 
 // specialisation
 template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(const std::shared_ptr<Matrix<fastEIT::dtype::real>>,
-    const std::shared_ptr<SparseMatrix<dtype::real>>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::real>>);
+    const std::shared_ptr<SparseMatrix<dtype::real>>, fastEIT::dtype::index, cudaStream_t,
+    std::shared_ptr<Matrix<fastEIT::dtype::real>>);
 template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const std::shared_ptr<Matrix<fastEIT::dtype::index>>,
-    const std::shared_ptr<SparseMatrix<dtype::real>>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::index>>);
+    const std::shared_ptr<SparseMatrix<dtype::real>>, fastEIT::dtype::index, cudaStream_t,
+    std::shared_ptr<Matrix<fastEIT::dtype::index>>);
 
 template class fastEIT::Model<fastEIT::basis::Linear>;
 template class fastEIT::Model<fastEIT::basis::Quadratic>;

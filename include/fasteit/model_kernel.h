@@ -15,12 +15,12 @@ namespace fastEIT {
             class type
         >
         void reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* intermediateMatrix, const dtype::index* systemMatrixColumnIds,
-            dtype::size rows, type* matrix);
+            const type* intermediate_matrix, const dtype::index* column_ids,
+            dtype::size rows, dtype::index offset, type* matrix);
 
         // update matrix kernel
         void updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const dtype::index* connectivityMatrix, const dtype::real* elementalMatrix,
+            const dtype::index* connectivity_matrix, const dtype::real* elemental_matrix,
             const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows,
             dtype::real* matrix_values);
     }
