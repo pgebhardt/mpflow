@@ -28,9 +28,9 @@ namespace fastEIT {
         // accessors
         const std::shared_ptr<Mesh> mesh() const { return this->mesh_; }
         const std::shared_ptr<Electrodes> electrodes() const { return this->electrodes_; }
-        const std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
-        const std::shared_ptr<SparseMatrix> s_matrix() const { return this->s_matrix_; }
-        const std::shared_ptr<SparseMatrix> r_matrix() const { return this->r_matrix_; }
+        const std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
+        const std::shared_ptr<SparseMatrix<dtype::real>> s_matrix() const { return this->s_matrix_; }
+        const std::shared_ptr<SparseMatrix<dtype::real>> r_matrix() const { return this->r_matrix_; }
         const std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() const { return this->connectivity_matrix_; }
         const std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix() const { return this->elemental_s_matrix_; }
         const std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() const { return this->elemental_r_matrix_; }
@@ -40,9 +40,9 @@ namespace fastEIT {
         // mutators
         std::shared_ptr<Mesh> mesh() { return this->mesh_; }
         std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
-        std::shared_ptr<SparseMatrix> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
-        std::shared_ptr<SparseMatrix> s_matrix() { return this->s_matrix_; }
-        std::shared_ptr<SparseMatrix> r_matrix() { return this->r_matrix_; }
+        std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
+        std::shared_ptr<SparseMatrix<dtype::real>> s_matrix() { return this->s_matrix_; }
+        std::shared_ptr<SparseMatrix<dtype::real>> r_matrix() { return this->r_matrix_; }
         std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() { return this->connectivity_matrix_; }
         std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix() { return this->elemental_s_matrix_; }
         std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() { return this->elemental_r_matrix_; }
@@ -58,9 +58,9 @@ namespace fastEIT {
         // member
         std::shared_ptr<Mesh> mesh_;
         std::shared_ptr<Electrodes> electrodes_;
-        std::vector<std::shared_ptr<SparseMatrix>> system_matrices_;
-        std::shared_ptr<SparseMatrix> s_matrix_;
-        std::shared_ptr<SparseMatrix> r_matrix_;
+        std::vector<std::shared_ptr<SparseMatrix<dtype::real>>> system_matrices_;
+        std::shared_ptr<SparseMatrix<dtype::real>> s_matrix_;
+        std::shared_ptr<SparseMatrix<dtype::real>> r_matrix_;
         std::shared_ptr<Matrix<dtype::index>> connectivity_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix_;
@@ -74,14 +74,14 @@ namespace fastEIT {
         void updateMatrix(const std::shared_ptr<Matrix<dtype::real>> elements,
             const std::shared_ptr<Matrix<dtype::real>> gamma,
             const std::shared_ptr<Matrix<dtype::index>> connectivityMatrix, dtype::real sigmaRef,
-            cudaStream_t stream, std::shared_ptr<SparseMatrix> matrix);
+            cudaStream_t stream, std::shared_ptr<SparseMatrix<dtype::real>> matrix);
 
         // reduce matrix
         template <
             class type
         >
         void reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
-            const std::shared_ptr<SparseMatrix> shape, cudaStream_t stream,
+            const std::shared_ptr<SparseMatrix<dtype::real>> shape, cudaStream_t stream,
             std::shared_ptr<Matrix<type>> matrix);
     }
 }

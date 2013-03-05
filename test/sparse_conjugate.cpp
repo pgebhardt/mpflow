@@ -45,7 +45,7 @@ TEST(SparseConjugateTest, Solve) {
         std::make_tuple(-0.2f, 0.4f, -0.6f, 0.8f);
 
     A_dense->copyToDevice(nullptr);
-    auto A = std::make_shared<fastEIT::SparseMatrix>(A_dense, nullptr);
+    auto A = std::make_shared<fastEIT::SparseMatrix<fastEIT::dtype::real>>(A_dense, nullptr);
 
     // excitation
     auto f = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(4, 4, nullptr);

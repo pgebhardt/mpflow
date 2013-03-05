@@ -57,7 +57,7 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
 
     // create sparse matrices
     for (dtype::index component = 0; component < this->components_count(); ++component) {
-        this->system_matrices_.push_back(std::make_shared<SparseMatrix>(common_element_matrix, stream));
+        this->system_matrices_.push_back(std::make_shared<SparseMatrix<dtype::real>>(common_element_matrix, stream));
     }
 
     // create gamma
@@ -170,8 +170,8 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     common_element_matrix->copyToDevice(stream);
 
     // create sparse matrices
-    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix>(common_element_matrix, stream);
-    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix>(common_element_matrix, stream);
+    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
+    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
 
     // reduce matrices
     model::reduceMatrix(connectivity_matrix, this->s_matrix(), stream,
@@ -233,7 +233,7 @@ template <
     class type
 >
 void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
-    const std::shared_ptr<SparseMatrix> shape, cudaStream_t stream,
+    const std::shared_ptr<SparseMatrix<dtype::real>> shape, cudaStream_t stream,
     std::shared_ptr<Matrix<type>> matrix) {
     // check input
     if (intermediateMatrix == nullptr) {
@@ -261,7 +261,7 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
     const std::shared_ptr<Matrix<dtype::real>> gamma,
     const std::shared_ptr<Matrix<dtype::index>> connectivityMatrix,
     dtype::real sigmaRef, cudaStream_t stream,
-    std::shared_ptr<SparseMatrix> matrix) {
+    std::shared_ptr<SparseMatrix<dtype::real>> matrix) {
     // check input
     if (elements == nullptr) {
         throw std::invalid_argument("model::updateMatrix: elements == nullptr");
@@ -288,9 +288,9 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
 
 // specialisation
 template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(const std::shared_ptr<Matrix<fastEIT::dtype::real>>,
-    const std::shared_ptr<SparseMatrix>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::real>>);
+    const std::shared_ptr<SparseMatrix<dtype::real>>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::real>>);
 template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(const std::shared_ptr<Matrix<fastEIT::dtype::index>>,
-    const std::shared_ptr<SparseMatrix>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::index>>);
+    const std::shared_ptr<SparseMatrix<dtype::real>>, cudaStream_t, std::shared_ptr<Matrix<fastEIT::dtype::index>>);
 
 template class fastEIT::Model<fastEIT::basis::Linear>;
 template class fastEIT::Model<fastEIT::basis::Quadratic>;

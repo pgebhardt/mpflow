@@ -27,7 +27,7 @@ fastEIT::numeric::SparseConjugate::SparseConjugate(dtype::size rows,
 }
 
 // solve conjugate sparse
-void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix> A,
+void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix<dtype::real>> A,
     const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations, bool dcFree,
     cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
     // check input
