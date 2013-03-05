@@ -81,8 +81,8 @@ namespace fastEIT {
             class type
         >
         void reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
-            const std::shared_ptr<SparseMatrix<dtype::real>> shape, cudaStream_t stream,
-            std::shared_ptr<Matrix<type>> matrix);
+            const std::shared_ptr<SparseMatrix<dtype::real>> shape, dtype::index offset,
+            cudaStream_t stream, std::shared_ptr<Matrix<type>> matrix);
     }
 }
 
