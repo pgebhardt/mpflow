@@ -9,6 +9,9 @@
 // namespace fastEIT
 namespace fastEIT {
     // sparse matrix class definition
+    template <
+        class type = fastEIT::dtype::real
+    >
     class SparseMatrix {
     public:
         // constructor and destructor
@@ -16,15 +19,15 @@ namespace fastEIT {
             this->init(rows, columns);
         }
 
-        SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream);
+        SparseMatrix(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);
         virtual ~SparseMatrix();
 
         // convert to matrix
-        std::shared_ptr<Matrix<dtype::real>> toMatrix(cudaStream_t stream);
+        std::shared_ptr<Matrix<type>> toMatrix(cudaStream_t stream);
 
         // matrix multiply
-        void multiply(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream,
-            std::shared_ptr<Matrix<dtype::real>> result) const;
+        void multiply(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream,
+            std::shared_ptr<Matrix<type>> result) const;
 
         // accessors
         dtype::size rows() const { return this->rows_; }
@@ -32,11 +35,11 @@ namespace fastEIT {
         dtype::size data_rows() const { return this->data_rows_; }
         dtype::size data_columns() const { return this->data_columns_; }
         dtype::size density() const { return this->density_; }
-        const dtype::real* values() const { return this->values_; }
+        const type* values() const { return this->values_; }
         const dtype::index* column_ids() const { return this->column_ids_; }
 
         // mutators:
-        dtype::real* values() { return this->values_; }
+        type* values() { return this->values_; }
         dtype::index* column_ids() { return this->column_ids_; }
         dtype::size& density() { return this->density_; }
 
@@ -45,7 +48,7 @@ namespace fastEIT {
         void init(dtype::size rows, dtype::size columns);
 
         // convert to sparse matrix
-        void convert(const std::shared_ptr<Matrix<dtype::real>> matrix, cudaStream_t stream);
+        void convert(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);
 
         // member
         dtype::size rows_;
@@ -53,7 +56,7 @@ namespace fastEIT {
         dtype::size data_rows_;
         dtype::size data_columns_;
         dtype::size density_;
-        dtype::real* values_;
+        type* values_;
         dtype::index* column_ids_;
     };
 }

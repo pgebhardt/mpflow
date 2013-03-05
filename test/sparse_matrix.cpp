@@ -57,9 +57,9 @@ TEST_F(SparseMatrixTest, Constructor) {
     auto matrix = randomMatrix(30, 10, nullptr);
 
     // create sparse matrix
-    std::shared_ptr<fastEIT::SparseMatrix> sparse_matrix = nullptr;
+    std::shared_ptr<fastEIT::SparseMatrix<fastEIT::dtype::real>> sparse_matrix = nullptr;
     EXPECT_NO_THROW({
-        sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(matrix, nullptr);
+        sparse_matrix = std::make_shared<fastEIT::SparseMatrix<fastEIT::dtype::real>>(matrix, nullptr);
     });
 
     // check member
@@ -69,7 +69,7 @@ TEST_F(SparseMatrixTest, Constructor) {
 
     // check error
     EXPECT_THROW(
-        std::make_shared<fastEIT::SparseMatrix>(nullptr, nullptr),
+        std::make_shared<fastEIT::SparseMatrix<fastEIT::dtype::real>>(nullptr, nullptr),
         std::invalid_argument);
 }
 
@@ -78,7 +78,7 @@ TEST_F(SparseMatrixTest, Convert) {
     auto dense = randomMatrix(10, 8, nullptr);
 
     // create sparse matrix
-    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(dense, nullptr);
+    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix<fastEIT::dtype::real>>(dense, nullptr);
 
     // convert to matrix and compare
     auto convert = sparse_matrix->toMatrix(nullptr);
@@ -93,7 +93,7 @@ TEST_F(SparseMatrixTest, Convert) {
     dense = randomMatrix(10, fastEIT::sparseMatrix::block_size * 2, nullptr);
 
     // convert to sparse matrix
-    sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(dense, nullptr);
+    sparse_matrix = std::make_shared<fastEIT::SparseMatrix<fastEIT::dtype::real>>(dense, nullptr);
 
     // convert to matrix and compare
     convert = sparse_matrix->toMatrix(nullptr);
@@ -111,7 +111,7 @@ TEST_F(SparseMatrixTest, MatrixVectorMultiply) {
     auto vector = randomMatrix(10, 1, nullptr);
 
     // create sparse matrix
-    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(matrix, nullptr);
+    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix<fastEIT::dtype::real>>(matrix, nullptr);
 
     // multiply
     auto result_GPU = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(20, 1, nullptr);
@@ -150,7 +150,7 @@ TEST_F(SparseMatrixTest, MatrixMatrixMultiply) {
     auto vector = randomMatrix(10, 4, nullptr);
 
     // create sparse matrix
-    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix>(matrix, nullptr);
+    auto sparse_matrix = std::make_shared<fastEIT::SparseMatrix<fastEIT::dtype::real>>(matrix, nullptr);
 
     // multiply
     auto result_GPU = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(20, 4, nullptr);

@@ -7,7 +7,10 @@
 #include "fasteit/sparse_matrix_kernel.h"
 
 // create new sparse matrix
-fastEIT::SparseMatrix::SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> matrix,
+template <
+    class type
+>
+fastEIT::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<type>> matrix,
     cudaStream_t stream) {
     // check input
     if (matrix == nullptr) {
@@ -22,7 +25,10 @@ fastEIT::SparseMatrix::SparseMatrix(const std::shared_ptr<Matrix<dtype::real>> m
 }
 
 // create empty sparse matrix
-void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns) {
+template <
+    class type
+>
+void fastEIT::SparseMatrix<type>::init(dtype::size rows, dtype::size columns) {
     // check input
     if (rows == 0) {
         throw std::invalid_argument("SparseMatrix::init: rows == 0");
@@ -50,7 +56,7 @@ void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns) {
 
 
     // create matrices
-    if (cudaMalloc((void**)&this->values_, sizeof(dtype::real) *
+    if (cudaMalloc((void**)&this->values_, sizeof(type) *
         this->data_rows() * sparseMatrix::block_size) != cudaSuccess) {
         throw std::logic_error("SparseMatrix::init: create memory");
     }
@@ -62,7 +68,10 @@ void fastEIT::SparseMatrix::init(dtype::size rows, dtype::size columns) {
 }
 
 // release sparse matrix
-fastEIT::SparseMatrix::~SparseMatrix() {
+template <
+    class type
+>
+fastEIT::SparseMatrix<type>::~SparseMatrix() {
     // release matrices
     cudaFree(this->values_);
     cudaFree(this->column_ids_);
@@ -70,7 +79,10 @@ fastEIT::SparseMatrix::~SparseMatrix() {
 }
 
 // convert to sparse matrix
-void fastEIT::SparseMatrix::convert(const std::shared_ptr<Matrix<dtype::real>> matrix,
+template <
+    class type
+>
+void fastEIT::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<type>> matrix,
     cudaStream_t stream) {
     // check input
     if (matrix == nullptr) {
@@ -97,10 +109,13 @@ void fastEIT::SparseMatrix::convert(const std::shared_ptr<Matrix<dtype::real>> m
 }
 
 // convert to matrix
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::SparseMatrix::toMatrix(
+template <
+    class type
+>
+std::shared_ptr<fastEIT::Matrix<type>> fastEIT::SparseMatrix<type>::toMatrix(
     cudaStream_t stream) {
     // create empty matrix
-    auto matrix = std::make_shared<Matrix<dtype::real>>(this->rows(),
+    auto matrix = std::make_shared<Matrix<type>>(this->rows(),
         this->columns(), stream);
 
     // convert to matrix
@@ -112,8 +127,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::SparseMatrix::to
 }
 
 // sparse matrix multiply
-void fastEIT::SparseMatrix::multiply(const std::shared_ptr<Matrix<dtype::real>> matrix,
-    cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> result) const {
+template <
+    class type
+>
+void fastEIT::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<type>> matrix,
+    cudaStream_t stream, std::shared_ptr<Matrix<type>> result) const {
     // check input
     if (matrix == nullptr) {
         throw std::invalid_argument("SparseMatrix::multiply: matrix == nullptr");
@@ -139,3 +157,7 @@ void fastEIT::SparseMatrix::multiply(const std::shared_ptr<Matrix<dtype::real>> 
         matrix->device_data(), result->data_rows(), matrix->data_rows(),
         result->data_columns(), this->density(), result->device_data());
 }
+
+// specialisations
+template class fastEIT::SparseMatrix<fastEIT::dtype::real>;
+template class fastEIT::SparseMatrix<fastEIT::dtype::index>;

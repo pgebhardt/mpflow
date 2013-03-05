@@ -17,9 +17,12 @@
 #include "fasteit/sparse_matrix_kernel.h"
 
 // convert to sparse matrix kernel
-static __global__ void convertKernel(const fastEIT::dtype::real* matrix,
+template <
+    class type
+>
+static __global__ void convertKernel(const type* matrix,
     fastEIT::dtype::size rows, fastEIT::dtype::size columns,
-    fastEIT::dtype::real* values, fastEIT::dtype::index* columnIds,
+    type* values, fastEIT::dtype::index* columnIds,
     fastEIT::dtype::index* elementCount) {
     // get id
     fastEIT::dtype::index i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -34,7 +37,7 @@ static __global__ void convertKernel(const fastEIT::dtype::real* matrix,
     }
 
     // search non-zero elements
-    fastEIT::dtype::real element = 0.0f;
+    type element = 0.0f;
     for (fastEIT::dtype::index j = 0; j < columns; j++) {
         // get element
         element = matrix[i + j * rows];
@@ -59,20 +62,26 @@ static __global__ void convertKernel(const fastEIT::dtype::real* matrix,
 }
 
 // convert to sparse matrix kernel wrapper
+template <
+    class type
+>
 void fastEIT::sparseMatrixKernel::convert(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const dtype::real* matrix, dtype::size rows, dtype::size columns,
-    dtype::real* values, dtype::index* columnIds, dtype::index* elementCount) {
+    const type* matrix, dtype::size rows, dtype::size columns,
+    type* values, dtype::index* columnIds, dtype::index* elementCount) {
     // call cuda kernel
-    convertKernel<<<blocks, threads, 0, stream>>>(matrix, rows, columns,
+    convertKernel<type><<<blocks, threads, 0, stream>>>(matrix, rows, columns,
         values, columnIds, elementCount);
 
     CudaCheckError();
 }
 
 // convert to matrix kernel
-static __global__ void convertToMatrixKernel(const fastEIT::dtype::real* values,
+template <
+    class type
+>
+static __global__ void convertToMatrixKernel(const type* values,
     const fastEIT::dtype::index* column_ids, fastEIT::dtype::size density,
-    fastEIT::dtype::size rows, fastEIT::dtype::real* matrix) {
+    fastEIT::dtype::size rows, type* matrix) {
     // get row id
     fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -91,33 +100,39 @@ static __global__ void convertToMatrixKernel(const fastEIT::dtype::real* values,
 }
 
 // convert to matrix kernel wrapper
+template <
+    class type
+>
 void fastEIT::sparseMatrixKernel::convertToMatrix(dim3 blocks, dim3 threads,
-    cudaStream_t stream, const dtype::real* values, const dtype::index* column_ids,
-    dtype::size density, dtype::size rows, dtype::real* matrix) {
+    cudaStream_t stream, const type* values, const dtype::index* column_ids,
+    dtype::size density, dtype::size rows, type* matrix) {
     // call cuda kernel
-    convertToMatrixKernel<<<blocks, threads, 0, stream>>>(values, column_ids,
+    convertToMatrixKernel<type><<<blocks, threads, 0, stream>>>(values, column_ids,
         density, rows, matrix);
 
     CudaCheckError();
 }
 
 // sparse matrix multiply kernel
-static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
-    const fastEIT::dtype::index* columnIds, const fastEIT::dtype::real* matrix,
+template <
+    class type
+>
+static __global__ void multiplyKernel(const type* values,
+    const fastEIT::dtype::index* columnIds, const type* matrix,
     fastEIT::dtype::size result_rows, fastEIT::dtype::size matrix_rows,
-    fastEIT::dtype::size columns, fastEIT::dtype::size density, fastEIT::dtype::real* result) {
+    fastEIT::dtype::size columns, fastEIT::dtype::size density, type* result) {
     // get ids
     fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc result
-    fastEIT::dtype::real res = 0.0f;
+    type res = 0.0f;
     fastEIT::dtype::index id = fastEIT::dtype::invalid_index;
 
     // read column ids to local memory
     __shared__ fastEIT::dtype::index columnId[
         fastEIT::sparseMatrix::block_size * fastEIT::sparseMatrix::block_size];
-    __shared__ fastEIT::dtype::real value[
+    __shared__ type value[
         fastEIT::sparseMatrix::block_size * fastEIT::sparseMatrix::block_size];
 
     columnId[threadIdx.x * fastEIT::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
@@ -146,13 +161,43 @@ static __global__ void multiplyKernel(const fastEIT::dtype::real* values,
 }
 
 // sparse matrix multiply kernel wrapper
+template <
+    class type
+>
 void fastEIT::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const dtype::real* values, const dtype::index* columnIds,
-    const dtype::real* matrix, dtype::size result_rows, dtype::size matrix_rows,
-    dtype::size columns, dtype::size density, dtype::real* result) {
+    const type* values, const dtype::index* columnIds,
+    const type* matrix, dtype::size result_rows, dtype::size matrix_rows,
+    dtype::size columns, dtype::size density, type* result) {
     // call cuda kernel
-    multiplyKernel<<<blocks, threads, 0, stream>>>(values, columnIds, matrix,
+    multiplyKernel<type><<<blocks, threads, 0, stream>>>(values, columnIds, matrix,
         result_rows, matrix_rows, columns, density, result);
 
     CudaCheckError();
 }
+
+// specialisations
+// convert to sparse matrix kernel
+template void fastEIT::sparseMatrixKernel::convert<fastEIT::dtype::real>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::real*, fastEIT::dtype::size, fastEIT::dtype::size,
+    fastEIT::dtype::real*, fastEIT::dtype::index*, fastEIT::dtype::index*);
+template void fastEIT::sparseMatrixKernel::convert<fastEIT::dtype::index>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::index*, fastEIT::dtype::size, fastEIT::dtype::size,
+    fastEIT::dtype::index*, fastEIT::dtype::index*, fastEIT::dtype::index*);
+
+// convertToMatrix kernel
+template void fastEIT::sparseMatrixKernel::convertToMatrix<fastEIT::dtype::real>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::real*, const fastEIT::dtype::index*,
+    fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::real* matrix);
+template void fastEIT::sparseMatrixKernel::convertToMatrix<fastEIT::dtype::index>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::index*, const fastEIT::dtype::index*,
+    fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::index* matrix);
+
+// multiply kernel
+template void fastEIT::sparseMatrixKernel::multiply<fastEIT::dtype::real>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::real*, const fastEIT::dtype::index*,
+    const fastEIT::dtype::real*, fastEIT::dtype::size, fastEIT::dtype::size,
+    fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::real*);
+template void fastEIT::sparseMatrixKernel::multiply<fastEIT::dtype::index>(dim3, dim3,
+    cudaStream_t, const fastEIT::dtype::index*, const fastEIT::dtype::index*,
+    const fastEIT::dtype::index*, fastEIT::dtype::size, fastEIT::dtype::size,
+    fastEIT::dtype::size, fastEIT::dtype::size, fastEIT::dtype::index*);
