@@ -124,26 +124,25 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
         }
 
         // set connectivity and elemental residual matrix elements
-        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; i++) {
-            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++) {
-                // get current element count
-                temp = (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; i++)
+        for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++) {
+            // get current element count
+            temp = (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
 
-                // set connectivity element
-                (*connectivity_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                    element;
+            // set connectivity element
+            (*connectivity_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                element;
 
-                // set elemental system element
-                (*elemental_s_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                    basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
+            // set elemental system element
+            (*elemental_s_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
 
-                // set elemental residual element
-                (*elemental_r_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                    basis_functions[i]->integrateWithBasis(basis_functions[j]);
+            // set elemental residual element
+            (*elemental_r_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                basis_functions[i]->integrateWithBasis(basis_functions[j]);
 
-                // increment element count
-                (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]))++;
-            }
+            // increment element count
+            (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]))++;
         }
     }
 
@@ -162,10 +161,9 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
         nodes = this->mesh()->elementNodes(element);
 
         // set system matrix elements
-        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i) {
-            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
-                (*common_element_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
-            }
+        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i)
+        for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
+            (*common_element_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
         }
     }
 
@@ -176,7 +174,8 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
     this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
 
-    // reduce matrices
+    // store all elemental matrices in one matrix for each type in a sparse
+    // matrix like format
     for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
         model::reduceMatrix(connectivity_matrices[i], this->s_matrix(), i, stream,
             this->connectivity_matrix());
