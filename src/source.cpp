@@ -40,7 +40,7 @@ fastEIT::source::Source<model_type>::Source(std::string type, dtype::real value,
 
     // excitation matrices
     for (dtype::index component = 0;
-        component < this->model()->components_count() + 1;
+        component < this->model()->components_count();
         ++component) {
         this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->model()->mesh()->nodes()->rows(),
@@ -169,7 +169,7 @@ void fastEIT::source::Current<model_type>::updateExcitation(
 
     // update excitation
     // calc excitation components
-    for (dtype::index component = 0; component < this->model()->components_count() + 1; ++component) {
+    for (dtype::index component = 0; component < this->model()->components_count(); ++component) {
         // set excitation
         this->excitation(component)->multiply(this->excitation_matrix(),
             this->pattern(), handle, stream);
