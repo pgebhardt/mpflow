@@ -51,7 +51,7 @@ TEST(ElectrodesTest, CircularBoundary) {
         // check length
         EXPECT_LT(std::abs(1.0f * std::fmod(
             std::abs(std::get<1>(start) - std::get<1>(end)),
-                (fastEIT::dtype::real)(2.0 * M_PI)) - 0.05f), 1e6);
+                (fastEIT::dtype::real)(2.0 * M_PI)) - 0.05f), 1e-6);
     }
 
     // check invalid arguments
