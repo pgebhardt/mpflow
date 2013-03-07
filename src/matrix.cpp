@@ -15,7 +15,8 @@
 template<
     class type
 >
-fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream)
+fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream,
+    type value)
     : host_data_(nullptr), device_data_(nullptr), rows_(rows), columns_(columns),
         data_rows_(rows), data_columns_(columns) {
     // check input
@@ -62,7 +63,7 @@ fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_
     // init data with 0.0
     for (dtype::size i = 0; i < this->data_rows(); i++) {
         for (dtype::size j = 0; j < this->data_columns(); j++) {
-            this->host_data()[i + this->data_rows() * j] = 0.0;
+            this->host_data()[i + this->data_rows() * j] = value;
         }
     }
     this->copyToDevice(stream);

@@ -22,7 +22,7 @@ namespace fastEIT {
         void updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
             const dtype::index* connectivity_matrix, const dtype::real* elemental_matrix,
             const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows,
-            dtype::real* matrix_values);
+            dtype::size columns, dtype::real* matrix_values);
     }
 }
 

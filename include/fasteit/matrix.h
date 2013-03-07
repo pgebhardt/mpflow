@@ -15,7 +15,8 @@ namespace fastEIT {
     class Matrix {
     public:
         // constructor and destructor
-        Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream);
+        Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream,
+            type value=0);
         virtual ~Matrix();
 
         // copy methods
