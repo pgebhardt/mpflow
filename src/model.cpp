@@ -1,6 +1,6 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include "fasteit/fasteit.h"
@@ -29,14 +29,6 @@ fastEIT::Model<basis_function_type>::Model(
     if (handle == NULL) {
         throw std::invalid_argument("Model::Model: handle == NULL");
     }
-
-    // create matrices
-    this->connectivity_matrix_ = std::make_shared<Matrix<dtype::index>>(this->mesh()->nodes()->rows(),
-        sparseMatrix::block_size * matrix::block_size, stream);
-    this->elemental_s_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-        sparseMatrix::block_size * matrix::block_size, stream);
-    this->elemental_r_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-        sparseMatrix::block_size * matrix::block_size, stream);
 
     // init model
     this->init(handle, stream);
@@ -80,27 +72,6 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     std::vector<std::shared_ptr<Matrix<dtype::index>>> connectivity_matrices;
     std::vector<std::shared_ptr<Matrix<dtype::real>>> elemental_s_matrices,
         elemental_r_matrices;
-    for (dtype::index i = 0; i < matrix::block_size; ++i) {
-        connectivity_matrices.push_back(std::make_shared<Matrix<dtype::index>>(
-            this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
-        elemental_s_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
-            this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
-        elemental_r_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
-            this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
-    }
-
-    // init connectivityMatrix
-    for (dtype::index row = 0; row < this->mesh()->nodes()->rows(); ++row)
-    for (dtype::index column = 0; column < this->mesh()->nodes()->rows(); ++column) {
-        for (auto connectivity_matrix : connectivity_matrices) {
-            (*connectivity_matrix)(row, column) = dtype::invalid_index;
-        }
-    }
-    for (dtype::index row = 0; row < this->connectivity_matrix()->rows(); ++row)
-    for (dtype::index column = 0; column < this->connectivity_matrix()->columns(); ++column) {
-        (*this->connectivity_matrix())(row, column) = dtype::invalid_index;
-    }
-    this->connectivity_matrix()->copyToDevice(stream);
 
     // fill intermediate connectivity and elemental matrices
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
@@ -126,8 +97,18 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
         // set connectivity and elemental residual matrix elements
         for (dtype::index i = 0; i < basis_function_type::nodes_per_element; i++)
         for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++) {
-            // get current element count
+            // get current element count and add new intermediate matrices if 
+            // neccessary
             temp = (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+            if (connectivity_matrices.size() <= temp) {
+                connectivity_matrices.push_back(std::make_shared<Matrix<dtype::index>>(
+                    this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream,
+                    dtype::invalid_index));
+                elemental_s_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
+                    this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
+                elemental_r_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
+                    this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
+            }
 
             // set connectivity element
             (*connectivity_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
@@ -173,6 +154,14 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_func
     // create sparse matrices
     this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
     this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
+
+    // create elemental matrices
+    this->connectivity_matrix_ = std::make_shared<Matrix<dtype::index>>(this->mesh()->nodes()->rows(),
+        sparseMatrix::block_size * connectivity_matrices.size(), stream, dtype::invalid_index);
+    this->elemental_s_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
+        sparseMatrix::block_size * elemental_s_matrices.size(), stream);
+    this->elemental_r_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
+        sparseMatrix::block_size * elemental_r_matrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
@@ -287,7 +276,7 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
     // execute kernel
     modelKernel::updateMatrix(blocks, threads, stream,
         connectivityMatrix->device_data(), elements->device_data(), gamma->device_data(),
-        sigmaRef, connectivityMatrix->data_rows(), matrix->values());
+        sigmaRef, connectivityMatrix->data_rows(), connectivityMatrix->data_columns(), matrix->values());
 }
 
 // specialisation
