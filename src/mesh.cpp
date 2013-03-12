@@ -32,10 +32,12 @@ fastEIT::Mesh::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes, std::shared_ptr<
     }
 }
 
-std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>>
-    fastEIT::Mesh::elementNodes(dtype::index element) const {
+std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real,
+    fastEIT::dtype::real>>>
+    fastEIT::Mesh::elementNodes(dtype::index element) {
     // result array
-    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> result(
+    std::vector<std::tuple<dtype::index,
+        std::tuple<dtype::real, dtype::real>>> result(
         this->elements()->columns());
 
     // get node index and coordinate
@@ -56,10 +58,12 @@ std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, f
     return result;
 }
 
-std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>>>
-    fastEIT::Mesh::boundaryNodes(dtype::index element) const {
+std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real,
+    fastEIT::dtype::real>>>
+    fastEIT::Mesh::boundaryNodes(dtype::index element) {
     // result vector
-    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> result(
+    std::vector<std::tuple<dtype::index,
+        std::tuple<dtype::real, dtype::real>>> result(
         this->boundary()->columns());
 
     // get node index and coordinate

@@ -35,19 +35,6 @@ namespace fastEIT {
             cudaStream_t stream);
 
         // accessors
-        const std::shared_ptr<model_type> model() const { return this->model_; }
-        const std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type>> forward_solver() const {
-            return this->forward_solver_;
-        }
-        const std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver() const {
-            return this->inverse_solver_;
-        }
-        const std::shared_ptr<Matrix<dtype::real>> dgamma() const { return this->dgamma_; }
-        const std::shared_ptr<Matrix<dtype::real>> gamma() const { return this->gamma_; }
-        const std::shared_ptr<Matrix<dtype::real>> measured_voltage() const { return this->measured_voltage_; }
-        const std::shared_ptr<Matrix<dtype::real>> calibration_voltage() const { return this->calibration_voltage_; }
-
-        // mutators
         std::shared_ptr<model_type> model() { return this->model_; }
         std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type>> forward_solver() {
             return this->forward_solver_;
