@@ -17,18 +17,11 @@ namespace fastEIT {
 
         // helper methods
         std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
-            elementNodes(dtype::index element) const;
+            elementNodes(dtype::index element);
         std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
-            boundaryNodes(dtype::index element) const;
+            boundaryNodes(dtype::index element);
 
         // accessors
-        const std::shared_ptr<Matrix<dtype::real>> nodes() const { return this->nodes_; }
-        const std::shared_ptr<Matrix<dtype::index>> elements() const { return this->elements_; }
-        const std::shared_ptr<Matrix<dtype::index>> boundary() const { return this->boundary_; }
-        dtype::real radius() const { return this->radius_; }
-        dtype::real height() const { return this->height_; }
-
-        // mutators
         std::shared_ptr<Matrix<dtype::real>> nodes() { return this->nodes_; }
         std::shared_ptr<Matrix<dtype::index>> elements() { return this->elements_; }
         std::shared_ptr<Matrix<dtype::index>> boundary() { return this->boundary_; }
