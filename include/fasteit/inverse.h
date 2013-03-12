@@ -38,15 +38,6 @@ namespace fastEIT {
             cublasHandle_t handle, cudaStream_t stream);
 
         // accessors
-        const std::shared_ptr<NumericSolver> numeric_solver() const { return this->numeric_solver_; }
-        const std::shared_ptr<Matrix<dtype::real>> dvoltage() const { return this->dvoltage_; }
-        const std::shared_ptr<Matrix<dtype::real>> zeros() const { return this->zeros_; }
-        const std::shared_ptr<Matrix<dtype::real>> excitation() const { return this->excitation_; }
-        const std::shared_ptr<Matrix<dtype::real>> system_matrix() const { return this->system_matrix_; }
-        const std::shared_ptr<Matrix<dtype::real>> jacobian_square() const { return this->jacobian_square_; }
-        const dtype::real& regularization_factor() const { return this->regularization_factor_; }
-
-        // mutators
         std::shared_ptr<NumericSolver> numeric_solver() { return this->numeric_solver_; }
         std::shared_ptr<Matrix<dtype::real>> dvoltage() { return this->dvoltage_; }
         std::shared_ptr<Matrix<dtype::real>> zeros() { return this->zeros_; }
