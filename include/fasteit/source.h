@@ -15,19 +15,19 @@ namespace fastEIT {
             class model_type
         >
         class Source {
-        protected:
+        public:
             // constructor
             Source(std::string type, dtype::real value, std::shared_ptr<model_type> model,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
                 cublasHandle_t handle, cudaStream_t stream);
 
-        public:
             // destructor
             virtual ~Source() { }
 
             // update excitation
-            virtual void updateExcitation(cublasHandle_t handle, cudaStream_t stream) = 0;
+            virtual void updateExcitation(cublasHandle_t, cudaStream_t) {
+            };
 
         protected:
             // init excitation
