@@ -26,18 +26,6 @@ namespace fastEIT {
         typedef template_basis_function_type basis_function_type;
 
         // accessors
-        const std::shared_ptr<Mesh> mesh() const { return this->mesh_; }
-        const std::shared_ptr<Electrodes> electrodes() const { return this->electrodes_; }
-        const std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) const { return this->system_matrices_[index]; }
-        const std::shared_ptr<SparseMatrix<dtype::real>> s_matrix() const { return this->s_matrix_; }
-        const std::shared_ptr<SparseMatrix<dtype::real>> r_matrix() const { return this->r_matrix_; }
-        const std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() const { return this->connectivity_matrix_; }
-        const std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix() const { return this->elemental_s_matrix_; }
-        const std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() const { return this->elemental_r_matrix_; }
-        dtype::real sigma_ref() const { return this->sigma_ref_; }
-        dtype::size components_count() const { return this->components_count_; }
-
-        // mutators
         std::shared_ptr<Mesh> mesh() { return this->mesh_; }
         std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
         std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
