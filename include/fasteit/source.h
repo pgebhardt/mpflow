@@ -1,6 +1,6 @@
-// fastECT
+// fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #ifndef FASTEIT_INCLUDE_SOURCE_H
@@ -35,32 +35,14 @@ namespace fastEIT {
 
         public:
             // accessors
-            const std::string& type() const { return this->type_; }
-            const std::shared_ptr<model_type> model() const { return this->model_; }
-            const std::shared_ptr<Matrix<dtype::real>> drive_pattern() const {
+            std::string& type() { return this->type_; }
+            std::shared_ptr<model_type> model() { return this->model_; }
+            std::shared_ptr<Matrix<dtype::real>> drive_pattern() {
                 return this->drive_pattern_;
             }
-            const std::shared_ptr<Matrix<dtype::real>> measurement_pattern() const {
+            std::shared_ptr<Matrix<dtype::real>> measurement_pattern() {
                 return this->measurement_pattern_;
             }
-            const std::shared_ptr<Matrix<dtype::real>> pattern() const {
-                return this->pattern_;
-            }
-            const std::shared_ptr<Matrix<dtype::real>> elemental_pattern(dtype::index index) const {
-                return this->elemental_pattern_[index];
-            }
-            const std::shared_ptr<Matrix<dtype::real>> excitation_matrix() const {
-                return this->excitation_matrix_;
-            }
-            const std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) const {
-                return this->excitation_[index];
-            }
-            dtype::size drive_count() const { return this->drive_pattern()->columns(); }
-            dtype::size measurement_count() const { return this->measurement_pattern()->columns(); }
-            dtype::real value() const { return this->value_; }
-
-            // mutators
-            std::shared_ptr<model_type> model() { return this->model_; }
             std::shared_ptr<Matrix<dtype::real>> pattern() {
                 return this->pattern_;
             }
@@ -73,6 +55,9 @@ namespace fastEIT {
             std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) {
                 return this->excitation_[index];
             }
+            dtype::size drive_count() { return this->drive_pattern()->columns(); }
+            dtype::size measurement_count() { return this->measurement_pattern()->columns(); }
+            dtype::real value() { return this->value_; }
 
         private:
             // member
