@@ -12,10 +12,10 @@ fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle,
     : rows_(rows)  {
     // check input
     if (rows <= 1) {
-        throw std::invalid_argument("Conjugate::Conjugate: rows <= 1");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::Conjugate: rows <= 1");
     }
     if (handle == NULL) {
-        throw std::invalid_argument("Conjugate::Conjugate: handle == NULL");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::Conjugate: handle == NULL");
     }
 
     // create matrices
@@ -34,16 +34,16 @@ void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
     // check input
     if (A == nullptr) {
-        throw std::invalid_argument("Conjugate::solve: A == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: A == nullptr");
     }
     if (f == nullptr) {
-        throw std::invalid_argument("Conjugate::solve: f == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: f == nullptr");
     }
     if (x == nullptr) {
-        throw std::invalid_argument("Conjugate::solve: x == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: x == nullptr");
     }
     if (handle == NULL) {
-        throw std::invalid_argument("Conjugate::solve: handle == NULL");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: handle == NULL");
     }
 
     // calc residuum r = f - A * x
@@ -93,10 +93,10 @@ void fastEIT::numeric::conjugate::addScalar(
     std::shared_ptr<Matrix<dtype::real>> vector) {
     // check input
     if (scalar == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: scalar == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: scalar == nullptr");
     }
     if (vector == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: vector == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: vector == nullptr");
     }
 
     // kernel dimension
@@ -120,19 +120,19 @@ void fastEIT::numeric::conjugate::updateVector(
     std::shared_ptr<Matrix<dtype::real>> result) {
     // check input
     if (x1 == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: x1 == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: x1 == nullptr");
     }
     if (x2 == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: x2 == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: x2 == nullptr");
     }
     if (r1 == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: r1 == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: r1 == nullptr");
     }
     if (r2 == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: r2 == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: r2 == nullptr");
     }
     if (result == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: result == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: result == nullptr");
     }
 
     // kernel dimension
@@ -155,13 +155,13 @@ void fastEIT::numeric::conjugate::gemv(
     std::shared_ptr<Matrix<dtype::real>> result) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: matrix == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: matrix == nullptr");
     }
     if (vector == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: vector == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: vector == nullptr");
     }
     if (result == nullptr) {
-        throw std::invalid_argument("Conjugate::addScalar: result == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: result == nullptr");
     }
 
     // dimension
