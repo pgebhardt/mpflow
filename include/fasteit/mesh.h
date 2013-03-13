@@ -25,10 +25,10 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> nodes() { return this->nodes_; }
         std::shared_ptr<Matrix<dtype::index>> elements() { return this->elements_; }
         std::shared_ptr<Matrix<dtype::index>> boundary() { return this->boundary_; }
-        dtype::real& radius() { return this->radius_; }
-        dtype::real& height() { return this->height_; }
+        dtype::real radius() { return this->radius_; }
+        dtype::real height() { return this->height_; }
 
-    protected:
+    private:
         // member
         std::shared_ptr<Matrix<dtype::real>> nodes_;
         std::shared_ptr<Matrix<dtype::index>> elements_;
