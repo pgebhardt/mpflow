@@ -1,0 +1,36 @@
+import sconshelper
+import os
+
+# create library
+pyfasteit = sconshelper.Library(
+    name='pyfasteit', arguments=ARGUMENTS,
+    CXXFLAGS=[
+        '-std=c++11',
+        ],
+    CPPPATH=[
+        '/usr/include/python2.7/',
+        '/usr/local/cuda/include/',
+        ],
+    LIBPATH=[
+        '/usr/local/lib',
+        '/usr/local/cuda/lib64/',
+        ],
+    RPATH=[
+        '/usr/local/lib',
+        '/usr/local/cuda/lib64/',
+        ],
+    LIBS=[
+        'python2.7',
+        'boost_python',
+        'fasteit',
+        'cudart',
+        'cublas',
+        ],
+    )
+
+AddPostAction(pyfasteit.library, Move(
+    os.path.join(pyfasteit.env['BUILDDIR'], 'fasteit.so'),
+    pyfasteit.library[0].abspath))
+
+# set clang as compiler
+pyfasteit.env.Replace(CXX='clang++')
