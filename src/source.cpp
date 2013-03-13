@@ -16,16 +16,16 @@ fastEIT::source::Source<model_type>::Source(std::string type, dtype::real value,
         measurement_pattern_(measurement_pattern), value_(value) {
     // check input
     if (drive_pattern == nullptr) {
-        throw std::invalid_argument("Source::Source: drive_pattern == nullptr");
+        throw std::invalid_argument("fastEIT::source::Source::Source: drive_pattern == nullptr");
     }
     if (measurement_pattern == nullptr) {
-        throw std::invalid_argument("Source::Source: measurement_pattern == nullptr");
+        throw std::invalid_argument("fastEIT::source::Source::Source: measurement_pattern == nullptr");
     }
     if (model == nullptr) {
-        throw std::invalid_argument("Source::Source: model == nullptr");
+        throw std::invalid_argument("fastEIT::source::Source::Source: model == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("Source::Source: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::source::Source::Source: handle == nullptr");
     }
 
     // create matrices
@@ -54,8 +54,8 @@ template <
 >
 void fastEIT::source::Source<model_type>::initExcitation(cublasHandle_t handle,
     cudaStream_t stream) {
-    if (handle == NULL) {
-        throw std::invalid_argument("Current::initExcitation: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::source::Current::initExcitation: handle == nullptr");
     }
 
     // needed arrays
@@ -158,8 +158,8 @@ template <
 >
 void fastEIT::source::Current<model_type>::updateExcitation(
     cublasHandle_t handle, cudaStream_t stream) {
-    if (handle == NULL) {
-        throw std::invalid_argument("Current::updateExcitation: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::source::Current::updateExcitation: handle == nullptr");
     }
 
     // calc pattern
