@@ -14,8 +14,8 @@ fastEIT::InverseSolver<NumericSolver>::InverseSolver(dtype::size element_count,
     cublasHandle_t handle, cudaStream_t stream)
     : regularization_factor_(regularization_factor) {
     // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("InverseSolver::InverseSolver: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::InverseSolver::InverseSolver: handle == nullptr");
     }
 
     // create matrices
@@ -38,10 +38,10 @@ void fastEIT::InverseSolver<NumericSolver>::calcSystemMatrix(
     cudaStream_t stream) {
     // check input
     if (jacobian == nullptr) {
-        throw std::invalid_argument("InverseSolver::calcSystemMatrix: jacobian == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::calcSystemMatrix: jacobian == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("InverseSolver::calcSystemMatrix: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::InverseSolver::calcSystemMatrix: handle == nullptr");
     }
 
     // cublas coeficients
@@ -54,7 +54,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcSystemMatrix(
         jacobian->data_rows(), &beta, this->jacobian_square()->device_data(),
         this->jacobian_square()->data_rows())
         != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("InverseSolver::calcSystemMatrix: calc Jt * J");
+        throw std::logic_error("fastEIT::InverseSolver::calcSystemMatrix: calc Jt * J");
     }
 
     // copy jacobianSquare to systemMatrix
@@ -69,7 +69,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcSystemMatrix(
         this->jacobian_square()->data_rows(), &alpha, this->system_matrix()->device_data(),
         this->system_matrix()->data_rows()) != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
-            "InverseSolver::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
+            "fastEIT::InverseSolver::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
     }
 }
 
@@ -84,16 +84,16 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
     cudaStream_t stream) {
     // check input
     if (jacobian == nullptr) {
-        throw std::invalid_argument("InverseSolver::calcExcitation: jacobian == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::calcExcitation: jacobian == nullptr");
     }
     if (calculated_voltage == nullptr) {
-        throw std::invalid_argument("InverseSolver::calcExcitation: calculated_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::calcExcitation: calculated_voltage == nullptr");
     }
     if (measured_voltage == nullptr) {
-        throw std::invalid_argument("InverseSolver::calcExcitation: measured_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::calcExcitation: measured_voltage == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("InverseSolver::calcExcitation: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::InverseSolver::calcExcitation: handle == nullptr");
     }
 
     // set cublas stream
@@ -104,7 +104,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
         measured_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
-            "InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
+            "fastEIT::InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
     }
 
     // substract calculatedVoltage
@@ -113,7 +113,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
         calculated_voltage->device_data(), 1, this->dvoltage()->device_data(), 1)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
-            "Model::calcExcitation: substract calculatedVoltage");
+            "fastEIT::InverseSolver::calcExcitation: substract calculatedVoltage");
     }
 
     // calc excitation
@@ -122,7 +122,7 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
     if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->data_rows(), jacobian->data_columns(), &alpha,
         jacobian->device_data(), jacobian->data_rows(), this->dvoltage()->device_data(), 1, &beta,
         this->excitation()->device_data(), 1) != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("InverseSolver::calcExcitation: calc excitation");
+        throw std::logic_error("fastEIT::InverseSolver::calcExcitation: calc excitation");
     }
 }
 
@@ -138,19 +138,19 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::InverseSolver<Nu
     std::shared_ptr<Matrix<dtype::real>> gamma) {
     // check input
     if (jacobian == nullptr) {
-        throw std::invalid_argument("InverseSolver::solve: jacobian == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::solve: jacobian == nullptr");
     }
     if (calculated_voltage == nullptr) {
-        throw std::invalid_argument("InverseSolver::solve: calculated_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::solve: calculated_voltage == nullptr");
     }
     if (measured_voltage == nullptr) {
-        throw std::invalid_argument("InverseSolver::solve: measured_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::solve: measured_voltage == nullptr");
     }
     if (gamma == nullptr) {
-        throw std::invalid_argument("InverseSolver::solve: gamma == nullptr");
+        throw std::invalid_argument("fastEIT::InverseSolver::solve: gamma == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("InverseSolver::solve: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::InverseSolver::solve: handle == nullptr");
     }
 
     // reset gamma

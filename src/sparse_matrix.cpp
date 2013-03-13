@@ -14,7 +14,7 @@ fastEIT::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<type>> ma
     cudaStream_t stream) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("SparseMatrix::SparseMatrix: matrix == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::SparseMatrix::SparseMatrix: matrix == nullptr");
     }
 
     // create empty sparse matrix
@@ -31,10 +31,10 @@ template <
 void fastEIT::SparseMatrix<type>::init(dtype::size rows, dtype::size columns) {
     // check input
     if (rows == 0) {
-        throw std::invalid_argument("SparseMatrix::init: rows == 0");
+        throw std::invalid_argument("fastEIT::numeric::SparseMatrix::init: rows == 0");
     }
     if (columns == 0) {
-        throw std::invalid_argument("SparseMatrix::init: columns == 0");
+        throw std::invalid_argument("fastEIT::numeric::SparseMatrix::init: columns == 0");
     }
 
     // init struct
@@ -58,12 +58,12 @@ void fastEIT::SparseMatrix<type>::init(dtype::size rows, dtype::size columns) {
     // create matrices
     if (cudaMalloc((void**)&this->values_, sizeof(type) *
         this->data_rows() * sparseMatrix::block_size) != cudaSuccess) {
-        throw std::logic_error("SparseMatrix::init: create memory");
+        throw std::logic_error("fastEIT::numeric::SparseMatrix::init: create memory");
     }
 
     if (cudaMalloc((void**)&this->column_ids_, sizeof(dtype::index) *
         this->data_rows() * sparseMatrix::block_size) != cudaSuccess) {
-        throw std::logic_error("SparseMatrix::init: create memory");
+        throw std::logic_error("fastEIT::numeric::SparseMatrix::init: create memory");
     }
 }
 
@@ -86,7 +86,7 @@ void fastEIT::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<type>> ma
     cudaStream_t stream) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("SparseMatrix::convert: matrix == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::SparseMatrix::convert: matrix == nullptr");
     }
 
     // create elementCount matrix
@@ -134,17 +134,17 @@ void fastEIT::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<type>> m
     cudaStream_t stream, std::shared_ptr<Matrix<type>> result) const {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("SparseMatrix::multiply: matrix == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::SparseMatrix::multiply: matrix == nullptr");
     }
     if (result == nullptr) {
-        throw std::invalid_argument("SparseMatrix::multiply: result == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::SparseMatrix::multiply: result == nullptr");
     }
 
     // check size
     if ((result->data_rows() != this->data_rows()) ||
         (this->data_columns() != matrix->data_rows()) ||
         (result->data_columns() != matrix->data_columns())) {
-        throw std::invalid_argument("SparseMatrix::multiply: size");
+        throw std::invalid_argument("fastEIT::numeric::SparseMatrix::multiply: shape does not match");
     }
 
     // kernel dimension

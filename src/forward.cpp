@@ -17,13 +17,13 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
     : model_(model), source_(source) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("ForwardSolver::ForwardSolver: model == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: model == nullptr");
     }
     if (source == nullptr) {
-        throw std::invalid_argument("ForwardSolver::ForwardSolver: source == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: source == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("ForwardSolver::ForwardSolver: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: handle == nullptr");
     }
 
     // create numeric_solver_type solver
@@ -72,7 +72,7 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
         this->source()->excitation_matrix()->data_rows(),
         &beta, this->electrode_attachment_matrix()->device_data(),
         this->electrode_attachment_matrix()->data_rows()) != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("ForwardSolver::ForwardSolver: calc voltage calculation");
+        throw std::logic_error("fastEIT::ForwardSolver::ForwardSolver: calc voltage calculation");
     }
 }
 
@@ -84,8 +84,8 @@ template <
 void fastEIT::ForwardSolver<numeric_solver_type, model_type>::initJacobianCalculationMatrix(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("ForwardSolver::initJacobianCalculationMatrix: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::initJacobianCalculationMatrix: handle == nullptr");
     }
 
     // variables
@@ -133,10 +133,10 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPa
     std::shared_ptr<Matrix<dtype::real>> result, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
-        throw std::invalid_argument("forward::applyPattern: result == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: result == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("forward::applyPattern: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: handle == nullptr");
     }
 
     // set stream
@@ -171,10 +171,10 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
     cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
-        throw std::invalid_argument("ForwardSolver::solve: gamma == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::solve: gamma == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("ForwardSolver::solve: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::solve: handle == nullptr");
     }
 
     // update system matrix
@@ -240,19 +240,19 @@ void fastEIT::forward::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> g
     bool additiv, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> jacobian) {
     // check input
     if (gamma == nullptr) {
-        throw std::invalid_argument("ForwardSolver::calcJacobian: gamma == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::calcJacobian: gamma == nullptr");
     }
     if (potential == nullptr) {
-        throw std::invalid_argument("ForwardSolver::calcJacobian: potential == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::calcJacobian: potential == nullptr");
     }
     if (elements == nullptr) {
-        throw std::invalid_argument("ForwardSolver::calcJacobian: elements == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::calcJacobian: elements == nullptr");
     }
     if (elemental_jacobian_matrix == nullptr) {
-        throw std::invalid_argument("ForwardSolver::calcJacobian: elemental_jacobian_matrix == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::calcJacobian: elemental_jacobian_matrix == nullptr");
     }
     if (jacobian == nullptr) {
-        throw std::invalid_argument("ForwardSolver::calcJacobian: jacobian == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::calcJacobian: jacobian == nullptr");
     }
 
     // dimension

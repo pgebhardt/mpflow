@@ -11,16 +11,16 @@ fastEIT::Electrodes::Electrodes(dtype::size count,
     : count_(count), coordinates_(count), shape_(shape), impedance_(impedance) {
     // check input
     if (count == 0) {
-        throw std::invalid_argument("Electrodes::Electrodes: count == 0");
+        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: count == 0");
     }
     if (std::get<0>(shape) <= 0.0) {
-        throw std::invalid_argument("Electrodes::Electrodes: width <= 0.0");
+        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: width <= 0.0");
     }
     if (std::get<1>(shape) <= 0.0) {
-        throw std::invalid_argument("Electrodes::Electrodes: height <= 0.0");
+        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: height <= 0.0");
     }
     if (impedance <= 0.0) {
-        throw std::invalid_argument("Electrodes::Electrodes: impedance <= 0.0");
+        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: impedance <= 0.0");
     }
 }
 

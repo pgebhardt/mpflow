@@ -15,10 +15,10 @@ fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
     : model_(model) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("Solver::Solver: model == nullptr");
+        throw std::invalid_argument("fastEIT::Solver::Solver: model == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("Solver::Solver: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::Solver::Solver: handle == nullptr");
     }
 
     // create forward solver
@@ -51,8 +51,8 @@ template <
 >
 void fastEIT::Solver<model_type>::preSolve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Solver::pre_solve: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::Solver::pre_solve: handle == nullptr");
     }
 
     // forward solving a few steps
@@ -75,10 +75,10 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_typ
     cudaStream_t stream) {
     // check input
     if (calibration_voltage == nullptr) {
-        throw std::invalid_argument("Solver::calibrate: calibration_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::Solver::calibrate: calibration_voltage == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("Solver::calibrate: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::Solver::calibrate: handle == nullptr");
     }
 
     // solve forward
@@ -115,13 +115,13 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_typ
     cudaStream_t stream) {
     // check input
     if (measured_voltage == nullptr) {
-        throw std::invalid_argument("Solver::solve: measured_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::Solver::solve: measured_voltage == nullptr");
     }
     if (calibration_voltage == nullptr) {
-        throw std::invalid_argument("Solver::solve: calibration_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::Solver::solve: calibration_voltage == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("Solver::solve: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::Solver::solve: handle == nullptr");
     }
 
     // solve

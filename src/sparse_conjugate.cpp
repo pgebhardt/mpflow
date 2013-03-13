@@ -11,10 +11,10 @@ fastEIT::numeric::SparseConjugate::SparseConjugate(dtype::size rows,
     : rows_(rows), columns_(columns) {
     // check input
     if (rows <= 1) {
-        throw std::invalid_argument("SparseConjugate::SparseConjugate: rows <= 1");
+        throw std::invalid_argument("fastEIT::numeric::SparseConjugate::SparseConjugate: rows <= 1");
     }
     if (columns <= 1) {
-        throw std::invalid_argument("SparseConjugate::SparseConjugate: columns <= 1");
+        throw std::invalid_argument("fastEIT::numeric::SparseConjugate::SparseConjugate: columns <= 1");
     }
 
     // create matrices
@@ -32,13 +32,13 @@ void fastEIT::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix
     cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
     // check input
     if (A == nullptr) {
-        throw std::invalid_argument("SparseConjugate::solve: A == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::SparseConjugate::solve: A == nullptr");
     }
     if (f == nullptr) {
-        throw std::invalid_argument("SparseConjugate::solve: f == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::SparseConjugate::solve: f == nullptr");
     }
     if (x == nullptr) {
-        throw std::invalid_argument("SparseConjugate::solve: x == nullptr");
+        throw std::invalid_argument("fastEIT::numeric::SparseConjugate::solve: x == nullptr");
     }
 
     // calc residuum r = f - A * x

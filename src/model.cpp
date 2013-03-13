@@ -18,16 +18,16 @@ fastEIT::Model<basis_function_type>::Model(
         components_count_(components_count) {
     // check input
     if (mesh == nullptr) {
-        throw std::invalid_argument("Model::Model: mesh == nullptr");
+        throw std::invalid_argument("fastEIT::Model::Model: mesh == nullptr");
     }
     if (electrodes == nullptr) {
-        throw std::invalid_argument("Model::Model: electrodes == nullptr");
+        throw std::invalid_argument("fastEIT::Model::Model: electrodes == nullptr");
     }
     if (components_count == 0) {
-        throw std::invalid_argument("Model::Model: components_count == 0");
+        throw std::invalid_argument("fastEIT::Model::Model: components_count == 0");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::Model: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::Model::Model: handle == nullptr");
     }
 
     // init model
@@ -40,8 +40,8 @@ template <
 >
 void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream_t stream) {
     // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::init: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::Model::init: handle == nullptr");
     }
 
     // init elemental matrices
@@ -184,8 +184,8 @@ template <
 void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
-    if (handle == NULL) {
-        throw std::invalid_argument("Model::init: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::Model::init: handle == nullptr");
     }
 
     // update matrices
@@ -208,7 +208,7 @@ void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dt
             this->s_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
-                "Model::update: calc system matrices for all harmonics");
+                "fastEIT::Model::update: calc system matrices for all harmonics");
         }
 
         // add alpha * residualMatrix
@@ -216,7 +216,7 @@ void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dt
             this->r_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
-                "Model::update: calc system matrices for all harmonics");
+                "fastEIT::Model::update: calc system matrices for all harmonics");
         }
     }
 }
@@ -230,13 +230,13 @@ void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermedia
     cudaStream_t stream, std::shared_ptr<Matrix<type>> matrix) {
     // check input
     if (intermediateMatrix == nullptr) {
-        throw std::invalid_argument("model::reduceMatrix: intermediateMatrix == nullptr");
+        throw std::invalid_argument("fastEIT::model::reduceMatrix: intermediateMatrix == nullptr");
     }
     if (shape == nullptr) {
-        throw std::invalid_argument("model::reduceMatrix: shape == nullptr");
+        throw std::invalid_argument("fastEIT::model::reduceMatrix: shape == nullptr");
     }
     if (matrix == nullptr) {
-        throw std::invalid_argument("model::reduceMatrix: matrix == nullptr");
+        throw std::invalid_argument("fastEIT::model::reduceMatrix: matrix == nullptr");
     }
 
     // block size
@@ -257,16 +257,16 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
     std::shared_ptr<SparseMatrix<dtype::real>> matrix) {
     // check input
     if (elements == nullptr) {
-        throw std::invalid_argument("model::updateMatrix: elements == nullptr");
+        throw std::invalid_argument("fastEIT::model::updateMatrix: elements == nullptr");
     }
     if (gamma == nullptr) {
-        throw std::invalid_argument("model::updateMatrix: gamma == nullptr");
+        throw std::invalid_argument("fastEIT::model::updateMatrix: gamma == nullptr");
     }
     if (connectivityMatrix == nullptr) {
-        throw std::invalid_argument("model::updateMatrix: connectivityMatrix == nullptr");
+        throw std::invalid_argument("fastEIT::model::updateMatrix: connectivityMatrix == nullptr");
     }
     if (matrix == nullptr) {
-        throw std::invalid_argument("model::updateMatrix: matrix == nullptr");
+        throw std::invalid_argument("fastEIT::model::updateMatrix: matrix == nullptr");
     }
 
     // dimension
