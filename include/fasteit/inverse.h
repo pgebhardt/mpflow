@@ -24,8 +24,8 @@ namespace fastEIT {
             const std::shared_ptr<Matrix<dtype::real>> jacobian,
             const std::shared_ptr<Matrix<dtype::real>> calculated_voltage,
             const std::shared_ptr<Matrix<dtype::real>> measured_voltage,
-            dtype::size steps, bool regularized, cublasHandle_t handle,
-            cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> gamma);
+            dtype::size steps, cublasHandle_t handle, cudaStream_t stream,
+            std::shared_ptr<Matrix<dtype::real>> gamma);
 
         // calc system matrix
         void calcSystemMatrix(const std::shared_ptr<Matrix<dtype::real>> jacobian,

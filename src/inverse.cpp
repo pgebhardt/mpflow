@@ -134,7 +134,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::InverseSolver<Nu
     const std::shared_ptr<Matrix<dtype::real>> jacobian,
     const std::shared_ptr<Matrix<dtype::real>> calculated_voltage,
     const std::shared_ptr<Matrix<dtype::real>> measured_voltage, dtype::size steps,
-    bool regularized, cublasHandle_t handle, cudaStream_t stream,
+    cublasHandle_t handle, cudaStream_t stream,
     std::shared_ptr<Matrix<dtype::real>> gamma) {
     // check input
     if (jacobian == nullptr) {
@@ -160,8 +160,8 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::InverseSolver<Nu
     this->calcExcitation(jacobian, calculated_voltage, measured_voltage, handle, stream);
 
     // solve system
-    this->numeric_solver()->solve(regularized ? this->system_matrix() : this->jacobian_square(),
-        this->excitation(), steps, handle, stream, gamma);
+    this->numeric_solver()->solve(this->system_matrix(), this->excitation(),
+        steps, handle, stream, gamma);
 
     return gamma;
 }
