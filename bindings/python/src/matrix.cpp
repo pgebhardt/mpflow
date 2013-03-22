@@ -1,4 +1,5 @@
 #include <pyfasteit/pyfasteit.hpp>
+#include <boost/python/slice.hpp>
 #include <numpy/arrayobject.h>
 using namespace boost::python;
 
@@ -6,60 +7,59 @@ template <
     class matrix_type,
     int npy_type
 >
-numeric::array get(fastEIT::Matrix<matrix_type>* self, cudaStream_t stream) {
+PyObject* get(fastEIT::Matrix<matrix_type>* self, cudaStream_t stream) {
     self->copyToHost(stream);
     cudaStreamSynchronize(stream);
 
     // create new numpy array
     npy_intp size[] = {
-        (int)self->rows(),
-        (int)self->columns()
+        (npy_intp)self->data_columns(),
+        (npy_intp)self->data_rows()
     };
-    PyObject* obj = PyArray_SimpleNew(2, size, npy_type);
-    handle<> h(obj);
-    numeric::array array(h);
+    PyArrayObject* array = (PyArrayObject*)PyArray_SimpleNewFromData(2, size, npy_type,
+        self->host_data());
 
-    // fill array with data
-    for (fastEIT::dtype::index row = 0; row < self->rows(); ++row)
-    for (fastEIT::dtype::index column = 0; column < self->columns(); ++column) {
-        array[make_tuple(row, column)] = (*self)(row, column);
-    }
+    // transpose and reshape array
+    tuple shape = make_tuple(slice(_, self->rows()), slice(_, self->columns()));
+    array = (PyArrayObject*)PyArray_Transpose(array, nullptr);
+    array = (PyArrayObject*)PyObject_GetItem((PyObject*)array, shape.ptr());
 
-    return array;
+    return (PyObject*)array;
 }
 
 template <
     class matrix_type,
-    class cast_type,
     int npy_type
 >
 void put(fastEIT::Matrix<matrix_type>* self, numeric::array& numpy_array,
     cudaStream_t stream) {
-    // cast array to npy_type
-    PyArrayObject* array = (PyArrayObject*)PyArray_FROM_OF(
-        numpy_array.ptr(), npy_type);
-
-    // check success and dims
-    if ((array == nullptr) || (PyArray_NDIM(array) != 2)) {
+    // check dimensions of numpy_array
+    if (PyArray_NDIM((PyArrayObject*)numpy_array.ptr()) != 2) {
         // TODO: raise an exception
         return;
     }
 
-    // get array shape, strides and data
-    npy_intp* shape = PyArray_DIMS(array);
-    npy_intp* strides = PyArray_STRIDES(array);
-    char* data = (char*)PyArray_DATA(array);
-
-    // check shape
+    // convert array to correct data type
+    npy_intp* shape = PyArray_DIMS((PyArrayObject*)numpy_array.ptr());
     if ((shape[0] != self->rows()) || (shape[1] != self->columns())) {
         // TODO: raise an exception
         return;
     }
 
+    PyArrayObject* array = (PyArrayObject*)PyArray_SimpleNew(2, shape, npy_type);
+    if (PyArray_CopyInto(array, (PyArrayObject*)numpy_array.ptr()) != 0) {
+        // TODO: raise an exception
+        return;
+    }
+
+    // get strides and data
+    npy_intp* strides = PyArray_STRIDES(array);
+    char* data = (char*)PyArray_DATA(array);
+
     // fill matrix with data from numpy array
     for (fastEIT::dtype::index row = 0; row < self->rows(); ++row)
     for (fastEIT::dtype::index column = 0; column < self->columns(); ++column) {
-        (*self)(row, column) = *reinterpret_cast<cast_type*>(
+        (*self)(row, column) = *reinterpret_cast<matrix_type*>(
             data + row * strides[0] + column * strides[1]);
     }
     self->copyToDevice(stream);
@@ -67,7 +67,6 @@ void put(fastEIT::Matrix<matrix_type>* self, numeric::array& numpy_array,
 
 template <
     class matrix_type,
-    class cast_type,
     int npy_type
 >
 void wrap_matrix(const char* name) {
@@ -83,12 +82,11 @@ void wrap_matrix(const char* name) {
     .def("copy_to_host", &fastEIT::Matrix<matrix_type>::copyToHost)
     .def("copy_to_device", &fastEIT::Matrix<matrix_type>::copyToDevice)
     .def("get", get<matrix_type, npy_type>)
-    .def("put", put<matrix_type, cast_type, npy_type>);
+    .def("put", put<matrix_type, npy_type>);
 }
 
 template <
     class matrix_type,
-    class cast_type,
     int npy_type
 >
 std::shared_ptr<fastEIT::Matrix<matrix_type>> fromNumpy(numeric::array& array,
@@ -106,7 +104,7 @@ std::shared_ptr<fastEIT::Matrix<matrix_type>> fromNumpy(numeric::array& array,
         shape[0], shape[1], stream);
 
     // put array data to matrix
-    put<matrix_type, cast_type, npy_type>(matrix.get(), array, stream);
+    put<matrix_type, npy_type>(matrix.get(), array, stream);
 
     return matrix;
 }
@@ -114,16 +112,16 @@ std::shared_ptr<fastEIT::Matrix<matrix_type>> fromNumpy(numeric::array& array,
 void pyfasteit::export_matrix() {
     import_array();
 
-    wrap_matrix<fastEIT::dtype::real, double, NPY_DOUBLE>("Matrix_real");
-    wrap_matrix<fastEIT::dtype::index, long, NPY_LONG>("Matrix_index");
+    wrap_matrix<fastEIT::dtype::real, NPY_FLOAT32>("Matrix_real");
+    wrap_matrix<fastEIT::dtype::index, NPY_UINT32>("Matrix_index");
 
     // expose this module as part of fasteit package
     object module(handle<>(borrowed(PyImport_AddModule("fasteit.matrix"))));
     scope().attr("matrix") = module;
     scope sub_module = module;
 
-    def("to_real", fromNumpy<fastEIT::dtype::real, double, NPY_DOUBLE>);
-    def("to_index", fromNumpy<fastEIT::dtype::index, long, NPY_LONG>);
+    def("to_real", fromNumpy<fastEIT::dtype::real, NPY_FLOAT32>);
+    def("to_index", fromNumpy<fastEIT::dtype::index, NPY_UINT32>);
 
     // reset scope
     scope();
