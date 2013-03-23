@@ -7,24 +7,44 @@ template <
     class matrix_type,
     int npy_type
 >
-PyObject* get(fastEIT::Matrix<matrix_type>* self, cudaStream_t stream) {
-    self->copyToHost(stream);
-    cudaStreamSynchronize(stream);
-
+PyObject* numpy_array_from_matrix(fastEIT::Matrix<matrix_type>* matrix) {
     // create new numpy array
     npy_intp size[] = {
-        (npy_intp)self->data_columns(),
-        (npy_intp)self->data_rows()
+        (npy_intp)matrix->data_columns(),
+        (npy_intp)matrix->data_rows()
     };
     PyArrayObject* array = (PyArrayObject*)PyArray_SimpleNewFromData(2, size, npy_type,
-        self->host_data());
+        matrix->host_data());
 
     // transpose and reshape array
-    tuple shape = make_tuple(slice(_, self->rows()), slice(_, self->columns()));
+    tuple shape = make_tuple(slice(_, matrix->rows()), slice(_, matrix->columns()));
     array = (PyArrayObject*)PyArray_Transpose(array, nullptr);
     array = (PyArrayObject*)PyObject_GetItem((PyObject*)array, shape.ptr());
 
     return (PyObject*)array;
+}
+
+template <
+    class matrix_type,
+    int npy_type
+>
+PyObject* get(fastEIT::Matrix<matrix_type>* self, cudaStream_t stream) {
+    // get data from device and sync
+    self->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+
+    return numpy_array_from_matrix<matrix_type, npy_type>(self);
+}
+
+template <
+    class matrix_type,
+    int npy_type
+>
+PyObject* get_async(fastEIT::Matrix<matrix_type>* self, cudaStream_t stream) {
+    // get data from device
+    self->copyToHost(stream);
+
+    return numpy_array_from_matrix<matrix_type, npy_type>(self);
 }
 
 template <
@@ -82,6 +102,7 @@ void wrap_matrix(const char* name) {
     .def("copy_to_host", &fastEIT::Matrix<matrix_type>::copyToHost)
     .def("copy_to_device", &fastEIT::Matrix<matrix_type>::copyToDevice)
     .def("get", get<matrix_type, npy_type>)
+    .def("get_async", get_async<matrix_type, npy_type>)
     .def("put", put<matrix_type, npy_type>);
 }
 
