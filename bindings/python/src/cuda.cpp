@@ -27,6 +27,10 @@ int cudaGetDeviceCount_wrapper() {
     return count;
 }
 
+void cudaDeviceEnablePeerAccess_wrapper(int device_id) {
+    cudaDeviceEnablePeerAccess(device_id, 0);
+}
+
 void pyfasteit::export_cuda() {
     // expose this module as part of fasteit package
     object module(handle<>(borrowed(PyImport_AddModule("fasteit.cuda"))));
@@ -40,6 +44,7 @@ void pyfasteit::export_cuda() {
     def("stream_synchronize", &cudaStreamSynchronize_wrapper);
     def("set_device", &cudaSetDevice_wrapper);
     def("device_count", &cudaGetDeviceCount_wrapper);
+    def("enable_peer_access", &cudaDeviceEnablePeerAccess_wrapper);
 
     // reset scope
     scope();
