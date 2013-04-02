@@ -30,7 +30,7 @@ inline void __cudaSafeCall(cudaError err, const char *file, const int line) {
 inline void __cudaCheckError( const char *file, const int line ) {
     // More careful checking. However, this will affect performance.
     // Comment away if needed.
-    cudaStreamSynchronize(NULL);
+    cudaThreadSynchronize();
     cudaError err = cudaGetLastError();
 
     if(cudaSuccess != err) {
