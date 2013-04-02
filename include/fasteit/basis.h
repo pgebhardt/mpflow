@@ -66,6 +66,9 @@ namespace fastEIT {
             static dtype::real integrateBoundaryEdge(
                 std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
                 dtype::real start, dtype::real end);
+            static dtype::real integrateBoundaryEdgeWithOther(
+                std::array<dtype::real, nodes_per_edge> nodes, dtype::index self,
+                dtype::index other, dtype::real start, dtype::real end);
 
             // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
@@ -84,6 +87,9 @@ namespace fastEIT {
             static dtype::real integrateBoundaryEdge(
                 std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
                 dtype::real start, dtype::real end);
+            static dtype::real integrateBoundaryEdgeWithOther(
+                std::array<dtype::real, nodes_per_edge> nodes, dtype::index self,
+                dtype::index other, dtype::real start, dtype::real end);
 
             // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
