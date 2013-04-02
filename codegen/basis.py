@@ -109,6 +109,24 @@ class Basis(object):
 
         return integral(coefficients, start, end)
 
+    @expressionize
+    def integrateBoundaryEdgeWithOther(self, nodes,
+        self_coefficients, other_coefficients, start, end):
+        # integrate boundary_function symbolic
+        @symbolic
+        def integral(self_coefficients, other_coefficients, start, end):
+            x = Symbol('x', real=True)
+            return integrate(
+                self.boundary_function(x, self_coefficients) *\
+                self.boundary_function(x, other_coefficients),
+                (x, start, end))
+
+        # clip integration interval to function definition
+        start = start.clip(nodes[0], nodes[self.nodes_per_edge - 1])
+        end = end.clip(nodes[0], nodes[self.nodes_per_edge - 1])
+
+        return integral(self_coefficients, other_coefficients, start, end)
+
     def render(self, template):
         # arguments
         points_args = [[
@@ -161,5 +179,10 @@ class Basis(object):
             integrateBoundaryEdge=self.integrateBoundaryEdge(
                 ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
+                'start', 'end').expand(),
+            integrateBoundaryEdgeWithOther=self.integrateBoundaryEdgeWithOther(
+                ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
+                ['self_coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
+                ['other_coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 'start', 'end').expand(),
             )

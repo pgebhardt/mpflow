@@ -62,3 +62,24 @@ fastEIT::dtype::real fastEIT::basis::${name}::integrateBoundaryEdge(
 % endfor
     return ${integrateBoundaryEdge};
 }
+
+// integrate edge with other
+fastEIT::dtype::real fastEIT::basis::${name}::integrateBoundaryEdgeWithOther(
+    std::array<dtype::real, nodes_per_edge> nodes, dtype::index self,
+    dtype::index other, dtype::real start, dtype::real end) {
+    // calc coefficients for basis function
+    std::array<dtype::real, nodes_per_edge> self_coefficients;
+% for i in range(len(boundaryCoefficiens)):
+    if (self == ${i}) {
+    % for j in range(len(boundaryCoefficiens[i])):
+        self_coefficients[${j}] = ${boundaryCoefficiens[i][j].expand()};
+    % endfor
+    }
+    if (other == ${i}) {
+    % for j in range(len(boundaryCoefficiens[i])):
+        other_coefficients[${j}] = ${boundaryCoefficiens[i][j].expand()};
+    % endfor
+    }
+% endfor
+    return ${integrateBoundaryEdgeWithOther};
+}
