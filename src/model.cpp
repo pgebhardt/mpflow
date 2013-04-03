@@ -12,9 +12,10 @@ template <
 >
 fastEIT::Model<basis_function_type>::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
-    dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
+    std::shared_ptr<source::Source<basis_function_type>> source, dtype::real sigmaRef,
+    dtype::size components_count, cublasHandle_t handle,
     cudaStream_t stream)
-    : mesh_(mesh), electrodes_(electrodes), sigma_ref_(sigmaRef),
+    : mesh_(mesh), electrodes_(electrodes), source_(source), sigma_ref_(sigmaRef),
         components_count_(components_count) {
     // check input
     if (mesh == nullptr) {
@@ -47,9 +48,42 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
     // init elemental matrices
     auto common_element_matrix = this->initElementalMatrices(stream);
 
+    // assamble initial system matrices
+    auto system_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows() + this->electrodes()->count(),
+        this->mesh()->nodes()->rows() + this->electrodes()->count(),
+        stream);
+
+    // fill s + r + z
+    for (dtype::index row = 0; row < this->mesh()->nodes()->rows(); ++row) {
+        for (dtype::index column = 0; column < this->mesh()->nodes()->rows(); ++column) {
+            (*system_matrix)(row, column) = (*common_element_matrix)(row, column);
+        }
+    }
+
+    // fill w and x
+    for (dtype::index node = 0; node < this->mesh()->nodes()->rows(); ++node) {
+        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+            (*system_matrix)(node, electrode + this->mesh()->nodes()->rows()) =
+                (*this->source()->w_matrix())(node, electrode);
+
+            (*system_matrix)(electrode + this->mesh()->nodes()->rows(), node) =
+                (*this->source()->x_matrix())(node, electrode);
+        }
+    }
+
+    // fill d matrix
+    for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+        (*system_matrix)(electrode + this->mesh()->nodes()->rows(),
+            electrode + this->mesh()->nodes()->rows()) =
+            (*this->source()->d_matrix())(electrode, electrode);
+    }
+
     // create sparse matrices
+    system_matrix->copyToDevice(stream);
     for (dtype::index component = 0; component < this->components_count(); ++component) {
-        this->system_matrices_.push_back(std::make_shared<SparseMatrix<dtype::real>>(common_element_matrix, stream));
+        this->system_matrices_.push_back(std::make_shared<SparseMatrix<dtype::real>>(
+            system_matrix, stream));
     }
 
     // create gamma
@@ -63,7 +97,8 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
 template <
     class basis_function_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Model<basis_function_type>::initElementalMatrices(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
+    fastEIT::Model<basis_function_type>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
     auto element_count = std::make_shared<Matrix<dtype::index>>(
@@ -201,23 +236,14 @@ void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dt
     dtype::real alpha = 0.0f;
     for (dtype::index component = 0; component < this->components_count(); ++component) {
         // calc alpha
-        alpha = fastEIT::math::square(2.0f * component * M_PI / this->mesh()->height());
+        alpha = math::square(2.0f * component * M_PI / this->mesh()->height());
 
-        // init system matrix with 2d system matrix
-        if (cublasScopy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size,
-            this->s_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
-            != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error(
-                "fastEIT::Model::update: calc system matrices for all harmonics");
-        }
-
-        // add alpha * residualMatrix
-        if (cublasSaxpy(handle, this->s_matrix()->data_rows() * sparseMatrix::block_size, &alpha,
-            this->r_matrix()->values(), 1, this->system_matrix(component)->values(), 1)
-            != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error(
-                "fastEIT::Model::update: calc system matrices for all harmonics");
-        }
+        // update system matrix
+        modelKernel::updateSystemMatrix(this->s_matrix()->data_rows() / matrix::block_size,
+            matrix::block_size, stream,
+            this->s_matrix()->values(), this->r_matrix()->values(), this->s_matrix()->column_ids(),
+            this->source()->z_matrix()->device_data(), this->s_matrix()->density(), alpha,
+            this->source()->z_matrix()->data_rows(), this->system_matrix(component)->values());
     }
 }
 

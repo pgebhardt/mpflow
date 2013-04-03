@@ -16,11 +16,13 @@ namespace fastEIT {
     public:
         // constructor
         Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+            std::shared_ptr<source::Source<template_basis_function_type>> source,
             dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
             cudaStream_t stream);
 
         // update model
-        void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream);
+        void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
+            cudaStream_t stream);
 
         // type defs
         typedef template_basis_function_type basis_function_type;
@@ -28,6 +30,9 @@ namespace fastEIT {
         // accessors
         std::shared_ptr<Mesh> mesh() { return this->mesh_; }
         std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
+        std::shared_ptr<source::Source<template_basis_function_type>> source() {
+            return this->source_;
+        }
         std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
         std::shared_ptr<SparseMatrix<dtype::real>> s_matrix() { return this->s_matrix_; }
         std::shared_ptr<SparseMatrix<dtype::real>> r_matrix() { return this->r_matrix_; }
@@ -41,11 +46,11 @@ namespace fastEIT {
         // init methods
         void init(cublasHandle_t handle, cudaStream_t stream);
         std::shared_ptr<Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
-        void initExcitation(cublasHandle_t handle, cudaStream_t);
 
         // member
         std::shared_ptr<Mesh> mesh_;
         std::shared_ptr<Electrodes> electrodes_;
+        std::shared_ptr<source::Source<template_basis_function_type>> source_;
         std::vector<std::shared_ptr<SparseMatrix<dtype::real>>> system_matrices_;
         std::shared_ptr<SparseMatrix<dtype::real>> s_matrix_;
         std::shared_ptr<SparseMatrix<dtype::real>> r_matrix_;

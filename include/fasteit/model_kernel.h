@@ -23,6 +23,13 @@ namespace fastEIT {
             const dtype::index* connectivity_matrix, const dtype::real* elemental_matrix,
             const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows,
             dtype::size columns, dtype::real* matrix_values);
+
+        // update system matrix kernel
+        void updateSystemMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+            const dtype::real* s_matrix_values, const dtype::real* r_matrix_values,
+            const dtype::index* s_matrix_column_ids, const dtype::real* z_matrix,
+            dtype::size density, dtype::real scalar, dtype::size z_matrix_rows,
+            dtype::real* system_matrix_values);
     }
 }
 
