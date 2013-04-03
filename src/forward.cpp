@@ -129,7 +129,7 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPa
         this->potential(0)->data_rows(),
         this->model()->source()->measurement_pattern()->device_data(),
         this->model()->source()->measurement_pattern()->data_rows(),
-        true, result->device_data(), result->data_rows());
+        false, result->device_data(), result->data_rows());
 
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         forwardKernel::calcVoltage(blocks, threads, stream,
