@@ -112,7 +112,33 @@ template <
     class model_type
 >
 void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPattern(
-    std::shared_ptr<Matrix<dtype::real>>, cudaStream_t) {
+    std::shared_ptr<Matrix<dtype::real>> result, cudaStream_t stream) {
+    // check input
+    if (result == nullptr) {
+        throw std::invalid_argument("forward::applyPattern: result == nullptr");
+    }
+
+    // apply pattern
+    dim3 blocks(result->rows(), result->columns());
+    dim3 threads(1, 1);
+
+    forwardKernel::calcVoltage(blocks, threads, stream,
+        this->potential(0)->device_data(),
+        this->model()->mesh()->nodes()->rows(),
+        this->potential(0)->data_rows(),
+        this->model()->source()->measurement_pattern()->device_data(),
+        this->model()->source()->measurement_pattern()->data_rows(),
+        true, result->device_data(), result->data_rows());
+
+    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+        forwardKernel::calcVoltage(blocks, threads, stream,
+            this->potential(component)->device_data(),
+            this->model()->mesh()->nodes()->rows(),
+            this->potential(component)->data_rows(),
+            this->model()->source()->measurement_pattern()->device_data(),
+            this->model()->source()->measurement_pattern()->data_rows(),
+            true, result->device_data(), result->data_rows());
+    }
 }
 
 // forward solving

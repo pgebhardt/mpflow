@@ -94,6 +94,42 @@ void fastEIT::forwardKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_
     CudaCheckError();
 }
 
+// calc voltage kernel
+static __global__ void calcVoltageKernel(const fastEIT::dtype::real* potential,
+    fastEIT::dtype::size offset, fastEIT::dtype::size rows, const fastEIT::dtype::real* pattern,
+    fastEIT::dtype::size pattern_rows, bool additiv,
+    fastEIT::dtype::real* voltage, fastEIT::dtype::size voltage_rows) {
+    // get ids
+    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // calc voltage
+    fastEIT::dtype::real value = 0.0f;
+    for (fastEIT::dtype::index electrode = 0; electrode < pattern_rows; ++electrode) {
+        value += pattern[electrode + pattern_rows * row] * potential[offset + electrode + column * rows];
+    }
+
+    // set voltage
+    if (additiv == true) {
+        voltage[row + voltage_rows * column] += value;
+    } else {
+        voltage[row + voltage_rows * column] = value;
+    }
+}
+
+// calc voltage kernel wrapper
+void fastEIT::forwardKernel::calcVoltage(dim3 blocks, dim3 threads, cudaStream_t stream,
+    const fastEIT::dtype::real* potential, fastEIT::dtype::size offset,
+    fastEIT::dtype::size rows, const fastEIT::dtype::real* pattern,
+    fastEIT::dtype::size pattern_rows, bool additiv,
+    fastEIT::dtype::real* voltage, fastEIT::dtype::size voltage_rows) {
+    // call cuda kernel
+    calcVoltageKernel<<<blocks, threads, 0, stream>>>(
+        potential, offset, rows, pattern, pattern_rows, additiv, voltage, voltage_rows);
+
+    CudaCheckError();
+}
+
 // template specialisation
 template void fastEIT::forwardKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
