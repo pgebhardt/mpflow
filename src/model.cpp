@@ -170,6 +170,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     // determine nodes with common element
     auto common_element_matrix = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
+
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
         // get nodes for element
         nodes = this->mesh()->elementNodes(element);

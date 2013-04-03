@@ -58,21 +58,20 @@ fastEIT::source::Source<basis_function_type>::Source(std::string type, dtype::re
     }
 
     // fill pattern matrix with drive pattern
-    for (dtype::index column = 0; column < this->drive_count(); ++column) {
-        for (dtype::index row = 0; row < this->electrodes()->count(); ++row) {
-            (*this->elemental_pattern(0))(row, column) =
-                (*this->drive_pattern())(row, column);
-        }
+    for (dtype::index column = 0; column < this->drive_count(); ++column)
+    for (dtype::index row = 0; row < this->electrodes()->count(); ++row) {
+        (*this->elemental_pattern(0))(row, column) =
+            (*this->drive_pattern())(row, column);
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index column = 0; column < this->measurement_count(); ++column) {
-        for (dtype::index row = 0; row < this->electrodes()->count(); ++row) {
-            (*this->elemental_pattern(1))(row, column + this->drive_count()) =
-                (*this->measurement_pattern())(row, column);
-        }
+    for (dtype::index column = 0; column < this->measurement_count(); ++column)
+    for (dtype::index row = 0; row < this->electrodes()->count(); ++row) {
+        (*this->elemental_pattern(1))(row, column + this->drive_count()) =
+            (*this->measurement_pattern())(row, column);
     }
+
     this->elemental_pattern(0)->copyToDevice(stream);
     this->elemental_pattern(1)->copyToDevice(stream);
 }
