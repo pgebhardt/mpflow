@@ -59,13 +59,13 @@ namespace fastEIT {
                 return this->d_matrix_;
             }
             std::shared_ptr<Matrix<dtype::real>> w_matrix() {
-                return this->d_matrix_;
+                return this->w_matrix_;
             }
             std::shared_ptr<Matrix<dtype::real>> x_matrix() {
-                return this->d_matrix_;
+                return this->x_matrix_;
             }
             std::shared_ptr<Matrix<dtype::real>> z_matrix() {
-                return this->d_matrix_;
+                return this->z_matrix_;
             }
             std::shared_ptr<Matrix<dtype::real>> excitation(dtype::index index) {
                 return this->excitation_[index];

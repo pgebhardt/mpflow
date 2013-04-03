@@ -55,22 +55,22 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
         stream);
 
     // fill s + r + z
-    for (dtype::index row = 0; row < this->mesh()->nodes()->rows(); ++row) {
-        for (dtype::index column = 0; column < this->mesh()->nodes()->rows(); ++column) {
-            (*system_matrix)(row, column) = (*common_element_matrix)(row, column);
-        }
+    for (dtype::index row = 0; row < this->mesh()->nodes()->rows(); ++row)
+    for (dtype::index column = 0; column < this->mesh()->nodes()->rows(); ++column) {
+        (*system_matrix)(row, column) = (*common_element_matrix)(row, column);
     }
 
     // fill w and x
-    for (dtype::index node = 0; node < this->mesh()->nodes()->rows(); ++node) {
-        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
-            (*system_matrix)(node, electrode + this->mesh()->nodes()->rows()) =
-                (*this->source()->w_matrix())(node, electrode);
+    for (dtype::index node = 0; node < this->mesh()->nodes()->rows(); ++node)
+    for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+        (*system_matrix)(node, electrode + this->mesh()->nodes()->rows()) =
+            (*this->source()->w_matrix())(node, electrode);
 
-            (*system_matrix)(electrode + this->mesh()->nodes()->rows(), node) =
-                (*this->source()->x_matrix())(node, electrode);
-        }
+        (*system_matrix)(electrode + this->mesh()->nodes()->rows(), node) =
+            (*this->source()->x_matrix())(electrode, node);
     }
+
+    std::cout << "Bin hier!" << std::endl;
 
     // fill d matrix
     for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {

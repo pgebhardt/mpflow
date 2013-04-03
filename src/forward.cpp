@@ -12,7 +12,8 @@ template <
     class model_type
 >
 fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
-    std::shared_ptr<model_type> model, std::shared_ptr<source::Source<model_type>> source,
+    std::shared_ptr<model_type> model,
+    std::shared_ptr<source::Source<typename model_type::basis_function_type>> source,
     cublasHandle_t handle, cudaStream_t stream)
     : model_(model), source_(source) {
     // check input

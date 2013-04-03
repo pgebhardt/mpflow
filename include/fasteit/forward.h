@@ -17,8 +17,8 @@ namespace fastEIT {
     public:
         // constructor
         ForwardSolver(std::shared_ptr<model_type> model,
-            std::shared_ptr<source::Source<model_type>> source, cublasHandle_t handle,
-            cudaStream_t stream);
+            std::shared_ptr<source::Source<typename model_type::basis_function_type>> source,
+            cublasHandle_t handle, cudaStream_t stream);
 
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<Matrix<dtype::real>> result,
@@ -32,7 +32,9 @@ namespace fastEIT {
         // accessors
         std::shared_ptr<numeric_solver_type> numeric_solver() { return this->numeric_solver_; }
         std::shared_ptr<model_type> model() { return this->model_; }
-        std::shared_ptr<source::Source<model_type>> source() { return this->source_; }
+        std::shared_ptr<source::Source<typename model_type::basis_function_type>> source() {
+            return this->source_;
+        }
         std::shared_ptr<Matrix<dtype::real>> jacobian() { return this->jacobian_; }
         std::shared_ptr<Matrix<dtype::real>> voltage() { return this->voltage_; }
         std::shared_ptr<Matrix<dtype::real>> current() { return this->current_; }
@@ -50,7 +52,7 @@ namespace fastEIT {
         // member
         std::shared_ptr<numeric_solver_type> numeric_solver_;
         std::shared_ptr<model_type> model_;
-        std::shared_ptr<source::Source<model_type>> source_;
+        std::shared_ptr<source::Source<typename model_type::basis_function_type>> source_;
         std::shared_ptr<Matrix<dtype::real>> jacobian_;
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::shared_ptr<Matrix<dtype::real>> current_;

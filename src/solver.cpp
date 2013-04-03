@@ -10,8 +10,8 @@ template <
     class model_type
 >
 fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
-    std::shared_ptr<source::Source<model_type>> source, dtype::real regularization_factor,
-    cublasHandle_t handle, cudaStream_t stream)
+    std::shared_ptr<source::Source<typename model_type::basis_function_type>> source,
+    dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
