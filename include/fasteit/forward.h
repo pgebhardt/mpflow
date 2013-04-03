@@ -22,7 +22,7 @@ namespace fastEIT {
 
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<Matrix<dtype::real>> result,
-            cublasHandle_t handle, cudaStream_t stream);
+            cudaStream_t stream);
 
         // forward solving
         std::shared_ptr<Matrix<dtype::real>> solve(
@@ -42,9 +42,6 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() {
             return this->elemental_jacobian_matrix_;
         }
-        std::shared_ptr<Matrix<dtype::real>> electrode_attachment_matrix() {
-            return this->electrode_attachment_matrix_;
-        }
 
     private:
         // init jacobian calculation matrix
@@ -59,7 +56,6 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> current_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
-        std::shared_ptr<Matrix<dtype::real>> electrode_attachment_matrix_;
     };
 
     namespace forward {
