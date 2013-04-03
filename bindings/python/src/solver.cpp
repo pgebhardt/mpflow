@@ -31,7 +31,7 @@ void wrap_solver(const char* name) {
         std::shared_ptr<fastEIT::Solver<model_type>>>(
         name, init<
             std::shared_ptr<model_type>,
-            std::shared_ptr<fastEIT::source::Source<model_type>>,
+            std::shared_ptr<fastEIT::source::Source<typename model_type::basis_function_type>>,
             fastEIT::dtype::real, cublasHandle_t, cudaStream_t>())
     .def("pre_solve", &fastEIT::Solver<model_type>::preSolve)
     .def("calibrate", calibrate1)

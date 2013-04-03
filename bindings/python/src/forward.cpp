@@ -10,7 +10,7 @@ void wrap_forward(const char* name) {
             model_type>>>(
         name, init<
             std::shared_ptr<model_type>,
-            std::shared_ptr<fastEIT::source::Source<model_type>>,
+            std::shared_ptr<fastEIT::source::Source<typename model_type::basis_function_type>>,
             cublasHandle_t, cudaStream_t>())
     .def("apply_measurement_pattern",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
@@ -38,10 +38,7 @@ void wrap_forward(const char* name) {
         model_type>::potential)
     .add_property("elemental_jacobian_matrix",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-        model_type>::elemental_jacobian_matrix)
-    .add_property("electrode_attachment_matrix",
-        &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-        model_type>::electrode_attachment_matrix);
+        model_type>::elemental_jacobian_matrix);
 }
 
 void pyfasteit::export_forward() {

@@ -9,10 +9,12 @@ void wrap_model(const char* name) {
         std::shared_ptr<fastEIT::Model<basis_function_type>>>(
         name, init<
             std::shared_ptr<fastEIT::Mesh>, std::shared_ptr<fastEIT::Electrodes>,
+            std::shared_ptr<fastEIT::source::Source<basis_function_type>>,
             fastEIT::dtype::real, fastEIT::dtype::size, cublasHandle_t, cudaStream_t>())
     .def("update", &fastEIT::Model<basis_function_type>::update)
     .add_property("mesh", &fastEIT::Model<basis_function_type>::mesh)
     .add_property("electrodes", &fastEIT::Model<basis_function_type>::electrodes)
+    .add_property("source", &fastEIT::Model<basis_function_type>::source)
     .def("system_matrix", &fastEIT::Model<basis_function_type>::system_matrix)
     .add_property("s_matrix", &fastEIT::Model<basis_function_type>::s_matrix)
     .add_property("r_matrix", &fastEIT::Model<basis_function_type>::r_matrix)
