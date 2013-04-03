@@ -70,8 +70,6 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
             (*this->source()->x_matrix())(electrode, node);
     }
 
-    std::cout << "Bin hier!" << std::endl;
-
     // fill d matrix
     for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
         (*system_matrix)(electrode + this->mesh()->nodes()->rows(),

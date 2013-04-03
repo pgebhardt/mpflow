@@ -75,12 +75,6 @@ fastEIT::source::Source<basis_function_type>::Source(std::string type, dtype::re
     }
     this->elemental_pattern(0)->copyToDevice(stream);
     this->elemental_pattern(1)->copyToDevice(stream);
-
-    // init complete electrode model
-    this->initCEM(handle, stream);
-
-    // update excitation
-    this->updateExcitation(handle, stream);
 }
 
 // current source
@@ -95,6 +89,11 @@ fastEIT::source::Current<basis_function_type>::Current(
     cublasHandle_t handle, cudaStream_t stream)
     : Source<basis_function_type>("current", current, mesh, electrodes, components_count,
         drive_pattern, measurement_pattern, handle, stream) {
+    // init complete electrode model
+    this->initCEM(handle, stream);
+
+    // update excitation
+    this->updateExcitation(handle, stream);
 }
 
 // init complete electrode model matrices
@@ -193,6 +192,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(
     this->pattern()->scalarMultiply(this->value(), stream);
     this->pattern()->add(this->elemental_pattern(1), stream);
     this->pattern()->copyToHost(stream);
+    cudaStreamSynchronize(stream);
 
     // update excitation
     // calc excitation components
@@ -230,6 +230,11 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
     cublasHandle_t handle, cudaStream_t stream)
     : Source<basis_function_type>("voltage", voltage, mesh, electrodes, components_count,
         drive_pattern, measurement_pattern, handle, stream) {
+    // init complete electrode model
+    this->initCEM(handle, stream);
+
+    // update excitation
+    this->updateExcitation(handle, stream);
 }
 
 // init complete electrode model matrices
