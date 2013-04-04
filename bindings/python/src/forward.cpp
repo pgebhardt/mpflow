@@ -9,9 +9,7 @@ void wrap_forward(const char* name) {
         std::shared_ptr<fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
             model_type>>>(
         name, init<
-            std::shared_ptr<model_type>,
-            std::shared_ptr<fastEIT::source::Source<typename model_type::basis_function_type>>,
-            cublasHandle_t, cudaStream_t>())
+            std::shared_ptr<model_type>, cublasHandle_t, cudaStream_t>())
     .def("apply_measurement_pattern",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
         model_type>::applyMeasurementPattern)
@@ -21,9 +19,6 @@ void wrap_forward(const char* name) {
     .add_property("model",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
         model_type>::model)
-    .add_property("source",
-        &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-        model_type>::source)
     .add_property("jacobian",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
         model_type>::jacobian)

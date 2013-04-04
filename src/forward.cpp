@@ -12,16 +12,11 @@ template <
     class model_type
 >
 fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
-    std::shared_ptr<model_type> model,
-    std::shared_ptr<source::Source<typename model_type::basis_function_type>> source,
-    cublasHandle_t handle, cudaStream_t stream)
-    : model_(model), source_(source) {
+    std::shared_ptr<model_type> model, cublasHandle_t handle, cudaStream_t stream)
+    : model_(model) {
     // check input
     if (model == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: model == nullptr");
-    }
-    if (source == nullptr) {
-        throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: source == nullptr");
     }
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: handle == nullptr");
@@ -30,18 +25,18 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
     // create numeric_solver_type solver
     this->numeric_solver_ = std::make_shared<numeric_solver_type>(
         this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
-        this->source()->drive_count() + this->source()->measurement_count(),
+        this->model()->source()->drive_count() + this->model()->source()->measurement_count(),
         stream);
 
     // create matrices
     this->jacobian_ = std::make_shared<Matrix<dtype::real>>(
-        math::roundTo(this->source()->measurement_count(), matrix::block_size) *
-        math::roundTo(this->source()->drive_count(), matrix::block_size),
+        math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
+        math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
         this->model()->mesh()->elements()->rows(), stream);
-    this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
-        this->source()->drive_count(), stream);
-    this->current_ = std::make_shared<Matrix<dtype::real>>(this->source()->measurement_count(),
-        this->source()->drive_count(), stream);
+    this->voltage_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
+        this->model()->source()->drive_count(), stream);
+    this->current_ = std::make_shared<Matrix<dtype::real>>(this->model()->source()->measurement_count(),
+        this->model()->source()->drive_count(), stream);
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(
         this->model()->mesh()->elements()->rows(),
         math::square(model_type::basis_function_type::nodes_per_element), stream);
@@ -52,7 +47,7 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
         ++component) {
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
-            this->source()->drive_count() + this->source()->measurement_count(), stream));
+            this->model()->source()->drive_count() + this->model()->source()->measurement_count(), stream));
     }
 
     // init jacobian calculation matrix
@@ -163,34 +158,34 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
 
     // solve for ground mode
     this->numeric_solver()->solve(this->model()->system_matrix(0),
-        this->source()->excitation(0), steps,
-        this->source()->type() == "current" ? true : false,
+        this->model()->source()->excitation(0), steps,
+        this->model()->source()->type() == "current" ? true : false,
         stream, this->potential(0));
 
     // solve for higher harmonics
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         this->numeric_solver()->solve(
             this->model()->system_matrix(component),
-            this->source()->excitation(component),
+            this->model()->source()->excitation(component),
             steps, false, stream, this->potential(component));
     }
 
     // calc jacobian
     forward::calcJacobian<typename decltype(this->model())::element_type>(
         gamma, this->potential(0), this->model()->mesh()->elements(),
-        this->elemental_jacobian_matrix(), this->source()->drive_count(),
-        this->source()->measurement_count(), this->model()->sigma_ref(),
+        this->elemental_jacobian_matrix(), this->model()->source()->drive_count(),
+        this->model()->source()->measurement_count(), this->model()->sigma_ref(),
         false, stream, this->jacobian());
     for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
         forward::calcJacobian<typename decltype(this->model())::element_type>(
             gamma, this->potential(component), this->model()->mesh()->elements(),
-            this->elemental_jacobian_matrix(), this->source()->drive_count(),
-            this->source()->measurement_count(), this->model()->sigma_ref(),
+            this->elemental_jacobian_matrix(), this->model()->source()->drive_count(),
+            this->model()->source()->measurement_count(), this->model()->sigma_ref(),
             true, stream, this->jacobian());
     }
 
     // current source specific tasks
-    if (this->source()->type() == "current") {
+    if (this->model()->source()->type() == "current") {
         // turn sign of jacobian, because of voltage jacobian
         this->jacobian()->scalarMultiply(-1.0, stream);
 
@@ -198,7 +193,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
         this->applyMeasurementPattern(this->voltage(), stream);
 
         return this->voltage();
-    } else if (this->source()->type() == "voltage") {
+    } else if (this->model()->source()->type() == "voltage") {
         // calc current
         this->applyMeasurementPattern(this->current(), stream);
 
