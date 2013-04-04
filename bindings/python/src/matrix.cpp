@@ -55,21 +55,21 @@ void put(fastEIT::Matrix<matrix_type>* self, numeric::array& numpy_array,
     cudaStream_t stream) {
     // check dimensions of numpy_array
     if (PyArray_NDIM((PyArrayObject*)numpy_array.ptr()) != 2) {
-        // TODO: raise an exception
-        return;
+        throw std::invalid_argument("only array with ndim of 2 are allowed");
     }
 
     // convert array to correct data type
     npy_intp* shape = PyArray_DIMS((PyArrayObject*)numpy_array.ptr());
     if ((shape[0] != self->rows()) || (shape[1] != self->columns())) {
-        // TODO: raise an exception
-        return;
+        std::stringstream message;
+        message << "cannot assign array of incompatible shape (" << self->rows() << "," <<
+            self->columns() << ") (" << shape[0] << "," << shape[1] << ")";
+        throw std::invalid_argument(message.str());
     }
 
     PyArrayObject* array = (PyArrayObject*)PyArray_SimpleNew(2, shape, npy_type);
     if (PyArray_CopyInto(array, (PyArrayObject*)numpy_array.ptr()) != 0) {
-        // TODO: raise an exception
-        return;
+        throw std::invalid_argument("array of incompatible dtype");
     }
 
     // get strides and data
@@ -86,6 +86,13 @@ void put(fastEIT::Matrix<matrix_type>* self, numeric::array& numpy_array,
 }
 
 template <
+    class matrix_type
+>
+tuple shape(fastEIT::Matrix<matrix_type>* self) {
+    return make_tuple(self->rows(), self->columns());
+}
+
+template <
     class matrix_type,
     int npy_type
 >
@@ -98,6 +105,7 @@ void wrap_matrix(const char* name) {
             cudaStream_t, matrix_type>())
     .add_property("rows", &fastEIT::Matrix<matrix_type>::rows)
     .add_property("columns", &fastEIT::Matrix<matrix_type>::columns)
+    .add_property("shape", shape<matrix_type>)
     .def("copy", &fastEIT::Matrix<matrix_type>::copy)
     .def("copy_to_host", &fastEIT::Matrix<matrix_type>::copyToHost)
     .def("copy_to_device", &fastEIT::Matrix<matrix_type>::copyToDevice)
@@ -114,7 +122,7 @@ std::shared_ptr<fastEIT::Matrix<matrix_type>> fromNumpy(numeric::array& array,
     cudaStream_t stream) {
     // check dimension
     if (PyArray_NDIM(array.ptr()) != 2) {
-        return nullptr;
+        throw std::invalid_argument("only array with ndim of 2 are allowed");
     }
 
     // get array shape
