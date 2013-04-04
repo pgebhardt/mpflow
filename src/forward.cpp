@@ -120,8 +120,8 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPa
     }
 
     // apply pattern
-    dim3 blocks(result->rows(), result->columns());
-    dim3 threads(1, 1);
+    dim3 threads(result->rows(), result->columns());
+    dim3 blocks(1, 1);
 
     forwardKernel::calcVoltage(blocks, threads, stream,
         this->potential(0)->device_data(),
