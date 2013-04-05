@@ -55,7 +55,7 @@ void put(fastEIT::Matrix<matrix_type>* self, numeric::array& numpy_array,
     cudaStream_t stream) {
     // check dimensions of numpy_array
     if (PyArray_NDIM((PyArrayObject*)numpy_array.ptr()) != 2) {
-        throw std::invalid_argument("only array with ndim of 2 are allowed");
+        throw std::invalid_argument("only arrays with ndim of 2 are allowed");
     }
 
     // convert array to correct data type
