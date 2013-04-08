@@ -6,7 +6,7 @@
 #include "fasteit/fasteit.h"
 
 // create solver
-fastEIT::Solver::Solver(std::shared_ptr<fastEIT::Model_base> model,
+fastEIT::Solver::Solver(std::shared_ptr<fastEIT::model::Model> model,
     dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input

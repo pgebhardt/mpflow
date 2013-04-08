@@ -7,7 +7,7 @@
 #include "fasteit/model_kernel.h"
 
 // 2.5D model base class
-fastEIT::Model_base::Model_base(
+fastEIT::model::Model::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
     dtype::size components_count)
@@ -15,13 +15,13 @@ fastEIT::Model_base::Model_base(
         components_count_(components_count) {
     // check input
     if (mesh == nullptr) {
-        throw std::invalid_argument("fastEIT::Model_base::Model_base: mesh == nullptr");
+        throw std::invalid_argument("fastEIT::model::Model::Model: mesh == nullptr");
     }
     if (electrodes == nullptr) {
-        throw std::invalid_argument("fastEIT::Model_base::Model_base: electrodes == nullptr");
+        throw std::invalid_argument("fastEIT::model::Model::Model: electrodes == nullptr");
     }
     if (components_count == 0) {
-        throw std::invalid_argument("fastEIT::Model_base::Model_base: components_count == 0");
+        throw std::invalid_argument("fastEIT::model::Model::Model: components_count == 0");
     }
 }
 
@@ -33,7 +33,7 @@ fastEIT::Model<basis_function_type>::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
     dtype::size components_count, cublasHandle_t handle, cudaStream_t stream)
-    : Model_base(mesh, electrodes, source, sigma_ref, components_count) {
+    : model::Model(mesh, electrodes, source, sigma_ref, components_count) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::Model::Model: handle == nullptr");
