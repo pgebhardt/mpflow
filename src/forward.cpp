@@ -8,11 +8,10 @@
 
 // create forward_solver
 template <
-    class numeric_solver_type,
-    class model_type
+    class numeric_solver_type
 >
-fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
-    std::shared_ptr<model_type> model, cublasHandle_t handle, cudaStream_t stream)
+fastEIT::ForwardSolver<numeric_solver_type>::ForwardSolver(
+    std::shared_ptr<fastEIT::model::Model> model, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
@@ -39,10 +38,9 @@ fastEIT::ForwardSolver<numeric_solver_type, model_type>::ForwardSolver(
 
 // apply pattern
 template <
-    class numeric_solver_type,
-    class model_type
+    class numeric_solver_type
 >
-void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPattern(
+void fastEIT::ForwardSolver<numeric_solver_type>::applyMeasurementPattern(
     std::shared_ptr<Matrix<dtype::real>> result, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
@@ -74,10 +72,9 @@ void fastEIT::ForwardSolver<numeric_solver_type, model_type>::applyMeasurementPa
 
 // forward solving
 template <
-    class numeric_solver_type,
-    class model_type
+    class numeric_solver_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<numeric_solver_type, model_type>::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<numeric_solver_type>::solve(
     const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
@@ -129,7 +126,4 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
 }
 
 // specialisation
-template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-    fastEIT::Model<fastEIT::basis::Linear>>;
-template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-    fastEIT::Model<fastEIT::basis::Quadratic>>;
+template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate>;

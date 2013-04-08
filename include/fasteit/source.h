@@ -11,9 +11,6 @@ namespace fastEIT {
     // source namespace
     namespace source {
         // source base class
-        template <
-            class template_basis_function_type
-        >
         class Source {
         public:
             // constructor
@@ -29,9 +26,6 @@ namespace fastEIT {
             // update excitation
             virtual void updateExcitation(cublasHandle_t, cudaStream_t) {
             };
-
-            // type defs
-            typedef template_basis_function_type basis_function_type;
 
         protected:
             // init excitation
@@ -95,9 +89,9 @@ namespace fastEIT {
 
         // current source
         template <
-            class template_basis_function_type
+            class basis_function_type
         >
-        class Current : public Source<template_basis_function_type> {
+        class Current : public Source {
         public:
             // constructor
             Current(dtype::real current, std::shared_ptr<Mesh> mesh,
@@ -116,9 +110,9 @@ namespace fastEIT {
 
         // voltage source
         template <
-            class template_basis_function_type
+            class basis_function_type
         >
-        class Voltage : public Source<template_basis_function_type> {
+        class Voltage : public Source {
         public:
             // constructor
             Voltage(dtype::real voltage, std::shared_ptr<Mesh> mesh,
