@@ -5,7 +5,7 @@ void pyfasteit::export_forward() {
     class_<fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate>,
         std::shared_ptr<fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate>>>(
         "ForwardSolver", init<
-            std::shared_ptr<fastEIT::Model_base>, cublasHandle_t, cudaStream_t>())
+            std::shared_ptr<fastEIT::model::Model>, cublasHandle_t, cudaStream_t>())
     .def("apply_measurement_pattern",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate>::applyMeasurementPattern)
     .def("solve",

@@ -2,28 +2,28 @@
 using namespace boost::python;
 
 void wrap_model(const char* name) {
-    class_<fastEIT::Model_base,
-        std::shared_ptr<fastEIT::Model_base>>(
+    class_<fastEIT::model::Model,
+        std::shared_ptr<fastEIT::model::Model>>(
         name, init<
             std::shared_ptr<fastEIT::Mesh>, std::shared_ptr<fastEIT::Electrodes>,
             std::shared_ptr<fastEIT::source::Source>, fastEIT::dtype::real,
             fastEIT::dtype::size>())
-    .def("update", &fastEIT::Model_base::update)
-    .add_property("mesh", &fastEIT::Model_base::mesh)
-    .add_property("electrodes", &fastEIT::Model_base::electrodes)
-    .add_property("source", &fastEIT::Model_base::source)
-    .def("system_matrix", &fastEIT::Model_base::system_matrix)
-    .def("potential", &fastEIT::Model_base::potential)
-    .add_property("jacobian", &fastEIT::Model_base::jacobian)
-    .add_property("s_matrix", &fastEIT::Model_base::s_matrix)
-    .add_property("r_matrix", &fastEIT::Model_base::r_matrix)
-    .add_property("connectivity_matrix", &fastEIT::Model_base::connectivity_matrix)
-    .add_property("elemental_s_matrix", &fastEIT::Model_base::elemental_s_matrix)
-    .add_property("elemental_r_matrix", &fastEIT::Model_base::elemental_r_matrix)
+    .def("update", &fastEIT::model::Model::update)
+    .add_property("mesh", &fastEIT::model::Model::mesh)
+    .add_property("electrodes", &fastEIT::model::Model::electrodes)
+    .add_property("source", &fastEIT::model::Model::source)
+    .def("system_matrix", &fastEIT::model::Model::system_matrix)
+    .def("potential", &fastEIT::model::Model::potential)
+    .add_property("jacobian", &fastEIT::model::Model::jacobian)
+    .add_property("s_matrix", &fastEIT::model::Model::s_matrix)
+    .add_property("r_matrix", &fastEIT::model::Model::r_matrix)
+    .add_property("connectivity_matrix", &fastEIT::model::Model::connectivity_matrix)
+    .add_property("elemental_s_matrix", &fastEIT::model::Model::elemental_s_matrix)
+    .add_property("elemental_r_matrix", &fastEIT::model::Model::elemental_r_matrix)
     .add_property("elemental_jacobian_matrix",
-        &fastEIT::Model_base::elemental_jacobian_matrix)
-    .add_property("sigma_ref", &fastEIT::Model_base::sigma_ref)
-    .add_property("components_count", &fastEIT::Model_base::components_count);
+        &fastEIT::model::Model::elemental_jacobian_matrix)
+    .add_property("sigma_ref", &fastEIT::model::Model::sigma_ref)
+    .add_property("components_count", &fastEIT::model::Model::components_count);
 }
 
 template <
@@ -32,16 +32,16 @@ template <
 void wrap_derived_model(const char* name) {
     class_<fastEIT::Model<basis_function_type>,
         std::shared_ptr<fastEIT::Model<basis_function_type>>,
-        bases<fastEIT::Model_base>>(
+        bases<fastEIT::model::Model>>(
         name, init<
             std::shared_ptr<fastEIT::Mesh>, std::shared_ptr<fastEIT::Electrodes>,
             std::shared_ptr<fastEIT::source::Source>, fastEIT::dtype::real,
             fastEIT::dtype::size, cublasHandle_t, cudaStream_t>());
 
     implicitly_convertible<fastEIT::Model<basis_function_type>,
-        fastEIT::Model_base>();
+        fastEIT::model::Model>();
     implicitly_convertible<std::shared_ptr<fastEIT::Model<basis_function_type>>,
-        std::shared_ptr<fastEIT::Model_base>>();
+        std::shared_ptr<fastEIT::model::Model>>();
 }
 
 void pyfasteit::export_model() {

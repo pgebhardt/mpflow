@@ -25,7 +25,7 @@ void pyfasteit::export_solver() {
             cublasHandle_t, cudaStream_t) = &fastEIT::Solver::solve;
 
     class_<fastEIT::Solver, std::shared_ptr<fastEIT::Solver>>(
-        "Solver", init<std::shared_ptr<fastEIT::Model_base>,
+        "Solver", init<std::shared_ptr<fastEIT::model::Model>,
             fastEIT::dtype::real, cublasHandle_t, cudaStream_t>())
     .def("pre_solve", &fastEIT::Solver::preSolve)
     .def("calibrate", calibrate1)
