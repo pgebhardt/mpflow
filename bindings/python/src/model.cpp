@@ -30,5 +30,14 @@ void wrap_model(const char* name) {
 }
 
 void pyfasteit::export_model() {
-    wrap_model<fastEIT::basis::Linear>("Model");
+    // expose this module as part of fasteit package
+    object module(handle<>(borrowed(PyImport_AddModule("fasteit.model"))));
+    scope().attr("model") = module;
+    scope sub_module = module;
+
+    wrap_model<fastEIT::basis::Linear>("Linear");
+    wrap_model<fastEIT::basis::Quadratic>("Quadratic");
+
+    // reset scope
+    scope();
 }

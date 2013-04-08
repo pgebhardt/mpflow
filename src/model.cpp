@@ -6,27 +6,35 @@
 #include "fasteit/fasteit.h"
 #include "fasteit/model_kernel.h"
 
+// 2.5D model base class
+fastEIT::Model_base::Model_base(
+    std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+    std::shared_ptr<source::Source> source, dtype::real sigma_ref,
+    dtype::size components_count)
+    : mesh_(mesh), electrodes_(electrodes), source_(source), sigma_ref_(sigma_ref),
+        components_count_(components_count) {
+    // check input
+    if (mesh == nullptr) {
+        throw std::invalid_argument("fastEIT::Model_base::Model_base: mesh == nullptr");
+    }
+    if (electrodes == nullptr) {
+        throw std::invalid_argument("fastEIT::Model_base::Model_base: electrodes == nullptr");
+    }
+    if (components_count == 0) {
+        throw std::invalid_argument("fastEIT::Model_base::Model_base: components_count == 0");
+    }
+}
+
 // create 2.5D model
 template <
     class basis_function_type
 >
 fastEIT::Model<basis_function_type>::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
-    std::shared_ptr<source::Source<basis_function_type>> source, dtype::real sigmaRef,
-    dtype::size components_count, cublasHandle_t handle,
-    cudaStream_t stream)
-    : mesh_(mesh), electrodes_(electrodes), source_(source), sigma_ref_(sigmaRef),
-        components_count_(components_count) {
+    std::shared_ptr<source::Source> source, dtype::real sigma_ref,
+    dtype::size components_count, cublasHandle_t handle, cudaStream_t stream)
+    : Model_base(mesh, electrodes, source, sigma_ref, components_count) {
     // check input
-    if (mesh == nullptr) {
-        throw std::invalid_argument("fastEIT::Model::Model: mesh == nullptr");
-    }
-    if (electrodes == nullptr) {
-        throw std::invalid_argument("fastEIT::Model::Model: electrodes == nullptr");
-    }
-    if (components_count == 0) {
-        throw std::invalid_argument("fastEIT::Model::Model: components_count == 0");
-    }
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::Model::Model: handle == nullptr");
     }

@@ -6,10 +6,7 @@
 #include "fasteit/fasteit.h"
 
 // create solver
-template <
-    class model_type
->
-fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
+fastEIT::Solver::Solver(std::shared_ptr<fastEIT::Model_base> model,
     dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
@@ -21,8 +18,8 @@ fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
     }
 
     // create forward solver
-    this->forward_solver_ = std::make_shared<ForwardSolver<numeric::SparseConjugate,
-        model_type>>(this->model(), handle, stream);
+    this->forward_solver_ = std::make_shared<ForwardSolver<numeric::SparseConjugate>>(
+        this->model(), handle, stream);
 
     // create inverse solver
     this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
@@ -45,10 +42,7 @@ fastEIT::Solver<model_type>::Solver(std::shared_ptr<model_type> model,
 }
 
 // pre solve for accurate initial jacobian
-template <
-    class model_type
->
-void fastEIT::Solver<model_type>::preSolve(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::Solver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::Solver::pre_solve: handle == nullptr");
@@ -66,10 +60,7 @@ void fastEIT::Solver<model_type>::preSolve(cublasHandle_t handle, cudaStream_t s
 }
 
 // calibrate
-template <
-    class model_type
->
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_type>::calibrate(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::calibrate(
     const std::shared_ptr<Matrix<dtype::real>> calibration_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
@@ -95,20 +86,14 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_typ
 
     return this->gamma();
 }
-template <
-    class model_type
->
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_type>::calibrate(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::calibrate(
     cublasHandle_t handle, cudaStream_t stream) {
     // calibrate
     return this->calibrate(this->calibration_voltage(), handle, stream);
 }
 
 // solving
-template <
-    class model_type
->
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_type>::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::solve(
     const std::shared_ptr<Matrix<dtype::real>> measured_voltage,
     const std::shared_ptr<Matrix<dtype::real>> calibration_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
@@ -129,24 +114,14 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_typ
 
     return this->dgamma();
 }
-template <
-    class model_type
->
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_type>::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::solve(
     const std::shared_ptr<Matrix<dtype::real>> measured_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
     // solve
     return this->solve(measured_voltage, this->calibration_voltage(), handle, stream);
 }
-template <
-    class model_type
->
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_type>::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::solve(
     cublasHandle_t handle, cudaStream_t stream) {
     // solve
     return this->solve(this->measured_voltage(), this->calibration_voltage(), handle, stream);
 }
-
-// specialization
-template class fastEIT::Solver<fastEIT::Model<fastEIT::basis::Linear>>;
-template class fastEIT::Solver<fastEIT::Model<fastEIT::basis::Quadratic>>;

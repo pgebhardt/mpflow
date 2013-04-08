@@ -9,13 +9,10 @@
 // namespace fastEIT
 namespace fastEIT {
     // solver class definition
-    template <
-        class model_type
-    >
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<model_type> model, dtype::real regularization_factor,
+        Solver(std::shared_ptr<fastEIT::Model_base> model, dtype::real regularization_factor,
             cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian
@@ -35,8 +32,8 @@ namespace fastEIT {
             cudaStream_t stream);
 
         // accessors
-        std::shared_ptr<model_type> model() { return this->model_; }
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type>> forward_solver() {
+        std::shared_ptr<fastEIT::Model_base> model() { return this->model_; }
+        std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver() {
             return this->forward_solver_;
         }
         std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver() {
@@ -49,8 +46,8 @@ namespace fastEIT {
 
     private:
         // member
-        std::shared_ptr<model_type> model_;
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate, model_type>> forward_solver_;
+        std::shared_ptr<fastEIT::Model_base> model_;
+        std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver_;
         std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
         std::shared_ptr<Matrix<dtype::real>> gamma_;

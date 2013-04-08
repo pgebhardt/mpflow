@@ -8,33 +8,29 @@
 
 // namespaces fastEIT
 namespace fastEIT {
-    // model class definition
-    template <
-        class template_basis_function_type
-    >
-    class Model {
+    // model base class
+    class Model_base {
     public:
         // constructor
-        Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
-            std::shared_ptr<source::Source<template_basis_function_type>> source,
-            dtype::real sigmaRef, dtype::size components_count, cublasHandle_t handle,
-            cudaStream_t stream);
+        Model_base(std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+            std::shared_ptr<source::Source> source,
+            dtype::real sigmaRef, dtype::size components_count);
 
         // update model
-        void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
-            cudaStream_t stream);
+        virtual void update(const std::shared_ptr<Matrix<dtype::real>>,
+            cublasHandle_t, cudaStream_t) {
+        }
 
         // calc jacobian
-        std::shared_ptr<Matrix<dtype::real>> calcJacobian(
-            const std::shared_ptr<Matrix<dtype::real>> gamma, cudaStream_t stream);
-
-        // type defs
-        typedef template_basis_function_type basis_function_type;
+        virtual std::shared_ptr<Matrix<dtype::real>> calcJacobian(
+            const std::shared_ptr<Matrix<dtype::real>>, cudaStream_t) {
+            return nullptr;
+        }
 
         // accessors
         std::shared_ptr<Mesh> mesh() { return this->mesh_; }
         std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
-        std::shared_ptr<source::Source<template_basis_function_type>> source() {
+        std::shared_ptr<source::Source> source() {
             return this->source_;
         }
         std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) {
@@ -61,16 +57,19 @@ namespace fastEIT {
         dtype::real sigma_ref() { return this->sigma_ref_; }
         dtype::size components_count() { return this->components_count_; }
 
-    private:
+    protected:
         // init methods
-        void init(cublasHandle_t handle, cudaStream_t stream);
-        std::shared_ptr<Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
-        void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
+        virtual void init(cublasHandle_t, cudaStream_t) { }
+        virtual std::shared_ptr<Matrix<dtype::real>> initElementalMatrices(cudaStream_t) {
+            return nullptr;
+        }
+        virtual void initJacobianCalculationMatrix(cublasHandle_t, cudaStream_t) {
+        }
 
         // member
         std::shared_ptr<Mesh> mesh_;
         std::shared_ptr<Electrodes> electrodes_;
-        std::shared_ptr<source::Source<template_basis_function_type>> source_;
+        std::shared_ptr<source::Source> source_;
         std::vector<std::shared_ptr<SparseMatrix<dtype::real>>> system_matrices_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
         std::shared_ptr<Matrix<dtype::real>> jacobian_;
@@ -82,6 +81,33 @@ namespace fastEIT {
         std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
         dtype::real sigma_ref_;
         dtype::size components_count_;
+    };
+
+    // model class definition
+    template <
+        class basis_function_type
+    >
+    class Model :
+    public Model_base {
+    public:
+        // constructor
+        Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+            std::shared_ptr<source::Source> source, dtype::real sigmaRef,
+            dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
+
+        // update model
+        virtual void update(const std::shared_ptr<Matrix<dtype::real>> gamma,
+            cublasHandle_t handle, cudaStream_t stream);
+
+        // calc jacobian
+        virtual std::shared_ptr<Matrix<dtype::real>> calcJacobian(
+            const std::shared_ptr<Matrix<dtype::real>> gamma, cudaStream_t stream);
+
+    protected:
+        // init methods
+        virtual void init(cublasHandle_t handle, cudaStream_t stream);
+        virtual std::shared_ptr<Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
+        virtual void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
     };
 
     // special functions

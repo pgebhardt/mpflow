@@ -5,10 +5,7 @@
 
 #include "fasteit/fasteit.h"
 
-template <
-    class basis_function_type
->
-fastEIT::source::Source<basis_function_type>::Source(std::string type, dtype::real value,
+fastEIT::source::Source::Source(std::string type, dtype::real value,
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     dtype::size components_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
@@ -86,7 +83,7 @@ fastEIT::source::Current<basis_function_type>::Current(
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
-    : Source<basis_function_type>("current", current, mesh, electrodes, components_count,
+    : Source("current", current, mesh, electrodes, components_count,
         drive_pattern, measurement_pattern, handle, stream) {
     // init complete electrode model
     this->initCEM(handle, stream);
@@ -227,7 +224,7 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
-    : Source<basis_function_type>("voltage", voltage, mesh, electrodes, components_count,
+    : Source("voltage", voltage, mesh, electrodes, components_count,
         drive_pattern, measurement_pattern, handle, stream) {
     // init complete electrode model
     this->initCEM(handle, stream);
@@ -252,9 +249,7 @@ void fastEIT::source::Voltage<model_type>::updateExcitation(
 }
 
 // specialisation
-template class fastEIT::source::Source<fastEIT::basis::Linear>;
 template class fastEIT::source::Current<fastEIT::basis::Linear>;
 template class fastEIT::source::Voltage<fastEIT::basis::Linear>;
-template class fastEIT::source::Source<fastEIT::basis::Quadratic>;
 template class fastEIT::source::Current<fastEIT::basis::Quadratic>;
 template class fastEIT::source::Voltage<fastEIT::basis::Quadratic>;
