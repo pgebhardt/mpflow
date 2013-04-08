@@ -19,21 +19,12 @@ void wrap_forward(const char* name) {
     .add_property("model",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
         model_type>::model)
-    .add_property("jacobian",
-        &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-        model_type>::jacobian)
     .add_property("voltage",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
         model_type>::voltage)
     .add_property("current",
         &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-        model_type>::current)
-    .def("potential",
-        &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-        model_type>::potential)
-    .add_property("elemental_jacobian_matrix",
-        &fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate,
-        model_type>::elemental_jacobian_matrix);
+        model_type>::current);
 }
 
 void pyfasteit::export_forward() {
