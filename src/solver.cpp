@@ -58,7 +58,7 @@ void fastEIT::Solver<model_type>::preSolve(cublasHandle_t handle, cudaStream_t s
     this->forward_solver()->solve(this->gamma(), 1000, handle, stream);
 
     // calc system matrix
-    this->inverse_solver()->calcSystemMatrix(this->forward_solver()->jacobian(), handle, stream);
+    this->inverse_solver()->calcSystemMatrix(this->model()->jacobian(), handle, stream);
 
     // set measuredVoltage and calibrationVoltage to calculatedVoltage
     this->measured_voltage()->copy(this->forward_solver()->voltage(), stream);
@@ -84,10 +84,10 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_typ
     this->forward_solver()->solve(this->gamma(), 20, handle, stream);
 
     // calc inverse system matrix
-    this->inverse_solver()->calcSystemMatrix(this->forward_solver()->jacobian(), handle, stream);
+    this->inverse_solver()->calcSystemMatrix(this->model()->jacobian(), handle, stream);
 
     // solve inverse
-    this->inverse_solver()->solve(this->forward_solver()->jacobian(), this->forward_solver()->voltage(),
+    this->inverse_solver()->solve(this->model()->jacobian(), this->forward_solver()->voltage(),
         calibration_voltage, 90, handle, stream, this->dgamma());
 
     // add to gamma
@@ -124,7 +124,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver<model_typ
     }
 
     // solve
-    this->inverse_solver()->solve(this->forward_solver()->jacobian(), calibration_voltage,
+    this->inverse_solver()->solve(this->model()->jacobian(), calibration_voltage,
         measured_voltage, 90, handle, stream, this->dgamma());
 
     return this->dgamma();

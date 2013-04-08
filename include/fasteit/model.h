@@ -1,6 +1,6 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #ifndef FASTEIT_INCLUDE_MODEL_H
@@ -24,6 +24,10 @@ namespace fastEIT {
         void update(const std::shared_ptr<Matrix<dtype::real>> gamma, cublasHandle_t handle,
             cudaStream_t stream);
 
+        // calc jacobian
+        std::shared_ptr<Matrix<dtype::real>> calcJacobian(
+            const std::shared_ptr<Matrix<dtype::real>> gamma, cudaStream_t stream);
+
         // type defs
         typedef template_basis_function_type basis_function_type;
 
@@ -33,12 +37,27 @@ namespace fastEIT {
         std::shared_ptr<source::Source<template_basis_function_type>> source() {
             return this->source_;
         }
-        std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) { return this->system_matrices_[index]; }
+        std::shared_ptr<SparseMatrix<dtype::real>> system_matrix(dtype::index index) {
+            return this->system_matrices_[index];
+        }
+        std::shared_ptr<Matrix<dtype::real>> potential(dtype::index index) {
+            return this->potential_[index];
+        }
+        std::shared_ptr<Matrix<dtype::real>> jacobian() { return this->jacobian_; }
         std::shared_ptr<SparseMatrix<dtype::real>> s_matrix() { return this->s_matrix_; }
         std::shared_ptr<SparseMatrix<dtype::real>> r_matrix() { return this->r_matrix_; }
-        std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() { return this->connectivity_matrix_; }
-        std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix() { return this->elemental_s_matrix_; }
-        std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() { return this->elemental_r_matrix_; }
+        std::shared_ptr<Matrix<dtype::index>> connectivity_matrix() {
+            return this->connectivity_matrix_;
+        }
+        std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix() {
+            return this->elemental_s_matrix_;
+        }
+        std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix() {
+            return this->elemental_r_matrix_;
+        }
+        std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix() {
+            return this->elemental_jacobian_matrix_;
+        }
         dtype::real sigma_ref() { return this->sigma_ref_; }
         dtype::size components_count() { return this->components_count_; }
 
@@ -46,17 +65,21 @@ namespace fastEIT {
         // init methods
         void init(cublasHandle_t handle, cudaStream_t stream);
         std::shared_ptr<Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
+        void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
 
         // member
         std::shared_ptr<Mesh> mesh_;
         std::shared_ptr<Electrodes> electrodes_;
         std::shared_ptr<source::Source<template_basis_function_type>> source_;
         std::vector<std::shared_ptr<SparseMatrix<dtype::real>>> system_matrices_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> potential_;
+        std::shared_ptr<Matrix<dtype::real>> jacobian_;
         std::shared_ptr<SparseMatrix<dtype::real>> s_matrix_;
         std::shared_ptr<SparseMatrix<dtype::real>> r_matrix_;
         std::shared_ptr<Matrix<dtype::index>> connectivity_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_s_matrix_;
         std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix_;
+        std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
         dtype::real sigma_ref_;
         dtype::size components_count_;
     };
@@ -76,6 +99,18 @@ namespace fastEIT {
         void reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
             const std::shared_ptr<SparseMatrix<dtype::real>> shape, dtype::index offset,
             cudaStream_t stream, std::shared_ptr<Matrix<type>> matrix);
+
+        // calc jacobian
+        template <
+            class basis_function_type
+        >
+        void calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gamma,
+            const std::shared_ptr<Matrix<dtype::real>> potential,
+            const std::shared_ptr<Matrix<dtype::index>> elements,
+            const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix,
+            dtype::size drive_count, dtype::size measurment_count,
+            dtype::real sigma_ref, bool additiv,
+            cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> jacobian);
     }
 }
 

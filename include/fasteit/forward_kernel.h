@@ -10,20 +10,8 @@
 namespace fastEIT {
     // namespace forward
     namespace forwardKernel {
-        // calc jacobian kernel
-        template <
-            int nodes_per_element
-        >
-        void calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const dtype::real* drive_phi, const dtype::real* measurment_phi,
-            const dtype::index* connectivity_matrix,
-            const dtype::real* elemental_jacobian_matrix, const dtype::real* gamma,
-            dtype::real sigma_ref, dtype::size rows, dtype::size columns,
-            dtype::size phi_rows, dtype::size element_count, dtype::size drive_count,
-            dtype::size measurment_count, bool additiv, dtype::real* jacobian);
-
-        // calc voltage
-        void calcVoltage(dim3 blocks, dim3 threads, cudaStream_t stream,
+        // apply measurment pattern
+        void applyMeasurementPattern(dim3 blocks, dim3 threads, cudaStream_t stream,
             const dtype::real* potential, dtype::size offset,
             dtype::size rows, const dtype::real* pattern,
             dtype::size pattern_rows, bool additiv, dtype::real* voltage, dtype::size voltage_rows);
