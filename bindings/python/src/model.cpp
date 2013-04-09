@@ -9,6 +9,7 @@ void wrap_model(const char* name) {
             std::shared_ptr<fastEIT::source::Source>, fastEIT::dtype::real,
             fastEIT::dtype::size>())
     .def("update", &fastEIT::model::Model::update)
+    .def("calc_jacobian", &fastEIT::model::Model::calcJacobian)
     .add_property("mesh", &fastEIT::model::Model::mesh)
     .add_property("electrodes", &fastEIT::model::Model::electrodes)
     .add_property("source", &fastEIT::model::Model::source)
