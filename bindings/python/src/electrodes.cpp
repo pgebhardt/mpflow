@@ -37,7 +37,4 @@ void pyfasteit::export_electrodes() {
     scope sub_module = module;
 
     def("circular_boundary", &fastEIT::electrodes::circularBoundary);
-
-    // reset scope
-    scope();
 }

@@ -45,7 +45,4 @@ void pyfasteit::export_cuda() {
     def("set_device", &cudaSetDevice_wrapper);
     def("device_count", &cudaGetDeviceCount_wrapper);
     def("enable_peer_access", &cudaDeviceEnablePeerAccess_wrapper);
-
-    // reset scope
-    scope();
 }

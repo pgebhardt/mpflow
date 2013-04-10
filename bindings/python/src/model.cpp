@@ -57,7 +57,4 @@ void pyfasteit::export_model() {
     // wrap derived classes
     wrap_derived_model<fastEIT::basis::Linear>("Linear");
     wrap_derived_model<fastEIT::basis::Quadratic>("Quadratic");
-
-    // reset scope
-    scope();
 }

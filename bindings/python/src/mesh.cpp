@@ -14,4 +14,11 @@ void pyfasteit::export_mesh() {
     .add_property("boundary", &fastEIT::Mesh::boundary)
     .add_property("radius", &fastEIT::Mesh::radius)
     .add_property("height", &fastEIT::Mesh::height);
+
+    // expose this module as part of fasteit package
+    object module(handle<>(borrowed(PyImport_AddModule("fasteit.mesh"))));
+    scope().attr("mesh") = module;
+    scope sub_module = module;
+
+    def("quadratic_basis", &fastEIT::mesh::quadraticBasis);
 }

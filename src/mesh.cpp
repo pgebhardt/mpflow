@@ -241,6 +241,9 @@ fastEIT::mesh::quadraticMeshFromLinear(
             (*boundary_new)(row, column) = quadratic_boundary_vector[row][column];
         }
      }
+     nodes_new->copyToDevice(nullptr);
+     elements_new->copyToDevice(nullptr);
+     boundary_new->copyToDevice(nullptr);
 
     // return quadratic mesh matrices
     return std::make_tuple(nodes_new, elements_new, boundary_new);

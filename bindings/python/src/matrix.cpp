@@ -122,7 +122,7 @@ std::shared_ptr<fastEIT::Matrix<matrix_type>> fromNumpy(numeric::array& array,
     cudaStream_t stream) {
     // check dimension
     if (PyArray_NDIM(array.ptr()) != 2) {
-        throw std::invalid_argument("only array with ndim of 2 are allowed");
+        throw std::invalid_argument("only array with ndim of 2 is allowed");
     }
 
     // get array shape
@@ -141,17 +141,14 @@ std::shared_ptr<fastEIT::Matrix<matrix_type>> fromNumpy(numeric::array& array,
 void pyfasteit::export_matrix() {
     import_array();
 
-    wrap_matrix<fastEIT::dtype::real, NPY_FLOAT32>("Matrix_real");
-    wrap_matrix<fastEIT::dtype::index, NPY_UINT32>("Matrix_index");
-
     // expose this module as part of fasteit package
     object module(handle<>(borrowed(PyImport_AddModule("fasteit.matrix"))));
     scope().attr("matrix") = module;
     scope sub_module = module;
 
+    wrap_matrix<fastEIT::dtype::real, NPY_FLOAT32>("Real");
+    wrap_matrix<fastEIT::dtype::index, NPY_UINT32>("Index");
+
     def("to_real", fromNumpy<fastEIT::dtype::real, NPY_FLOAT32>);
     def("to_index", fromNumpy<fastEIT::dtype::index, NPY_UINT32>);
-
-    // reset scope
-    scope();
 }
