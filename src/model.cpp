@@ -124,11 +124,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     fastEIT::Model<basis_function_type>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
-    auto element_count = std::make_shared<Matrix<dtype::index>>(
-        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-
-    std::vector<std::shared_ptr<Matrix<dtype::index>>> connectivity_matrices;
-    std::vector<std::shared_ptr<Matrix<dtype::real>>> elemental_s_matrices,
+    std::vector<std::vector<dtype::index>> element_count(
+        this->mesh()->nodes()->rows(), std::vector<dtype::index>(
+        this->mesh()->nodes()->rows(), 0));
+    std::vector<std::vector<std::vector<dtype::index>>> connectivity_matrices;
+    std::vector<std::vector<std::vector<dtype::real>>> elemental_s_matrices,
         elemental_r_matrices;
 
     // fill intermediate connectivity and elemental matrices
@@ -157,39 +157,34 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
         for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            temp = (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+            temp = element_count[std::get<0>(nodes[i])][std::get<0>(nodes[j])];
             if (connectivity_matrices.size() <= temp) {
-                connectivity_matrices.push_back(std::make_shared<Matrix<dtype::index>>(
-                    this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream,
-                    dtype::invalid_index));
-                elemental_s_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
-                    this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
-                elemental_r_matrices.push_back(std::make_shared<Matrix<dtype::real>>(
-                    this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream));
+                connectivity_matrices.push_back(std::vector<std::vector<dtype::index>>(
+                    this->mesh()->nodes()->rows(), std::vector<dtype::index>(
+                    this->mesh()->nodes()->rows(), dtype::invalid_index)));
+                elemental_s_matrices.push_back(std::vector<std::vector<dtype::real>>(
+                    this->mesh()->nodes()->rows(), std::vector<dtype::real>(
+                    this->mesh()->nodes()->rows(), 0.0)));
+                elemental_r_matrices.push_back(std::vector<std::vector<dtype::real>>(
+                    this->mesh()->nodes()->rows(), std::vector<dtype::real>(
+                    this->mesh()->nodes()->rows(), 0.0)));
             }
 
             // set connectivity element
-            (*connectivity_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+            connectivity_matrices[temp][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
                 element;
 
             // set elemental system element
-            (*elemental_s_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+            elemental_s_matrices[temp][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
                 basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
 
             // set elemental residual element
-            (*elemental_r_matrices[temp])(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+            elemental_r_matrices[temp][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
                 basis_functions[i]->integrateWithBasis(basis_functions[j]);
 
             // increment element count
-            (*element_count)(std::get<0>(nodes[i]), std::get<0>(nodes[j]))++;
+            element_count[std::get<0>(nodes[i])][std::get<0>(nodes[j])]++;
         }
-    }
-
-    // upload intermediate matrices
-    for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
-        connectivity_matrices[i]->copyToDevice(stream);
-        elemental_s_matrices[i]->copyToDevice(stream);
-        elemental_r_matrices[i]->copyToDevice(stream);
     }
 
     // determine nodes with common element
@@ -224,12 +219,30 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
+    auto connectivity_matrix = std::make_shared<Matrix<dtype::index>>(
+        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream,
+        dtype::invalid_index);
+    auto elemental_s_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
+    auto elemental_r_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
-        model::reduceMatrix(connectivity_matrices[i], this->s_matrix(), i, stream,
+        for (dtype::index row = 0; row < connectivity_matrix->rows(); ++row)
+        for (dtype::index column = 0; column < connectivity_matrix->columns(); ++column) {
+            (*connectivity_matrix)(row, column) = connectivity_matrices[i][row][column];
+            (*elemental_s_matrix)(row, column) = elemental_s_matrices[i][row][column];
+            (*elemental_r_matrix)(row, column) = elemental_r_matrices[i][row][column];
+        }
+        connectivity_matrix->copyToDevice(stream);
+        elemental_s_matrix->copyToDevice(stream);
+        elemental_r_matrix->copyToDevice(stream);
+        cudaStreamSynchronize(stream);
+
+        model::reduceMatrix(connectivity_matrix, this->s_matrix(), i, stream,
             this->connectivity_matrix());
-        model::reduceMatrix(elemental_s_matrices[i], this->s_matrix(), i, stream,
+        model::reduceMatrix(elemental_s_matrix, this->s_matrix(), i, stream,
             this->elemental_s_matrix());
-        model::reduceMatrix(elemental_r_matrices[i], this->s_matrix(), i, stream,
+        model::reduceMatrix(elemental_r_matrix, this->r_matrix(), i, stream,
             this->elemental_r_matrix());
     }
 
