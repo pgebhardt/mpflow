@@ -124,8 +124,9 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     fastEIT::Model<basis_function_type>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
-    std::vector<std::vector<dtype::index>> element_count(this->mesh()->nodes()->rows(),
-        std::vector<dtype::index>(this->mesh()->nodes()->rows(), 0));
+    std::vector<std::vector<dtype::index>> element_count(
+        this->mesh()->nodes()->rows(), std::vector<dtype::index>(
+        this->mesh()->nodes()->rows(), 0));
     std::vector<std::vector<std::vector<dtype::index>>> connectivity_matrices;
     std::vector<std::vector<std::vector<dtype::real>>> elemental_s_matrices,
         elemental_r_matrices;
@@ -221,34 +222,27 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     auto connectivity_matrix = std::make_shared<Matrix<dtype::index>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream,
         dtype::invalid_index);
-    auto elemental_matrix = std::make_shared<Matrix<dtype::real>>(
+    auto elemental_s_matrix = std::make_shared<Matrix<dtype::real>>(
+        this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
+    auto elemental_r_matrix = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
         for (dtype::index row = 0; row < connectivity_matrix->rows(); ++row)
         for (dtype::index column = 0; column < connectivity_matrix->columns(); ++column) {
             (*connectivity_matrix)(row, column) = connectivity_matrices[i][row][column];
+            (*elemental_s_matrix)(row, column) = elemental_s_matrices[i][row][column];
+            (*elemental_r_matrix)(row, column) = elemental_r_matrices[i][row][column];
         }
         connectivity_matrix->copyToDevice(stream);
+        elemental_s_matrix->copyToDevice(stream);
+        elemental_r_matrix->copyToDevice(stream);
         cudaStreamSynchronize(stream);
+
         model::reduceMatrix(connectivity_matrix, this->s_matrix(), i, stream,
             this->connectivity_matrix());
-
-        for (dtype::index row = 0; row < elemental_matrix->rows(); ++row)
-        for (dtype::index column = 0; column < elemental_matrix->columns(); ++column) {
-            (*elemental_matrix)(row, column) = elemental_s_matrices[i][row][column];
-        }
-        elemental_matrix->copyToDevice(stream);
-        cudaStreamSynchronize(stream);
-        model::reduceMatrix(elemental_matrix, this->s_matrix(), i, stream,
+        model::reduceMatrix(elemental_s_matrix, this->s_matrix(), i, stream,
             this->elemental_s_matrix());
-
-        for (dtype::index row = 0; row < elemental_matrix->rows(); ++row)
-        for (dtype::index column = 0; column < elemental_matrix->columns(); ++column) {
-            (*elemental_matrix)(row, column) = elemental_r_matrices[i][row][column];
-        }
-        elemental_matrix->copyToDevice(stream);
-        cudaStreamSynchronize(stream);
-        model::reduceMatrix(elemental_matrix, this->r_matrix(), i, stream,
+        model::reduceMatrix(elemental_r_matrix, this->r_matrix(), i, stream,
             this->elemental_r_matrix());
     }
 
