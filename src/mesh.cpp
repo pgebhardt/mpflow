@@ -41,7 +41,7 @@ std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real,
         this->elements()->columns());
 
     // get node index and coordinate
-    dtype::index index = -1;
+    dtype::index index = dtype::invalid_index;
     std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
     for (dtype::index node = 0; node < this->elements()->columns(); ++node) {
         // get index
