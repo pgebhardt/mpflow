@@ -66,8 +66,10 @@ TEST_F(BasisQuadraticTest, Constructor) {
 // basis function definition
 TEST_F(BasisQuadraticTest, Definition) {
     // check basis function definition
-    for (fastEIT::dtype::index basis = 0; basis < 3; ++basis)
-    for (fastEIT::dtype::index node = 0; node < 3; ++node) {
+    for (fastEIT::dtype::index basis = 0; basis < fastEIT::basis::Quadratic::nodes_per_element;
+        ++basis)
+    for (fastEIT::dtype::index node = 0; node < fastEIT::basis::Quadratic::nodes_per_element;
+        ++node) {
         if (basis == node) {
             EXPECT_NEAR(basis_[basis]->evaluate(basis_[basis]->nodes()[node]), 1.0, 1e-6);
         } else {

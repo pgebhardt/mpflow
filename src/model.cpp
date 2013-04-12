@@ -390,7 +390,7 @@ void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermedia
 
     // block size
     dim3 blocks(matrix->data_rows() / matrix::block_size, 1);
-    dim3 threads(matrix::block_size, matrix::block_size);
+    dim3 threads(matrix::block_size, sparseMatrix::block_size);
 
     // reduce matrix
     modelKernel::reduceMatrix<type>(blocks, threads, stream,
@@ -419,7 +419,7 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
     }
 
     // dimension
-    dim3 threads(matrix::block_size, matrix::block_size);
+    dim3 threads(matrix::block_size, sparseMatrix::block_size);
     dim3 blocks(matrix->data_rows() / matrix::block_size, 1);
 
     // execute kernel
