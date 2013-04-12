@@ -54,7 +54,7 @@ fastEIT::Model<basis_function_type>::Model(
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->elements()->rows(),
         math::square(basis_function_type::nodes_per_element), stream);
-    for (dtype::index component = 0; component < this->component_count() + 1; ++component) {
+    for (dtype::index component = 0; component < this->component_count(); ++component) {
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->mesh()->nodes()->rows() + this->electrodes()->count(),
             this->source()->drive_count() + this->source()->measurement_count(), stream));
@@ -142,8 +142,6 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<std::tuple<dtype::real, dtype::real>, basis_function_type::nodes_per_element> nodes_coordinates;
     std::array<std::shared_ptr<basis_function_type>, basis_function_type::nodes_per_element> basis_functions;
-    dtype::real temp;
-
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
         // get element nodes
         nodes = this->mesh()->elementNodes(element);
@@ -164,8 +162,8 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
         for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            temp = element_count[std::get<0>(nodes[i])][std::get<0>(nodes[j])];
-            if (connectivity_matrices.size() <= temp) {
+            auto level = element_count[std::get<0>(nodes[i])][std::get<0>(nodes[j])];
+            if (connectivity_matrices.size() <= level) {
                 connectivity_matrices.push_back(std::vector<std::vector<dtype::index>>(
                     this->mesh()->nodes()->rows(), std::vector<dtype::index>(
                     this->mesh()->nodes()->rows(), dtype::invalid_index)));
@@ -178,15 +176,15 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
             }
 
             // set connectivity element
-            connectivity_matrices[temp][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
+            connectivity_matrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
                 element;
 
             // set elemental system element
-            elemental_s_matrices[temp][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
+            elemental_s_matrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
                 basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
 
             // set elemental residual element
-            elemental_r_matrices[temp][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
+            elemental_r_matrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
                 basis_functions[i]->integrateWithBasis(basis_functions[j]);
 
             // increment element count
