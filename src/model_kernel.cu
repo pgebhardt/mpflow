@@ -179,11 +179,10 @@ static __global__ void calcJacobianKernel(const fastEIT::dtype::real* drivePhi,
 
     // calc matrix element
     fastEIT::dtype::real element = 0.0f;
-    for (fastEIT::dtype::index i = 0; i < nodes_per_element; i++) {
-        for (fastEIT::dtype::index j = 0; j < nodes_per_element; j++) {
-            element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column +
-                (i + j * nodes_per_element) * columns];
-        }
+    for (fastEIT::dtype::index i = 0; i < nodes_per_element; i++)
+    for (fastEIT::dtype::index j = 0; j < nodes_per_element; j++) {
+        element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column +
+            (i + j * nodes_per_element) * columns];
     }
 
     // diff sigma to gamma

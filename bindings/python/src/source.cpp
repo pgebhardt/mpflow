@@ -56,8 +56,6 @@ void pyfasteit::export_source() {
     wrap_source("Source");
 
     // expose linear sources as standard sources
-    wrap_derived_source<fastEIT::source::Current, fastEIT::basis::Linear>("Current");
-    wrap_derived_source<fastEIT::source::Voltage, fastEIT::basis::Linear>("Voltage");
 
     // create submodule for each type of source
     object current_module(handle<>(borrowed(PyImport_AddModule("fasteit.source.current"))));
@@ -67,8 +65,10 @@ void pyfasteit::export_source() {
 
     // wrap derived classes
     scope current_scope = current_module;
+    wrap_derived_source<fastEIT::source::Current, fastEIT::basis::Linear>("Linear");
     wrap_derived_source<fastEIT::source::Current, fastEIT::basis::Quadratic>("Quadratic");
 
     scope voltage_scope = voltage_module;
+    wrap_derived_source<fastEIT::source::Voltage, fastEIT::basis::Linear>("Linear");
     wrap_derived_source<fastEIT::source::Voltage, fastEIT::basis::Quadratic>("Quadratic");
 }
