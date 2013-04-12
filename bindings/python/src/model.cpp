@@ -24,7 +24,7 @@ void wrap_model(const char* name) {
     .add_property("elemental_jacobian_matrix",
         &fastEIT::model::Model::elemental_jacobian_matrix)
     .add_property("sigma_ref", &fastEIT::model::Model::sigma_ref)
-    .add_property("components_count", &fastEIT::model::Model::components_count);
+    .add_property("component_count", &fastEIT::model::Model::component_count);
 }
 
 template <

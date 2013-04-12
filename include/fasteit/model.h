@@ -16,7 +16,7 @@ namespace fastEIT {
             // constructor
             Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
                 std::shared_ptr<source::Source> source,
-                dtype::real sigmaRef, dtype::size components_count);
+                dtype::real sigmaRef, dtype::size component_count);
 
             // update model
             virtual void update(const std::shared_ptr<Matrix<dtype::real>>,
@@ -57,7 +57,7 @@ namespace fastEIT {
                 return this->elemental_jacobian_matrix_;
             }
             dtype::real sigma_ref() { return this->sigma_ref_; }
-            dtype::size components_count() { return this->components_count_; }
+            dtype::size component_count() { return this->component_count_; }
 
         protected:
             // init methods
@@ -82,7 +82,7 @@ namespace fastEIT {
             std::shared_ptr<Matrix<dtype::real>> elemental_r_matrix_;
             std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix_;
             dtype::real sigma_ref_;
-            dtype::size components_count_;
+            dtype::size component_count_;
         };
 
         // update matrix
@@ -122,7 +122,7 @@ namespace fastEIT {
         // constructor
         Model(std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
             std::shared_ptr<source::Source> source, dtype::real sigmaRef,
-            dtype::size components_count, cublasHandle_t handle, cudaStream_t stream);
+            dtype::size component_count, cublasHandle_t handle, cudaStream_t stream);
 
         // update model
         virtual void update(const std::shared_ptr<Matrix<dtype::real>> gamma,

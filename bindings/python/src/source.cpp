@@ -22,7 +22,8 @@ void wrap_source(const char* name) {
     .def("excitation", &fastEIT::source::Source::excitation)
     .add_property("drive_count", &fastEIT::source::Source::drive_count)
     .add_property("measurement_count", &fastEIT::source::Source::measurement_count)
-    .add_property("value", &fastEIT::source::Source::value);
+    .add_property("value", &fastEIT::source::Source::value)
+    .add_property("component_count", &fastEIT::source::Source::component_count);
 }
 
 template <

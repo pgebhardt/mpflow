@@ -7,12 +7,12 @@
 
 fastEIT::source::Source::Source(std::string type, dtype::real value,
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
-    dtype::size components_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+    dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
     cudaStream_t stream)
     : type_(type), mesh_(mesh), electrodes_(electrodes), drive_pattern_(drive_pattern),
         measurement_pattern_(measurement_pattern), value_(value),
-        components_count_(components_count) {
+        component_count_(component_count) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("fastEIT::source::Source::Source: mesh == nullptr");
@@ -48,7 +48,7 @@ fastEIT::source::Source::Source(std::string type, dtype::real value,
         this->mesh()->nodes()->rows(), stream);
 
     // excitation matrices
-    for (dtype::index component = 0; component < this->components_count(); ++component) {
+    for (dtype::index component = 0; component < this->component_count(); ++component) {
         this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->mesh()->nodes()->rows() + this->electrodes()->count(),
             this->drive_count() + this->measurement_count(), stream));
@@ -79,11 +79,11 @@ template <
 >
 fastEIT::source::Current<basis_function_type>::Current(
     dtype::real current, std::shared_ptr<Mesh> mesh,
-    std::shared_ptr<Electrodes> electrodes, dtype::size components_count,
+    std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
-    : Source("current", current, mesh, electrodes, components_count,
+    : Source("current", current, mesh, electrodes, component_count,
         drive_pattern, measurement_pattern, handle, stream) {
     // init complete electrode model
     this->initCEM(handle, stream);
@@ -192,7 +192,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(
 
     // update excitation
     // calc excitation components
-    for (dtype::index component = 0; component < this->components_count(); ++component) {
+    for (dtype::index component = 0; component < this->component_count(); ++component) {
         // set excitation
         for (dtype::index row = 0; row < this->pattern()->rows(); ++row)
         for (dtype::index column = 0; column < this->pattern()->columns(); ++column) {
@@ -220,11 +220,11 @@ template <
 >
 fastEIT::source::Voltage<basis_function_type>::Voltage(
     dtype::real voltage, std::shared_ptr<Mesh> mesh,
-    std::shared_ptr<Electrodes> electrodes, dtype::size components_count,
+    std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
-    : Source("voltage", voltage, mesh, electrodes, components_count,
+    : Source("voltage", voltage, mesh, electrodes, component_count,
         drive_pattern, measurement_pattern, handle, stream) {
     // init complete electrode model
     this->initCEM(handle, stream);

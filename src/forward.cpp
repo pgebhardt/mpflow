@@ -59,7 +59,7 @@ void fastEIT::ForwardSolver<numeric_solver_type>::applyMeasurementPattern(
         this->model()->source()->measurement_pattern()->data_rows(),
         false, result->device_data(), result->data_rows());
 
-    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+    for (dtype::index component = 1; component < this->model()->component_count(); ++component) {
         forwardKernel::applyMeasurementPattern(blocks, threads, stream,
             this->model()->potential(component)->device_data(),
             this->model()->mesh()->nodes()->rows(),
@@ -95,7 +95,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
         stream, this->model()->potential(0));
 
     // solve for higher harmonics
-    for (dtype::index component = 1; component < this->model()->components_count(); ++component) {
+    for (dtype::index component = 1; component < this->model()->component_count(); ++component) {
         this->numeric_solver()->solve(
             this->model()->system_matrix(component),
             this->model()->source()->excitation(component),

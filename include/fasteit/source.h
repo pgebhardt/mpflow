@@ -15,7 +15,7 @@ namespace fastEIT {
         public:
             // constructor
             Source(std::string type, dtype::real value, std::shared_ptr<Mesh> mesh,
-                std::shared_ptr<Electrodes> electrodes, dtype::size components_count,
+                std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
                 cublasHandle_t handle, cudaStream_t stream);
@@ -67,7 +67,7 @@ namespace fastEIT {
             dtype::size drive_count() { return this->drive_pattern()->columns(); }
             dtype::size measurement_count() { return this->measurement_pattern()->columns(); }
             dtype::real value() { return this->value_; }
-            dtype::size components_count() { return this->components_count_; }
+            dtype::size component_count() { return this->component_count_; }
 
         private:
             // member
@@ -84,7 +84,7 @@ namespace fastEIT {
             std::shared_ptr<Matrix<dtype::real>> z_matrix_;
             std::vector<std::shared_ptr<Matrix<dtype::real>>> excitation_;
             dtype::real value_;
-            dtype::size components_count_;
+            dtype::size component_count_;
         };
 
         // current source
@@ -95,7 +95,7 @@ namespace fastEIT {
         public:
             // constructor
             Current(dtype::real current, std::shared_ptr<Mesh> mesh,
-                std::shared_ptr<Electrodes> electrodes, dtype::size components_count,
+                std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
                 cublasHandle_t handle, cudaStream_t stream);
@@ -116,7 +116,7 @@ namespace fastEIT {
         public:
             // constructor
             Voltage(dtype::real voltage, std::shared_ptr<Mesh> mesh,
-                std::shared_ptr<Electrodes> electrodes, dtype::size components_count,
+                std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
                 std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
                 cublasHandle_t handle, cudaStream_t stream);

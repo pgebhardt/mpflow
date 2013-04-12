@@ -10,9 +10,9 @@
 fastEIT::model::Model::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
-    dtype::size components_count)
+    dtype::size component_count)
     : mesh_(mesh), electrodes_(electrodes), source_(source), sigma_ref_(sigma_ref),
-        components_count_(components_count) {
+        component_count_(component_count) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("fastEIT::model::Model::Model: mesh == nullptr");
@@ -20,8 +20,15 @@ fastEIT::model::Model::Model(
     if (electrodes == nullptr) {
         throw std::invalid_argument("fastEIT::model::Model::Model: electrodes == nullptr");
     }
-    if (components_count == 0) {
-        throw std::invalid_argument("fastEIT::model::Model::Model: components_count == 0");
+    if (source == nullptr) {
+        throw std::invalid_argument("fastEIT::model::Model::Model: electrodes == nullptr");
+    }
+    if (component_count == 0) {
+        throw std::invalid_argument("fastEIT::model::Model::Model: component_count == 0");
+    }
+    if (this->source()->component_count() != this->component_count()) {
+        throw std::invalid_argument(
+            "fastEIT::model::Model::Model: source.component_count != component_count");
     }
 }
 
@@ -32,8 +39,8 @@ template <
 fastEIT::Model<basis_function_type>::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
-    dtype::size components_count, cublasHandle_t handle, cudaStream_t stream)
-    : model::Model(mesh, electrodes, source, sigma_ref, components_count) {
+    dtype::size component_count, cublasHandle_t handle, cudaStream_t stream)
+    : model::Model(mesh, electrodes, source, sigma_ref, component_count) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::Model::Model: handle == nullptr");
@@ -47,7 +54,7 @@ fastEIT::Model<basis_function_type>::Model(
     this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->elements()->rows(),
         math::square(basis_function_type::nodes_per_element), stream);
-    for (dtype::index component = 0; component < this->components_count() + 1; ++component) {
+    for (dtype::index component = 0; component < this->component_count() + 1; ++component) {
         this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->mesh()->nodes()->rows() + this->electrodes()->count(),
             this->source()->drive_count() + this->source()->measurement_count(), stream));
@@ -104,7 +111,7 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
 
     // create sparse matrices
     system_matrix->copyToDevice(stream);
-    for (dtype::index component = 0; component < this->components_count(); ++component) {
+    for (dtype::index component = 0; component < this->component_count(); ++component) {
         this->system_matrices_.push_back(std::make_shared<SparseMatrix<dtype::real>>(
             system_matrix, stream));
     }
@@ -317,7 +324,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
         this->elemental_jacobian_matrix(), this->source()->drive_count(),
         this->source()->measurement_count(), this->sigma_ref(),
         false, stream, this->jacobian());
-    for (dtype::index component = 1; component < this->components_count(); ++component) {
+    for (dtype::index component = 1; component < this->component_count(); ++component) {
         model::calcJacobian<basis_function_type>(
             gamma, this->potential(component), this->mesh()->elements(),
             this->elemental_jacobian_matrix(), this->source()->drive_count(),
@@ -350,7 +357,7 @@ void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dt
 
     // create system matrices for all harmonics
     dtype::real alpha = 0.0f;
-    for (dtype::index component = 0; component < this->components_count(); ++component) {
+    for (dtype::index component = 0; component < this->component_count(); ++component) {
         // calc alpha
         alpha = math::square(2.0f * component * M_PI / this->mesh()->height());
 
