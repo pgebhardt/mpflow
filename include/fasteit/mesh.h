@@ -41,8 +41,9 @@ namespace fastEIT {
     namespace mesh {
         // create mesh for quadratic basis function
         std::shared_ptr<fastEIT::Mesh> quadraticBasis(std::shared_ptr<Matrix<dtype::real>> nodes,
-            std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
-            dtype::real radius, dtype::real height);
+            std::shared_ptr<Matrix<dtype::index>> elements,
+            std::shared_ptr<Matrix<dtype::index>> boundary,
+            dtype::real radius, dtype::real height, cudaStream_t stream);
 
         // quadratic mesh from linear
         std::tuple<
@@ -51,7 +52,8 @@ namespace fastEIT {
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>> quadraticMeshFromLinear(
             const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> nodes_old,
             const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> elements_old,
-            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> boundary_old);
+            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> boundary_old,
+            cudaStream_t stream);
     }
 }
 
