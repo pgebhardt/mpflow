@@ -29,7 +29,7 @@ std::shared_ptr<fastEIT::Mesh> quadraticBasis_wrapper(numeric::array& nodes,
         boundary, stream);
 
     return fastEIT::mesh::quadraticBasis(gpu_nodes, gpu_elements, gpu_boundary,
-        radius, height);
+        radius, height, stream);
 }
 
 void pyfasteit::export_mesh() {
