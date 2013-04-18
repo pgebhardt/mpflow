@@ -118,7 +118,7 @@ template <
     class matrix_type,
     int npy_type
 >
-std::shared_ptr<fastEIT::Matrix<matrix_type>> fromNumpy(numeric::array& array,
+std::shared_ptr<fastEIT::Matrix<matrix_type>> pyfasteit::fromNumpy(numeric::array& array,
     cudaStream_t stream) {
     // check dimension
     if (PyArray_NDIM(array.ptr()) != 2) {
