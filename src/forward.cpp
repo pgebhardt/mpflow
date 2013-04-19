@@ -107,9 +107,6 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
 
     // current source specific tasks
     if (this->model()->source()->type() == "current") {
-        // turn sign of jacobian, because of voltage jacobian
-        this->model()->jacobian()->scalarMultiply(-1.0, stream);
-
         // calc voltage
         this->applyMeasurementPattern(this->voltage(), stream);
 
