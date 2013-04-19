@@ -95,8 +95,8 @@ void fastEIT::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> other,
     }
 
     // check size
-    if ((other->data_rows() != this->data_rows()) ||
-        (other->data_columns() != this->data_columns())) {
+    if ((other->rows() != this->rows()) ||
+        (other->columns() != this->columns())) {
         throw std::invalid_argument("fastEIT::Matrix::copy: shape does not match");
     }
 
@@ -149,8 +149,8 @@ void fastEIT::Matrix<type>::add(const std::shared_ptr<Matrix<type>> value,
     }
 
     // check size
-    if ((this->data_rows() != value->data_rows()) ||
-        (this->data_columns() != value->data_columns())) {
+    if ((this->rows() != value->rows()) ||
+        (this->columns() != value->columns())) {
         throw std::invalid_argument("fastEIT::Matrix::add: shape does not match");
     }
 
@@ -193,9 +193,9 @@ namespace fastEIT {
         }
 
         // check size
-        if ((A->data_columns() != B->data_rows()) ||
-            (this->data_rows() != A->data_rows()) ||
-            (this->data_columns() != B->data_columns())) {
+        if ((A->columns() != B->rows()) ||
+            (this->rows() != A->rows()) ||
+            (this->columns() != B->columns())) {
             throw std::invalid_argument("fastEIT::Matrix::multiply: shape does not match");
         }
 
@@ -254,8 +254,8 @@ void fastEIT::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>>
     }
 
     // check size
-    if ((this->data_rows() != A->data_rows()) ||
-        (this->data_rows() != B->data_rows())) {
+    if ((this->rows() != A->rows()) ||
+        (this->rows() != B->rows())) {
         throw std::invalid_argument("fastEIT::Matrix::vectorDotProduct: shape does not match");
     }
 
@@ -291,7 +291,7 @@ void fastEIT::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> value,
     }
 
     // check size
-    if (this->data_rows() != value->data_rows()) {
+    if (this->rows() != value->rows()) {
         throw std::invalid_argument("fastEIT::Matrix::sum: shape does not match");
     }
 
@@ -335,7 +335,7 @@ void fastEIT::Matrix<type>::min(const std::shared_ptr<Matrix<type>> value,
     }
 
     // check size
-    if (this->data_rows() != value->data_rows()) {
+    if (this->rows() != value->rows()) {
         throw std::invalid_argument("fastEIT::Matrix::min: shape does not match");
     }
 
@@ -372,7 +372,7 @@ void fastEIT::Matrix<type>::max(const std::shared_ptr<Matrix<type>> value,
     }
 
     // check size
-    if (this->data_rows() != value->data_rows()) {
+    if (this->rows() != value->rows()) {
         throw std::invalid_argument("fastEIT::Matrix::max: shape does not match");
     }
 
