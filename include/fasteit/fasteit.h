@@ -19,6 +19,7 @@
 #include "source.h"
 #include "model.h"
 #include "conjugate.h"
+#include "fast_conjugate.h"
 #include "sparse_conjugate.h"
 #include "forward.h"
 #include "inverse.h"
