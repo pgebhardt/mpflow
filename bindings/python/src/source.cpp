@@ -1,5 +1,23 @@
 #include <pyfasteit/pyfasteit.hpp>
+#include <numpy/arrayobject.h>
 using namespace boost::python;
+
+template <
+    class source_type
+>
+std::shared_ptr<source_type> CreateSourceFromNumpy(fastEIT::dtype::real value,
+    std::shared_ptr<fastEIT::Mesh> mesh, std::shared_ptr<fastEIT::Electrodes> electrodes,
+    fastEIT::dtype::size component_count, numeric::array& drive_pattern,
+    numeric::array& measurement_pattern, cublasHandle_t handle, cudaStream_t stream) {
+    // create gpu matrices from arrays
+    auto gpu_drive_pattern = pyfasteit::fromNumpy<fastEIT::dtype::real, NPY_FLOAT32>(
+        drive_pattern, stream);
+    auto gpu_measurement_pattern = pyfasteit::fromNumpy<fastEIT::dtype::real, NPY_FLOAT32>(
+        measurement_pattern, stream);
+
+    return std::make_shared<source_type>(value, mesh, electrodes, component_count,
+        gpu_drive_pattern, gpu_measurement_pattern, handle, stream);
+}
 
 void wrap_source(const char* name) {
     class_<fastEIT::source::Source,
@@ -38,7 +56,8 @@ void wrap_derived_source(const char* name) {
             std::shared_ptr<fastEIT::Electrodes>, fastEIT::dtype::size,
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
-            cublasHandle_t, cudaStream_t>());
+            cublasHandle_t, cudaStream_t>())
+    .def("__init__", make_constructor(&CreateSourceFromNumpy<source_type<basis_function_type>>));
 
     implicitly_convertible<source_type<basis_function_type>,
         fastEIT::source::Source>();
@@ -47,6 +66,8 @@ void wrap_derived_source(const char* name) {
 }
 
 void pyfasteit::export_source() {
+    import_array();
+
     // expose this module as part of fasteit package
     object module(handle<>(borrowed(PyImport_AddModule("fasteit.source"))));
     scope().attr("source") = module;

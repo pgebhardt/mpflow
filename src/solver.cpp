@@ -22,7 +22,7 @@ fastEIT::Solver::Solver(std::shared_ptr<fastEIT::model::Model> model,
         this->model(), handle, stream);
 
     // create inverse solver
-    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
+    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::FastConjugate>>(
         this->model()->mesh()->elements()->rows(),
         math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
         math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
@@ -71,6 +71,12 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::calibrat
         throw std::invalid_argument("fastEIT::Solver::calibrate: handle == nullptr");
     }
 
+    // check size of voltage matrix
+    if ((calibration_voltage->rows() != this->model()->source()->measurement_count()) ||
+        (calibration_voltage->columns() != this->model()->source()->drive_count())) {
+        throw std::invalid_argument("fastEIT::Solver::calibrate: calibration_voltage has incompatible shape");
+    }
+
     // solve forward
     this->forward_solver()->solve(this->gamma(), 20, handle, stream);
 
@@ -79,7 +85,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::calibrat
 
     // solve inverse
     this->inverse_solver()->solve(this->model()->jacobian(), this->forward_solver()->voltage(),
-        calibration_voltage, 90, handle, stream, this->dgamma());
+        calibration_voltage, 180, handle, stream, this->dgamma());
 
     // add to gamma
     this->gamma()->add(this->dgamma(), stream);
@@ -108,9 +114,19 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::solve(
         throw std::invalid_argument("fastEIT::Solver::solve: handle == nullptr");
     }
 
+    // check size of voltage matrices
+    if ((calibration_voltage->rows() != this->model()->source()->measurement_count()) ||
+        (calibration_voltage->columns() != this->model()->source()->drive_count())) {
+        throw std::invalid_argument("fastEIT::Solver::solve: calibration_voltage has incompatible shape");
+    }
+    if ((measured_voltage->rows() != this->model()->source()->measurement_count()) ||
+        (measured_voltage->columns() != this->model()->source()->drive_count())) {
+        throw std::invalid_argument("fastEIT::Solver::solve: measured_voltage has incompatible shape");
+    }
+
     // solve
     this->inverse_solver()->solve(this->model()->jacobian(), calibration_voltage,
-        measured_voltage, 90, handle, stream, this->dgamma());
+        measured_voltage, 180, handle, stream, this->dgamma());
 
     return this->dgamma();
 }

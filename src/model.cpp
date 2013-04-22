@@ -140,8 +140,10 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
 
     // fill intermediate connectivity and elemental matrices
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
-    std::array<std::tuple<dtype::real, dtype::real>, basis_function_type::nodes_per_element> nodes_coordinates;
-    std::array<std::shared_ptr<basis_function_type>, basis_function_type::nodes_per_element> basis_functions;
+    std::array<std::tuple<dtype::real, dtype::real>,
+        basis_function_type::nodes_per_element> nodes_coordinates;
+    std::array<std::shared_ptr<basis_function_type>,
+        basis_function_type::nodes_per_element> basis_functions;
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
         // get element nodes
         nodes = this->mesh()->elementNodes(element);
@@ -211,11 +213,14 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     common_element_matrix->copyToDevice(stream);
 
     // create sparse matrices
-    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
-    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(common_element_matrix, stream);
+    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(
+        common_element_matrix, stream);
+    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(
+        common_element_matrix, stream);
 
     // create elemental matrices
-    this->connectivity_matrix_ = std::make_shared<Matrix<dtype::index>>(this->mesh()->nodes()->rows(),
+    this->connectivity_matrix_ = std::make_shared<Matrix<dtype::index>>(
+        this->mesh()->nodes()->rows(),
         sparseMatrix::block_size * connectivity_matrices.size(), stream, dtype::invalid_index);
     this->elemental_s_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
         sparseMatrix::block_size * elemental_s_matrices.size(), stream);
@@ -328,6 +333,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
             this->elemental_jacobian_matrix(), this->source()->drive_count(),
             this->source()->measurement_count(), this->sigma_ref(),
             true, stream, this->jacobian());
+    }
+
+    // switch sign if current source
+    if (this->source()->type() == "current") {
+        this->jacobian()->scalarMultiply(-1.0, stream);
     }
 
     return this->jacobian();

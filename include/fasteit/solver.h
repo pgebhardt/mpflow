@@ -39,7 +39,7 @@ namespace fastEIT {
         std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver() {
             return this->forward_solver_;
         }
-        std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver() {
+        std::shared_ptr<InverseSolver<numeric::FastConjugate>> inverse_solver() {
             return this->inverse_solver_;
         }
         std::shared_ptr<Matrix<dtype::real>> dgamma() { return this->dgamma_; }
@@ -53,7 +53,7 @@ namespace fastEIT {
         // member
         std::shared_ptr<fastEIT::model::Model> model_;
         std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver_;
-        std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver_;
+        std::shared_ptr<InverseSolver<numeric::FastConjugate>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
         std::shared_ptr<Matrix<dtype::real>> gamma_;
         std::shared_ptr<Matrix<dtype::real>> measured_voltage_;

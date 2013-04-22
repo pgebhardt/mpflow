@@ -22,11 +22,13 @@ fastEIT::InverseSolver<NumericSolver>::InverseSolver(dtype::size element_count,
     this->dvoltage_ = std::make_shared<Matrix<dtype::real>>(voltage_count, 1, stream);
     this->zeros_ = std::make_shared<Matrix<dtype::real>>(element_count, 1, stream);
     this->excitation_ = std::make_shared<Matrix<dtype::real>>(element_count, 1, stream);
-    this->system_matrix_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count, stream);
-    this->jacobian_square_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count, stream);
+    this->system_matrix_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count,
+        stream);
+    this->jacobian_square_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count,
+        stream);
 
     // create numeric solver
-    this->numeric_solver_ = std::make_shared<NumericSolver>(element_count, handle, stream);
+    this->numeric_solver_ = std::make_shared<NumericSolver>(element_count, 1, stream);
 }
 
 // calc system matrix
@@ -168,3 +170,4 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::InverseSolver<Nu
 
 // specialisation
 template class fastEIT::InverseSolver<fastEIT::numeric::Conjugate>;
+template class fastEIT::InverseSolver<fastEIT::numeric::FastConjugate>;

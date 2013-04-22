@@ -1,34 +1,32 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include "fasteit/fasteit.h"
 #include "fasteit/conjugate_kernel.h"
 
 // create conjugate solver
-fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, cublasHandle_t handle,
-    cudaStream_t stream)
-    : rows_(rows)  {
+fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, dtype::size columns, cudaStream_t stream)
+    : rows_(rows), columns_(columns) {
     // check input
-    if (rows <= 1) {
+    if (rows < 1) {
         throw std::invalid_argument("fastEIT::numeric::Conjugate::Conjugate: rows <= 1");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::Conjugate: handle == NULL");
+    if (columns < 1) {
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::Conjugate: columns <= 1");
     }
 
     // create matrices
-    this->residuum_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
-    this->projection_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
-    this->rsold_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
-    this->rsnew_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
-    this->temp_vector_ = std::make_shared<Matrix<dtype::real>>(this->rows(),
-        this->residuum()->data_rows() / matrix::block_size, stream);
-    this->temp_number_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
+    this->residuum_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
+    this->projection_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
+    this->rsold_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
+    this->rsnew_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
+    this->temp_vector_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
+    this->temp_number_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
 }
 
-// solve conjugate
+// solve conjugate sparse
 void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real>> A,
     const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
@@ -42,8 +40,8 @@ void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real
     if (x == nullptr) {
         throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: x == nullptr");
     }
-    if (handle == NULL) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: handle == NULL");
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: handle == nullptr");
     }
 
     // calc residuum r = f - A * x
@@ -60,7 +58,7 @@ void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
-        conjugate::gemv(A, this->projection(), stream, this->temp_vector());
+        this->temp_vector()->multiply(A, this->projection(), handle, stream);
 
         // calc p * A * p
         this->temp_number()->vectorDotProduct(this->projection(),
