@@ -85,7 +85,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::calibrat
 
     // solve inverse
     this->inverse_solver()->solve(this->model()->jacobian(), this->forward_solver()->voltage(),
-        calibration_voltage, 90, handle, stream, this->dgamma());
+        calibration_voltage, 180, handle, stream, this->dgamma());
 
     // add to gamma
     this->gamma()->add(this->dgamma(), stream);
@@ -126,7 +126,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::Solver::solve(
 
     // solve
     this->inverse_solver()->solve(this->model()->jacobian(), calibration_voltage,
-        measured_voltage, 90, handle, stream, this->dgamma());
+        measured_voltage, 180, handle, stream, this->dgamma());
 
     return this->dgamma();
 }
