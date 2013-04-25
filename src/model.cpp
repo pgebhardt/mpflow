@@ -239,11 +239,19 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     auto elemental_r_matrix = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
-        for (dtype::index row = 0; row < connectivity_matrix->rows(); ++row)
-        for (dtype::index column = 0; column < connectivity_matrix->columns(); ++column) {
-            (*connectivity_matrix)(row, column) = connectivity_matrices[i][row][column];
-            (*elemental_s_matrix)(row, column) = elemental_s_matrices[i][row][column];
-            (*elemental_r_matrix)(row, column) = elemental_r_matrices[i][row][column];
+        for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
+            // get element nodes
+            nodes = this->mesh()->elementNodes(element);
+
+            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++)
+            for (dtype::index k = 0; k < basis_function_type::nodes_per_element; k++) {
+                (*connectivity_matrix)(std::get<0>(nodes[j]), std::get<0>(nodes[k])) =
+                    connectivity_matrices[i][std::get<0>(nodes[j])][std::get<0>(nodes[k])];
+                (*elemental_s_matrix)(std::get<0>(nodes[j]), std::get<0>(nodes[k])) =
+                    elemental_s_matrices[i][std::get<0>(nodes[j])][std::get<0>(nodes[k])];
+                (*elemental_r_matrix)(std::get<0>(nodes[j]), std::get<0>(nodes[k])) =
+                    elemental_r_matrices[i][std::get<0>(nodes[j])][std::get<0>(nodes[k])];
+            }
         }
         connectivity_matrix->copyToDevice(stream);
         elemental_s_matrix->copyToDevice(stream);
