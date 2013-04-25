@@ -1,6 +1,6 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #ifndef FASTEIT_INCLUDE_BASIS_H
@@ -19,36 +19,29 @@ namespace fastEIT {
         // constructor and destructor
         protected:
             Basis(std::array<std::tuple<dtype::real, dtype::real>, template_nodes_per_element> nodes,
-                dtype::index) {
-                // init member
-                this->nodes_ = nodes;
-                for (dtype::real& coefficient : this->coefficients()) {
+                dtype::index)
+                : nodes_(nodes) {
+                for (auto& coefficient : this->coefficients()) {
                     coefficient = 0.0f;
                 }
             }
 
             virtual ~Basis() { }
 
-        // evaluation
         public:
+            // evaluation
             virtual dtype::real evaluate(std::tuple<dtype::real, dtype::real> point) = 0;
 
-        // geometry definition
-        public:
+            // geometry definition
             static const dtype::size nodes_per_edge = template_nodes_per_edge;
             static const dtype::size nodes_per_element = template_nodes_per_element;
 
-        public:
             // accessors
-            const std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element>& nodes() const { return this->nodes_; }
-            const std::array<dtype::real, nodes_per_element>& coefficients() const { return this->coefficients_; }
-
-            // mutators
             std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element>& nodes() { return this->nodes_; }
             std::array<dtype::real, nodes_per_element>& coefficients() { return this->coefficients_; }
 
-        // member
         private:
+            // member
             std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes_;
             std::array<dtype::real, nodes_per_element> coefficients_;
         };

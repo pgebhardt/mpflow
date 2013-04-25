@@ -1,6 +1,6 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <cmath>
@@ -14,9 +14,9 @@ fastEIT::basis::${name}::${name}(
     dtype::index one)
     : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
     // check one
-    if (one > nodes_per_element) {
+    if (one >= nodes_per_element) {
         throw std::invalid_argument(
-            "fastEIT::basis::${name}::${name}: one > nodes_per_element");
+            "fastEIT::basis::${name}::${name}: one >= nodes_per_element");
     }
 
     // calc coefficients with gauss
