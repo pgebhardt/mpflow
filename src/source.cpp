@@ -187,20 +187,21 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(
     this->pattern()->copy(this->elemental_pattern(0), stream);
     this->pattern()->scalarMultiply(this->value(), stream);
     this->pattern()->add(this->elemental_pattern(1), stream);
-    this->pattern()->copyToHost(stream);
-    cudaStreamSynchronize(stream);
 
     // update excitation
     // calc excitation components
     for (dtype::index component = 0; component < this->component_count(); ++component) {
         // set excitation
-        for (dtype::index row = 0; row < this->pattern()->rows(); ++row)
         for (dtype::index column = 0; column < this->pattern()->columns(); ++column) {
-            (*this->excitation(component))(
-                this->mesh()->nodes()->rows() + row, column) =
-                (*this->pattern())(row, column);
+            if (cublasScopy(handle, this->pattern()->rows(),
+                this->pattern()->device_data() + column * this->pattern()->data_rows(), 1,
+                this->excitation(component)->device_data() +
+                column * this->excitation(component)->data_rows() +
+                this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
+                throw std::logic_error(
+                    "fastEIT::source::Current::updateExcitation: copy pattern to excitation");
+            }
         }
-        this->excitation(component)->copyToDevice(stream);
 
         // fourier transform pattern
         if (component == 0) {
