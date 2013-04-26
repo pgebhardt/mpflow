@@ -17,14 +17,17 @@ fastEIT::numeric::PreConjugate::PreConjugate(dtype::size rows, dtype::size colum
     }
 
     // create matrices
-    this->residuum_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->projection_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->z_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->rsold_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->rsnew_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->temp_vector_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->temp_number_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->preconditioner_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->rows(), stream);
+    this->residuum_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
+    this->projection_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
+    this->z_ = std::make_shared<Matrix<dtype::real>>(this->rows(),
+        this->residuum()->data_rows() / matrix::block_size, stream);
+    this->rsold_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
+    this->rsnew_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
+    this->temp_vector_ = std::make_shared<Matrix<dtype::real>>(this->rows(),
+        this->residuum()->data_rows() / matrix::block_size, stream);
+    this->temp_number_ = std::make_shared<Matrix<dtype::real>>(this->rows(), 1, stream);
+    this->preconditioner_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->rows(),
+        stream);
 
     // init preconditioner as unit matrix
     for (dtype::index row = 0; row < this->rows(); ++row) {
@@ -57,10 +60,11 @@ void fastEIT::numeric::PreConjugate::solve(const std::shared_ptr<Matrix<dtype::r
     this->residuum()->add(f, stream);
 
     // apply preconditioner
-    this->z()->multiply(this->preconditioner(), this->residuum(), handle, stream);
+    conjugate::gemv(this->preconditioner(), this->residuum(), stream, this->z());
 
     // p = z
-    this->projection()->copy(this->z(), stream);
+    // this->projection()->copy(this->z(), stream);
+    this->projection()->multiply(this->preconditioner(), this->residuum(), handle, stream);
 
     // calc rsold
     this->rsold()->vectorDotProduct(this->residuum(), this->z(), stream);
@@ -68,7 +72,7 @@ void fastEIT::numeric::PreConjugate::solve(const std::shared_ptr<Matrix<dtype::r
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
-        this->temp_vector()->multiply(A, this->projection(), handle, stream);
+        conjugate::gemv(A, this->projection(), stream, this->temp_vector());
 
         // calc p * A * p
         this->temp_number()->vectorDotProduct(this->projection(),
@@ -83,7 +87,7 @@ void fastEIT::numeric::PreConjugate::solve(const std::shared_ptr<Matrix<dtype::r
             this->temp_number(), stream, x);
 
         // apply preconditioner
-        this->z()->multiply(this->preconditioner(), this->residuum(), handle, stream);
+        conjugate::gemv(this->preconditioner(), this->residuum(), stream, this->z());
 
         // calc rsnew
         this->rsnew()->vectorDotProduct(this->z(), this->residuum(), stream);
