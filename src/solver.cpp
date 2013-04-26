@@ -22,7 +22,7 @@ fastEIT::Solver::Solver(std::shared_ptr<fastEIT::model::Model> model,
         this->model(), handle, stream);
 
     // create inverse solver
-    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::PreConjugate>>(
+    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::FastConjugate>>(
         this->model()->mesh()->elements()->rows(),
         math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
         math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
