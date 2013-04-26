@@ -19,6 +19,21 @@ std::shared_ptr<source_type> CreateSourceFromNumpy(fastEIT::dtype::real value,
         gpu_drive_pattern, gpu_measurement_pattern, handle, stream);
 }
 
+void updateExcitation_wrapper(fastEIT::source::Source* that, numeric::array& np_values,
+    cublasHandle_t handle, cudaStream_t stream) {
+    // copy numpy array to std::vector
+    std::vector<fastEIT::dtype::real> values(that->drive_count());
+    for (fastEIT::dtype::index excitation = 0; excitation < that->drive_count(); ++excitation) {
+        values[excitation] = extract<fastEIT::dtype::real>(np_values[excitation]);
+    }
+
+    that->updateExcitation(values, handle, stream);
+}
+
+std::vector<fastEIT::dtype::real> values_getter(fastEIT::source::Source* that) {
+    return that->values();
+}
+
 void wrap_source(const char* name) {
     class_<fastEIT::source::Source,
         std::shared_ptr<fastEIT::source::Source>>(
@@ -28,11 +43,10 @@ void wrap_source(const char* name) {
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
             cublasHandle_t, cudaStream_t>())
-    .def("update_excitation", &fastEIT::source::Source::updateExcitation)
+    .def("update_excitation", &updateExcitation_wrapper)
     .add_property("drive_pattern", &fastEIT::source::Source::drive_pattern)
     .add_property("measurement_pattern", &fastEIT::source::Source::measurement_pattern)
     .add_property("pattern", &fastEIT::source::Source::pattern)
-    .add_property("elemental_pattern", &fastEIT::source::Source::elemental_pattern)
     .add_property("d_matrix", &fastEIT::source::Source::d_matrix)
     .add_property("w_matrix", &fastEIT::source::Source::w_matrix)
     .add_property("x_matrix", &fastEIT::source::Source::x_matrix)
@@ -40,7 +54,7 @@ void wrap_source(const char* name) {
     .def("excitation", &fastEIT::source::Source::excitation)
     .add_property("drive_count", &fastEIT::source::Source::drive_count)
     .add_property("measurement_count", &fastEIT::source::Source::measurement_count)
-    .add_property("value", &fastEIT::source::Source::value)
+    // .add_property("values", &values_getter) TODO
     .add_property("component_count", &fastEIT::source::Source::component_count);
 }
 

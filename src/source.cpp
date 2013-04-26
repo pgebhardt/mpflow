@@ -11,8 +11,7 @@ fastEIT::source::Source::Source(std::string type, dtype::real value,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
     cudaStream_t stream)
     : type_(type), mesh_(mesh), electrodes_(electrodes), drive_pattern_(drive_pattern),
-        measurement_pattern_(measurement_pattern), value_(value),
-        component_count_(component_count) {
+        measurement_pattern_(measurement_pattern), component_count_(component_count) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("fastEIT::source::Source::Source: mesh == nullptr");
@@ -31,12 +30,11 @@ fastEIT::source::Source::Source(std::string type, dtype::real value,
         throw std::invalid_argument("fastEIT::source::Source::Source: handle == nullptr");
     }
 
+    // init value vector
+    this->values_ = std::vector<dtype::real>(this->drive_count(), value);
+
     // create matrices
     this->pattern_ = std::make_shared<Matrix<dtype::real>>(
-        this->electrodes()->count(), this->drive_count() + this->measurement_count(), stream);
-    this->elemental_pattern_[0] = std::make_shared<Matrix<dtype::real>>(
-        this->electrodes()->count(), this->drive_count() + this->measurement_count(), stream);
-    this->elemental_pattern_[1] = std::make_shared<Matrix<dtype::real>>(
         this->electrodes()->count(), this->drive_count() + this->measurement_count(), stream);
     this->d_matrix_ = std::make_shared<Matrix<dtype::real>>(this->electrodes()->count(),
         this->electrodes()->count(), stream);
@@ -57,20 +55,17 @@ fastEIT::source::Source::Source(std::string type, dtype::real value,
     // fill pattern matrix with drive pattern
     for (dtype::index column = 0; column < this->drive_count(); ++column)
     for (dtype::index row = 0; row < this->electrodes()->count(); ++row) {
-        (*this->elemental_pattern(0))(row, column) =
-            (*this->drive_pattern())(row, column);
+        (*this->pattern())(row, column) = (*this->drive_pattern())(row, column);
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
     for (dtype::index column = 0; column < this->measurement_count(); ++column)
     for (dtype::index row = 0; row < this->electrodes()->count(); ++row) {
-        (*this->elemental_pattern(1))(row, column + this->drive_count()) =
+        (*this->pattern())(row, column + this->drive_count()) =
             (*this->measurement_pattern())(row, column);
     }
-
-    this->elemental_pattern(0)->copyToDevice(stream);
-    this->elemental_pattern(1)->copyToDevice(stream);
+    this->pattern()->copyToDevice(stream);
 }
 
 // current source
@@ -89,7 +84,7 @@ fastEIT::source::Current<basis_function_type>::Current(
     this->initCEM(handle, stream);
 
     // update excitation
-    this->updateExcitation(handle, stream);
+    this->updateExcitation(this->values(), handle, stream);
 }
 
 // init complete electrode model matrices
@@ -178,28 +173,39 @@ template <
     class basis_function_type
 >
 void fastEIT::source::Current<basis_function_type>::updateExcitation(
-    cublasHandle_t handle, cudaStream_t stream) {
+    std::vector<dtype::real> values, cublasHandle_t handle, cudaStream_t stream) {
+    if (values.size() != this->drive_count()) {
+        throw std::invalid_argument(
+            "fastEIT::source::Current::updateExcitation: invalid length of values vector");
+    }
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::source::Current::updateExcitation: handle == nullptr");
     }
 
-    // calc pattern
-    this->pattern()->copy(this->elemental_pattern(0), stream);
-    this->pattern()->scalarMultiply(this->value(), stream);
-    this->pattern()->add(this->elemental_pattern(1), stream);
+    // update values vector
+    this->values() = values;
 
     // update excitation
     // calc excitation components
     for (dtype::index component = 0; component < this->component_count(); ++component) {
         // set excitation
-        for (dtype::index column = 0; column < this->pattern()->columns(); ++column) {
+        for (dtype::index excitation = 0; excitation < this->pattern()->columns(); ++excitation) {
             if (cublasScopy(handle, this->pattern()->rows(),
-                this->pattern()->device_data() + column * this->pattern()->data_rows(), 1,
+                this->pattern()->device_data() + excitation * this->pattern()->data_rows(), 1,
                 this->excitation(component)->device_data() +
-                column * this->excitation(component)->data_rows() +
+                excitation * this->excitation(component)->data_rows() +
                 this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error(
                     "fastEIT::source::Current::updateExcitation: copy pattern to excitation");
+            }
+        }
+        for (dtype::index excitation = 0; excitation < this->drive_count(); ++excitation) {
+            if (cublasSscal(handle, this->pattern()->rows(), &this->values()[excitation],
+                this->excitation(component)->device_data() +
+                excitation * this->excitation(component)->data_rows() +
+                this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
+                throw std::logic_error(
+                    "fastEIT::source::Current::updateExcitation: apply value to pattern");
             }
         }
 
@@ -231,7 +237,7 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
     this->initCEM(handle, stream);
 
     // update excitation
-    this->updateExcitation(handle, stream);
+    this->updateExcitation(this->values(), handle, stream);
 }
 
 // init complete electrode model matrices
@@ -246,7 +252,7 @@ template <
     class model_type
 >
 void fastEIT::source::Voltage<model_type>::updateExcitation(
-    cublasHandle_t, cudaStream_t) {
+    std::vector<dtype::real>, cublasHandle_t, cudaStream_t) {
 }
 
 // specialisation
