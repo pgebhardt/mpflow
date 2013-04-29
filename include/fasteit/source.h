@@ -24,7 +24,7 @@ namespace fastEIT {
             virtual ~Source() { }
 
             // update excitation
-            virtual void updateExcitation(std::vector<dtype::real>, cublasHandle_t, cudaStream_t) {
+            virtual void updateExcitation(cublasHandle_t, cudaStream_t) {
             };
 
         protected:
@@ -63,7 +63,7 @@ namespace fastEIT {
             }
             dtype::size drive_count() { return this->drive_pattern()->columns(); }
             dtype::size measurement_count() { return this->measurement_pattern()->columns(); }
-            std::vector<dtype::real>& values() { return this->values_; }
+            dtype::real& values(dtype::index index) { return this->values_[index]; }
             dtype::size component_count() { return this->component_count_; }
 
         private:
@@ -97,8 +97,7 @@ namespace fastEIT {
                 cublasHandle_t handle, cudaStream_t stream);
 
             // update excitation
-            virtual void updateExcitation(std::vector<dtype::real> values, cublasHandle_t handle,
-                cudaStream_t stream);
+            virtual void updateExcitation(cublasHandle_t handle, cudaStream_t stream);
 
         protected:
             // init excitation
@@ -119,8 +118,7 @@ namespace fastEIT {
                 cublasHandle_t handle, cudaStream_t stream);
 
             // update excitation
-            virtual void updateExcitation(std::vector<dtype::real> values, cublasHandle_t handle,
-                cudaStream_t stream);
+            virtual void updateExcitation(cublasHandle_t handle, cudaStream_t stream);
 
         protected:
             // init excitation

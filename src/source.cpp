@@ -84,7 +84,7 @@ fastEIT::source::Current<basis_function_type>::Current(
     this->initCEM(handle, stream);
 
     // update excitation
-    this->updateExcitation(this->values(), handle, stream);
+    this->updateExcitation(handle, stream);
 }
 
 // init complete electrode model matrices
@@ -172,18 +172,11 @@ void fastEIT::source::Current<basis_function_type>::initCEM(cublasHandle_t handl
 template <
     class basis_function_type
 >
-void fastEIT::source::Current<basis_function_type>::updateExcitation(
-    std::vector<dtype::real> values, cublasHandle_t handle, cudaStream_t stream) {
-    if (values.size() != this->drive_count()) {
-        throw std::invalid_argument(
-            "fastEIT::source::Current::updateExcitation: invalid length of values vector");
-    }
+void fastEIT::source::Current<basis_function_type>::updateExcitation(cublasHandle_t handle,
+    cudaStream_t stream) {
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::source::Current::updateExcitation: handle == nullptr");
     }
-
-    // update values vector
-    this->values() = values;
 
     // update excitation
     // calc excitation components
@@ -200,7 +193,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(
             }
         }
         for (dtype::index excitation = 0; excitation < this->drive_count(); ++excitation) {
-            if (cublasSscal(handle, this->pattern()->rows(), &this->values()[excitation],
+            if (cublasSscal(handle, this->pattern()->rows(), &this->values(excitation),
                 this->excitation(component)->device_data() +
                 excitation * this->excitation(component)->data_rows() +
                 this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
@@ -237,7 +230,7 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
     this->initCEM(handle, stream);
 
     // update excitation
-    this->updateExcitation(this->values(), handle, stream);
+    this->updateExcitation(handle, stream);
 }
 
 // init complete electrode model matrices
@@ -252,7 +245,7 @@ template <
     class model_type
 >
 void fastEIT::source::Voltage<model_type>::updateExcitation(
-    std::vector<dtype::real>, cublasHandle_t, cudaStream_t) {
+    cublasHandle_t, cudaStream_t) {
 }
 
 // specialisation

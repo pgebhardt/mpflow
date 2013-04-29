@@ -19,19 +19,14 @@ std::shared_ptr<source_type> CreateSourceFromNumpy(fastEIT::dtype::real value,
         gpu_drive_pattern, gpu_measurement_pattern, handle, stream);
 }
 
-void updateExcitation_wrapper(fastEIT::source::Source* that, numeric::array& np_values,
+void updateExcitation_wrapper(fastEIT::source::Source* self, numeric::array& np_values,
     cublasHandle_t handle, cudaStream_t stream) {
     // copy numpy array to std::vector
-    std::vector<fastEIT::dtype::real> values(that->drive_count());
-    for (fastEIT::dtype::index excitation = 0; excitation < that->drive_count(); ++excitation) {
-        values[excitation] = extract<fastEIT::dtype::real>(np_values[excitation]);
+    for (fastEIT::dtype::index excitation = 0; excitation < self->drive_count(); ++excitation) {
+        self->values(excitation) = extract<fastEIT::dtype::real>(np_values[excitation]);
     }
 
-    that->updateExcitation(values, handle, stream);
-}
-
-std::vector<fastEIT::dtype::real> values_getter(fastEIT::source::Source* that) {
-    return that->values();
+    self->updateExcitation(handle, stream);
 }
 
 void wrap_source(const char* name) {
