@@ -193,7 +193,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(cublasHandl
             }
         }
         for (dtype::index excitation = 0; excitation < this->drive_count(); ++excitation) {
-            if (cublasSscal(handle, this->pattern()->rows(), &this->values(excitation),
+            if (cublasSscal(handle, this->pattern()->rows(), &this->values()[excitation],
                 this->excitation(component)->device_data() +
                 excitation * this->excitation(component)->data_rows() +
                 this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {

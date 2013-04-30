@@ -1,5 +1,6 @@
 #include <pyfasteit/pyfasteit.hpp>
 #include <numpy/arrayobject.h>
+#include <functional>
 using namespace boost::python;
 
 template <
@@ -19,14 +20,21 @@ std::shared_ptr<source_type> CreateSourceFromNumpy(fastEIT::dtype::real value,
         gpu_drive_pattern, gpu_measurement_pattern, handle, stream);
 }
 
-void updateExcitation_wrapper(fastEIT::source::Source* self, numeric::array& np_values,
-    cublasHandle_t handle, cudaStream_t stream) {
-    // copy numpy array to std::vector
-    for (fastEIT::dtype::index excitation = 0; excitation < self->drive_count(); ++excitation) {
-        self->values(excitation) = extract<fastEIT::dtype::real>(np_values[excitation]);
-    }
+PyObject* values_getter(fastEIT::source::Source* self) {
+    // create new numpy array
+    npy_intp size[] = {
+        (npy_intp)self->values().size(),
+    };
+    PyArrayObject* array = (PyArrayObject*)PyArray_SimpleNewFromData(1, size, NPY_FLOAT32,
+        self->values().data());
 
-    self->updateExcitation(handle, stream);
+    return (PyObject*)array;
+}
+
+void values_setter(fastEIT::source::Source* self, numeric::array& value) {
+    for (fastEIT::dtype::index excitation = 0; excitation < self->drive_count(); ++excitation) {
+        self->values()[excitation] = extract<fastEIT::dtype::real>(value[excitation]);
+    }
 }
 
 void wrap_source(const char* name) {
@@ -38,7 +46,7 @@ void wrap_source(const char* name) {
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
             cublasHandle_t, cudaStream_t>())
-    .def("update_excitation", &updateExcitation_wrapper)
+    .def("update_excitation", &fastEIT::source::Source::updateExcitation)
     .add_property("drive_pattern", &fastEIT::source::Source::drive_pattern)
     .add_property("measurement_pattern", &fastEIT::source::Source::measurement_pattern)
     .add_property("pattern", &fastEIT::source::Source::pattern)
@@ -49,7 +57,7 @@ void wrap_source(const char* name) {
     .def("excitation", &fastEIT::source::Source::excitation)
     .add_property("drive_count", &fastEIT::source::Source::drive_count)
     .add_property("measurement_count", &fastEIT::source::Source::measurement_count)
-    // .add_property("values", &values_getter) TODO
+    .add_property("values", &values_getter, &values_setter)
     .add_property("component_count", &fastEIT::source::Source::component_count);
 }
 

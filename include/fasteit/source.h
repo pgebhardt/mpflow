@@ -63,7 +63,7 @@ namespace fastEIT {
             }
             dtype::size drive_count() { return this->drive_pattern()->columns(); }
             dtype::size measurement_count() { return this->measurement_pattern()->columns(); }
-            dtype::real& values(dtype::index index) { return this->values_[index]; }
+            std::vector<dtype::real>& values() { return this->values_; }
             dtype::size component_count() { return this->component_count_; }
 
         private:
