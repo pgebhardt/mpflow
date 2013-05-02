@@ -5,13 +5,14 @@
 
 #include "fasteit/fasteit.h"
 
-fastEIT::source::Source::Source(std::string type, dtype::real value,
+fastEIT::source::Source::Source(std::string type, const std::vector<dtype::real>& values,
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
     cudaStream_t stream)
     : type_(type), mesh_(mesh), electrodes_(electrodes), drive_pattern_(drive_pattern),
-        measurement_pattern_(measurement_pattern), component_count_(component_count) {
+        measurement_pattern_(measurement_pattern), values_(values),
+        component_count_(component_count) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("fastEIT::source::Source::Source: mesh == nullptr");
@@ -26,12 +27,13 @@ fastEIT::source::Source::Source(std::string type, dtype::real value,
         throw std::invalid_argument(
             "fastEIT::source::Source::Source: measurement_pattern == nullptr");
     }
+    if (values.size() != this->drive_count()) {
+        throw std::invalid_argument(
+            "fastEIT::source::Source::Source: invalid size of values vector");
+    }
     if (handle == nullptr) {
         throw std::invalid_argument("fastEIT::source::Source::Source: handle == nullptr");
     }
-
-    // init value vector
-    this->values_ = std::vector<dtype::real>(this->drive_count(), value);
 
     // create matrices
     this->pattern_ = std::make_shared<Matrix<dtype::real>>(
@@ -68,12 +70,22 @@ fastEIT::source::Source::Source(std::string type, dtype::real value,
     this->pattern()->copyToDevice(stream);
 }
 
+fastEIT::source::Source::Source(std::string type, dtype::real value,
+    std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+    dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
+    cudaStream_t stream)
+    : Source(type, std::vector<dtype::real>(drive_pattern->columns(), value),
+        mesh, electrodes, component_count, drive_pattern, measurement_pattern, handle,
+        stream) {
+}
+
 // current source
 template <
     class basis_function_type
 >
 fastEIT::source::Current<basis_function_type>::Current(
-    dtype::real current, std::shared_ptr<Mesh> mesh,
+    const std::vector<dtype::real>& current, std::shared_ptr<Mesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
@@ -85,6 +97,19 @@ fastEIT::source::Current<basis_function_type>::Current(
 
     // update excitation
     this->updateExcitation(handle, stream);
+}
+template <
+    class basis_function_type
+>
+fastEIT::source::Current<basis_function_type>::Current(
+    dtype::real current, std::shared_ptr<Mesh> mesh,
+    std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    cublasHandle_t handle, cudaStream_t stream)
+    : Current(std::vector<dtype::real>(drive_pattern->columns(), current),
+        mesh, electrodes, component_count, drive_pattern, measurement_pattern,
+        handle, stream) {
 }
 
 // init complete electrode model matrices
@@ -219,7 +244,7 @@ template <
     class basis_function_type
 >
 fastEIT::source::Voltage<basis_function_type>::Voltage(
-    dtype::real voltage, std::shared_ptr<Mesh> mesh,
+    const std::vector<dtype::real>& voltage, std::shared_ptr<Mesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
@@ -231,6 +256,19 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
 
     // update excitation
     this->updateExcitation(handle, stream);
+}
+template <
+    class basis_function_type
+>
+fastEIT::source::Voltage<basis_function_type>::Voltage(
+    dtype::real voltage, std::shared_ptr<Mesh> mesh,
+    std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    cublasHandle_t handle, cudaStream_t stream)
+    : Voltage(std::vector<dtype::real>(drive_pattern->columns(), voltage),
+        mesh, electrodes, component_count, drive_pattern, measurement_pattern,
+        handle, stream) {
 }
 
 // init complete electrode model matrices

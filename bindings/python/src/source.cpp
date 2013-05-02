@@ -6,7 +6,7 @@ using namespace boost::python;
 template <
     class source_type
 >
-std::shared_ptr<source_type> CreateSourceFromNumpy(fastEIT::dtype::real value,
+std::shared_ptr<source_type> CreateSourceFromNumpyScalar(fastEIT::dtype::real value,
     std::shared_ptr<fastEIT::Mesh> mesh, std::shared_ptr<fastEIT::Electrodes> electrodes,
     fastEIT::dtype::size component_count, numeric::array& drive_pattern,
     numeric::array& measurement_pattern, cublasHandle_t handle, cudaStream_t stream) {
@@ -17,6 +17,28 @@ std::shared_ptr<source_type> CreateSourceFromNumpy(fastEIT::dtype::real value,
         measurement_pattern, stream);
 
     return std::make_shared<source_type>(value, mesh, electrodes, component_count,
+        gpu_drive_pattern, gpu_measurement_pattern, handle, stream);
+}
+template <
+    class source_type
+>
+std::shared_ptr<source_type> CreateSourceFromNumpyVector(numeric::array& values,
+    std::shared_ptr<fastEIT::Mesh> mesh, std::shared_ptr<fastEIT::Electrodes> electrodes,
+    fastEIT::dtype::size component_count, numeric::array& drive_pattern,
+    numeric::array& measurement_pattern, cublasHandle_t handle, cudaStream_t stream) {
+    // create gpu matrices from arrays
+    auto gpu_drive_pattern = pyfasteit::fromNumpy<fastEIT::dtype::real, NPY_FLOAT32>(
+        drive_pattern, stream);
+    auto gpu_measurement_pattern = pyfasteit::fromNumpy<fastEIT::dtype::real, NPY_FLOAT32>(
+        measurement_pattern, stream);
+
+    // create vector from values array
+    std::vector<fastEIT::dtype::real> values_vector(gpu_drive_pattern->columns());
+    for (fastEIT::dtype::index i = 0; i < gpu_drive_pattern->columns(); ++i) {
+        values_vector[i] = extract<fastEIT::dtype::real>(values[i]);
+    }
+
+    return std::make_shared<source_type>(values_vector, mesh, electrodes, component_count,
         gpu_drive_pattern, gpu_measurement_pattern, handle, stream);
 }
 
@@ -74,7 +96,8 @@ void wrap_derived_source(const char* name) {
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
             std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
             cublasHandle_t, cudaStream_t>())
-    .def("__init__", make_constructor(&CreateSourceFromNumpy<source_type<basis_function_type>>));
+    .def("__init__", make_constructor(&CreateSourceFromNumpyScalar<source_type<basis_function_type>>))
+    .def("__init__", make_constructor(&CreateSourceFromNumpyVector<source_type<basis_function_type>>));
 
     implicitly_convertible<source_type<basis_function_type>,
         fastEIT::source::Source>();

@@ -14,6 +14,11 @@ namespace fastEIT {
         class Source {
         public:
             // constructor
+            Source(std::string type, const std::vector<dtype::real>& values,
+                std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+                dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+                cublasHandle_t handle, cudaStream_t stream);
             Source(std::string type, dtype::real value, std::shared_ptr<Mesh> mesh,
                 std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
@@ -90,6 +95,11 @@ namespace fastEIT {
         class Current : public Source {
         public:
             // constructor
+            Current(const std::vector<dtype::real>& current, std::shared_ptr<Mesh> mesh,
+                std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+                std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+                cublasHandle_t handle, cudaStream_t stream);
             Current(dtype::real current, std::shared_ptr<Mesh> mesh,
                 std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
@@ -111,6 +121,11 @@ namespace fastEIT {
         class Voltage : public Source {
         public:
             // constructor
+            Voltage(const std::vector<dtype::real>& voltage, std::shared_ptr<Mesh> mesh,
+                std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+                std::shared_ptr<Matrix<dtype::real>> drive_pattern,
+                std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+                cublasHandle_t handle, cudaStream_t stream);
             Voltage(dtype::real voltage, std::shared_ptr<Mesh> mesh,
                 std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
                 std::shared_ptr<Matrix<dtype::real>> drive_pattern,
