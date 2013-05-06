@@ -197,19 +197,14 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     // determine nodes with common element
     auto common_element_matrix = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
-        // get nodes for element
         nodes = this->mesh()->elementNodes(element);
 
-        // set system matrix elements
         for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i)
         for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
             (*common_element_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
         }
     }
-
-    // copy matrix to device
     common_element_matrix->copyToDevice(stream);
 
     // create sparse matrices
@@ -236,19 +231,19 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     auto elemental_r_matrix = std::make_shared<Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-    for (dtype::index i = 0; i < connectivity_matrices.size(); ++i) {
+    for (dtype::index level = 0; level < connectivity_matrices.size(); ++level) {
         for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
             // get element nodes
             nodes = this->mesh()->elementNodes(element);
 
-            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; j++)
-            for (dtype::index k = 0; k < basis_function_type::nodes_per_element; k++) {
-                (*connectivity_matrix)(std::get<0>(nodes[j]), std::get<0>(nodes[k])) =
-                    connectivity_matrices[i][std::get<0>(nodes[j])][std::get<0>(nodes[k])];
-                (*elemental_s_matrix)(std::get<0>(nodes[j]), std::get<0>(nodes[k])) =
-                    elemental_s_matrices[i][std::get<0>(nodes[j])][std::get<0>(nodes[k])];
-                (*elemental_r_matrix)(std::get<0>(nodes[j]), std::get<0>(nodes[k])) =
-                    elemental_r_matrices[i][std::get<0>(nodes[j])][std::get<0>(nodes[k])];
+            for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i)
+            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
+                (*connectivity_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                    connectivity_matrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])];
+                (*elemental_s_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                    elemental_s_matrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])];
+                (*elemental_r_matrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                    elemental_r_matrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])];
             }
         }
         connectivity_matrix->copyToDevice(stream);
@@ -256,11 +251,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
         elemental_r_matrix->copyToDevice(stream);
         cudaStreamSynchronize(stream);
 
-        model::reduceMatrix(connectivity_matrix, this->s_matrix(), i, stream,
+        model::reduceMatrix(connectivity_matrix, this->s_matrix(), level, stream,
             this->connectivity_matrix());
-        model::reduceMatrix(elemental_s_matrix, this->s_matrix(), i, stream,
+        model::reduceMatrix(elemental_s_matrix, this->s_matrix(), level, stream,
             this->elemental_s_matrix());
-        model::reduceMatrix(elemental_r_matrix, this->r_matrix(), i, stream,
+        model::reduceMatrix(elemental_r_matrix, this->r_matrix(), level, stream,
             this->elemental_r_matrix());
     }
 
@@ -303,17 +298,14 @@ void fastEIT::Model<basis_function_type>::initJacobianCalculationMatrix(
         }
 
         // fill matrix
-        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i) {
-            for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
-                // set elementalJacobianMatrix element
-                (*this->elemental_jacobian_matrix())(element, i +
-                    j * basis_function_type::nodes_per_element) =
-                    basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
-            }
+        for (dtype::index i = 0; i < basis_function_type::nodes_per_element; ++i)
+        for (dtype::index j = 0; j < basis_function_type::nodes_per_element; ++j) {
+            // set elementalJacobianMatrix element
+            (*this->elemental_jacobian_matrix())(element, i +
+                j * basis_function_type::nodes_per_element) =
+                basis_functions[i]->integrateGradientWithBasis(basis_functions[j]);
         }
     }
-
-    // upload to device
     this->elemental_jacobian_matrix()->copyToDevice(stream);
 }
 
