@@ -1,6 +1,9 @@
 #include <pyfasteit/pyfasteit.hpp>
-#include <numpy/arrayobject.h>
 #include <functional>
+
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#include <numpy/arrayobject.h>
+
 using namespace boost::python;
 
 template <

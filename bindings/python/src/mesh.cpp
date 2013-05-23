@@ -1,5 +1,8 @@
 #include <pyfasteit/pyfasteit.hpp>
+
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
+
 using namespace boost::python;
 
 std::shared_ptr<fastEIT::Mesh> CreateMeshFromNumpyArrays(numeric::array& nodes,

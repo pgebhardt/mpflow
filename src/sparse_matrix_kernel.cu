@@ -6,8 +6,6 @@
 #include <cstdlib>
 #include <cstdio>
 
-#include <iostream>
-
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include "fasteit/cuda_error.h"

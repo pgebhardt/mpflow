@@ -1,6 +1,9 @@
 #include <pyfasteit/pyfasteit.hpp>
 #include <boost/python/slice.hpp>
+
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
+
 using namespace boost::python;
 
 template <
@@ -120,13 +123,16 @@ template <
 >
 std::shared_ptr<fastEIT::Matrix<matrix_type>> pyfasteit::fromNumpy(numeric::array& array,
     cudaStream_t stream) {
+    // get numpy array
+    PyArrayObject* numpy_array = (PyArrayObject*)array.ptr();
+
     // check dimension
-    if (PyArray_NDIM(array.ptr()) != 2) {
+    if (PyArray_NDIM(numpy_array) != 2) {
         throw std::invalid_argument("only array with ndim of 2 is allowed");
     }
 
     // get array shape
-    npy_intp* shape = PyArray_DIMS(array.ptr());
+    npy_intp* shape = PyArray_DIMS(numpy_array);
 
     // create fastEIT matrix with same shape as numpy array
     auto matrix = std::make_shared<fastEIT::Matrix<matrix_type>>(
