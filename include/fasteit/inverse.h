@@ -15,15 +15,15 @@ namespace fastEIT {
     class InverseSolver {
     public:
         // constructor
-        InverseSolver(dtype::size element_count, dtype::size voltage_count,
+        InverseSolver(dtype::size element_count, dtype::size voltage_count, dtype::index parallel_images,
             dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
 
     public:
         // inverse solving
         std::shared_ptr<Matrix<dtype::real>> solve(
             const std::shared_ptr<Matrix<dtype::real>> jacobian,
-            const std::shared_ptr<Matrix<dtype::real>> calculated_voltage,
-            const std::shared_ptr<Matrix<dtype::real>> measured_voltage,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculated_voltage,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measured_voltage,
             dtype::size steps, cublasHandle_t handle, cudaStream_t stream,
             std::shared_ptr<Matrix<dtype::real>> gamma);
 
@@ -33,8 +33,8 @@ namespace fastEIT {
 
         // calc excitation
         void calcExcitation(const std::shared_ptr<Matrix<dtype::real>> jacobian,
-            const std::shared_ptr<Matrix<dtype::real>> calculated_voltage,
-            const std::shared_ptr<Matrix<dtype::real>> measured_voltage,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculated_voltage,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measured_voltage,
             cublasHandle_t handle, cudaStream_t stream);
 
         // accessors

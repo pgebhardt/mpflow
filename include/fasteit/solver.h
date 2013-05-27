@@ -12,27 +12,17 @@ namespace fastEIT {
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<fastEIT::model::Model> model, dtype::real regularization_factor,
-            cublasHandle_t handle, cudaStream_t stream);
+        Solver(std::shared_ptr<fastEIT::model::Model> model, dtype::index parallel_images,
+            dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian
         void preSolve(cublasHandle_t handle, cudaStream_t stream);
 
         // calibrate
-        std::shared_ptr<Matrix<dtype::real>> calibrate(cublasHandle_t handle, cudaStream_t stream);
-        std::shared_ptr<Matrix<dtype::real>> calibrate(
-            const std::shared_ptr<Matrix<dtype::real>> calibration_voltage,
-            cublasHandle_t handle, cudaStream_t stream);
+        // std::shared_ptr<Matrix<dtype::real>> calibrate(cublasHandle_t handle, cudaStream_t stream);
 
         // solving
         std::shared_ptr<Matrix<dtype::real>> solve(cublasHandle_t handle, cudaStream_t stream);
-        std::shared_ptr<Matrix<dtype::real>> solve(
-            const std::shared_ptr<Matrix<dtype::real>> measured_voltage,
-            cublasHandle_t handle, cudaStream_t stream);
-        std::shared_ptr<Matrix<dtype::real>> solve(
-            const std::shared_ptr<Matrix<dtype::real>> measured_voltage,
-            const std::shared_ptr<Matrix<dtype::real>> calibration_voltage, cublasHandle_t handle,
-            cudaStream_t stream);
 
         // accessors
         std::shared_ptr<fastEIT::model::Model> model() { return this->model_; }
@@ -44,9 +34,11 @@ namespace fastEIT {
         }
         std::shared_ptr<Matrix<dtype::real>> dgamma() { return this->dgamma_; }
         std::shared_ptr<Matrix<dtype::real>> gamma() { return this->gamma_; }
-        std::shared_ptr<Matrix<dtype::real>> measured_voltage() { return this->measured_voltage_; }
-        std::shared_ptr<Matrix<dtype::real>> calibration_voltage() {
-            return this->calibration_voltage_;
+        std::shared_ptr<Matrix<dtype::real>> measured_voltage(dtype::index index) {
+            return this->measured_voltage_[index];
+        }
+        std::shared_ptr<Matrix<dtype::real>> calibration_voltage(dtype::index index) {
+            return this->calibration_voltage_[index];
         }
 
     private:
@@ -56,8 +48,8 @@ namespace fastEIT {
         std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
         std::shared_ptr<Matrix<dtype::real>> gamma_;
-        std::shared_ptr<Matrix<dtype::real>> measured_voltage_;
-        std::shared_ptr<Matrix<dtype::real>> calibration_voltage_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> measured_voltage_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> calibration_voltage_;
     };
 }
 
