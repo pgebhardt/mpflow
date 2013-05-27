@@ -19,16 +19,16 @@ fastEIT::InverseSolver<NumericSolver>::InverseSolver(dtype::size element_count,
     }
 
     // create matrices
-    this->dvoltage_ = std::make_shared<Matrix<dtype::real>>(voltage_count, 1, stream);
-    this->zeros_ = std::make_shared<Matrix<dtype::real>>(element_count, 1, stream);
-    this->excitation_ = std::make_shared<Matrix<dtype::real>>(element_count, 1, stream);
+    this->dvoltage_ = std::make_shared<Matrix<dtype::real>>(voltage_count, 16, stream);
+    this->zeros_ = std::make_shared<Matrix<dtype::real>>(element_count, 16, stream);
+    this->excitation_ = std::make_shared<Matrix<dtype::real>>(element_count, 16, stream);
     this->system_matrix_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count,
         stream);
     this->jacobian_square_ = std::make_shared<Matrix<dtype::real>>(element_count, element_count,
         stream);
 
     // create numeric solver
-    this->numeric_solver_ = std::make_shared<NumericSolver>(element_count, 1, stream);
+    this->numeric_solver_ = std::make_shared<NumericSolver>(element_count, 16, stream);
 }
 
 // calc system matrix
@@ -121,9 +121,10 @@ void fastEIT::InverseSolver<NumericSolver>::calcExcitation(
     // calc excitation
     alpha = 1.0f;
     dtype::real beta = 0.0f;
-    if (cublasSgemv(handle, CUBLAS_OP_T, jacobian->data_rows(), jacobian->data_columns(), &alpha,
-        jacobian->device_data(), jacobian->data_rows(), this->dvoltage()->device_data(), 1, &beta,
-        this->excitation()->device_data(), 1) != CUBLAS_STATUS_SUCCESS) {
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, jacobian->data_columns(), this->dvoltage()->data_columns(),
+        jacobian->data_rows(), &alpha, jacobian->device_data(), jacobian->data_rows(), this->dvoltage()->device_data(),
+        this->dvoltage()->data_rows(), &beta, this->excitation()->device_data(), this->excitation()->data_rows())
+        != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("fastEIT::InverseSolver::calcExcitation: calc excitation");
     }
 }

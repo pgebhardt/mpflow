@@ -22,7 +22,7 @@ fastEIT::Solver::Solver(std::shared_ptr<fastEIT::model::Model> model,
         this->model(), handle, stream);
 
     // create inverse solver
-    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::FastConjugate>>(
+    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
         this->model()->mesh()->elements()->rows(),
         math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
         math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
@@ -30,9 +30,9 @@ fastEIT::Solver::Solver(std::shared_ptr<fastEIT::model::Model> model,
 
     // create matrices
     this->dgamma_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->mesh()->elements()->rows(), 1, stream);
+        this->model()->mesh()->elements()->rows(), 16, stream);
     this->gamma_ = std::make_shared<Matrix<dtype::real>>(
-        this->model()->mesh()->elements()->rows(), 1, stream);
+        this->model()->mesh()->elements()->rows(), 16, stream);
     this->measured_voltage_ = std::make_shared<Matrix<dtype::real>>(
         this->model()->source()->measurement_count(),
         this->model()->source()->drive_count(), stream);
