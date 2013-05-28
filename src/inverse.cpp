@@ -163,3 +163,4 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::InverseSolver<Nu
 
 // specialisation
 template class fastEIT::InverseSolver<fastEIT::numeric::Conjugate>;
+template class fastEIT::InverseSolver<fastEIT::numeric::FastConjugate>;
