@@ -6,24 +6,24 @@
 #include "fasteit/fasteit.h"
 
 // create solver
-fastEIT::DifferentialSolver::DifferentialSolver(std::shared_ptr<fastEIT::model::Model> model,
+fastEIT::solver::Differential::Differential(std::shared_ptr<fastEIT::model::Model> model,
     dtype::index parallel_images, dtype::real regularization_factor, cublasHandle_t handle,
     cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("fastEIT::DifferentialSolver::DifferentialSolver: model == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Differential::Differential: model == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::DifferentialSolver::DifferentialSolver: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Differential::Differential: handle == nullptr");
     }
 
     // create forward solver
-    this->forward_solver_ = std::make_shared<ForwardSolver<numeric::SparseConjugate>>(
+    this->forward_solver_ = std::make_shared<Forward<numeric::SparseConjugate>>(
         this->model(), handle, stream);
 
     // create inverse solver
-    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::Conjugate>>(
+    this->inverse_solver_ = std::make_shared<Inverse<numeric::Conjugate>>(
         this->model()->mesh()->elements()->rows(),
         math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
         math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
@@ -43,10 +43,10 @@ fastEIT::DifferentialSolver::DifferentialSolver(std::shared_ptr<fastEIT::model::
 }
 
 // pre solve for accurate initial jacobian
-void fastEIT::DifferentialSolver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::solver::Differential::preSolve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::DifferentialSolver::pre_solve: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Differential::pre_solve: handle == nullptr");
     }
 
     // forward solving a few steps
@@ -65,11 +65,11 @@ void fastEIT::DifferentialSolver::preSolve(cublasHandle_t handle, cudaStream_t s
 }
 
 // solving
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::DifferentialSolver::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Differential::solve(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::DifferentialSolver::solve: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Differential::solve: handle == nullptr");
     }
 
     // solve
@@ -80,23 +80,23 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::DifferentialSolv
 }
 
 // create solver
-fastEIT::AbsoluteSolver::AbsoluteSolver(std::shared_ptr<fastEIT::model::Model> model,
+fastEIT::solver::Absolute::Absolute(std::shared_ptr<fastEIT::model::Model> model,
     dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("fastEIT::AbsoluteSolver::DifferentialSolver: model == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Absolute::Absolute: model == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::AbsoluteSolver::DifferentialSolver: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Absolute::Absolute: handle == nullptr");
     }
 
     // create forward solver
-    this->forward_solver_ = std::make_shared<ForwardSolver<numeric::SparseConjugate>>(
+    this->forward_solver_ = std::make_shared<Forward<numeric::SparseConjugate>>(
         this->model(), handle, stream);
 
     // create inverse solver
-    this->inverse_solver_ = std::make_shared<InverseSolver<numeric::FastConjugate>>(
+    this->inverse_solver_ = std::make_shared<Inverse<numeric::FastConjugate>>(
         this->model()->mesh()->elements()->rows(),
         math::roundTo(this->model()->source()->measurement_count(), matrix::block_size) *
         math::roundTo(this->model()->source()->drive_count(), matrix::block_size),
@@ -114,10 +114,10 @@ fastEIT::AbsoluteSolver::AbsoluteSolver(std::shared_ptr<fastEIT::model::Model> m
 }
 
 // pre solve for accurate initial jacobian
-void fastEIT::AbsoluteSolver::preSolve(cublasHandle_t handle, cudaStream_t stream) {
+void fastEIT::solver::Absolute::preSolve(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::AbsoluteSolver::pre_solve: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Absolute::pre_solve: handle == nullptr");
     }
 
     // forward solving a few steps
@@ -131,15 +131,15 @@ void fastEIT::AbsoluteSolver::preSolve(cublasHandle_t handle, cudaStream_t strea
 }
 
 // solve
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::AbsoluteSolver::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Absolute::solve(
     const std::shared_ptr<Matrix<dtype::real>> measured_voltage, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (measured_voltage == nullptr) {
-        throw std::invalid_argument("fastEIT::AbsoluteSolver::solve: measured_voltage == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Absolute::solve: measured_voltage == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::AbsoluteSolver::solve: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Absolute::solve: handle == nullptr");
     }
 
     // solve forward
@@ -157,7 +157,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::AbsoluteSolver::
 
     return this->gamma();
 }
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::AbsoluteSolver::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Absolute::solve(
     cublasHandle_t handle, cudaStream_t stream) {
     return this->solve(this->measured_voltage(), handle, stream);
 }

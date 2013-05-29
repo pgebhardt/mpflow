@@ -8,11 +8,12 @@
 
 // namespace fastEIT
 namespace fastEIT {
+namespace solver {
     // class for solving differential EIT
-    class DifferentialSolver {
+    class Differential {
     public:
         // constructor
-        DifferentialSolver(std::shared_ptr<fastEIT::model::Model> model, dtype::index parallel_images,
+        Differential(std::shared_ptr<fastEIT::model::Model> model, dtype::index parallel_images,
             dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian
@@ -23,10 +24,10 @@ namespace fastEIT {
 
         // accessors
         std::shared_ptr<fastEIT::model::Model> model() { return this->model_; }
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver() {
+        std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver() {
             return this->forward_solver_;
         }
-        std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver() {
+        std::shared_ptr<Inverse<numeric::Conjugate>> inverse_solver() {
             return this->inverse_solver_;
         }
         std::shared_ptr<Matrix<dtype::real>> dgamma() { return this->dgamma_; }
@@ -40,18 +41,18 @@ namespace fastEIT {
     private:
         // member
         std::shared_ptr<fastEIT::model::Model> model_;
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver_;
-        std::shared_ptr<InverseSolver<numeric::Conjugate>> inverse_solver_;
+        std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver_;
+        std::shared_ptr<Inverse<numeric::Conjugate>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> measured_voltage_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> calibration_voltage_;
     };
 
     // class for solving absolute EIT
-    class AbsoluteSolver {
+    class Absolute {
     public:
         // constructor
-        AbsoluteSolver(std::shared_ptr<fastEIT::model::Model> model, dtype::real regularization_factor,
+        Absolute(std::shared_ptr<fastEIT::model::Model> model, dtype::real regularization_factor,
             cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian
@@ -64,10 +65,10 @@ namespace fastEIT {
 
         // accessors
         std::shared_ptr<fastEIT::model::Model> model() { return this->model_; }
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver() {
+        std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver() {
             return this->forward_solver_;
         }
-        std::shared_ptr<InverseSolver<numeric::FastConjugate>> inverse_solver() {
+        std::shared_ptr<Inverse<numeric::FastConjugate>> inverse_solver() {
             return this->inverse_solver_;
         }
         std::shared_ptr<Matrix<dtype::real>> dgamma() { return this->dgamma_; }
@@ -82,13 +83,14 @@ namespace fastEIT {
     private:
         // member
         std::shared_ptr<fastEIT::model::Model> model_;
-        std::shared_ptr<ForwardSolver<numeric::SparseConjugate>> forward_solver_;
-        std::shared_ptr<InverseSolver<numeric::FastConjugate>> inverse_solver_;
+        std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver_;
+        std::shared_ptr<Inverse<numeric::FastConjugate>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
         std::shared_ptr<Matrix<dtype::real>> gamma_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> measured_voltage_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> calculated_voltage_;
     };
+}
 }
 
 #endif

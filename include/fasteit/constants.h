@@ -8,15 +8,15 @@
 
 //namespace fastEIT
 namespace fastEIT {
+namespace matrix {
     // matrix block size
-    namespace matrix {
-        const fastEIT::dtype::size block_size = 16;
-    }
+    const fastEIT::dtype::size block_size = 16;
+}
 
+namespace sparseMatrix {
     // sparse matrix block size
-    namespace sparseMatrix {
-        const fastEIT::dtype::size block_size = 32;
-    }
+    const fastEIT::dtype::size block_size = 32;
+}
 }
 
 #endif
