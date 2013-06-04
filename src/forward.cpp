@@ -8,21 +8,21 @@
 
 // create forward_solver
 template <
-    class numeric_solver_type
+    class numerical_solver
 >
-fastEIT::ForwardSolver<numeric_solver_type>::ForwardSolver(
+fastEIT::solver::Forward<numerical_solver>::Forward(
     std::shared_ptr<fastEIT::model::Model> model, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: model == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Forward::Forward: model == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::ForwardSolver::ForwardSolver: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Forward::Forward: handle == nullptr");
     }
 
-    // create numeric_solver_type solver
-    this->numeric_solver_ = std::make_shared<numeric_solver_type>(
+    // create numerical_solver solver
+    this->numeric_solver_ = std::make_shared<numerical_solver>(
         this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
         this->model()->source()->drive_count() + this->model()->source()->measurement_count(),
         stream);
@@ -38,9 +38,9 @@ fastEIT::ForwardSolver<numeric_solver_type>::ForwardSolver(
 
 // apply pattern
 template <
-    class numeric_solver_type
+    class numerical_solver
 >
-void fastEIT::ForwardSolver<numeric_solver_type>::applyMeasurementPattern(
+void fastEIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
     std::shared_ptr<Matrix<dtype::real>> result, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
@@ -72,17 +72,17 @@ void fastEIT::ForwardSolver<numeric_solver_type>::applyMeasurementPattern(
 
 // forward solving
 template <
-    class numeric_solver_type
+    class numerical_solver
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<numeric_solver_type>::solve(
+std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Forward<numerical_solver>::solve(
     const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
-        throw std::invalid_argument("fastEIT::ForwardSolver::solve: gamma == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Forward::solve: gamma == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::ForwardSolver::solve: handle == nullptr");
+        throw std::invalid_argument("fastEIT::solver::Forward::solve: handle == nullptr");
     }
 
     // update system matrix
@@ -123,4 +123,4 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::ForwardSolver<nu
 }
 
 // specialisation
-template class fastEIT::ForwardSolver<fastEIT::numeric::SparseConjugate>;
+template class fastEIT::solver::Forward<fastEIT::numeric::SparseConjugate>;

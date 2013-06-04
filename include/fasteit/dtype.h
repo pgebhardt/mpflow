@@ -8,16 +8,15 @@
 
 //namespace fastEIT
 namespace fastEIT {
-    // namespace dtype
-    namespace dtype {
-        // basic scalar types
-        typedef unsigned int size;
-        typedef float real;
-        typedef unsigned int index;
+namespace dtype {
+    // basic scalar types
+    typedef unsigned int size;
+    typedef float real;
+    typedef unsigned int index;
 
-        // invalid index
-        static const index invalid_index = (index)(-1);
-    }
+    // invalid index
+    static const index invalid_index = (index)(-1);
+}
 }
 
 #endif

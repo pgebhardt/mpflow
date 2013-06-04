@@ -8,14 +8,15 @@
 
 // namespace fastEIT
 namespace fastEIT {
+namespace solver {
     // forward solver class definition
     template <
-        class numeric_solver_type
+        class numerical_solver
     >
-    class ForwardSolver {
+    class Forward {
     public:
         // constructor
-        ForwardSolver(std::shared_ptr<fastEIT::model::Model> model, cublasHandle_t handle,
+        Forward(std::shared_ptr<fastEIT::model::Model> model, cublasHandle_t handle,
             cudaStream_t stream);
 
         // apply pattern
@@ -28,18 +29,19 @@ namespace fastEIT {
             cublasHandle_t handle, cudaStream_t stream);
 
         // accessors
-        std::shared_ptr<numeric_solver_type> numeric_solver() { return this->numeric_solver_; }
+        std::shared_ptr<numerical_solver> numeric_solver() { return this->numeric_solver_; }
         std::shared_ptr<fastEIT::model::Model> model() { return this->model_; }
         std::shared_ptr<Matrix<dtype::real>> voltage() { return this->voltage_; }
         std::shared_ptr<Matrix<dtype::real>> current() { return this->current_; }
 
     private:
         // member
-        std::shared_ptr<numeric_solver_type> numeric_solver_;
+        std::shared_ptr<numerical_solver> numeric_solver_;
         std::shared_ptr<fastEIT::model::Model> model_;
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::shared_ptr<Matrix<dtype::real>> current_;
     };
+}
 }
 
 #endif
