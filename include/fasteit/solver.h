@@ -37,7 +37,7 @@ namespace solver {
         std::shared_ptr<Inverse<numerical_inverse_solver_type>> inverse_solver() {
             return this->inverse_solver_;
         }
-        std::shared_ptr<Matrix<dtype::real>> gamma() { return this->dgamma_; }
+        std::shared_ptr<Matrix<dtype::real>> gamma() { return this->gamma_; }
         std::shared_ptr<Matrix<dtype::real>> dgamma() { return this->dgamma_; }
         std::shared_ptr<Matrix<dtype::real>> measured_voltage(dtype::index index) {
             return this->measured_voltage_[index];
