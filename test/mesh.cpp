@@ -164,7 +164,7 @@ TEST(MeshTest, QuadraticBasis) {
     std::shared_ptr<fastEIT::Mesh> mesh = nullptr;
     EXPECT_NO_THROW({
         mesh = fastEIT::mesh::quadraticBasis(nodes, elements, boundary,
-            1.0, 1.0);
+            1.0, 1.0, nullptr);
     });
 
     // check count of nodes to prove no unneccessary nodes are created

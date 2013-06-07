@@ -20,21 +20,21 @@ TEST_F(ConjugateTest, Constructor) {
     // create solver
     std::shared_ptr<fastEIT::numeric::Conjugate> conjugate = nullptr;
     EXPECT_NO_THROW({
-        conjugate = std::make_shared<fastEIT::numeric::Conjugate>(20, handle_, nullptr);
+        conjugate = std::make_shared<fastEIT::numeric::Conjugate>(20, 1, nullptr);
     });
 
     // check errors
     EXPECT_THROW(
-        std::make_shared<fastEIT::numeric::Conjugate>(0, handle_, nullptr),
+        std::make_shared<fastEIT::numeric::Conjugate>(0, 1, nullptr),
         std::invalid_argument);
     EXPECT_THROW(
-        std::make_shared<fastEIT::numeric::Conjugate>(7, nullptr, nullptr),
+        std::make_shared<fastEIT::numeric::Conjugate>(1, 0, nullptr),
         std::invalid_argument);
 };
 
 TEST_F(ConjugateTest, Solve) {
     // create solver
-    auto solver = std::make_shared<fastEIT::numeric::Conjugate>(4, handle_, nullptr);
+    auto solver = std::make_shared<fastEIT::numeric::Conjugate>(4, 1, nullptr);
 
     // init matrix
     auto x = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(4, 1, nullptr);
