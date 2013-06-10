@@ -81,8 +81,8 @@ template <
 >
 void fastEIT::solver::Inverse<numerical_solver>::calcExcitation(
     const std::shared_ptr<Matrix<dtype::real>> jacobian,
-    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculated_voltage,
-    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measured_voltage, cublasHandle_t handle,
+    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculation,
+    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measurement, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (jacobian == nullptr) {
@@ -98,7 +98,7 @@ void fastEIT::solver::Inverse<numerical_solver>::calcExcitation(
     // copy measuredVoltage to dVoltage
     for (dtype::index image = 0; image < this->numeric_solver()->columns(); ++image) {
         if (cublasScopy(handle, this->dvoltage()->data_rows(),
-            measured_voltage[image]->device_data(), 1,
+            measurement[image]->device_data(), 1,
             (dtype::real*)(this->dvoltage()->device_data() + image * this->dvoltage()->data_rows()), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
@@ -108,7 +108,7 @@ void fastEIT::solver::Inverse<numerical_solver>::calcExcitation(
         // substract calculatedVoltage
         dtype::real alpha = -1.0f;
         if (cublasSaxpy(handle, this->dvoltage()->data_rows(), &alpha,
-            calculated_voltage[image]->device_data(), 1,
+            calculation[image]->device_data(), 1,
             (dtype::real*)(this->dvoltage()->device_data() + image * this->dvoltage()->data_rows()), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
@@ -133,8 +133,8 @@ template <
 >
 std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Inverse<numerical_solver>::solve(
     const std::shared_ptr<Matrix<dtype::real>> jacobian,
-    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculated_voltage,
-    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measured_voltage, dtype::size steps,
+    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculation,
+    const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measurement, dtype::size steps,
     cublasHandle_t handle, cudaStream_t stream,
     std::shared_ptr<Matrix<dtype::real>> gamma) {
     // check input
@@ -152,7 +152,7 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Inverse<
     gamma->copy(this->zeros(), stream);
 
     // calc excitation
-    this->calcExcitation(jacobian, calculated_voltage, measured_voltage, handle, stream);
+    this->calcExcitation(jacobian, calculation, measurement, handle, stream);
 
     // solve system
     this->numeric_solver()->solve(this->system_matrix(), this->excitation(),
