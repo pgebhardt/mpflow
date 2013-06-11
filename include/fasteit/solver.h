@@ -39,11 +39,11 @@ namespace solver {
         }
         std::shared_ptr<Matrix<dtype::real>> gamma() { return this->gamma_; }
         std::shared_ptr<Matrix<dtype::real>> dgamma() { return this->dgamma_; }
-        std::shared_ptr<Matrix<dtype::real>> measured_voltage(dtype::index index) {
-            return this->measured_voltage_[index];
+        std::shared_ptr<Matrix<dtype::real>> measurement(dtype::index index) {
+            return this->measurement_[index];
         }
-        std::shared_ptr<Matrix<dtype::real>> calculated_voltage(dtype::index index) {
-            return this->calculated_voltage_[index];
+        std::shared_ptr<Matrix<dtype::real>> calculation(dtype::index index) {
+            return this->calculation_[index];
         }
 
     private:
@@ -53,8 +53,8 @@ namespace solver {
         std::shared_ptr<Inverse<numerical_inverse_solver_type>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> gamma_;
         std::shared_ptr<Matrix<dtype::real>> dgamma_;
-        std::vector<std::shared_ptr<Matrix<dtype::real>>> measured_voltage_;
-        std::vector<std::shared_ptr<Matrix<dtype::real>>> calculated_voltage_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> measurement_;
+        std::vector<std::shared_ptr<Matrix<dtype::real>>> calculation_;
     };
 }
 }

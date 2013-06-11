@@ -39,10 +39,10 @@ fastEIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_
     this->dgamma_ = std::make_shared<Matrix<dtype::real>>(
         this->model()->mesh()->elements()->rows(), parallel_images, stream);
     for (dtype::index image = 0; image < parallel_images; ++image) {
-        this->measured_voltage_.push_back(std::make_shared<Matrix<dtype::real>>(
+        this->measurement_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->model()->source()->measurement_count(),
             this->model()->source()->drive_count(), stream));
-        this->calculated_voltage_.push_back(std::make_shared<Matrix<dtype::real>>(
+        this->calculation_.push_back(std::make_shared<Matrix<dtype::real>>(
             this->model()->source()->measurement_count(),
             this->model()->source()->drive_count(), stream));
     }
@@ -61,17 +61,17 @@ void fastEIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_so
     }
 
     // forward solving a few steps
-    this->forward_solver()->solve(this->gamma(), 1000, handle, stream);
+    auto initial_value = this->forward_solver()->solve(this->gamma(), 1000, handle, stream);
 
     // calc system matrix
     this->inverse_solver()->calcSystemMatrix(this->model()->jacobian(), handle, stream);
 
-    // set measuredVoltage and calibrationVoltage to calculatedVoltage
-    for (auto voltage : this->measured_voltage_) {
-        voltage->copy(this->forward_solver()->voltage(), stream);
+    // set measurement and calculation to initial value of forward solver
+    for (auto level : this->measurement_) {
+        level->copy(initial_value, stream);
     }
-    for (auto voltage : this->calculated_voltage_) {
-        voltage->copy(this->forward_solver()->voltage(), stream);
+    for (auto level : this->calculation_) {
+        level->copy(initial_value, stream);
     }
 }
 
@@ -89,8 +89,8 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     }
 
     // solve
-    this->inverse_solver()->solve(this->model()->jacobian(), this->calculated_voltage_,
-        this->measured_voltage_, 180, handle, stream, this->dgamma());
+    this->inverse_solver()->solve(this->model()->jacobian(), this->calculation_,
+        this->measurement_, 180, handle, stream, this->dgamma());
 
     return this->dgamma();
 }
@@ -115,10 +115,10 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     this->inverse_solver()->calcSystemMatrix(this->model()->jacobian(), handle, stream);
 
     // solve inverse
-    std::vector<std::shared_ptr<Matrix<dtype::real>>> calculated_voltage(
+    std::vector<std::shared_ptr<Matrix<dtype::real>>> calculation(
         1, this->forward_solver()->voltage());
-    this->inverse_solver()->solve(this->model()->jacobian(), calculated_voltage,
-        this->measured_voltage_, 180, handle, stream, this->dgamma());
+    this->inverse_solver()->solve(this->model()->jacobian(), calculation,
+        this->measurement_, 180, handle, stream, this->dgamma());
 
     // add to gamma
     this->gamma()->add(this->dgamma(), stream);

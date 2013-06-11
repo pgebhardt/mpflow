@@ -23,8 +23,8 @@ namespace solver {
         // inverse solving
         std::shared_ptr<Matrix<dtype::real>> solve(
             const std::shared_ptr<Matrix<dtype::real>> jacobian,
-            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculated_voltage,
-            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measured_voltage,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculation,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measurement,
             dtype::size steps, cublasHandle_t handle, cudaStream_t stream,
             std::shared_ptr<Matrix<dtype::real>> gamma);
 
@@ -34,8 +34,8 @@ namespace solver {
 
         // calc excitation
         void calcExcitation(const std::shared_ptr<Matrix<dtype::real>> jacobian,
-            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculated_voltage,
-            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measured_voltage,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& calculation,
+            const std::vector<std::shared_ptr<Matrix<dtype::real>>>& measurement,
             cublasHandle_t handle, cudaStream_t stream);
 
         // accessors
