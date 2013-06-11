@@ -93,7 +93,7 @@ fastEIT::source::Current<basis_function_type>::Current(
     : Source("current", current, mesh, electrodes, component_count,
         drive_pattern, measurement_pattern, handle, stream) {
     // init complete electrode model
-    this->initCEM(handle, stream);
+    this->initCEM(stream);
 
     // update excitation
     this->updateExcitation(handle, stream);
@@ -116,12 +116,7 @@ fastEIT::source::Current<basis_function_type>::Current(
 template <
     class basis_function_type
 >
-void fastEIT::source::Current<basis_function_type>::initCEM(cublasHandle_t handle,
-    cudaStream_t stream) {
-    if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::source::Current::initCEM: handle == nullptr");
-    }
-
+void fastEIT::source::Current<basis_function_type>::initCEM(cudaStream_t stream) {
     // needed arrays
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
@@ -251,8 +246,22 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
     cublasHandle_t handle, cudaStream_t stream)
     : Source("voltage", voltage, mesh, electrodes, component_count,
         drive_pattern, measurement_pattern, handle, stream) {
+    // make pattern dc free
+    dtype::real dc_offset = 0.0;
+    for (dtype::index excitation = 0; excitation < this->pattern()->columns(); ++excitation) {
+        dc_offset = 0.0;
+        for (dtype::index electrode = 0; electrode < this->pattern()->rows(); ++electrode) {
+            dc_offset += (*this->pattern())(electrode, excitation) / this->pattern()->rows();
+        }
+        for (dtype::index electrode = 0; electrode < this->pattern()->rows(); ++electrode) {
+            (*this->pattern())(electrode, excitation) -= dc_offset;
+        }
+    }
+    this->pattern()->copyToDevice(stream);
+    fastEIT::matrix::savetxt(this->pattern(), &std::cout);
+
     // init complete electrode model
-    this->initCEM(handle, stream);
+    this->initCEM(stream);
 
     // update excitation
     this->updateExcitation(handle, stream);
@@ -275,15 +284,112 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
 template <
     class basis_function_type
 >
-void fastEIT::source::Voltage<basis_function_type>::initCEM(cublasHandle_t, cudaStream_t) {
+void fastEIT::source::Voltage<basis_function_type>::initCEM(cudaStream_t) {
+    // needed arrays
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
+    std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
+    dtype::real integration_start, integration_end;
+
+    // init z and w matrices
+    for (dtype::index boundary_element = 0;
+        boundary_element < this->mesh()->boundary()->rows();
+        ++boundary_element) {
+        // get boundary nodes
+        nodes = this->mesh()->boundaryNodes(boundary_element);
+
+        // sort nodes by parameter
+        std::sort(nodes.begin(), nodes.end(),
+            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
+                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
+                -> bool {
+                    return math::circleParameter(std::get<1>(b),
+                        math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
+        });
+
+        // calc parameter offset
+        dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
+
+        // calc node parameter centered to node 0
+        for (dtype::size i = 0; i < basis_function_type::nodes_per_edge; ++i) {
+            node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
+                parameter_offset);
+        }
+
+        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+            // calc integration interval centered to node 0
+            integration_start = math::circleParameter(
+                std::get<0>(this->electrodes()->coordinates(electrode)), parameter_offset);
+            integration_end = math::circleParameter(
+                std::get<1>(this->electrodes()->coordinates(electrode)), parameter_offset);
+
+            // intgrate if integration_start is left of integration_end
+            if (integration_start < integration_end) {
+                // calc w and x matrix elements
+                for (dtype::index i = 0; i < basis_function_type::nodes_per_edge; ++i) {
+                    (*this->w_matrix())(std::get<0>(nodes[i]), electrode) -=
+                        basis_function_type::integrateBoundaryEdge(
+                            node_parameter, i, integration_start, integration_end) /
+                        std::get<0>(this->electrodes()->shape());
+                    (*this->x_matrix())(electrode, std::get<0>(nodes[i])) -=
+                        basis_function_type::integrateBoundaryEdge(
+                            node_parameter, i, integration_start, integration_end) /
+                        std::get<0>(this->electrodes()->shape());
+                }
+            }
+        }
+    }
+
+    // init d matrix
+    for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
+        (*this->d_matrix())(electrode, electrode) = this->electrodes()->impedance() /
+            std::get<0>(this->electrodes()->shape());
+    }
 }
 
 // update excitation
 template <
     class model_type
 >
-void fastEIT::source::Voltage<model_type>::updateExcitation(
-    cublasHandle_t, cudaStream_t) {
+void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handle,
+    cudaStream_t stream) {
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::source::Voltage::updateExcitation: handle == nullptr");
+    }
+
+    // update excitation
+    // calc excitation components
+    for (dtype::index component = 0; component < this->component_count(); ++component) {
+        // set excitation
+        for (dtype::index excitation = 0; excitation < this->pattern()->columns(); ++excitation) {
+            if (cublasScopy(handle, this->pattern()->rows(),
+                this->pattern()->device_data() + excitation * this->pattern()->data_rows(), 1,
+                this->excitation(component)->device_data() +
+                excitation * this->excitation(component)->data_rows() +
+                this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
+                throw std::logic_error(
+                    "fastEIT::source::Voltage::updateExcitation: copy pattern to excitation");
+            }
+        }
+        for (dtype::index excitation = 0; excitation < this->drive_count(); ++excitation) {
+            if (cublasSscal(handle, this->pattern()->rows(), &this->values()[excitation],
+                this->excitation(component)->device_data() +
+                excitation * this->excitation(component)->data_rows() +
+                this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
+                throw std::logic_error(
+                    "fastEIT::source::Voltage::updateExcitation: apply value to pattern");
+            }
+        }
+
+        // fourier transform pattern
+        if (component == 0) {
+            // calc ground mode
+            this->excitation(component)->scalarMultiply(1.0f / this->mesh()->height(), stream);
+        } else {
+            this->excitation(component)->scalarMultiply(2.0f * sin(
+                component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
+                (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
+        }
+    }
 }
 
 // specialisation

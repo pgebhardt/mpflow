@@ -34,7 +34,7 @@ namespace fastEIT {
 
         protected:
             // init excitation
-            virtual void initCEM(cublasHandle_t, cudaStream_t) {
+            virtual void initCEM(cudaStream_t) {
             };
 
         public:
@@ -111,7 +111,7 @@ namespace fastEIT {
 
         protected:
             // init excitation
-            virtual void initCEM(cublasHandle_t handle, cudaStream_t stream);
+            virtual void initCEM(cudaStream_t stream);
         };
 
         // voltage source
@@ -137,7 +137,7 @@ namespace fastEIT {
 
         protected:
             // init excitation
-            virtual void initCEM(cublasHandle_t handle, cudaStream_t stream);
+            virtual void initCEM(cudaStream_t stream);
         };
     }
 }
