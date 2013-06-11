@@ -200,6 +200,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(cublasHandl
 
     // update excitation
     // calc excitation components
+    cublasSetStream(handle, stream);
     for (dtype::index component = 0; component < this->component_count(); ++component) {
         // set excitation
         for (dtype::index excitation = 0; excitation < this->pattern()->columns(); ++excitation) {
@@ -258,7 +259,6 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
         }
     }
     this->pattern()->copyToDevice(stream);
-    fastEIT::matrix::savetxt(this->pattern(), &std::cout);
 
     // init complete electrode model
     this->initCEM(stream);
@@ -330,7 +330,7 @@ void fastEIT::source::Voltage<basis_function_type>::initCEM(cudaStream_t) {
                         basis_function_type::integrateBoundaryEdge(
                             node_parameter, i, integration_start, integration_end) /
                         std::get<0>(this->electrodes()->shape());
-                    (*this->x_matrix())(electrode, std::get<0>(nodes[i])) -=
+                    (*this->x_matrix())(electrode, std::get<0>(nodes[i])) +=
                         basis_function_type::integrateBoundaryEdge(
                             node_parameter, i, integration_start, integration_end) /
                         std::get<0>(this->electrodes()->shape());
@@ -358,6 +358,7 @@ void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handl
 
     // update excitation
     // calc excitation components
+    cublasSetStream(handle, stream);
     for (dtype::index component = 0; component < this->component_count(); ++component) {
         // set excitation
         for (dtype::index excitation = 0; excitation < this->pattern()->columns(); ++excitation) {
@@ -381,14 +382,14 @@ void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handl
         }
 
         // fourier transform pattern
-        if (component == 0) {
+/*        if (component == 0) {
             // calc ground mode
             this->excitation(component)->scalarMultiply(1.0f / this->mesh()->height(), stream);
         } else {
             this->excitation(component)->scalarMultiply(2.0f * sin(
                 component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
                 (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
-        }
+        }*/
     }
 }
 
