@@ -115,6 +115,9 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Forward<
         // calc current
         this->applyMeasurementPattern(this->current(), stream);
 
+        // scale current with electrode height
+        this->current()->scalarMultiply(std::get<1>(this->model()->electrodes()->shape()), stream);
+
         return this->current();
     }
 

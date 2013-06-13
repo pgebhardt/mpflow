@@ -382,14 +382,15 @@ void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handl
         }
 
         // fourier transform pattern
-/*        if (component == 0) {
+        if (component == 0) {
             // calc ground mode
-            this->excitation(component)->scalarMultiply(1.0f / this->mesh()->height(), stream);
+            this->excitation(component)->scalarMultiply(std::get<1>(this->electrodes()->shape()) /
+                this->mesh()->height(), stream);
         } else {
-            this->excitation(component)->scalarMultiply(2.0f * sin(
-                component * M_PI * std::get<1>(this->electrodes()->shape()) / this->mesh()->height()) /
-                (component * M_PI * std::get<1>(this->electrodes()->shape())), stream);
-        }*/
+            this->excitation(component)->scalarMultiply((2.0f / (component * M_PI)) *
+                sin(component * M_PI * std::get<1>(this->electrodes()->shape()) /
+                this->mesh()->height()), stream);
+        }
     }
 }
 
