@@ -162,19 +162,19 @@ void fastEIT::source::Current<basis_function_type>::initCEM(cudaStream_t stream)
                         // calc z matrix element
                         (*this->z_matrix())(std::get<0>(nodes[i]), std::get<0>(nodes[j])) +=
                             basis_function_type::integrateBoundaryEdgeWithOther(
-                                node_parameter, i, j, integration_start, integration_end) /
-                            this->electrodes()->impedance();
+                                node_parameter, i, j, integration_start, integration_end) *
+                            std::get<1>(this->electrodes()->shape()) / this->electrodes()->impedance();
                     }
 
                     // calc w and x matrix elements
                     (*this->w_matrix())(std::get<0>(nodes[i]), electrode) -=
                         basis_function_type::integrateBoundaryEdge(
-                            node_parameter, i, integration_start, integration_end) /
-                        this->electrodes()->impedance();
+                            node_parameter, i, integration_start, integration_end) *
+                        std::get<1>(this->electrodes()->shape()) / this->electrodes()->impedance();
                     (*this->x_matrix())(electrode, std::get<0>(nodes[i])) -=
                         basis_function_type::integrateBoundaryEdge(
-                            node_parameter, i, integration_start, integration_end) /
-                        this->electrodes()->impedance();
+                            node_parameter, i, integration_start, integration_end) *
+                        std::get<1>(this->electrodes()->shape()) / this->electrodes()->impedance();
                 }
             }
         }
@@ -183,7 +183,7 @@ void fastEIT::source::Current<basis_function_type>::initCEM(cudaStream_t stream)
 
     // init d matrix
     for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
-        (*this->d_matrix())(electrode, electrode) = std::get<0>(this->electrodes()->shape()) /
+        (*this->d_matrix())(electrode, electrode) = this->electrodes()->area() /
             this->electrodes()->impedance();
     }
 }
@@ -342,7 +342,7 @@ void fastEIT::source::Voltage<basis_function_type>::initCEM(cudaStream_t) {
     // init d matrix
     for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
         (*this->d_matrix())(electrode, electrode) = this->electrodes()->impedance() /
-            std::get<0>(this->electrodes()->shape());
+            this->electrodes()->area();
     }
 }
 
