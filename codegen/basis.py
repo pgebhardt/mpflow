@@ -151,23 +151,23 @@ class Basis(object):
             evaluate=self.evaluate(
                 ['std::get<{}>(point)'.format(i) for i in range(self.nodes_per_edge)],
                 this_coefficients,
-                dtype='fastEIT::dtype::real',
+                dtype='mpFlow::dtype::real',
                 custom_args=['std::tuple<dtype::real, dtype::real> point'],
-                name='fastEIT::basis::{}::evaluate'.format(self.name),
+                name='mpFlow::EIT::basis::{}::evaluate'.format(self.name),
                 ),
 
             # model integrals
             integrateWithBasis=self.integrateWithBasis(
                 points_args, this_coefficients, other_coefficients,
-                dtype='fastEIT::dtype::real',
+                dtype='mpFlow::dtype::real',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
-                name='fastEIT::basis::{}::integrateWithBasis'.format(self.name),
+                name='mpFlow::EIT::basis::{}::integrateWithBasis'.format(self.name),
                 ),
             integrateGradientWithBasis=self.integrateGradientWithBasis(
                 points_args, this_coefficients, other_coefficients,
-                dtype='fastEIT::dtype::real',
+                dtype='mpFlow::dtype::real',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
-                name='fastEIT::basis::{}::integrateGradientWithBasis'.format(self.name),
+                name='mpFlow::EIT::basis::{}::integrateGradientWithBasis'.format(self.name),
                 ),
 
             # integrate boundary

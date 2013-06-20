@@ -1,6 +1,6 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <string>
@@ -8,23 +8,23 @@
 #include <iostream>
 #include <fstream>
 
-#include "fasteit/fasteit.h"
-#include "fasteit/matrix_kernel.h"
+#include "mpflow/mpflow.h"
+#include "mpflow/matrix_kernel.h"
 
 // create new matrix
 template<
     class type
 >
-fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream,
+mpFlow::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream,
     type value)
     : host_data_(nullptr), device_data_(nullptr), rows_(rows), columns_(columns),
         data_rows_(rows), data_columns_(columns) {
     // check input
     if (rows == 0) {
-        throw std::invalid_argument("fastEIT::Matrix::Matrix: rows == 0");
+        throw std::invalid_argument("mpFlow::Matrix::Matrix: rows == 0");
     }
     if (columns == 0) {
-        throw std::invalid_argument("fastEIT::Matrix::Matrix: columns == 0");
+        throw std::invalid_argument("mpFlow::Matrix::Matrix: columns == 0");
     }
 
     // cuda error
@@ -46,7 +46,7 @@ fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_
 
     // check success
     if (error != cudaSuccess) {
-        throw std::logic_error("fastEIT::Matrix::Matrix: create host data memory");
+        throw std::logic_error("mpFlow::Matrix::Matrix: create host data memory");
     }
 
     // create matrix device data memory
@@ -57,7 +57,7 @@ fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_
 
     // check success
     if (error != cudaSuccess) {
-        throw std::logic_error("fastEIT::Matrix::Matrix: create device data memory");
+        throw std::logic_error("mpFlow::Matrix::Matrix: create device data memory");
     }
 
     // init data with 0.0
@@ -73,7 +73,7 @@ fastEIT::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_
 template <
     class type
 >
-fastEIT::Matrix<type>::~Matrix() {
+mpFlow::Matrix<type>::~Matrix() {
     // free matrix host data
     cudaFreeHost(this->host_data_);
     CudaCheckError();
@@ -87,17 +87,17 @@ fastEIT::Matrix<type>::~Matrix() {
 template <
     class type
 >
-void fastEIT::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> other,
+void mpFlow::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> other,
     cudaStream_t stream) {
     // check input
     if (other == nullptr) {
-        throw std::invalid_argument("fastEIT::Matrix::copy: other == nullptr");
+        throw std::invalid_argument("mpFlow::Matrix::copy: other == nullptr");
     }
 
     // check size
     if ((other->rows() != this->rows()) ||
         (other->columns() != this->columns())) {
-        throw std::invalid_argument("fastEIT::Matrix::copy: shape does not match");
+        throw std::invalid_argument("mpFlow::Matrix::copy: shape does not match");
     }
 
     // copy data
@@ -113,7 +113,7 @@ void fastEIT::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> other,
 template <
     class type
 >
-void fastEIT::Matrix<type>::copyToDevice(cudaStream_t stream) {
+void mpFlow::Matrix<type>::copyToDevice(cudaStream_t stream) {
     // copy host buffer to device
     CudaSafeCall(
         cudaMemcpyAsync(this->device_data(), this->host_data(),
@@ -127,7 +127,7 @@ void fastEIT::Matrix<type>::copyToDevice(cudaStream_t stream) {
 template <
     class type
 >
-void fastEIT::Matrix<type>::copyToHost(cudaStream_t stream) {
+void mpFlow::Matrix<type>::copyToHost(cudaStream_t stream) {
     // copy host buffer to device
     CudaSafeCall(
         cudaMemcpyAsync(this->host_data(), this->device_data(),
@@ -141,17 +141,17 @@ void fastEIT::Matrix<type>::copyToHost(cudaStream_t stream) {
 template <
     class type
 >
-void fastEIT::Matrix<type>::add(const std::shared_ptr<Matrix<type>> value,
+void mpFlow::Matrix<type>::add(const std::shared_ptr<Matrix<type>> value,
     cudaStream_t stream) {
     // check input
     if (value == nullptr) {
-        throw std::invalid_argument("fastEIT::Matrix::add: value == nullptr");
+        throw std::invalid_argument("mpFlow::Matrix::add: value == nullptr");
     }
 
     // check size
     if ((this->rows() != value->rows()) ||
         (this->columns() != value->columns())) {
-        throw std::invalid_argument("fastEIT::Matrix::add: shape does not match");
+        throw std::invalid_argument("mpFlow::Matrix::add: shape does not match");
     }
 
     // dimension
@@ -170,33 +170,33 @@ void fastEIT::Matrix<type>::add(const std::shared_ptr<Matrix<type>> value,
 template <
     class type
 >
-void fastEIT::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>,
+void mpFlow::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>,
     const std::shared_ptr<Matrix<type>>, cublasHandle_t, cudaStream_t) {
-    throw std::logic_error("fastEIT::Matrix::multiply: not supported dtype");
+    throw std::logic_error("mpFlow::Matrix::multiply: not supported dtype");
 }
 
 // specialisation for dtype::real
-namespace fastEIT {
+namespace mpFlow {
     template <>
     void Matrix<dtype::real>::multiply(const std::shared_ptr<Matrix<dtype::real>> A,
         const std::shared_ptr<Matrix<dtype::real>> B, cublasHandle_t handle,
         cudaStream_t stream) {
         // check input
         if (A == nullptr) {
-            throw std::invalid_argument("fastEIT::Matrix::multiply: A == nullptr");
+            throw std::invalid_argument("mpFlow::Matrix::multiply: A == nullptr");
         }
         if (B == nullptr) {
-            throw std::invalid_argument("fastEIT::Matrix::multiply: B == nullptr");
+            throw std::invalid_argument("mpFlow::Matrix::multiply: B == nullptr");
         }
         if (handle == NULL) {
-            throw std::invalid_argument("fastEIT::Matrix::multiply: handle == NULL");
+            throw std::invalid_argument("mpFlow::Matrix::multiply: handle == NULL");
         }
 
         // check size
         if ((A->columns() != B->rows()) ||
             (this->rows() != A->rows()) ||
             (this->columns() != B->columns())) {
-            throw std::invalid_argument("fastEIT::Matrix::multiply: shape does not match");
+            throw std::invalid_argument("mpFlow::Matrix::multiply: shape does not match");
         }
 
         // set cublas stream
@@ -210,14 +210,14 @@ namespace fastEIT {
             if (cublasSgemv(handle, CUBLAS_OP_N, A->data_rows(), A->data_columns(), &alpha, A->device_data(),
                 A->data_rows(), B->device_data(), 1, &beta, this->device_data(), 1)
                 != CUBLAS_STATUS_SUCCESS) {
-                throw std::logic_error("fastEIT::Matrix::multiply: cublasSgemv");
+                throw std::logic_error("mpFlow::Matrix::multiply: cublasSgemv");
             }
         }
         else {
             if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->data_rows(), B->data_columns(), A->data_columns(),
                 &alpha, A->device_data(), A->data_rows(), B->device_data(), B->data_rows(), &beta,
                 this->device_data(), this->data_rows()) != CUBLAS_STATUS_SUCCESS) {
-                throw std::logic_error("fastEIT::Matrix::multiply: cublasSgemm");
+                throw std::logic_error("mpFlow::Matrix::multiply: cublasSgemm");
             }
         }
     }
@@ -227,7 +227,7 @@ namespace fastEIT {
 template <
     class type
 >
-void fastEIT::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
+void mpFlow::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
     // dimension
     dim3 blocks(this->data_rows() == 1 ? 1 : this->data_rows() / matrix::block_size,
         this->data_columns() == 1 ? 1 : this->data_columns() / matrix::block_size);
@@ -243,20 +243,20 @@ void fastEIT::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
 template <
     class type
 >
-void fastEIT::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
+void mpFlow::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
     const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
     // check input
     if (A == nullptr) {
-        throw std::invalid_argument("fastEIT::Matrix::vectorDotProduct: A == nullptr");
+        throw std::invalid_argument("mpFlow::Matrix::vectorDotProduct: A == nullptr");
     }
     if (B == nullptr) {
-        throw std::invalid_argument("fastEIT::Matrix::vectorDotProduct: B == nullptr");
+        throw std::invalid_argument("mpFlow::Matrix::vectorDotProduct: B == nullptr");
     }
 
     // check size
     if ((this->rows() != A->rows()) ||
         (this->rows() != B->rows())) {
-        throw std::invalid_argument("fastEIT::Matrix::vectorDotProduct: shape does not match");
+        throw std::invalid_argument("mpFlow::Matrix::vectorDotProduct: shape does not match");
     }
 
     // get minimum colums
@@ -276,23 +276,23 @@ void fastEIT::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>>
 
     // sum
     struct noop_deleter { void operator()(void*) {} };
-    this->sum(std::shared_ptr<fastEIT::Matrix<type>>(this, noop_deleter()), stream);
+    this->sum(std::shared_ptr<mpFlow::Matrix<type>>(this, noop_deleter()), stream);
 }
 
 // sum
 template <
     class type
 >
-void fastEIT::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> value,
+void mpFlow::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> value,
     cudaStream_t stream) {
     // check input
     if (value == nullptr) {
-        throw std::invalid_argument("fastEIT::Matrix::sum: value == nullptr");
+        throw std::invalid_argument("mpFlow::Matrix::sum: value == nullptr");
     }
 
     // check size
     if (this->rows() != value->rows()) {
-        throw std::invalid_argument("fastEIT::Matrix::sum: shape does not match");
+        throw std::invalid_argument("mpFlow::Matrix::sum: shape does not match");
     }
 
     // get minimum columns
@@ -327,16 +327,16 @@ void fastEIT::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> value,
 template <
     class type
 >
-void fastEIT::Matrix<type>::min(const std::shared_ptr<Matrix<type>> value,
+void mpFlow::Matrix<type>::min(const std::shared_ptr<Matrix<type>> value,
     cudaStream_t stream) {
     // check input
     if (value == nullptr) {
-        throw std::invalid_argument("fastEIT::Matrix::min: value == nullptr");
+        throw std::invalid_argument("mpFlow::Matrix::min: value == nullptr");
     }
 
     // check size
     if (this->rows() != value->rows()) {
-        throw std::invalid_argument("fastEIT::Matrix::min: shape does not match");
+        throw std::invalid_argument("mpFlow::Matrix::min: shape does not match");
     }
 
     // kernel settings
@@ -364,16 +364,16 @@ void fastEIT::Matrix<type>::min(const std::shared_ptr<Matrix<type>> value,
 template <
     class type
 >
-void fastEIT::Matrix<type>::max(const std::shared_ptr<Matrix<type>> value,
+void mpFlow::Matrix<type>::max(const std::shared_ptr<Matrix<type>> value,
     cudaStream_t stream) {
     // check input
     if (value == nullptr) {
-        throw std::invalid_argument("fastEIT::Matrix::max: value == nullptr");
+        throw std::invalid_argument("mpFlow::Matrix::max: value == nullptr");
     }
 
     // check size
     if (this->rows() != value->rows()) {
-        throw std::invalid_argument("fastEIT::Matrix::max: shape does not match");
+        throw std::invalid_argument("mpFlow::Matrix::max: shape does not match");
     }
 
     // kernel settings
@@ -401,11 +401,11 @@ void fastEIT::Matrix<type>::max(const std::shared_ptr<Matrix<type>> value,
 template <
     class type
 >
-std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(std::istream* istream,
+std::shared_ptr<mpFlow::Matrix<type>> mpFlow::matrix::loadtxt(std::istream* istream,
     cudaStream_t stream) {
     // check input
     if (istream == nullptr) {
-        throw std::invalid_argument("fastEIT::matrix::loadtxt: istream == nullptr");
+        throw std::invalid_argument("mpFlow::matrix::loadtxt: istream == nullptr");
     }
 
     // read matrix
@@ -432,7 +432,7 @@ std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(std::istream* is
 
             // check read error
             if (line_stream.bad()) {
-                throw std::logic_error("fastEIT::matrix::loadtxt: invalid value");
+                throw std::logic_error("mpFlow::matrix::loadtxt: invalid value");
             }
 
             row.push_back(value);
@@ -464,14 +464,14 @@ std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(std::istream* is
 template <
     class type
 >
-std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(const std::string filename, cudaStream_t stream) {
+std::shared_ptr<mpFlow::Matrix<type>> mpFlow::matrix::loadtxt(const std::string filename, cudaStream_t stream) {
     // open file stream
     std::ifstream file;
     file.open(filename.c_str());
 
     // check open
     if (file.fail()) {
-        throw std::logic_error("fastEIT::matrix::loadtxt: cannot open file!");
+        throw std::logic_error("mpFlow::matrix::loadtxt: cannot open file!");
     }
 
     // load matrix
@@ -487,14 +487,14 @@ std::shared_ptr<fastEIT::Matrix<type>> fastEIT::matrix::loadtxt(const std::strin
 template <
     class type
 >
-void fastEIT::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix,
+void mpFlow::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix,
     std::ostream* ostream) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("fastEIT::matrix::savetxt: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::matrix::savetxt: matrix == nullptr");
     }
     if (ostream == nullptr) {
-        throw std::invalid_argument("fastEIT::matrix::savetxt: ostream == nullptr");
+        throw std::invalid_argument("mpFlow::matrix::savetxt: ostream == nullptr");
     }
 
     // write data
@@ -510,11 +510,11 @@ void fastEIT::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix,
 template <
     class type
 >
-void fastEIT::matrix::savetxt(const std::string filename,
+void mpFlow::matrix::savetxt(const std::string filename,
     const std::shared_ptr<Matrix<type>> matrix) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("fastEIT::matrix::savetxt: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::matrix::savetxt: matrix == nullptr");
     }
 
     // open file stream
@@ -523,7 +523,7 @@ void fastEIT::matrix::savetxt(const std::string filename,
 
     // check open
     if (file.fail()) {
-        throw std::logic_error("fastEIT::matrix::savetxt: cannot open file!");
+        throw std::logic_error("mpFlow::matrix::savetxt: cannot open file!");
     }
 
     // save matrix
@@ -534,25 +534,25 @@ void fastEIT::matrix::savetxt(const std::string filename,
 }
 
 // specialisation
-template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
-    fastEIT::matrix::loadtxt<fastEIT::dtype::real>(std::istream*, cudaStream_t);
-template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>
-    fastEIT::matrix::loadtxt<fastEIT::dtype::index>(std::istream*, cudaStream_t);
+template std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+    mpFlow::matrix::loadtxt<mpFlow::dtype::real>(std::istream*, cudaStream_t);
+template std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>
+    mpFlow::matrix::loadtxt<mpFlow::dtype::index>(std::istream*, cudaStream_t);
 
-template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
-    fastEIT::matrix::loadtxt<fastEIT::dtype::real>(const std::string, cudaStream_t);
-template std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>
-    fastEIT::matrix::loadtxt<fastEIT::dtype::index>(const std::string, cudaStream_t);
+template std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+    mpFlow::matrix::loadtxt<mpFlow::dtype::real>(const std::string, cudaStream_t);
+template std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>
+    mpFlow::matrix::loadtxt<mpFlow::dtype::index>(const std::string, cudaStream_t);
 
-template void fastEIT::matrix::savetxt<fastEIT::dtype::real>(
-    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>, std::ostream*);
-template void fastEIT::matrix::savetxt<fastEIT::dtype::index>(
-    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>, std::ostream*);
+template void mpFlow::matrix::savetxt<mpFlow::dtype::real>(
+    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>, std::ostream*);
+template void mpFlow::matrix::savetxt<mpFlow::dtype::index>(
+    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>, std::ostream*);
 
-template void fastEIT::matrix::savetxt<fastEIT::dtype::real>(const std::string,
-    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>);
-template void fastEIT::matrix::savetxt<fastEIT::dtype::index>(const std::string,
-    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>);
+template void mpFlow::matrix::savetxt<mpFlow::dtype::real>(const std::string,
+    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>);
+template void mpFlow::matrix::savetxt<mpFlow::dtype::index>(const std::string,
+    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>);
 
-template class fastEIT::Matrix<fastEIT::dtype::real>;
-template class fastEIT::Matrix<fastEIT::dtype::index>;
+template class mpFlow::Matrix<mpFlow::dtype::real>;
+template class mpFlow::Matrix<mpFlow::dtype::index>;

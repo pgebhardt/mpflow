@@ -1,40 +1,39 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
-#include <iostream>
+#include "mpflow/mpflow.h"
 
 // create mesh class
-fastEIT::Mesh::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes, std::shared_ptr<Matrix<dtype::index>> elements,
+mpFlow::Mesh::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes, std::shared_ptr<Matrix<dtype::index>> elements,
     std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height)
     : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
         height_(height) {
     // check input
     if (nodes == nullptr) {
-        throw std::invalid_argument("fastEIT::Mesh::Mesh: nodes == nullptr");
+        throw std::invalid_argument("mpFlow::Mesh::Mesh: nodes == nullptr");
     }
     if (nodes->columns() != 2) {
-        throw std::invalid_argument("fastEIT::Mesh::Mesh: nodes->columns() != 2");
+        throw std::invalid_argument("mpFlow::Mesh::Mesh: nodes->columns() != 2");
     }
     if (elements == nullptr) {
-        throw std::invalid_argument("fastEIT::Mesh::Mesh: elements == nullptr");
+        throw std::invalid_argument("mpFlow::Mesh::Mesh: elements == nullptr");
     }
     if (boundary == nullptr) {
-        throw std::invalid_argument("fastEIT::Mesh::Mesh: boundary == nullptr");
+        throw std::invalid_argument("mpFlow::Mesh::Mesh: boundary == nullptr");
     }
     if (radius <= 0.0f) {
-        throw std::invalid_argument("fastEIT::Mesh::Mesh: radius <= 0.0");
+        throw std::invalid_argument("mpFlow::Mesh::Mesh: radius <= 0.0");
     }
     if (height <= 0.0f) {
-        throw std::invalid_argument("fastEIT::Mesh::Mesh: height <= 0.0");
+        throw std::invalid_argument("mpFlow::Mesh::Mesh: height <= 0.0");
     }
 }
 
-std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real,
-    fastEIT::dtype::real>>>
-    fastEIT::Mesh::elementNodes(dtype::index element) {
+std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
+    mpFlow::dtype::real>>>
+    mpFlow::Mesh::elementNodes(dtype::index element) {
     // result array
     std::vector<std::tuple<dtype::index,
         std::tuple<dtype::real, dtype::real>>> result(
@@ -58,9 +57,9 @@ std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real,
     return result;
 }
 
-std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real,
-    fastEIT::dtype::real>>>
-    fastEIT::Mesh::boundaryNodes(dtype::index element) {
+std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
+    mpFlow::dtype::real>>>
+    mpFlow::Mesh::boundaryNodes(dtype::index element) {
     // result vector
     std::vector<std::tuple<dtype::index,
         std::tuple<dtype::real, dtype::real>>> result(
@@ -85,7 +84,7 @@ std::vector<std::tuple<fastEIT::dtype::index, std::tuple<fastEIT::dtype::real,
 }
 
 // create mesh for quadratic basis function
-std::shared_ptr<fastEIT::Mesh> fastEIT::mesh::quadraticBasis(
+std::shared_ptr<mpFlow::Mesh> mpFlow::mesh::quadraticBasis(
     std::shared_ptr<Matrix<dtype::real>> nodes,
     std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
     dtype::real radius, dtype::real height, cudaStream_t stream) {
@@ -99,37 +98,37 @@ std::shared_ptr<fastEIT::Mesh> fastEIT::mesh::quadraticBasis(
 
 // function create quadratic mesh from linear
 std::tuple<
-    std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
-    std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>,
-    std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>>
-fastEIT::mesh::quadraticMeshFromLinear(
-    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> nodes_old,
-    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> elements_old,
-    const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> boundary_old,
+    std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>,
+    std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>,
+    std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>>
+mpFlow::mesh::quadraticMeshFromLinear(
+    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>> nodes_old,
+    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>> elements_old,
+    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>> boundary_old,
     cudaStream_t stream) {
     // define vectors for calculation
-    std::vector<std::array<fastEIT::dtype::index, 2> > already_calc_midpoints(0);
-    std::vector<std::array<fastEIT::dtype::real, 2> > new_calc_nodes(0);
-    std::vector<std::array<fastEIT::dtype::index, 6> > quadratic_elements_vector(
+    std::vector<std::array<mpFlow::dtype::index, 2> > already_calc_midpoints(0);
+    std::vector<std::array<mpFlow::dtype::real, 2> > new_calc_nodes(0);
+    std::vector<std::array<mpFlow::dtype::index, 6> > quadratic_elements_vector(
         elements_old->rows());
-    std::vector<std::array<fastEIT::dtype::index, 2> > current_edge(2);
-    std::vector<std::array<fastEIT::dtype::real, 2> > quadratic_node_vector(0);
-    std::vector<std::array<fastEIT::dtype::real, 2> > node_from_linear(1);
-    std::vector<std::array<fastEIT::dtype::index, 3> > quadratic_boundary_vector(0);
-    std::vector<std::array<fastEIT::dtype::index, 3> > quadratic_bound(1);
-    std::vector<std::array<fastEIT::dtype::index, 2> > linear_bound_inverted(1);
-    std::vector<std::array<fastEIT::dtype::index, 2> > linear_bound(1);
-    fastEIT::dtype::index new_bound = 0;
+    std::vector<std::array<mpFlow::dtype::index, 2> > current_edge(2);
+    std::vector<std::array<mpFlow::dtype::real, 2> > quadratic_node_vector(0);
+    std::vector<std::array<mpFlow::dtype::real, 2> > node_from_linear(1);
+    std::vector<std::array<mpFlow::dtype::index, 3> > quadratic_boundary_vector(0);
+    std::vector<std::array<mpFlow::dtype::index, 3> > quadratic_bound(1);
+    std::vector<std::array<mpFlow::dtype::index, 2> > linear_bound_inverted(1);
+    std::vector<std::array<mpFlow::dtype::index, 2> > linear_bound(1);
+    mpFlow::dtype::index new_bound = 0;
 
     // copy existing elements vom matrix to vector
-    for (fastEIT::dtype::index element = 0; element < elements_old->rows(); ++element)
-    for (fastEIT::dtype::index element_node = 0; element_node < 3; ++element_node) {
+    for (mpFlow::dtype::index element = 0; element < elements_old->rows(); ++element)
+    for (mpFlow::dtype::index element_node = 0; element_node < 3; ++element_node) {
         quadratic_elements_vector[element][element_node] = (*elements_old)(element, element_node);
     }
 
     // calculate new midpoints between existing ones
-    for (fastEIT::dtype::index element = 0; element < elements_old->rows(); ++element)
-    for (fastEIT::dtype::index element_node = 0; element_node < elements_old->columns();
+    for (mpFlow::dtype::index element = 0; element < elements_old->rows(); ++element)
+    for (mpFlow::dtype::index element_node = 0; element_node < elements_old->columns();
         ++element_node) {
         // get current edge
         current_edge[0][0] = (*elements_old)(element, element_node);
@@ -157,13 +156,13 @@ fastEIT::mesh::quadraticMeshFromLinear(
                 std::distance(already_calc_midpoints.begin(), index);
             } else {
                 // midpoint does not exist. calculate new one
-                fastEIT::dtype::real node_x = 0.5 * ((*nodes_old)(current_edge[0][0], 0) +
+                mpFlow::dtype::real node_x = 0.5 * ((*nodes_old)(current_edge[0][0], 0) +
                     (*nodes_old)(current_edge[0][1],0));
-                fastEIT::dtype::real node_y = 0.5 * ((*nodes_old)(current_edge[0][0], 1) +
+                mpFlow::dtype::real node_y = 0.5 * ((*nodes_old)(current_edge[0][0], 1) +
                     (*nodes_old)(current_edge[0][1],1));
 
                 // create array with x and y coords
-                std::array<fastEIT::dtype::real, 2> midpoint = {{node_x, node_y}};
+                std::array<mpFlow::dtype::real, 2> midpoint = {{node_x, node_y}};
 
                 // append new midpoint to existing nodes
                 new_calc_nodes.push_back(midpoint);
@@ -179,17 +178,17 @@ fastEIT::mesh::quadraticMeshFromLinear(
     }
 
     // copy nodes from linear mesh and new nodes to one vector
-    for (fastEIT::dtype::index node = 0; node < nodes_old->rows(); ++node) {
+    for (mpFlow::dtype::index node = 0; node < nodes_old->rows(); ++node) {
         node_from_linear[0][0] = (*nodes_old)(node, 0);
         node_from_linear[0][1] = (*nodes_old)(node, 1);
         quadratic_node_vector.push_back(node_from_linear[0]);
     }
-    for (fastEIT::dtype::index new_node = 0; new_node < new_calc_nodes.size(); ++new_node) {
+    for (mpFlow::dtype::index new_node = 0; new_node < new_calc_nodes.size(); ++new_node) {
         quadratic_node_vector.push_back(new_calc_nodes[new_node]);
     }
 
     // calculate new boundary Matrix
-    for(fastEIT::dtype::index bound = 0; bound < boundary_old->rows(); ++bound){
+    for(mpFlow::dtype::index bound = 0; bound < boundary_old->rows(); ++bound){
         // get current bound
         linear_bound[0][0] = (*boundary_old)(bound,0);
         linear_bound[0][1] = (*boundary_old)(bound,1);
@@ -220,28 +219,28 @@ fastEIT::mesh::quadraticMeshFromLinear(
     }
 
     // create new element, node and boundary matrices
-    auto nodes_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::real>>(
+    auto nodes_new = std::make_shared<mpFlow::Matrix<mpFlow::dtype::real>>(
         quadratic_node_vector.size(), 2, stream);
-    auto elements_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(
+    auto elements_new = std::make_shared<mpFlow::Matrix<mpFlow::dtype::index>>(
         quadratic_elements_vector.size(), 6, stream);
-    auto boundary_new = std::make_shared<fastEIT::Matrix<fastEIT::dtype::index>>(
+    auto boundary_new = std::make_shared<mpFlow::Matrix<mpFlow::dtype::index>>(
         quadratic_boundary_vector.size(), 3, stream);
 
     // copy element vector to element matrix
-    for (fastEIT::dtype::index row = 0; row < quadratic_elements_vector.size(); ++row)
-    for (fastEIT::dtype::index column = 0; column < quadratic_elements_vector[0].size(); ++column) {
+    for (mpFlow::dtype::index row = 0; row < quadratic_elements_vector.size(); ++row)
+    for (mpFlow::dtype::index column = 0; column < quadratic_elements_vector[0].size(); ++column) {
         (*elements_new)(row, column) = quadratic_elements_vector[row][column];
     }
 
     // copy node vector to node matrix
-    for (fastEIT::dtype::index row = 0; row < quadratic_node_vector.size(); ++row)
-    for (fastEIT::dtype::index column = 0; column < quadratic_node_vector[0].size(); ++column) {
+    for (mpFlow::dtype::index row = 0; row < quadratic_node_vector.size(); ++row)
+    for (mpFlow::dtype::index column = 0; column < quadratic_node_vector[0].size(); ++column) {
         (*nodes_new)(row, column) = quadratic_node_vector[row][column];
     }
 
     // copy boundary vector to boundary matrix
-    for (fastEIT::dtype::index row = 0; row < quadratic_boundary_vector.size(); ++row)
-    for (fastEIT::dtype::index column = 0; column < quadratic_boundary_vector[0].size(); ++column) {
+    for (mpFlow::dtype::index row = 0; row < quadratic_boundary_vector.size(); ++row)
+    for (mpFlow::dtype::index column = 0; column < quadratic_boundary_vector[0].size(); ++column) {
         (*boundary_new)(row, column) = quadratic_boundary_vector[row][column];
     }
     nodes_new->copyToDevice(stream);

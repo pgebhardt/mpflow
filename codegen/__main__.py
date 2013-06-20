@@ -31,7 +31,7 @@ def main():
     for basis in basises:
         print '#' * 50
         print 'render: {}'.format(basis.name)
-        file = open(os.path.join('src', 'basis_{}.cpp'.format(basis.name.lower())), 'w')
+        file = open(os.path.join('src', 'eit', 'basis_{}.cpp'.format(basis.name.lower())), 'w')
         file.write(basis.render(template))
         file.close()
 
