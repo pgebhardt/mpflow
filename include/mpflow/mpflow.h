@@ -1,10 +1,10 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_FASTEIT_H
-#define FASTEIT_INCLUDE_FASTEIT_H
+#ifndef MPFLOW_INCLUDE_MPFLOW_H
+#define MPFLOW_INCLUDE_MPFLOW_H
 
 #include "common.h"
 #include "cuda_error.h"
@@ -13,17 +13,23 @@
 #include "mathematics.h"
 #include "matrix.h"
 #include "sparse_matrix.h"
-#include "basis.h"
 #include "mesh.h"
-#include "electrodes.h"
-#include "source.h"
-#include "model.h"
-#include "conjugate.h"
-#include "fast_conjugate.h"
-#include "pre_conjugate.h"
-#include "sparse_conjugate.h"
-#include "forward.h"
-#include "inverse.h"
-#include "solver.h"
+
+/*
+// numeric solver
+#include "numeric/conjugate.h"
+#include "numeric/fast_conjugate.h"
+#include "numeric/pre_conjugate.h"
+#include "numeric/sparse_conjugate.h"
+
+// EIT specific
+#include "eit/basis.h"
+#include "eit/electrodes.h"
+#include "eit/source.h"
+#include "eit/model.h"
+#include "eit/forward.h"
+#include "eit/inverse.h"
+#include "eit/solver.h"
+*/
 
 #endif

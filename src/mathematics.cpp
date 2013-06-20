@@ -1,13 +1,13 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
+#include "mpflow/mpflow.h"
 
 // convert kartesian to polar coordinates
-std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>
-    fastEIT::math::polar(std::tuple<dtype::real, dtype::real> point) {
+std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>
+    mpFlow::math::polar(std::tuple<dtype::real, dtype::real> point) {
     // calc radius
     dtype::real angle = 0.0f;
     dtype::real radius = sqrt(square(std::get<0>(point)) + square(std::get<1>(point)));
@@ -36,8 +36,8 @@ std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>
 }
 
 // convert polar to kartesian coordinates
-std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>
-    fastEIT::math::kartesian(std::tuple<dtype::real, dtype::real> point) {
+std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>
+    mpFlow::math::kartesian(std::tuple<dtype::real, dtype::real> point) {
     dtype::real x = std::get<0>(point) * cos(std::get<1>(point));
     dtype::real y = std::get<0>(point) * sin(std::get<1>(point));
 
@@ -45,7 +45,7 @@ std::tuple<fastEIT::dtype::real, fastEIT::dtype::real>
 }
 
 // calc circle parameter
-fastEIT::dtype::real fastEIT::math::circleParameter(
+mpFlow::dtype::real mpFlow::math::circleParameter(
     std::tuple<dtype::real, dtype::real> point, dtype::real offset) {
     // convert to polar coordinates
     std::tuple<dtype::real, dtype::real> polar_point = polar(point);

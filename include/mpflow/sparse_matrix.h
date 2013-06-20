@@ -1,16 +1,16 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_SPARSE_MATRIX_H
-#define FASTEIT_INCLUDE_SPARSE_MATRIX_H
+#ifndef MPFLOW_INCLUDE_SPARSE_MATRIX_H
+#define MPFLOW_INCLUDE_SPARSE_MATRIX_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow
+namespace mpFlow {
     // sparse matrix class definition
     template <
-        class type = fastEIT::dtype::real
+        class type = mpFlow::dtype::real
     >
     class SparseMatrix {
     public:

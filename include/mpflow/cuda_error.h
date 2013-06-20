@@ -1,13 +1,13 @@
-// fastECT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 // Define this to turn on error checking
 // #define CUDA_ERROR_CHECK
 
-#ifndef FASTEIT_INCLUDE_CUDA_ERROR_H
-#define FASTEIT_INCLUDE_CUDA_ERROR_H
+#ifndef MPFLOW_INCLUDE_CUDA_ERROR_H
+#define MPFLOW_INCLUDE_CUDA_ERROR_H
 
 #define CudaSafeCall(err)   __cudaSafeCall(err, __FILE__, __LINE__)
 #define CudaCheckError()    __cudaCheckError(__FILE__, __LINE__)

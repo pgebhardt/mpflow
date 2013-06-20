@@ -1,10 +1,10 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_COMMON_H
-#define FASTEIT_INCLUDE_COMMON_H
+#ifndef MPFLOW_INCLUDE_COMMON_H
+#define MPFLOW_INCLUDE_COMMON_H
 
 #include <cstdlib>
 #include <cstdio>

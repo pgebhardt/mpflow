@@ -1,13 +1,13 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_MATRIX_KERNEL_H
-#define FASTEIT_INCLUDE_MATRIX_KERNEL_H
+#ifndef MPFLOW_INCLUDE_MATRIX_KERNEL_H
+#define MPFLOW_INCLUDE_MATRIX_KERNEL_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow
+namespace mpFlow {
     // matrix kernel
     namespace matrixKernel {
         // add kernel

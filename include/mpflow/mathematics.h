@@ -1,13 +1,13 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_MATH_H
-#define FASTEIT_INCLUDE_MATH_H
+#ifndef MPFLOW_INCLUDE_MATH_H
+#define MPFLOW_INCLUDE_MATH_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow
+namespace mpFlow {
     // namespace math
     namespace math {
         // square
@@ -34,7 +34,7 @@ namespace fastEIT {
         // simple gauss elemination
         template <
             class type,
-            fastEIT::dtype::size size
+            mpFlow::dtype::size size
         >
         inline std::array<type, size> gaussElemination(
             std::array<std::array<type, size>, size> matrix,
@@ -43,26 +43,26 @@ namespace fastEIT {
             dtype::index n = size;
 
             // foraward elemination
-            for (fastEIT::dtype::size k = 0; k < n - 1; ++k) {
+            for (mpFlow::dtype::size k = 0; k < n - 1; ++k) {
                 // find index of maximum pivot
                 auto pivot_index = k;
-                for (fastEIT::dtype::size i = k; i < n; ++i) {
+                for (mpFlow::dtype::size i = k; i < n; ++i) {
                     pivot_index = std::abs(matrix[i][k]) > std::abs(matrix[pivot_index][k]) ?
                         i : pivot_index;
                 }
 
                 // swap rows
-                for (fastEIT::dtype::index i = 0; i < n; ++i) {
+                for (mpFlow::dtype::index i = 0; i < n; ++i) {
                     std::tie(matrix[pivot_index][i], matrix[k][i]) =
                         std::make_tuple(matrix[k][i], matrix[pivot_index][i]);
                 }
                 std::tie(excitation[pivot_index], excitation[k]) =
                     std::make_tuple(excitation[k], excitation[pivot_index]);
 
-                for (fastEIT::dtype::size i = k + 1; i < n; ++i) {
+                for (mpFlow::dtype::size i = k + 1; i < n; ++i) {
                     x = matrix[i][k] / matrix[k][k];
 
-                    for (fastEIT::dtype::size j = k; j < n; ++j) {
+                    for (mpFlow::dtype::size j = k; j < n; ++j) {
                         matrix[i][j] = matrix[i][j] - matrix[k][j] * x;
                     }
                     excitation[i] = excitation[i] - excitation[k] * x;
@@ -71,10 +71,10 @@ namespace fastEIT {
 
             // Resubstitution
             excitation[n - 1] = excitation[n - 1] / matrix[n - 1][n - 1];
-            for (fastEIT::dtype::size i = n - 2;; --i) {
+            for (mpFlow::dtype::size i = n - 2;; --i) {
                 sum = excitation[i];
 
-                for (fastEIT::dtype::size j = i + 1; j < n; ++j) {
+                for (mpFlow::dtype::size j = i + 1; j < n; ++j) {
                     sum = sum - matrix[i][j] * excitation[j];
                 }
 

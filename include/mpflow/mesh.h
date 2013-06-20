@@ -1,13 +1,13 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_MESH_H
-#define FASTEIT_INCLUDE_MESH_H
+#ifndef MPFLOW_INCLUDE_MESH_H
+#define MPFLOW_INCLUDE_MESH_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow
+namespace mpFlow {
     // mesh class definition
     class Mesh {
     public:
@@ -40,19 +40,19 @@ namespace fastEIT {
     // mesh helper
     namespace mesh {
         // create mesh for quadratic basis function
-        std::shared_ptr<fastEIT::Mesh> quadraticBasis(std::shared_ptr<Matrix<dtype::real>> nodes,
+        std::shared_ptr<mpFlow::Mesh> quadraticBasis(std::shared_ptr<Matrix<dtype::real>> nodes,
             std::shared_ptr<Matrix<dtype::index>> elements,
             std::shared_ptr<Matrix<dtype::index>> boundary,
             dtype::real radius, dtype::real height, cudaStream_t stream);
 
         // quadratic mesh from linear
         std::tuple<
-            std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>,
-            std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>,
-            std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>>> quadraticMeshFromLinear(
-            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> nodes_old,
-            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> elements_old,
-            const std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::index>> boundary_old,
+            std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>,
+            std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>,
+            std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>> quadraticMeshFromLinear(
+            const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>> nodes_old,
+            const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>> elements_old,
+            const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>> boundary_old,
             cudaStream_t stream);
     }
 }

@@ -1,13 +1,13 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_MATRIX_H
-#define FASTEIT_INCLUDE_MATRIX_H
+#ifndef MPFLOW_INCLUDE_MATRIX_H
+#define MPFLOW_INCLUDE_MATRIX_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow
+namespace mpFlow {
     // matrix class definition
     template <
         class type
@@ -48,7 +48,7 @@ namespace fastEIT {
         const type& operator() (dtype::index i, dtype::index j) const {
             // check index
             if ((i >= this->rows()) || (j >= this->columns())) {
-                throw std::invalid_argument("fastEIT::Matrix::operator(): index out of range");
+                throw std::invalid_argument("mpFlow::Matrix::operator(): index out of range");
             }
 
             return this->host_data_[i + j * this->data_rows()];
@@ -59,7 +59,7 @@ namespace fastEIT {
         type& operator() (dtype::index i, dtype::index j) {
             // check index
             if ((i >= this->rows()) || (j >= this->columns())) {
-                throw std::invalid_argument("fastEIT::Matrix::operator(): index out of range");
+                throw std::invalid_argument("mpFlow::Matrix::operator(): index out of range");
             }
 
             return this->host_data_[i + j * this->data_rows()];
@@ -82,14 +82,14 @@ namespace fastEIT {
         template <
             class type
         >
-        std::shared_ptr<fastEIT::Matrix<type>> loadtxt(std::istream* istream,
+        std::shared_ptr<mpFlow::Matrix<type>> loadtxt(std::istream* istream,
             cudaStream_t stream);
 
         // load matrix from file
         template <
             class type
         >
-        std::shared_ptr<fastEIT::Matrix<type>> loadtxt(const std::string filename,
+        std::shared_ptr<mpFlow::Matrix<type>> loadtxt(const std::string filename,
             cudaStream_t stream);
 
         // save matrix to stream
