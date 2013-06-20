@@ -1,16 +1,16 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
+#include "mpflow/mpflow.h"
 
 // create conjugate solver
-fastEIT::numeric::FastConjugate::FastConjugate(dtype::size rows, dtype::size, cudaStream_t stream)
+mpFlow::numeric::FastConjugate::FastConjugate(dtype::size rows, dtype::size, cudaStream_t stream)
     : rows_(rows)  {
     // check input
     if (rows <= 1) {
-        throw std::invalid_argument("fastEIT::numeric::FastConjugate::FastConjugate: rows <= 1");
+        throw std::invalid_argument("mpFlow::numeric::FastConjugate::FastConjugate: rows <= 1");
     }
 
     // create matrices
@@ -24,21 +24,21 @@ fastEIT::numeric::FastConjugate::FastConjugate(dtype::size rows, dtype::size, cu
 }
 
 // solve conjugate
-void fastEIT::numeric::FastConjugate::solve(const std::shared_ptr<Matrix<dtype::real>> A,
+void mpFlow::numeric::FastConjugate::solve(const std::shared_ptr<Matrix<dtype::real>> A,
     const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
     // check input
     if (A == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::FastConjugate::solve: A == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::FastConjugate::solve: A == nullptr");
     }
     if (f == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::FastConjugate::solve: f == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::FastConjugate::solve: f == nullptr");
     }
     if (x == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::FastConjugate::solve: x == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::FastConjugate::solve: x == nullptr");
     }
     if (handle == NULL) {
-        throw std::invalid_argument("fastEIT::numeric::FastConjugate::solve: handle == NULL");
+        throw std::invalid_argument("mpFlow::numeric::FastConjugate::solve: handle == NULL");
     }
 
     // calc residuum r = f - A * x

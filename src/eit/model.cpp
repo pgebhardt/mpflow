@@ -1,13 +1,13 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
-#include "fasteit/model_kernel.h"
+#include "mpflow/mpflow.h"
+#include "mpflow/eit/model_kernel.h"
 
 // 2.5D model base class
-fastEIT::model::Model::Model(
+mpFlow::EIT::model::Model::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
     dtype::size component_count)
@@ -15,20 +15,20 @@ fastEIT::model::Model::Model(
         component_count_(component_count) {
     // check input
     if (mesh == nullptr) {
-        throw std::invalid_argument("fastEIT::model::Model::Model: mesh == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: mesh == nullptr");
     }
     if (electrodes == nullptr) {
-        throw std::invalid_argument("fastEIT::model::Model::Model: electrodes == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: electrodes == nullptr");
     }
     if (source == nullptr) {
-        throw std::invalid_argument("fastEIT::model::Model::Model: electrodes == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: electrodes == nullptr");
     }
     if (component_count == 0) {
-        throw std::invalid_argument("fastEIT::model::Model::Model: component_count == 0");
+        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: component_count == 0");
     }
     if (this->source()->component_count() != this->component_count()) {
         throw std::invalid_argument(
-            "fastEIT::model::Model::Model: source.component_count != component_count");
+            "mpFlow::EIT::model::Model::Model: source.component_count != component_count");
     }
 }
 
@@ -36,14 +36,14 @@ fastEIT::model::Model::Model(
 template <
     class basis_function_type
 >
-fastEIT::Model<basis_function_type>::Model(
+mpFlow::EIT::Model<basis_function_type>::Model(
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
     dtype::size component_count, cublasHandle_t handle, cudaStream_t stream)
     : model::Model(mesh, electrodes, source, sigma_ref, component_count) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::Model::Model: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::Model::Model: handle == nullptr");
     }
 
     // create matrices
@@ -71,10 +71,10 @@ fastEIT::Model<basis_function_type>::Model(
 template <
     class basis_function_type
 >
-void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream_t stream) {
+void mpFlow::EIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::Model::init: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::Model::init: handle == nullptr");
     }
 
     // init elemental matrices
@@ -127,8 +127,8 @@ void fastEIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaStream
 template <
     class basis_function_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
-    fastEIT::Model<basis_function_type>::initElementalMatrices(
+std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+    mpFlow::EIT::Model<basis_function_type>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
     std::vector<std::vector<dtype::index>> element_count(
@@ -208,9 +208,9 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
     common_element_matrix->copyToDevice(stream);
 
     // create sparse matrices
-    this->s_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(
+    this->s_matrix_ = std::make_shared<mpFlow::SparseMatrix<dtype::real>>(
         common_element_matrix, stream);
-    this->r_matrix_ = std::make_shared<fastEIT::SparseMatrix<dtype::real>>(
+    this->r_matrix_ = std::make_shared<mpFlow::SparseMatrix<dtype::real>>(
         common_element_matrix, stream);
 
     // create elemental matrices
@@ -266,12 +266,12 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
 template <
     class basis_function_type
 >
-void fastEIT::Model<basis_function_type>::initJacobianCalculationMatrix(
+void mpFlow::EIT::Model<basis_function_type>::initJacobianCalculationMatrix(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
-            "fastEIT::Model::initJacobianCalculationMatrix: handle == nullptr");
+            "mpFlow::EIT::Model::initJacobianCalculationMatrix: handle == nullptr");
     }
 
     // variables
@@ -313,12 +313,12 @@ void fastEIT::Model<basis_function_type>::initJacobianCalculationMatrix(
 template <
     class basis_function_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
-    fastEIT::Model<basis_function_type>::calcJacobian(
+std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+    mpFlow::EIT::Model<basis_function_type>::calcJacobian(
     const std::shared_ptr<Matrix<dtype::real>> gamma, cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
-        throw std::invalid_argument("fastEIT::Model::calcJacobian: gamma == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::Model::calcJacobian: gamma == nullptr");
     }
 
     // calc jacobian
@@ -347,11 +347,11 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
 template <
     class basis_function_type
 >
-void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma,
+void mpFlow::EIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::Model::init: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::Model::init: handle == nullptr");
     }
 
     // update matrices
@@ -382,18 +382,18 @@ void fastEIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dt
 template <
     class type
 >
-void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
+void mpFlow::EIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
     const std::shared_ptr<SparseMatrix<dtype::real>> shape, dtype::index offset,
     cudaStream_t stream, std::shared_ptr<Matrix<type>> matrix) {
     // check input
     if (intermediateMatrix == nullptr) {
-        throw std::invalid_argument("fastEIT::model::reduceMatrix: intermediateMatrix == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::reduceMatrix: intermediateMatrix == nullptr");
     }
     if (shape == nullptr) {
-        throw std::invalid_argument("fastEIT::model::reduceMatrix: shape == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::reduceMatrix: shape == nullptr");
     }
     if (matrix == nullptr) {
-        throw std::invalid_argument("fastEIT::model::reduceMatrix: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::reduceMatrix: matrix == nullptr");
     }
 
     // block size
@@ -407,23 +407,23 @@ void fastEIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermedia
 }
 
 // update matrix
-void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> elements,
+void mpFlow::EIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> elements,
     const std::shared_ptr<Matrix<dtype::real>> gamma,
     const std::shared_ptr<Matrix<dtype::index>> connectivityMatrix,
     dtype::real sigmaRef, cudaStream_t stream,
     std::shared_ptr<SparseMatrix<dtype::real>> matrix) {
     // check input
     if (elements == nullptr) {
-        throw std::invalid_argument("fastEIT::model::updateMatrix: elements == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::updateMatrix: elements == nullptr");
     }
     if (gamma == nullptr) {
-        throw std::invalid_argument("fastEIT::model::updateMatrix: gamma == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::updateMatrix: gamma == nullptr");
     }
     if (connectivityMatrix == nullptr) {
-        throw std::invalid_argument("fastEIT::model::updateMatrix: connectivityMatrix == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::updateMatrix: connectivityMatrix == nullptr");
     }
     if (matrix == nullptr) {
-        throw std::invalid_argument("fastEIT::model::updateMatrix: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::updateMatrix: matrix == nullptr");
     }
 
     // dimension
@@ -440,7 +440,7 @@ void fastEIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> ele
 template <
     class basis_function_type
 >
-void fastEIT::model::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gamma,
+void mpFlow::EIT::model::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gamma,
     const std::shared_ptr<Matrix<dtype::real>> potential,
     const std::shared_ptr<Matrix<dtype::index>> elements,
     const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix,
@@ -448,20 +448,20 @@ void fastEIT::model::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gam
     bool additiv, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> jacobian) {
     // check input
     if (gamma == nullptr) {
-        throw std::invalid_argument("fastEIT::model::calcJacobian: gamma == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::calcJacobian: gamma == nullptr");
     }
     if (potential == nullptr) {
-        throw std::invalid_argument("fastEIT::model::calcJacobian: potential == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::calcJacobian: potential == nullptr");
     }
     if (elements == nullptr) {
-        throw std::invalid_argument("fastEIT::model::calcJacobian: elements == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::calcJacobian: elements == nullptr");
     }
     if (elemental_jacobian_matrix == nullptr) {
         throw std::invalid_argument(
-        "fastEIT::model::calcJacobian: elemental_jacobian_matrix == nullptr");
+        "mpFlow::EIT::model::calcJacobian: elemental_jacobian_matrix == nullptr");
     }
     if (jacobian == nullptr) {
-        throw std::invalid_argument("fastEIT::model::calcJacobian: jacobian == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::calcJacobian: jacobian == nullptr");
     }
 
     // dimension
@@ -479,23 +479,23 @@ void fastEIT::model::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gam
 }
 
 // specialisation
-template void fastEIT::model::reduceMatrix<fastEIT::dtype::real>(
-    const std::shared_ptr<Matrix<fastEIT::dtype::real>>,
-    const std::shared_ptr<SparseMatrix<dtype::real>>, fastEIT::dtype::index, cudaStream_t,
-    std::shared_ptr<Matrix<fastEIT::dtype::real>>);
-template void fastEIT::model::reduceMatrix<fastEIT::dtype::index>(
-    const std::shared_ptr<Matrix<fastEIT::dtype::index>>,
-    const std::shared_ptr<SparseMatrix<dtype::real>>, fastEIT::dtype::index, cudaStream_t,
-    std::shared_ptr<Matrix<fastEIT::dtype::index>>);
+template void mpFlow::EIT::model::reduceMatrix<mpFlow::dtype::real>(
+    const std::shared_ptr<Matrix<mpFlow::dtype::real>>,
+    const std::shared_ptr<SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
+    std::shared_ptr<Matrix<mpFlow::dtype::real>>);
+template void mpFlow::EIT::model::reduceMatrix<mpFlow::dtype::index>(
+    const std::shared_ptr<Matrix<mpFlow::dtype::index>>,
+    const std::shared_ptr<SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
+    std::shared_ptr<Matrix<mpFlow::dtype::index>>);
 
-template void fastEIT::model::calcJacobian<fastEIT::basis::Linear>(
+template void mpFlow::EIT::model::calcJacobian<mpFlow::EIT::basis::Linear>(
     const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
     const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
-template void fastEIT::model::calcJacobian<fastEIT::basis::Quadratic>(
+template void mpFlow::EIT::model::calcJacobian<mpFlow::EIT::basis::Quadratic>(
     const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
     const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
 
-template class fastEIT::Model<fastEIT::basis::Linear>;
-template class fastEIT::Model<fastEIT::basis::Quadratic>;
+template class mpFlow::EIT::Model<mpFlow::EIT::basis::Linear>;
+template class mpFlow::EIT::Model<mpFlow::EIT::basis::Quadratic>;

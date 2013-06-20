@@ -1,25 +1,25 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
+#include "mpflow/mpflow.h"
 
 // create solver
 template <
     class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
-fastEIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::Solver(
+mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::Solver(
     std::shared_ptr<model::Model> model, dtype::index parallel_images,
     dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Solver::Solver: model == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Solver::Solver: model == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Solver::Solver: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Solver::Solver: handle == nullptr");
     }
 
     // create forward solver
@@ -53,11 +53,11 @@ template <
     class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
-void fastEIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::preSolve(
+void mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::preSolve(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Solver::pre_solve: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Solver::pre_solve: handle == nullptr");
     }
 
     // forward solving a few steps
@@ -80,12 +80,12 @@ template <
     class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
-    fastEIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::solve_differential(
+std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+    mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::solve_differential(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Solver::solve_differential: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Solver::solve_differential: handle == nullptr");
     }
 
     // solve
@@ -100,12 +100,12 @@ template <
     class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
-    fastEIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::solve_absolute(
+std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+    mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::solve_absolute(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Solver::solve_absolute: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Solver::solve_absolute: handle == nullptr");
     }
 
     // solve forward
@@ -127,5 +127,5 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>>
 }
 
 // specialisation
-template class fastEIT::solver::Solver<fastEIT::numeric::SparseConjugate, fastEIT::numeric::Conjugate>;
-template class fastEIT::solver::Solver<fastEIT::numeric::SparseConjugate, fastEIT::numeric::FastConjugate>;
+template class mpFlow::EIT::solver::Solver<mpFlow::numeric::SparseConjugate, mpFlow::numeric::Conjugate>;
+template class mpFlow::EIT::solver::Solver<mpFlow::numeric::SparseConjugate, mpFlow::numeric::FastConjugate>;

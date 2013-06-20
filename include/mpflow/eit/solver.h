@@ -1,13 +1,14 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_SOLVER_H
-#define FASTEIT_INCLUDE_SOLVER_H
+#ifndef MPFLOW_INCLDUE_EIT_SOLVER_H
+#define MPFLOW_INCLDUE_EIT_SOLVER_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow::EIT::solver
+namespace mpFlow {
+namespace EIT {
 namespace solver {
     // class for solving differential EIT
     template <
@@ -17,7 +18,7 @@ namespace solver {
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<fastEIT::model::Model> model, dtype::index parallel_images,
+        Solver(std::shared_ptr<mpFlow::EIT::model::Model> model, dtype::index parallel_images,
             dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian
@@ -30,7 +31,7 @@ namespace solver {
             cudaStream_t stream);
 
         // accessors
-        std::shared_ptr<fastEIT::model::Model> model() { return this->model_; }
+        std::shared_ptr<mpFlow::EIT::model::Model> model() { return this->model_; }
         std::shared_ptr<Forward<numerical_forward_solver_type>> forward_solver() {
             return this->forward_solver_;
         }
@@ -48,7 +49,7 @@ namespace solver {
 
     private:
         // member
-        std::shared_ptr<fastEIT::model::Model> model_;
+        std::shared_ptr<mpFlow::EIT::model::Model> model_;
         std::shared_ptr<Forward<numerical_forward_solver_type>> forward_solver_;
         std::shared_ptr<Inverse<numerical_inverse_solver_type>> inverse_solver_;
         std::shared_ptr<Matrix<dtype::real>> gamma_;
@@ -56,6 +57,7 @@ namespace solver {
         std::vector<std::shared_ptr<Matrix<dtype::real>>> measurement_;
         std::vector<std::shared_ptr<Matrix<dtype::real>>> calculation_;
     };
+}
 }
 }
 

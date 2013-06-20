@@ -1,13 +1,14 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_ELECTRODES_H
-#define FASTEIT_INCLUDE_ELECTRODES_H
+#ifndef MPFLOW_INCLUDE_EIT_ELECTRODES_H
+#define MPFLOW_INCLUDE_EIT_ELECTRODES_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow
+namespace mpFlow {
+namespace EIT {
     // Electrodes class definition
     class Electrodes {
     // constructer and destructor
@@ -49,6 +50,7 @@ namespace fastEIT {
             std::tuple<dtype::real, dtype::real> shape, dtype::real impedance,
             dtype::real boundary_radius);
     }
+}
 }
 
 #endif

@@ -1,22 +1,22 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #include <cmath>
-#include "fasteit/fasteit.h"
+#include "mpflow/mpflow.h"
 
 using namespace std;
 
 // create basis class
-fastEIT::basis::Linear::Linear(
+mpFlow::EIT::basis::Linear::Linear(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
     dtype::index one)
-    : fastEIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
+    : mpFlow::EIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
     // check one
     if (one >= nodes_per_element) {
         throw std::invalid_argument(
-            "fastEIT::basis::Linear::Linear: one >= nodes_per_element");
+            "mpFlow::EIT::basis::Linear::Linear: one >= nodes_per_element");
     }
 
     // calc coefficients with gauss
@@ -39,7 +39,7 @@ fastEIT::basis::Linear::Linear(
 }
 
 // evaluate basis function
-fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
+mpFlow::dtype::real mpFlow::EIT::basis::Linear::evaluate(
     std::tuple<dtype::real, dtype::real> point
     ) {
     return ({((((std::get<0>(point))*(this->coefficients()[1]))+((std::get<1>(point))*(this->coefficients()[2])))+(this->coefficients()[0]));});
@@ -47,7 +47,7 @@ fastEIT::dtype::real fastEIT::basis::Linear::evaluate(
 
 
 // integrate with basis
-fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
+mpFlow::dtype::real mpFlow::EIT::basis::Linear::integrateWithBasis(
     const std::shared_ptr<Linear> other
     ) {
     return ({(((1.0)*((((((((((((((((((((((((((((((((((((((((((((((0.0833333333333)*((std::get<0>(this->nodes()[0]))*(std::get<0>(this->nodes()[0]))))*(this->coefficients()[1]))*(other->coefficients()[1]))+(((((0.0833333333333)*(std::get<0>(this->nodes()[0])))*(std::get<1>(this->nodes()[0])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[0])))*(std::get<1>(this->nodes()[0])))*(this->coefficients()[2]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[0])))*(std::get<0>(this->nodes()[1])))*(this->coefficients()[1]))*(other->coefficients()[1])))+(((((0.0416666666667)*(std::get<0>(this->nodes()[0])))*(std::get<1>(this->nodes()[1])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<0>(this->nodes()[0])))*(std::get<1>(this->nodes()[1])))*(this->coefficients()[2]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[0])))*(std::get<0>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[1])))+(((((0.0416666666667)*(std::get<0>(this->nodes()[0])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<0>(this->nodes()[0])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[1])))+((((0.166666666667)*(std::get<0>(this->nodes()[0])))*(this->coefficients()[0]))*(other->coefficients()[1])))+((((0.166666666667)*(std::get<0>(this->nodes()[0])))*(this->coefficients()[1]))*(other->coefficients()[0])))+((((0.0833333333333)*((std::get<1>(this->nodes()[0]))*(std::get<1>(this->nodes()[0]))))*(this->coefficients()[2]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes()[0])))*(std::get<0>(this->nodes()[1])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes()[0])))*(std::get<0>(this->nodes()[1])))*(this->coefficients()[2]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<1>(this->nodes()[0])))*(std::get<1>(this->nodes()[1])))*(this->coefficients()[2]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes()[0])))*(std::get<0>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes()[0])))*(std::get<0>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<1>(this->nodes()[0])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[2])))+((((0.166666666667)*(std::get<1>(this->nodes()[0])))*(this->coefficients()[0]))*(other->coefficients()[2])))+((((0.166666666667)*(std::get<1>(this->nodes()[0])))*(this->coefficients()[2]))*(other->coefficients()[0])))+((((0.0833333333333)*((std::get<0>(this->nodes()[1]))*(std::get<0>(this->nodes()[1]))))*(this->coefficients()[1]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[1])))*(std::get<1>(this->nodes()[1])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[1])))*(std::get<1>(this->nodes()[1])))*(this->coefficients()[2]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[1])))*(std::get<0>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[1])))+(((((0.0416666666667)*(std::get<0>(this->nodes()[1])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<0>(this->nodes()[1])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[1])))+((((0.166666666667)*(std::get<0>(this->nodes()[1])))*(this->coefficients()[0]))*(other->coefficients()[1])))+((((0.166666666667)*(std::get<0>(this->nodes()[1])))*(this->coefficients()[1]))*(other->coefficients()[0])))+((((0.0833333333333)*((std::get<1>(this->nodes()[1]))*(std::get<1>(this->nodes()[1]))))*(this->coefficients()[2]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes()[1])))*(std::get<0>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes()[1])))*(std::get<0>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<1>(this->nodes()[1])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[2])))+((((0.166666666667)*(std::get<1>(this->nodes()[1])))*(this->coefficients()[0]))*(other->coefficients()[2])))+((((0.166666666667)*(std::get<1>(this->nodes()[1])))*(this->coefficients()[2]))*(other->coefficients()[0])))+((((0.0833333333333)*((std::get<0>(this->nodes()[2]))*(std::get<0>(this->nodes()[2]))))*(this->coefficients()[1]))*(other->coefficients()[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[2])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[2])))+(((((0.0833333333333)*(std::get<0>(this->nodes()[2])))*(std::get<1>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[1])))+((((0.166666666667)*(std::get<0>(this->nodes()[2])))*(this->coefficients()[0]))*(other->coefficients()[1])))+((((0.166666666667)*(std::get<0>(this->nodes()[2])))*(this->coefficients()[1]))*(other->coefficients()[0])))+((((0.0833333333333)*((std::get<1>(this->nodes()[2]))*(std::get<1>(this->nodes()[2]))))*(this->coefficients()[2]))*(other->coefficients()[2])))+((((0.166666666667)*(std::get<1>(this->nodes()[2])))*(this->coefficients()[0]))*(other->coefficients()[2])))+((((0.166666666667)*(std::get<1>(this->nodes()[2])))*(this->coefficients()[2]))*(other->coefficients()[0])))+(((0.5)*(this->coefficients()[0]))*(other->coefficients()[0]))))*(abs(((((-(std::get<0>(this->nodes()[0])))+(std::get<0>(this->nodes()[1])))*((-(std::get<1>(this->nodes()[0])))+(std::get<1>(this->nodes()[2]))))-(((-(std::get<0>(this->nodes()[0])))+(std::get<0>(this->nodes()[2])))*((-(std::get<1>(this->nodes()[0])))+(std::get<1>(this->nodes()[1]))))))));});
@@ -55,7 +55,7 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateWithBasis(
 
 
 // integrate gradient with basis
-fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
+mpFlow::dtype::real mpFlow::EIT::basis::Linear::integrateGradientWithBasis(
     const std::shared_ptr<Linear> other
     ) {
     return ({(((1.0)*((((0.5)*(this->coefficients()[1]))*(other->coefficients()[1]))+(((0.5)*(this->coefficients()[2]))*(other->coefficients()[2]))))*(abs(((((-(std::get<0>(this->nodes()[0])))+(std::get<0>(this->nodes()[1])))*((-(std::get<1>(this->nodes()[0])))+(std::get<1>(this->nodes()[2]))))-(((-(std::get<0>(this->nodes()[0])))+(std::get<0>(this->nodes()[2])))*((-(std::get<1>(this->nodes()[0])))+(std::get<1>(this->nodes()[1]))))))));});
@@ -63,7 +63,7 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateGradientWithBasis(
 
 
 // integrate edge
-fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
+mpFlow::dtype::real mpFlow::EIT::basis::Linear::integrateBoundaryEdge(
     std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
     // calc coefficients for basis function
@@ -80,7 +80,7 @@ fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdge(
 }
 
 // integrate edge with other
-fastEIT::dtype::real fastEIT::basis::Linear::integrateBoundaryEdgeWithOther(
+mpFlow::dtype::real mpFlow::EIT::basis::Linear::integrateBoundaryEdgeWithOther(
     std::array<dtype::real, nodes_per_edge> nodes, dtype::index self,
     dtype::index other, dtype::real start, dtype::real end) {
     // calc coefficients for basis function

@@ -1,19 +1,19 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
+#include "mpflow/mpflow.h"
 
 // create conjugate solver
-fastEIT::numeric::PreConjugate::PreConjugate(dtype::size rows, dtype::size columns, cudaStream_t stream)
+mpFlow::numeric::PreConjugate::PreConjugate(dtype::size rows, dtype::size columns, cudaStream_t stream)
     : rows_(rows), columns_(columns) {
     // check input
     if (rows < 1) {
-        throw std::invalid_argument("fastEIT::numeric::PreConjugate::PreConjugate: rows <= 1");
+        throw std::invalid_argument("mpFlow::numeric::PreConjugate::PreConjugate: rows <= 1");
     }
     if (columns < 1) {
-        throw std::invalid_argument("fastEIT::numeric::PreConjugate::PreConjugate: columns <= 1");
+        throw std::invalid_argument("mpFlow::numeric::PreConjugate::PreConjugate: columns <= 1");
     }
 
     // create matrices
@@ -37,21 +37,21 @@ fastEIT::numeric::PreConjugate::PreConjugate(dtype::size rows, dtype::size colum
 }
 
 // solve conjugate sparse
-void fastEIT::numeric::PreConjugate::solve(const std::shared_ptr<Matrix<dtype::real>> A,
+void mpFlow::numeric::PreConjugate::solve(const std::shared_ptr<Matrix<dtype::real>> A,
     const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
     // check input
     if (A == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::PreConjugate::solve: A == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::PreConjugate::solve: A == nullptr");
     }
     if (f == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::PreConjugate::solve: f == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::PreConjugate::solve: f == nullptr");
     }
     if (x == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::PreConjugate::solve: x == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::PreConjugate::solve: x == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::PreConjugate::solve: handle == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::PreConjugate::solve: handle == nullptr");
     }
 
     // calc residuum r = f - A * x

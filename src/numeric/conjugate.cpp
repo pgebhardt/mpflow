@@ -1,20 +1,20 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
-#include "fasteit/conjugate_kernel.h"
+#include "mpflow/mpflow.h"
+#include "mpflow/numeric/conjugate_kernel.h"
 
 // create conjugate solver
-fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, dtype::size columns, cudaStream_t stream)
+mpFlow::numeric::Conjugate::Conjugate(dtype::size rows, dtype::size columns, cudaStream_t stream)
     : rows_(rows), columns_(columns) {
     // check input
     if (rows < 1) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::Conjugate: rows <= 1");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::Conjugate: rows <= 1");
     }
     if (columns < 1) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::Conjugate: columns <= 1");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::Conjugate: columns <= 1");
     }
 
     // create matrices
@@ -27,21 +27,21 @@ fastEIT::numeric::Conjugate::Conjugate(dtype::size rows, dtype::size columns, cu
 }
 
 // solve conjugate sparse
-void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real>> A,
+void mpFlow::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real>> A,
     const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
     // check input
     if (A == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: A == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::solve: A == nullptr");
     }
     if (f == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: f == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::solve: f == nullptr");
     }
     if (x == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: x == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::solve: x == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::solve: handle == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::solve: handle == nullptr");
     }
 
     // calc residuum r = f - A * x
@@ -85,16 +85,16 @@ void fastEIT::numeric::Conjugate::solve(const std::shared_ptr<Matrix<dtype::real
 }
 
 // add scalar
-void fastEIT::numeric::conjugate::addScalar(
+void mpFlow::numeric::conjugate::addScalar(
     const std::shared_ptr<Matrix<dtype::real>> scalar,
     dtype::size rows, dtype::size columns, cudaStream_t stream,
     std::shared_ptr<Matrix<dtype::real>> vector) {
     // check input
     if (scalar == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: scalar == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: scalar == nullptr");
     }
     if (vector == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: vector == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: vector == nullptr");
     }
 
     // kernel dimension
@@ -110,7 +110,7 @@ void fastEIT::numeric::conjugate::addScalar(
 }
 
 // update vector
-void fastEIT::numeric::conjugate::updateVector(
+void mpFlow::numeric::conjugate::updateVector(
     const std::shared_ptr<Matrix<dtype::real>> x1, dtype::real sign,
     const std::shared_ptr<Matrix<dtype::real>> x2,
     const std::shared_ptr<Matrix<dtype::real>> r1,
@@ -118,19 +118,19 @@ void fastEIT::numeric::conjugate::updateVector(
     std::shared_ptr<Matrix<dtype::real>> result) {
     // check input
     if (x1 == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: x1 == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: x1 == nullptr");
     }
     if (x2 == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: x2 == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: x2 == nullptr");
     }
     if (r1 == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: r1 == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: r1 == nullptr");
     }
     if (r2 == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: r2 == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: r2 == nullptr");
     }
     if (result == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: result == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: result == nullptr");
     }
 
     // kernel dimension
@@ -147,19 +147,19 @@ void fastEIT::numeric::conjugate::updateVector(
 }
 
 // fast gemv
-void fastEIT::numeric::conjugate::gemv(
+void mpFlow::numeric::conjugate::gemv(
     const std::shared_ptr<Matrix<dtype::real>> matrix,
     const std::shared_ptr<Matrix<dtype::real>> vector, cudaStream_t stream,
     std::shared_ptr<Matrix<dtype::real>> result) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: matrix == nullptr");
     }
     if (vector == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: vector == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: vector == nullptr");
     }
     if (result == nullptr) {
-        throw std::invalid_argument("fastEIT::numeric::Conjugate::addScalar: result == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Conjugate::addScalar: result == nullptr");
     }
 
     // dimension

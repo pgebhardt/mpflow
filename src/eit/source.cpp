@@ -1,11 +1,11 @@
 // fastEIT
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
+#include "mpflow/mpflow.h"
 
-fastEIT::source::Source::Source(std::string type, const std::vector<dtype::real>& values,
+mpFlow::EIT::source::Source::Source(std::string type, const std::vector<dtype::real>& values,
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
@@ -15,24 +15,24 @@ fastEIT::source::Source::Source(std::string type, const std::vector<dtype::real>
         component_count_(component_count) {
     // check input
     if (mesh == nullptr) {
-        throw std::invalid_argument("fastEIT::source::Source::Source: mesh == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::source::Source::Source: mesh == nullptr");
     }
     if (electrodes == nullptr) {
-        throw std::invalid_argument("fastEIT::source::Source::Source: electrodes == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::source::Source::Source: electrodes == nullptr");
     }
     if (drive_pattern == nullptr) {
-        throw std::invalid_argument("fastEIT::source::Source::Source: drive_pattern == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::source::Source::Source: drive_pattern == nullptr");
     }
     if (measurement_pattern == nullptr) {
         throw std::invalid_argument(
-            "fastEIT::source::Source::Source: measurement_pattern == nullptr");
+            "mpFlow::EIT::source::Source::Source: measurement_pattern == nullptr");
     }
     if (values.size() != this->drive_count()) {
         throw std::invalid_argument(
-            "fastEIT::source::Source::Source: invalid size of values vector");
+            "mpFlow::EIT::source::Source::Source: invalid size of values vector");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::source::Source::Source: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::source::Source::Source: handle == nullptr");
     }
 
     // create matrices
@@ -70,7 +70,7 @@ fastEIT::source::Source::Source(std::string type, const std::vector<dtype::real>
     this->pattern()->copyToDevice(stream);
 }
 
-fastEIT::source::Source::Source(std::string type, dtype::real value,
+mpFlow::EIT::source::Source::Source(std::string type, dtype::real value,
     std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
     dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
     std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
@@ -84,7 +84,7 @@ fastEIT::source::Source::Source(std::string type, dtype::real value,
 template <
     class basis_function_type
 >
-fastEIT::source::Current<basis_function_type>::Current(
+mpFlow::EIT::source::Current<basis_function_type>::Current(
     const std::vector<dtype::real>& current, std::shared_ptr<Mesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
@@ -101,7 +101,7 @@ fastEIT::source::Current<basis_function_type>::Current(
 template <
     class basis_function_type
 >
-fastEIT::source::Current<basis_function_type>::Current(
+mpFlow::EIT::source::Current<basis_function_type>::Current(
     dtype::real current, std::shared_ptr<Mesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
@@ -116,7 +116,7 @@ fastEIT::source::Current<basis_function_type>::Current(
 template <
     class basis_function_type
 >
-void fastEIT::source::Current<basis_function_type>::initCEM(cudaStream_t stream) {
+void mpFlow::EIT::source::Current<basis_function_type>::initCEM(cudaStream_t stream) {
     // needed arrays
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
@@ -192,10 +192,10 @@ void fastEIT::source::Current<basis_function_type>::initCEM(cudaStream_t stream)
 template <
     class basis_function_type
 >
-void fastEIT::source::Current<basis_function_type>::updateExcitation(cublasHandle_t handle,
+void mpFlow::EIT::source::Current<basis_function_type>::updateExcitation(cublasHandle_t handle,
     cudaStream_t stream) {
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::source::Current::updateExcitation: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::source::Current::updateExcitation: handle == nullptr");
     }
 
     // update excitation
@@ -210,7 +210,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(cublasHandl
                 excitation * this->excitation(component)->data_rows() +
                 this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error(
-                    "fastEIT::source::Current::updateExcitation: copy pattern to excitation");
+                    "mpFlow::EIT::source::Current::updateExcitation: copy pattern to excitation");
             }
         }
         for (dtype::index excitation = 0; excitation < this->drive_count(); ++excitation) {
@@ -219,7 +219,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(cublasHandl
                 excitation * this->excitation(component)->data_rows() +
                 this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error(
-                    "fastEIT::source::Current::updateExcitation: apply value to pattern");
+                    "mpFlow::EIT::source::Current::updateExcitation: apply value to pattern");
             }
         }
 
@@ -239,7 +239,7 @@ void fastEIT::source::Current<basis_function_type>::updateExcitation(cublasHandl
 template <
     class basis_function_type
 >
-fastEIT::source::Voltage<basis_function_type>::Voltage(
+mpFlow::EIT::source::Voltage<basis_function_type>::Voltage(
     const std::vector<dtype::real>& voltage, std::shared_ptr<Mesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
@@ -269,7 +269,7 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
 template <
     class basis_function_type
 >
-fastEIT::source::Voltage<basis_function_type>::Voltage(
+mpFlow::EIT::source::Voltage<basis_function_type>::Voltage(
     dtype::real voltage, std::shared_ptr<Mesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
     std::shared_ptr<Matrix<dtype::real>> drive_pattern,
@@ -284,7 +284,7 @@ fastEIT::source::Voltage<basis_function_type>::Voltage(
 template <
     class basis_function_type
 >
-void fastEIT::source::Voltage<basis_function_type>::initCEM(cudaStream_t) {
+void mpFlow::EIT::source::Voltage<basis_function_type>::initCEM(cudaStream_t) {
     // needed arrays
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
@@ -350,10 +350,10 @@ void fastEIT::source::Voltage<basis_function_type>::initCEM(cudaStream_t) {
 template <
     class model_type
 >
-void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handle,
+void mpFlow::EIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handle,
     cudaStream_t stream) {
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::source::Voltage::updateExcitation: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::source::Voltage::updateExcitation: handle == nullptr");
     }
 
     // update excitation
@@ -368,7 +368,7 @@ void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handl
                 excitation * this->excitation(component)->data_rows() +
                 this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error(
-                    "fastEIT::source::Voltage::updateExcitation: copy pattern to excitation");
+                    "mpFlow::EIT::source::Voltage::updateExcitation: copy pattern to excitation");
             }
         }
         for (dtype::index excitation = 0; excitation < this->drive_count(); ++excitation) {
@@ -377,7 +377,7 @@ void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handl
                 excitation * this->excitation(component)->data_rows() +
                 this->mesh()->nodes()->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error(
-                    "fastEIT::source::Voltage::updateExcitation: apply value to pattern");
+                    "mpFlow::EIT::source::Voltage::updateExcitation: apply value to pattern");
             }
         }
 
@@ -395,7 +395,7 @@ void fastEIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t handl
 }
 
 // specialisation
-template class fastEIT::source::Current<fastEIT::basis::Linear>;
-template class fastEIT::source::Voltage<fastEIT::basis::Linear>;
-template class fastEIT::source::Current<fastEIT::basis::Quadratic>;
-template class fastEIT::source::Voltage<fastEIT::basis::Quadratic>;
+template class mpFlow::EIT::source::Current<mpFlow::EIT::basis::Linear>;
+template class mpFlow::EIT::source::Voltage<mpFlow::EIT::basis::Linear>;
+template class mpFlow::EIT::source::Current<mpFlow::EIT::basis::Quadratic>;
+template class mpFlow::EIT::source::Voltage<mpFlow::EIT::basis::Quadratic>;

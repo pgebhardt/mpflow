@@ -1,13 +1,14 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef FASTEIT_INCLUDE_FORWARD_H
-#define FASTEIT_INCLUDE_FORWARD_H
+#ifndef MPFLOW_INCLDUE_EIT_FORWARD_H
+#define MPFLOW_INCLDUE_EIT_FORWARD_H
 
-// namespace fastEIT
-namespace fastEIT {
+// namespace mpFlow::EIT::solver
+namespace mpFlow {
+namespace EIT {
 namespace solver {
     // forward solver class definition
     template <
@@ -16,7 +17,7 @@ namespace solver {
     class Forward {
     public:
         // constructor
-        Forward(std::shared_ptr<fastEIT::model::Model> model, cublasHandle_t handle,
+        Forward(std::shared_ptr<mpFlow::EIT::model::Model> model, cublasHandle_t handle,
             cudaStream_t stream);
 
         // apply pattern
@@ -30,17 +31,18 @@ namespace solver {
 
         // accessors
         std::shared_ptr<numerical_solver> numeric_solver() { return this->numeric_solver_; }
-        std::shared_ptr<fastEIT::model::Model> model() { return this->model_; }
+        std::shared_ptr<mpFlow::EIT::model::Model> model() { return this->model_; }
         std::shared_ptr<Matrix<dtype::real>> voltage() { return this->voltage_; }
         std::shared_ptr<Matrix<dtype::real>> current() { return this->current_; }
 
     private:
         // member
         std::shared_ptr<numerical_solver> numeric_solver_;
-        std::shared_ptr<fastEIT::model::Model> model_;
+        std::shared_ptr<mpFlow::EIT::model::Model> model_;
         std::shared_ptr<Matrix<dtype::real>> voltage_;
         std::shared_ptr<Matrix<dtype::real>> current_;
     };
+}
 }
 }
 

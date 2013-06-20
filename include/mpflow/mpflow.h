@@ -15,7 +15,6 @@
 #include "sparse_matrix.h"
 #include "mesh.h"
 
-/*
 // numeric solver
 #include "numeric/conjugate.h"
 #include "numeric/fast_conjugate.h"
@@ -30,6 +29,5 @@
 #include "eit/forward.h"
 #include "eit/inverse.h"
 #include "eit/solver.h"
-*/
 
 #endif

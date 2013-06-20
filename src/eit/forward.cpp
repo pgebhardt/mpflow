@@ -1,24 +1,24 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
-#include "fasteit/forward_kernel.h"
+#include "mpflow/mpflow.h"
+#include "mpflow/eit/forward_kernel.h"
 
 // create forward_solver
 template <
     class numerical_solver
 >
-fastEIT::solver::Forward<numerical_solver>::Forward(
-    std::shared_ptr<fastEIT::model::Model> model, cublasHandle_t handle, cudaStream_t stream)
+mpFlow::EIT::solver::Forward<numerical_solver>::Forward(
+    std::shared_ptr<mpFlow::EIT::model::Model> model, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Forward::Forward: model == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Forward::Forward: model == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Forward::Forward: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Forward::Forward: handle == nullptr");
     }
 
     // create numerical_solver solver
@@ -40,7 +40,7 @@ fastEIT::solver::Forward<numerical_solver>::Forward(
 template <
     class numerical_solver
 >
-void fastEIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
+void mpFlow::EIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
     std::shared_ptr<Matrix<dtype::real>> result, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
@@ -74,15 +74,15 @@ void fastEIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
 template <
     class numerical_solver
 >
-std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Forward<numerical_solver>::solve(
+std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>> mpFlow::EIT::solver::Forward<numerical_solver>::solve(
     const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Forward::solve: gamma == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Forward::solve: gamma == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("fastEIT::solver::Forward::solve: handle == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::solver::Forward::solve: handle == nullptr");
     }
 
     // update system matrix
@@ -126,4 +126,4 @@ std::shared_ptr<fastEIT::Matrix<fastEIT::dtype::real>> fastEIT::solver::Forward<
 }
 
 // specialisation
-template class fastEIT::solver::Forward<fastEIT::numeric::SparseConjugate>;
+template class mpFlow::EIT::solver::Forward<mpFlow::numeric::SparseConjugate>;

@@ -1,26 +1,23 @@
-// fastEIT
+// mpFlow
 //
-// Copyright (C) 2012  Patrik Gebhardt
+// Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
-
-#include <cstdlib>
-#include <cstdio>
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
-#include "fasteit/cuda_error.h"
+#include "mpflow/cuda_error.h"
 
-#include "fasteit/dtype.h"
-#include "fasteit/constants.h"
-#include "fasteit/conjugate_kernel.h"
+#include "mpflow/dtype.h"
+#include "mpflow/constants.h"
+#include "mpflow/numeric/conjugate_kernel.h"
 
 // add scalar kernel
-static __global__ void addScalarKernel(const fastEIT::dtype::real* scalar,
-    fastEIT::dtype::size vectorRows, fastEIT::dtype::size rows,
-    fastEIT::dtype::size columns, fastEIT::dtype::real* vector) {
+static __global__ void addScalarKernel(const mpFlow::dtype::real* scalar,
+    mpFlow::dtype::size vectorRows, mpFlow::dtype::size rows,
+    mpFlow::dtype::size columns, mpFlow::dtype::real* vector) {
     // get ids
-    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // add data
     vector[row + column * vectorRows] += row < rows && column < columns ?
@@ -28,7 +25,7 @@ static __global__ void addScalarKernel(const fastEIT::dtype::real* scalar,
 }
 
 // add scalar kernel wrapper
-void fastEIT::numeric::conjugateKernel::addScalar(dim3 blocks, dim3 threads,
+void mpFlow::numeric::conjugateKernel::addScalar(dim3 blocks, dim3 threads,
     cudaStream_t stream, const dtype::real* scalar, dtype::size vector_rows,
     dtype::size rows, dtype::size columns, dtype::real* vector) {
     // call cuda kernel
@@ -39,13 +36,13 @@ void fastEIT::numeric::conjugateKernel::addScalar(dim3 blocks, dim3 threads,
 }
 
 // update vector kernel
-static __global__ void updateVectorKernel(const fastEIT::dtype::real* x1,
-    const fastEIT::dtype::real sign, const fastEIT::dtype::real* x2,
-    const fastEIT::dtype::real* r1, const fastEIT::dtype::real* r2,
-    fastEIT::dtype::size rows, fastEIT::dtype::real* result) {
+static __global__ void updateVectorKernel(const mpFlow::dtype::real* x1,
+    const mpFlow::dtype::real sign, const mpFlow::dtype::real* x2,
+    const mpFlow::dtype::real* r1, const mpFlow::dtype::real* r2,
+    mpFlow::dtype::size rows, mpFlow::dtype::real* result) {
     // get ids
-    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    fastEIT::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
     result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] +
@@ -54,7 +51,7 @@ static __global__ void updateVectorKernel(const fastEIT::dtype::real* x1,
 }
 
 // update vector kernel wrapper
-void fastEIT::numeric::conjugateKernel::updateVector(dim3 blocks, dim3 threads,
+void mpFlow::numeric::conjugateKernel::updateVector(dim3 blocks, dim3 threads,
     cudaStream_t stream, const dtype::real* x1, const dtype::real sign,
     const dtype::real* x2, const dtype::real* r1, const dtype::real* r2,
     dtype::size rows, dtype::real* result) {
@@ -66,28 +63,28 @@ void fastEIT::numeric::conjugateKernel::updateVector(dim3 blocks, dim3 threads,
 }
 
 // gemv kernel
-static __global__ void gemvKernel(const fastEIT::dtype::real* matrix,
-    const fastEIT::dtype::real* vector, fastEIT::dtype::size rows,
-    fastEIT::dtype::real* result) {
+static __global__ void gemvKernel(const mpFlow::dtype::real* matrix,
+    const mpFlow::dtype::real* vector, mpFlow::dtype::size rows,
+    mpFlow::dtype::real* result) {
     // get ids
-    fastEIT::dtype::index row = threadIdx.x + blockIdx.x * blockDim.x;
-    fastEIT::dtype::index column = (threadIdx.y + blockIdx.y * blockDim.y) *
-        2 * fastEIT::matrix::block_size;
+    mpFlow::dtype::index row = threadIdx.x + blockIdx.x * blockDim.x;
+    mpFlow::dtype::index column = (threadIdx.y + blockIdx.y * blockDim.y) *
+        2 * mpFlow::matrix::block_size;
 
     // load vector to shared memory
-    __shared__ fastEIT::dtype::real work[2 * fastEIT::matrix::block_size *
-        fastEIT::matrix::block_size];
+    __shared__ mpFlow::dtype::real work[2 * mpFlow::matrix::block_size *
+        mpFlow::matrix::block_size];
     work[threadIdx.x +
-        threadIdx.y * 2 * fastEIT::matrix::block_size] =
+        threadIdx.y * 2 * mpFlow::matrix::block_size] =
         column + threadIdx.x < rows ? vector[column + threadIdx.x] : 0.0f;
     __syncthreads();
 
     // compute partial vector product
-    fastEIT::dtype::real product = 0.0f;
-    for (fastEIT::dtype::index i = 0; i < 2 * fastEIT::matrix::block_size; i++) {
+    mpFlow::dtype::real product = 0.0f;
+    for (mpFlow::dtype::index i = 0; i < 2 * mpFlow::matrix::block_size; i++) {
         product += row < rows && column + i < rows ?
             matrix[row + (column + i) * rows] * work[i +
-            threadIdx.y * 2 * fastEIT::matrix::block_size] :
+            threadIdx.y * 2 * mpFlow::matrix::block_size] :
             0.0f;
     }
 
@@ -98,7 +95,7 @@ static __global__ void gemvKernel(const fastEIT::dtype::real* matrix,
 }
 
 // gemv kernel wrapper
-void fastEIT::numeric::conjugateKernel::gemv(dim3 blocks, dim3 threads,
+void mpFlow::numeric::conjugateKernel::gemv(dim3 blocks, dim3 threads,
     cudaStream_t stream, const dtype::real* matrix, const dtype::real* vector,
     dtype::size rows, dtype::real* result) {
     // call cuda kernel
@@ -108,10 +105,10 @@ void fastEIT::numeric::conjugateKernel::gemv(dim3 blocks, dim3 threads,
 }
 
 // row reduce kernel
-static __global__ void reduceRowKernel(fastEIT::dtype::size rows,
-    fastEIT::dtype::real* vector) {
+static __global__ void reduceRowKernel(mpFlow::dtype::size rows,
+    mpFlow::dtype::real* vector) {
     // get id
-    fastEIT::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // check row
     if (row >= rows) {
@@ -119,11 +116,11 @@ static __global__ void reduceRowKernel(fastEIT::dtype::size rows,
     }
 
     // sum row
-    fastEIT::dtype::real sum = 0.0f;
-    fastEIT::dtype::size count =
-        (rows + 2 * fastEIT::matrix::block_size - 1) /
-        (2 * fastEIT::matrix::block_size);
-    for (fastEIT::dtype::index i = 0; i < count; i++) {
+    mpFlow::dtype::real sum = 0.0f;
+    mpFlow::dtype::size count =
+        (rows + 2 * mpFlow::matrix::block_size - 1) /
+        (2 * mpFlow::matrix::block_size);
+    for (mpFlow::dtype::index i = 0; i < count; i++) {
         sum += vector[row + i * rows];
     }
 
@@ -132,7 +129,7 @@ static __global__ void reduceRowKernel(fastEIT::dtype::size rows,
 }
 
 // row reduce kernel wrapper
-void fastEIT::numeric::conjugateKernel::reduceRow(dim3 blocks, dim3 threads,
+void mpFlow::numeric::conjugateKernel::reduceRow(dim3 blocks, dim3 threads,
     cudaStream_t stream, dtype::size rows, dtype::real* vector) {
     // call cuda kernel
     reduceRowKernel<<<blocks, threads, 0, stream>>>(rows, vector);

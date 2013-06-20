@@ -1,37 +1,37 @@
-// fastEIT
+// mpFlow
 //
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#include "fasteit/fasteit.h"
+#include "mpflow/mpflow.h"
 
 // create electrodes class
-fastEIT::Electrodes::Electrodes(dtype::size count,
+mpFlow::EIT::Electrodes::Electrodes(dtype::size count,
     std::tuple<dtype::real, dtype::real> shape, dtype::real impedance)
     : count_(count), coordinates_(count), shape_(shape), impedance_(impedance) {
     // check input
     if (count == 0) {
-        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: count == 0");
+        throw std::invalid_argument("mpFlow::EIT::Electrodes::Electrodes: count == 0");
     }
     if (std::get<0>(shape) <= 0.0) {
-        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: width <= 0.0");
+        throw std::invalid_argument("mpFlow::EIT::Electrodes::Electrodes: width <= 0.0");
     }
     if (std::get<1>(shape) <= 0.0) {
-        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: height <= 0.0");
+        throw std::invalid_argument("mpFlow::EIT::Electrodes::Electrodes: height <= 0.0");
     }
     if (impedance <= 0.0) {
-        throw std::invalid_argument("fastEIT::Electrodes::Electrodes: impedance <= 0.0");
+        throw std::invalid_argument("mpFlow::EIT::Electrodes::Electrodes: impedance <= 0.0");
     }
 }
 
 // create electrodes on circular boundary
-std::shared_ptr<fastEIT::Electrodes> fastEIT::electrodes::circularBoundary(
+std::shared_ptr<mpFlow::EIT::Electrodes> mpFlow::EIT::electrodes::circularBoundary(
     dtype::size count, std::tuple<dtype::real, dtype::real> shape,
     dtype::real impedance, dtype::real boundary_radius) {
     // check radius
     if (boundary_radius <= 0.0) {
         throw std::invalid_argument(
-            "fastEIT::electrodes::circularBoundary: boundary_radius <= 0.0");
+            "mpFlow::EIT::electrodes::circularBoundary: boundary_radius <= 0.0");
     }
 
     // create electrodes
