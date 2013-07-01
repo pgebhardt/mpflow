@@ -8,7 +8,7 @@
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/dtype.h"
-#include "mpflow/constants.h"
+#include "mpflow/numeric/constants.h"
 #include "mpflow/numeric/conjugate_kernel.h"
 
 // add scalar kernel
@@ -69,22 +69,22 @@ static __global__ void gemvKernel(const mpFlow::dtype::real* matrix,
     // get ids
     mpFlow::dtype::index row = threadIdx.x + blockIdx.x * blockDim.x;
     mpFlow::dtype::index column = (threadIdx.y + blockIdx.y * blockDim.y) *
-        2 * mpFlow::matrix::block_size;
+        2 * mpFlow::numeric::matrix::block_size;
 
     // load vector to shared memory
-    __shared__ mpFlow::dtype::real work[2 * mpFlow::matrix::block_size *
-        mpFlow::matrix::block_size];
+    __shared__ mpFlow::dtype::real work[2 * mpFlow::numeric::matrix::block_size *
+        mpFlow::numeric::matrix::block_size];
     work[threadIdx.x +
-        threadIdx.y * 2 * mpFlow::matrix::block_size] =
+        threadIdx.y * 2 * mpFlow::numeric::matrix::block_size] =
         column + threadIdx.x < rows ? vector[column + threadIdx.x] : 0.0f;
     __syncthreads();
 
     // compute partial vector product
     mpFlow::dtype::real product = 0.0f;
-    for (mpFlow::dtype::index i = 0; i < 2 * mpFlow::matrix::block_size; i++) {
+    for (mpFlow::dtype::index i = 0; i < 2 * mpFlow::numeric::matrix::block_size; i++) {
         product += row < rows && column + i < rows ?
             matrix[row + (column + i) * rows] * work[i +
-            threadIdx.y * 2 * mpFlow::matrix::block_size] :
+            threadIdx.y * 2 * mpFlow::numeric::matrix::block_size] :
             0.0f;
     }
 
@@ -118,8 +118,8 @@ static __global__ void reduceRowKernel(mpFlow::dtype::size rows,
     // sum row
     mpFlow::dtype::real sum = 0.0f;
     mpFlow::dtype::size count =
-        (rows + 2 * mpFlow::matrix::block_size - 1) /
-        (2 * mpFlow::matrix::block_size);
+        (rows + 2 * mpFlow::numeric::matrix::block_size - 1) /
+        (2 * mpFlow::numeric::matrix::block_size);
     for (mpFlow::dtype::index i = 0; i < count; i++) {
         sum += vector[row + i * rows];
     }

@@ -8,7 +8,7 @@
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/dtype.h"
-#include "mpflow/constants.h"
+#include "mpflow/numeric/constants.h"
 #include "mpflow/eit/forward_kernel.h"
 
 // calc voltage kernel

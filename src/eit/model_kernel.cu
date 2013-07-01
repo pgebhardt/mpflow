@@ -11,7 +11,7 @@
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/dtype.h"
-#include "mpflow/constants.h"
+#include "mpflow/numeric/constants.h"
 #include "mpflow/eit/model_kernel.h"
 
 // reduce connectivity and elementalResidual matrix
@@ -26,7 +26,7 @@ static __global__ void reduceMatrixKernel(const type* intermediate_matrix,
     mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // get column id
-    mpFlow::dtype::index columnId = column_ids[row * mpFlow::sparseMatrix::block_size + column];
+    mpFlow::dtype::index columnId = column_ids[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
     // check column id
     if (columnId == mpFlow::dtype::invalid_index) {
@@ -34,7 +34,7 @@ static __global__ void reduceMatrixKernel(const type* intermediate_matrix,
     }
 
     // reduce matrices
-    matrix[row + (column + offset * mpFlow::sparseMatrix::block_size) * rows] =
+    matrix[row + (column + offset * mpFlow::numeric::sparseMatrix::block_size) * rows] =
         intermediate_matrix[row + columnId * rows];
 }
 
@@ -72,18 +72,18 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
     // calc residual matrix element
     mpFlow::dtype::real value = 0.0f;
     mpFlow::dtype::index elementId = mpFlow::dtype::invalid_index;
-    for (mpFlow::dtype::index k = 0; k < columns / mpFlow::sparseMatrix::block_size; ++k) {
+    for (mpFlow::dtype::index k = 0; k < columns / mpFlow::numeric::sparseMatrix::block_size; ++k) {
         // get element id
         elementId = connectivityMatrix[row +
-            (column + k * mpFlow::sparseMatrix::block_size) * rows];
+            (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows];
 
         value += elementId != mpFlow::dtype::invalid_index ? elementalMatrix[row +
-            (column + k * mpFlow::sparseMatrix::block_size) * rows] *
+            (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
             sigmaRef * exp10f(gamma[elementId] / 10.0f) : 0.0f;
     }
 
     // set residual matrix element
-    matrix_values[row * mpFlow::sparseMatrix::block_size + column] = value;
+    matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] = value;
 }
 
 // update matrix kernel wrapper
@@ -111,15 +111,15 @@ static __global__ void updateSystemMatrixKernel(
     mpFlow::dtype::index column_id = mpFlow::dtype::invalid_index;
     for (mpFlow::dtype::index column = 0; column < density; ++column) {
         // get column id
-        column_id = s_matrix_column_ids[row * mpFlow::sparseMatrix::block_size + column];
+        column_id = s_matrix_column_ids[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
         // update system matrix element
-        system_matrix_values[row * mpFlow::sparseMatrix::block_size + column] =
+        system_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] =
             column_id != mpFlow::dtype::invalid_index ?
-            s_matrix_values[row * mpFlow::sparseMatrix::block_size + column] +
-            r_matrix_values[row * mpFlow::sparseMatrix::block_size + column] * scalar +
+            s_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] +
+            r_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] * scalar +
             z_matrix[row + z_matrix_rows * column_id] :
-            system_matrix_values[row * mpFlow::sparseMatrix::block_size + column];
+            system_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column];
     }
 }
 
@@ -159,9 +159,9 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
 
     // calc measurment and drive id
     mpFlow::dtype::size roundMeasurmentCount = (
-        (measurmentCount + mpFlow::matrix::block_size - 1) /
-        mpFlow::matrix::block_size) *
-        mpFlow::matrix::block_size;
+        (measurmentCount + mpFlow::numeric::matrix::block_size - 1) /
+        mpFlow::numeric::matrix::block_size) *
+        mpFlow::numeric::matrix::block_size;
     mpFlow::dtype::size measurmentId = row % roundMeasurmentCount;
     mpFlow::dtype::size driveId = row / roundMeasurmentCount;
 

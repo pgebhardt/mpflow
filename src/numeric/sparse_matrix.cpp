@@ -4,7 +4,7 @@
 // Contact: patrik.gebhardt@rub.de
 
 #include "mpflow/mpflow.h"
-#include "mpflow/sparse_matrix_kernel.h"
+#include "mpflow/numeric/sparse_matrix_kernel.h"
 
 // create new sparse matrix
 template <

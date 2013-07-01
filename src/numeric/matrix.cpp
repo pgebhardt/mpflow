@@ -9,7 +9,7 @@
 #include <fstream>
 
 #include "mpflow/mpflow.h"
-#include "mpflow/matrix_kernel.h"
+#include "mpflow/numeric/matrix_kernel.h"
 
 // create new matrix
 template<
