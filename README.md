@@ -1,6 +1,6 @@
-# fastEIT
+# mpFlow
 
-fastEIT is an extensible GPU-based Impedance Tomography Solving Library. It uses CUDA 5.0 and C++11.
+mpFlow is an extensible GPU-based multi-phase flow analysis library containing algorithms for solving EIT and UCT. It uses CUDA 5.0 and C++11.
 
 ## Features
 
