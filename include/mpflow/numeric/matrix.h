@@ -3,11 +3,12 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef MPFLOW_INCLUDE_MATRIX_H
-#define MPFLOW_INCLUDE_MATRIX_H
+#ifndef MPFLOW_INCLUDE_NUMERIC_MATRIX_H
+#define MPFLOW_INCLUDE_NUMERIC_MATRIX_H
 
-// namespace mpFlow
+// namespace mpFlow::numeric
 namespace mpFlow {
+namespace numeric {
     // matrix class definition
     template <
         class type
@@ -48,7 +49,7 @@ namespace mpFlow {
         const type& operator() (dtype::index i, dtype::index j) const {
             // check index
             if ((i >= this->rows()) || (j >= this->columns())) {
-                throw std::invalid_argument("mpFlow::Matrix::operator(): index out of range");
+                throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
             }
 
             return this->host_data_[i + j * this->data_rows()];
@@ -59,7 +60,7 @@ namespace mpFlow {
         type& operator() (dtype::index i, dtype::index j) {
             // check index
             if ((i >= this->rows()) || (j >= this->columns())) {
-                throw std::invalid_argument("mpFlow::Matrix::operator(): index out of range");
+                throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
             }
 
             return this->host_data_[i + j * this->data_rows()];
@@ -82,14 +83,14 @@ namespace mpFlow {
         template <
             class type
         >
-        std::shared_ptr<mpFlow::Matrix<type>> loadtxt(std::istream* istream,
+        std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream* istream,
             cudaStream_t stream);
 
         // load matrix from file
         template <
             class type
         >
-        std::shared_ptr<mpFlow::Matrix<type>> loadtxt(const std::string filename,
+        std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
             cudaStream_t stream);
 
         // save matrix to stream
@@ -104,6 +105,7 @@ namespace mpFlow {
         >
         void savetxt(const std::string filename, const std::shared_ptr<Matrix<type>> matrix);
     }
+}
 }
 
 #endif

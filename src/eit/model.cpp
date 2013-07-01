@@ -7,28 +7,28 @@
 #include "mpflow/eit/model_kernel.h"
 
 // 2.5D model base class
-mpFlow::EIT::model::Model::Model(
-    std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+mpFlow::EIT::model::Base::Base(
+    std::shared_ptr<numeric::IrregularMesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
     dtype::size component_count)
     : mesh_(mesh), electrodes_(electrodes), source_(source), sigma_ref_(sigma_ref),
         component_count_(component_count) {
     // check input
     if (mesh == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: mesh == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::Base::Base: mesh == nullptr");
     }
     if (electrodes == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: electrodes == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::Base::Base: electrodes == nullptr");
     }
     if (source == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: electrodes == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::model::Base::Base: electrodes == nullptr");
     }
     if (component_count == 0) {
-        throw std::invalid_argument("mpFlow::EIT::model::Model::Model: component_count == 0");
+        throw std::invalid_argument("mpFlow::EIT::model::Base::Base: component_count == 0");
     }
     if (this->source()->component_count() != this->component_count()) {
         throw std::invalid_argument(
-            "mpFlow::EIT::model::Model::Model: source.component_count != component_count");
+            "mpFlow::EIT::model::Base::Base: source.component_count != component_count");
     }
 }
 
@@ -37,25 +37,25 @@ template <
     class basis_function_type
 >
 mpFlow::EIT::Model<basis_function_type>::Model(
-    std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
+    std::shared_ptr<numeric::IrregularMesh> mesh, std::shared_ptr<Electrodes> electrodes,
     std::shared_ptr<source::Source> source, dtype::real sigma_ref,
     dtype::size component_count, cublasHandle_t handle, cudaStream_t stream)
-    : model::Model(mesh, electrodes, source, sigma_ref, component_count) {
+    : model::Base(mesh, electrodes, source, sigma_ref, component_count) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::Model::Model: handle == nullptr");
     }
 
     // create matrices
-    this->jacobian_ = std::make_shared<Matrix<dtype::real>>(
-        math::roundTo(this->source()->measurement_count(), matrix::block_size) *
-        math::roundTo(this->source()->drive_count(), matrix::block_size),
+    this->jacobian_ = std::make_shared<numeric::Matrix<dtype::real>>(
+        math::roundTo(this->source()->measurement_count(), numeric::matrix::block_size) *
+        math::roundTo(this->source()->drive_count(), numeric::matrix::block_size),
         this->mesh()->elements()->rows(), stream);
-    this->elemental_jacobian_matrix_ = std::make_shared<Matrix<dtype::real>>(
+    this->elemental_jacobian_matrix_ = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh()->elements()->rows(),
         math::square(basis_function_type::nodes_per_element), stream);
     for (dtype::index component = 0; component < this->component_count(); ++component) {
-        this->potential_.push_back(std::make_shared<Matrix<dtype::real>>(
+        this->potential_.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
             this->mesh()->nodes()->rows() + this->electrodes()->count(),
             this->source()->drive_count() + this->source()->measurement_count(), stream));
     }
@@ -81,7 +81,7 @@ void mpFlow::EIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaSt
     auto common_element_matrix = this->initElementalMatrices(stream);
 
     // assamble initial system matrices
-    auto system_matrix = std::make_shared<Matrix<dtype::real>>(
+    auto system_matrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh()->nodes()->rows() + this->electrodes()->count(),
         this->mesh()->nodes()->rows() + this->electrodes()->count(),
         stream);
@@ -112,22 +112,22 @@ void mpFlow::EIT::Model<basis_function_type>::init(cublasHandle_t handle, cudaSt
     // create sparse matrices
     system_matrix->copyToDevice(stream);
     for (dtype::index component = 0; component < this->component_count(); ++component) {
-        this->system_matrices_.push_back(std::make_shared<SparseMatrix<dtype::real>>(
+        this->system_matrices_.push_back(std::make_shared<numeric::SparseMatrix<dtype::real>>(
             system_matrix, stream));
     }
 
     // create gamma
-    auto gamma = std::make_shared<Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
+    auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
 
     // update model
-    this->update(gamma, handle, stream);
+    this->update(gamma, stream);
 }
 
 // init elemental matrices
 template <
     class basis_function_type
 >
-std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::EIT::Model<basis_function_type>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
@@ -195,7 +195,7 @@ std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
     }
 
     // determine nodes with common element
-    auto common_element_matrix = std::make_shared<Matrix<dtype::real>>(
+    auto common_element_matrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
         nodes = this->mesh()->elementNodes(element);
@@ -208,28 +208,28 @@ std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
     common_element_matrix->copyToDevice(stream);
 
     // create sparse matrices
-    this->s_matrix_ = std::make_shared<mpFlow::SparseMatrix<dtype::real>>(
+    this->s_matrix_ = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::real>>(
         common_element_matrix, stream);
-    this->r_matrix_ = std::make_shared<mpFlow::SparseMatrix<dtype::real>>(
+    this->r_matrix_ = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::real>>(
         common_element_matrix, stream);
 
     // create elemental matrices
-    this->connectivity_matrix_ = std::make_shared<Matrix<dtype::index>>(
+    this->connectivity_matrix_ = std::make_shared<numeric::Matrix<dtype::index>>(
         this->mesh()->nodes()->rows(),
-        sparseMatrix::block_size * connectivity_matrices.size(), stream, dtype::invalid_index);
-    this->elemental_s_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-        sparseMatrix::block_size * elemental_s_matrices.size(), stream);
-    this->elemental_r_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
-        sparseMatrix::block_size * elemental_r_matrices.size(), stream);
+        numeric::sparseMatrix::block_size * connectivity_matrices.size(), stream, dtype::invalid_index);
+    this->elemental_s_matrix_ = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
+        numeric::sparseMatrix::block_size * elemental_s_matrices.size(), stream);
+    this->elemental_r_matrix_ = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
+        numeric::sparseMatrix::block_size * elemental_r_matrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
-    auto connectivity_matrix = std::make_shared<Matrix<dtype::index>>(
+    auto connectivity_matrix = std::make_shared<numeric::Matrix<dtype::index>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream,
         dtype::invalid_index);
-    auto elemental_s_matrix = std::make_shared<Matrix<dtype::real>>(
+    auto elemental_s_matrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
-    auto elemental_r_matrix = std::make_shared<Matrix<dtype::real>>(
+    auto elemental_r_matrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh()->nodes()->rows(), this->mesh()->nodes()->rows(), stream);
     for (dtype::index level = 0; level < connectivity_matrices.size(); ++level) {
         for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
@@ -313,9 +313,9 @@ void mpFlow::EIT::Model<basis_function_type>::initJacobianCalculationMatrix(
 template <
     class basis_function_type
 >
-std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
+std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::EIT::Model<basis_function_type>::calcJacobian(
-    const std::shared_ptr<Matrix<dtype::real>> gamma, cudaStream_t stream) {
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::Model::calcJacobian: gamma == nullptr");
@@ -347,21 +347,13 @@ std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>
 template <
     class basis_function_type
 >
-void mpFlow::EIT::Model<basis_function_type>::update(const std::shared_ptr<Matrix<dtype::real>> gamma,
-    cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::Model::init: handle == nullptr");
-    }
-
+void mpFlow::EIT::Model<basis_function_type>::update(
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cudaStream_t stream) {
     // update matrices
     model::updateMatrix(this->elemental_s_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->s_matrix());
     model::updateMatrix(this->elemental_r_matrix(), gamma, this->connectivity_matrix(),
         this->sigma_ref(), stream, this->r_matrix());
-
-    // set cublas stream
-    cublasSetStream(handle, stream);
 
     // create system matrices for all harmonics
     dtype::real alpha = 0.0f;
@@ -370,8 +362,8 @@ void mpFlow::EIT::Model<basis_function_type>::update(const std::shared_ptr<Matri
         alpha = math::square(2.0f * component * M_PI / this->mesh()->height());
 
         // update system matrix
-        modelKernel::updateSystemMatrix(this->s_matrix()->data_rows() / matrix::block_size,
-            matrix::block_size, stream,
+        modelKernel::updateSystemMatrix(this->s_matrix()->data_rows() / numeric::matrix::block_size,
+            numeric::matrix::block_size, stream,
             this->s_matrix()->values(), this->r_matrix()->values(), this->s_matrix()->column_ids(),
             this->source()->z_matrix()->device_data(), this->s_matrix()->density(), alpha,
             this->source()->z_matrix()->data_rows(), this->system_matrix(component)->values());
@@ -382,9 +374,9 @@ void mpFlow::EIT::Model<basis_function_type>::update(const std::shared_ptr<Matri
 template <
     class type
 >
-void mpFlow::EIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> intermediateMatrix,
-    const std::shared_ptr<SparseMatrix<dtype::real>> shape, dtype::index offset,
-    cudaStream_t stream, std::shared_ptr<Matrix<type>> matrix) {
+void mpFlow::EIT::model::reduceMatrix(const std::shared_ptr<numeric::Matrix<type>> intermediateMatrix,
+    const std::shared_ptr<numeric::SparseMatrix<dtype::real>> shape, dtype::index offset,
+    cudaStream_t stream, std::shared_ptr<numeric::Matrix<type>> matrix) {
     // check input
     if (intermediateMatrix == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::model::reduceMatrix: intermediateMatrix == nullptr");
@@ -397,8 +389,8 @@ void mpFlow::EIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> interm
     }
 
     // block size
-    dim3 blocks(matrix->data_rows() / matrix::block_size, 1);
-    dim3 threads(matrix::block_size, sparseMatrix::block_size);
+    dim3 blocks(matrix->data_rows() / numeric::matrix::block_size, 1);
+    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
 
     // reduce matrix
     modelKernel::reduceMatrix<type>(blocks, threads, stream,
@@ -407,11 +399,11 @@ void mpFlow::EIT::model::reduceMatrix(const std::shared_ptr<Matrix<type>> interm
 }
 
 // update matrix
-void mpFlow::EIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>> elements,
-    const std::shared_ptr<Matrix<dtype::real>> gamma,
-    const std::shared_ptr<Matrix<dtype::index>> connectivityMatrix,
+void mpFlow::EIT::model::updateMatrix(const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
+    const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix,
     dtype::real sigmaRef, cudaStream_t stream,
-    std::shared_ptr<SparseMatrix<dtype::real>> matrix) {
+    std::shared_ptr<numeric::SparseMatrix<dtype::real>> matrix) {
     // check input
     if (elements == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::model::updateMatrix: elements == nullptr");
@@ -427,8 +419,8 @@ void mpFlow::EIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>>
     }
 
     // dimension
-    dim3 threads(matrix::block_size, sparseMatrix::block_size);
-    dim3 blocks(matrix->data_rows() / matrix::block_size, 1);
+    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
+    dim3 blocks(matrix->data_rows() / numeric::matrix::block_size, 1);
 
     // execute kernel
     modelKernel::updateMatrix(blocks, threads, stream,
@@ -440,12 +432,12 @@ void mpFlow::EIT::model::updateMatrix(const std::shared_ptr<Matrix<dtype::real>>
 template <
     class basis_function_type
 >
-void mpFlow::EIT::model::calcJacobian(const std::shared_ptr<Matrix<dtype::real>> gamma,
-    const std::shared_ptr<Matrix<dtype::real>> potential,
-    const std::shared_ptr<Matrix<dtype::index>> elements,
-    const std::shared_ptr<Matrix<dtype::real>> elemental_jacobian_matrix,
+void mpFlow::EIT::model::calcJacobian(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
+    const std::shared_ptr<numeric::Matrix<dtype::real>> potential,
+    const std::shared_ptr<numeric::Matrix<dtype::index>> elements,
+    const std::shared_ptr<numeric::Matrix<dtype::real>> elemental_jacobian_matrix,
     dtype::size drive_count, dtype::size measurment_count, dtype::real sigma_ref,
-    bool additiv, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> jacobian) {
+    bool additiv, cudaStream_t stream, std::shared_ptr<numeric::Matrix<dtype::real>> jacobian) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::model::calcJacobian: gamma == nullptr");
@@ -465,9 +457,9 @@ void mpFlow::EIT::model::calcJacobian(const std::shared_ptr<Matrix<dtype::real>>
     }
 
     // dimension
-    dim3 blocks(jacobian->data_rows() / matrix::block_size,
-        jacobian->data_columns() / matrix::block_size);
-    dim3 threads(matrix::block_size, matrix::block_size);
+    dim3 blocks(jacobian->data_rows() / numeric::matrix::block_size,
+        jacobian->data_columns() / numeric::matrix::block_size);
+    dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
 
     // calc jacobian
     modelKernel::calcJacobian<basis_function_type::nodes_per_element>(blocks, threads, stream,
@@ -480,22 +472,22 @@ void mpFlow::EIT::model::calcJacobian(const std::shared_ptr<Matrix<dtype::real>>
 
 // specialisation
 template void mpFlow::EIT::model::reduceMatrix<mpFlow::dtype::real>(
-    const std::shared_ptr<Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<Matrix<mpFlow::dtype::real>>);
+    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>,
+    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
+    std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>);
 template void mpFlow::EIT::model::reduceMatrix<mpFlow::dtype::index>(
-    const std::shared_ptr<Matrix<mpFlow::dtype::index>>,
-    const std::shared_ptr<SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<Matrix<mpFlow::dtype::index>>);
+    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
+    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
+    std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
 
 template void mpFlow::EIT::model::calcJacobian<mpFlow::EIT::basis::Linear>(
-    const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
-    const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
-    dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
+    const std::shared_ptr<numeric::Matrix<dtype::real>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
+    const std::shared_ptr<numeric::Matrix<dtype::index>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
+    dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<numeric::Matrix<dtype::real>>);
 template void mpFlow::EIT::model::calcJacobian<mpFlow::EIT::basis::Quadratic>(
-    const std::shared_ptr<Matrix<dtype::real>>, const std::shared_ptr<Matrix<dtype::real>>,
-    const std::shared_ptr<Matrix<dtype::index>>, const std::shared_ptr<Matrix<dtype::real>>,
-    dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<Matrix<dtype::real>>);
+    const std::shared_ptr<numeric::Matrix<dtype::real>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
+    const std::shared_ptr<numeric::Matrix<dtype::index>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
+    dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<numeric::Matrix<dtype::real>>);
 
 template class mpFlow::EIT::Model<mpFlow::EIT::basis::Linear>;
 template class mpFlow::EIT::Model<mpFlow::EIT::basis::Quadratic>;

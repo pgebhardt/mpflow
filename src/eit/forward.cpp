@@ -11,7 +11,7 @@ template <
     class numerical_solver
 >
 mpFlow::EIT::solver::Forward<numerical_solver>::Forward(
-    std::shared_ptr<mpFlow::EIT::model::Model> model, cublasHandle_t handle, cudaStream_t stream)
+    std::shared_ptr<mpFlow::EIT::model::Base> model, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
@@ -28,10 +28,10 @@ mpFlow::EIT::solver::Forward<numerical_solver>::Forward(
         stream);
 
     // create matrices
-    this->voltage_ = std::make_shared<Matrix<dtype::real>>(
+    this->voltage_ = std::make_shared<numeric::Matrix<dtype::real>>(
         this->model()->source()->measurement_count(),
         this->model()->source()->drive_count(), stream);
-    this->current_ = std::make_shared<Matrix<dtype::real>>(
+    this->current_ = std::make_shared<numeric::Matrix<dtype::real>>(
         this->model()->source()->measurement_count(),
         this->model()->source()->drive_count(), stream);
 }
@@ -41,7 +41,7 @@ template <
     class numerical_solver
 >
 void mpFlow::EIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
-    std::shared_ptr<Matrix<dtype::real>> result, cudaStream_t stream) {
+    std::shared_ptr<numeric::Matrix<dtype::real>> result, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
         throw std::invalid_argument("forward::applyPattern: result == nullptr");
@@ -74,19 +74,15 @@ void mpFlow::EIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
 template <
     class numerical_solver
 >
-std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>> mpFlow::EIT::solver::Forward<numerical_solver>::solve(
-    const std::shared_ptr<Matrix<dtype::real>> gamma, dtype::size steps, cublasHandle_t handle,
-    cudaStream_t stream) {
+std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::solver::Forward<numerical_solver>::solve(
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps, cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::solver::Forward::solve: gamma == nullptr");
     }
-    if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::solver::Forward::solve: handle == nullptr");
-    }
 
     // update system matrix
-    this->model()->update(gamma, handle, stream);
+    this->model()->update(gamma, stream);
 
     // solve for ground mode
     this->numeric_solver()->solve(this->model()->system_matrix(0),

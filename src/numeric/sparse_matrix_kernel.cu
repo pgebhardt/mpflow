@@ -8,8 +8,8 @@
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/dtype.h"
-#include "mpflow/constants.h"
-#include "mpflow/sparse_matrix_kernel.h"
+#include "mpflow/numeric/constants.h"
+#include "mpflow/numeric/sparse_matrix_kernel.h"
 
 // convert to sparse matrix kernel
 template <
@@ -26,9 +26,9 @@ static __global__ void convertKernel(const type* matrix,
     mpFlow::dtype::size count = 0;
 
     // init values and columnIds
-    for (mpFlow::dtype::index j = 0; j < mpFlow::sparseMatrix::block_size; j++) {
-        values[i * mpFlow::sparseMatrix::block_size + j] = 0.0f;
-        columnIds[i * mpFlow::sparseMatrix::block_size + j] = mpFlow::dtype::invalid_index;
+    for (mpFlow::dtype::index j = 0; j < mpFlow::numeric::sparseMatrix::block_size; j++) {
+        values[i * mpFlow::numeric::sparseMatrix::block_size + j] = 0.0f;
+        columnIds[i * mpFlow::numeric::sparseMatrix::block_size + j] = mpFlow::dtype::invalid_index;
     }
 
     // search non-zero elements
@@ -39,14 +39,14 @@ static __global__ void convertKernel(const type* matrix,
 
         // check for non-zero
         if (element != 0.0f) {
-            values[i * mpFlow::sparseMatrix::block_size + count] = element;
-            columnIds[i * mpFlow::sparseMatrix::block_size + count] = j;
+            values[i * mpFlow::numeric::sparseMatrix::block_size + count] = element;
+            columnIds[i * mpFlow::numeric::sparseMatrix::block_size + count] = j;
 
             // increment count
             count++;
 
             // check count
-            if (count >= mpFlow::sparseMatrix::block_size) {
+            if (count >= mpFlow::numeric::sparseMatrix::block_size) {
                 break;
             }
         }
@@ -60,7 +60,7 @@ static __global__ void convertKernel(const type* matrix,
 template <
     class type
 >
-void mpFlow::sparseMatrixKernel::convert(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::numeric::sparseMatrixKernel::convert(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* matrix, dtype::size rows, dtype::size columns,
     type* values, dtype::index* columnIds, dtype::index* elementCount) {
     // call cuda kernel
@@ -84,12 +84,12 @@ static __global__ void convertToMatrixKernel(const type* values,
     mpFlow::dtype::index column_id = mpFlow::dtype::invalid_index;
     for (mpFlow::dtype::index column = 0; column < density; ++column) {
         // get column id
-        column_id = column_ids[row * mpFlow::sparseMatrix::block_size + column];
+        column_id = column_ids[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
         // set matrix value
         if (column_id != mpFlow::dtype::invalid_index) {
             matrix[row + column_id * rows] = values[
-                row * mpFlow::sparseMatrix::block_size + column];
+                row * mpFlow::numeric::sparseMatrix::block_size + column];
         }
     }
 }
@@ -98,7 +98,7 @@ static __global__ void convertToMatrixKernel(const type* values,
 template <
     class type
 >
-void mpFlow::sparseMatrixKernel::convertToMatrix(dim3 blocks, dim3 threads,
+void mpFlow::numeric::sparseMatrixKernel::convertToMatrix(dim3 blocks, dim3 threads,
     cudaStream_t stream, const type* values, const dtype::index* column_ids,
     dtype::size density, dtype::size rows, type* matrix) {
     // call cuda kernel
@@ -126,14 +126,14 @@ static __global__ void multiplyKernel(const type* values,
 
     // read column ids to local memory
     __shared__ mpFlow::dtype::index columnId[
-        mpFlow::sparseMatrix::block_size * mpFlow::sparseMatrix::block_size];
+        mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
     __shared__ type value[
-        mpFlow::sparseMatrix::block_size * mpFlow::sparseMatrix::block_size];
+        mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
 
-    columnId[threadIdx.x * mpFlow::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
-        columnIds[row * mpFlow::sparseMatrix::block_size + threadIdx.y] : mpFlow::dtype::invalid_index;
-    value[threadIdx.x * mpFlow::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
-        values[row * mpFlow::sparseMatrix::block_size + threadIdx.y] : 0.0f;
+    columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
+        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::dtype::invalid_index;
+    value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
+        values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : 0.0f;
 
     __syncthreads();
 
@@ -145,10 +145,10 @@ static __global__ void multiplyKernel(const type* values,
     // read matrix to local memory
     for (mpFlow::dtype::index j = 0; j < density; j++) {
         // get column id
-        id = columnId[threadIdx.x * mpFlow::sparseMatrix::block_size + j];
+        id = columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j];
 
          res += id != mpFlow::dtype::invalid_index ? matrix[id + column * matrix_rows] *
-            value[threadIdx.x * mpFlow::sparseMatrix::block_size + j] : 0.0f;
+            value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j] : 0.0f;
     }
 
     // set result
@@ -159,7 +159,7 @@ static __global__ void multiplyKernel(const type* values,
 template <
     class type
 >
-void mpFlow::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::numeric::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* values, const dtype::index* columnIds,
     const type* matrix, dtype::size result_rows, dtype::size matrix_rows,
     dtype::size columns, dtype::size density, type* result) {
@@ -172,27 +172,27 @@ void mpFlow::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cudaStream_
 
 // specialisations
 // convert to sparse matrix kernel
-template void mpFlow::sparseMatrixKernel::convert<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::numeric::sparseMatrixKernel::convert<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::size,
     mpFlow::dtype::real*, mpFlow::dtype::index*, mpFlow::dtype::index*);
-template void mpFlow::sparseMatrixKernel::convert<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::numeric::sparseMatrixKernel::convert<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::size,
     mpFlow::dtype::index*, mpFlow::dtype::index*, mpFlow::dtype::index*);
 
 // convertToMatrix kernel
-template void mpFlow::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::real* matrix);
-template void mpFlow::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::index* matrix);
 
 // multiply kernel
-template void mpFlow::sparseMatrixKernel::multiply<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::numeric::sparseMatrixKernel::multiply<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
     const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::sparseMatrixKernel::multiply<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::numeric::sparseMatrixKernel::multiply<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::index*);

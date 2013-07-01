@@ -3,11 +3,12 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef MPFLOW_INCLUDE_SPARSE_MATRIX_KERNEL_H
-#define MPFLOW_INCLUDE_SPARSE_MATRIX_KERNEL_H
+#ifndef MPFLOW_INCLUDE_NUMERIC_SPARSE_MATRIX_KERNEL_H
+#define MPFLOW_INCLUDE_NUMERIC_SPARSE_MATRIX_KERNEL_H
 
-// namespace mpFlow
+// namespace mpFlow::numeric
 namespace mpFlow {
+namespace numeric {
     // sparse matrix kernel
     namespace sparseMatrixKernel {
         // convert to sparse matrix kernel
@@ -36,6 +37,7 @@ namespace mpFlow {
             const type* matrix, dtype::size result_rows, dtype::size matrix_rows,
             dtype::size columns, dtype::size density, type* result);
     }
+}
 }
 
 #endif

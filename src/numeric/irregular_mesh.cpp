@@ -6,34 +6,35 @@
 #include "mpflow/mpflow.h"
 
 // create mesh class
-mpFlow::Mesh::Mesh(std::shared_ptr<Matrix<dtype::real>> nodes, std::shared_ptr<Matrix<dtype::index>> elements,
-    std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height)
+mpFlow::numeric::IrregularMesh::IrregularMesh(std::shared_ptr<numeric::Matrix<dtype::real>> nodes,
+    std::shared_ptr<numeric::Matrix<dtype::index>> elements,
+    std::shared_ptr<numeric::Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height)
     : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
         height_(height) {
     // check input
     if (nodes == nullptr) {
-        throw std::invalid_argument("mpFlow::Mesh::Mesh: nodes == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes == nullptr");
     }
     if (nodes->columns() != 2) {
-        throw std::invalid_argument("mpFlow::Mesh::Mesh: nodes->columns() != 2");
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->columns() != 2");
     }
     if (elements == nullptr) {
-        throw std::invalid_argument("mpFlow::Mesh::Mesh: elements == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: elements == nullptr");
     }
     if (boundary == nullptr) {
-        throw std::invalid_argument("mpFlow::Mesh::Mesh: boundary == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: boundary == nullptr");
     }
     if (radius <= 0.0f) {
-        throw std::invalid_argument("mpFlow::Mesh::Mesh: radius <= 0.0");
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: radius <= 0.0");
     }
     if (height <= 0.0f) {
-        throw std::invalid_argument("mpFlow::Mesh::Mesh: height <= 0.0");
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: height <= 0.0");
     }
 }
 
 std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
     mpFlow::dtype::real>>>
-    mpFlow::Mesh::elementNodes(dtype::index element) {
+    mpFlow::numeric::IrregularMesh::elementNodes(dtype::index element) {
     // result array
     std::vector<std::tuple<dtype::index,
         std::tuple<dtype::real, dtype::real>>> result(
@@ -59,7 +60,7 @@ std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
 
 std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
     mpFlow::dtype::real>>>
-    mpFlow::Mesh::boundaryNodes(dtype::index element) {
+    mpFlow::numeric::IrregularMesh::boundaryNodes(dtype::index element) {
     // result vector
     std::vector<std::tuple<dtype::index,
         std::tuple<dtype::real, dtype::real>>> result(
@@ -84,27 +85,27 @@ std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
 }
 
 // create mesh for quadratic basis function
-std::shared_ptr<mpFlow::Mesh> mpFlow::mesh::quadraticBasis(
-    std::shared_ptr<Matrix<dtype::real>> nodes,
-    std::shared_ptr<Matrix<dtype::index>> elements, std::shared_ptr<Matrix<dtype::index>> boundary,
+std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::quadraticBasis(
+    std::shared_ptr<numeric::Matrix<dtype::real>> nodes,
+    std::shared_ptr<numeric::Matrix<dtype::index>> elements, std::shared_ptr<numeric::Matrix<dtype::index>> boundary,
     dtype::real radius, dtype::real height, cudaStream_t stream) {
     // create quadratic grid
     std::tie(nodes, elements, boundary) = quadraticMeshFromLinear(nodes, elements, boundary,
         stream);
 
     // create mesh
-    return std::make_shared<Mesh>(nodes, elements, boundary, radius, height);
+    return std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, height);
 }
 
 // function create quadratic mesh from linear
 std::tuple<
-    std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>>,
-    std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>,
-    std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>>>
-mpFlow::mesh::quadraticMeshFromLinear(
-    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::real>> nodes_old,
-    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>> elements_old,
-    const std::shared_ptr<mpFlow::Matrix<mpFlow::dtype::index>> boundary_old,
+    std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
+    std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
+    std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>>
+mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> nodes_old,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements_old,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> boundary_old,
     cudaStream_t stream) {
     // define vectors for calculation
     std::vector<std::array<mpFlow::dtype::index, 2> > already_calc_midpoints(0);
@@ -219,11 +220,11 @@ mpFlow::mesh::quadraticMeshFromLinear(
     }
 
     // create new element, node and boundary matrices
-    auto nodes_new = std::make_shared<mpFlow::Matrix<mpFlow::dtype::real>>(
+    auto nodes_new = std::make_shared<mpFlow::numeric::Matrix<mpFlow::dtype::real>>(
         quadratic_node_vector.size(), 2, stream);
-    auto elements_new = std::make_shared<mpFlow::Matrix<mpFlow::dtype::index>>(
+    auto elements_new = std::make_shared<mpFlow::numeric::Matrix<mpFlow::dtype::index>>(
         quadratic_elements_vector.size(), 6, stream);
-    auto boundary_new = std::make_shared<mpFlow::Matrix<mpFlow::dtype::index>>(
+    auto boundary_new = std::make_shared<mpFlow::numeric::Matrix<mpFlow::dtype::index>>(
         quadratic_boundary_vector.size(), 3, stream);
 
     // copy element vector to element matrix

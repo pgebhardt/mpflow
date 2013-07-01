@@ -22,16 +22,8 @@ namespace numeric {
             std::shared_ptr<Matrix<dtype::real>> x);
 
         // accessors
-        dtype::size rows() const { return this->rows_; }
-        dtype::size columns() const { return this->columns_; }
-        const std::shared_ptr<Matrix<dtype::real>> residuum() const { return this->residuum_; }
-        const std::shared_ptr<Matrix<dtype::real>> projection() const { return this->projection_; }
-        const std::shared_ptr<Matrix<dtype::real>> rsold() const { return this->rsold_; }
-        const std::shared_ptr<Matrix<dtype::real>> rsnew() const { return this->rsnew_; }
-        const std::shared_ptr<Matrix<dtype::real>> temp_vector() const { return this->temp_vector_; }
-        const std::shared_ptr<Matrix<dtype::real>> temp_number() const { return this->temp_number_; }
-
-        // mutators
+        dtype::size rows() { return this->rows_; }
+        dtype::size columns() { return this->columns_; }
         std::shared_ptr<Matrix<dtype::real>> residuum() { return this->residuum_; }
         std::shared_ptr<Matrix<dtype::real>> projection() { return this->projection_; }
         std::shared_ptr<Matrix<dtype::real>> rsold() { return this->rsold_; }

@@ -3,11 +3,12 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef MPFLOW_INCLUDE_SPARSE_MATRIX_H
-#define MPFLOW_INCLUDE_SPARSE_MATRIX_H
+#ifndef MPFLOW_INCLUDE_NUMERIC_SPARSE_MATRIX_H
+#define MPFLOW_INCLUDE_NUMERIC_SPARSE_MATRIX_H
 
-// namespace mpFlow
+// namespace mpFlow::numeric
 namespace mpFlow {
+namespace numeric {
     // sparse matrix class definition
     template <
         class type = mpFlow::dtype::real
@@ -59,6 +60,7 @@ namespace mpFlow {
         type* values_;
         dtype::index* column_ids_;
     };
+}
 }
 
 #endif

@@ -8,8 +8,8 @@
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/dtype.h"
-#include "mpflow/constants.h"
-#include "mpflow/matrix_kernel.h"
+#include "mpflow/numeric/constants.h"
+#include "mpflow/numeric/matrix_kernel.h"
 
 
 // add kernel
@@ -29,7 +29,7 @@ __global__ void addKernel(const type* matrix, mpFlow::dtype::size rows, type* re
 template <
     class type
 >
-void mpFlow::matrixKernel::add(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::numeric::matrixKernel::add(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* matrix, mpFlow::dtype::size rows, type* result) {
     // call cuda kernel
     addKernel<type><<<blocks, threads, 0, stream>>>(matrix, rows, result);
@@ -38,10 +38,10 @@ void mpFlow::matrixKernel::add(dim3 blocks, dim3 threads, cudaStream_t stream,
 }
 
 // add specialisation
-template void mpFlow::matrixKernel::add<mpFlow::dtype::real>(
+template void mpFlow::numeric::matrixKernel::add<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::real*,
     mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::matrixKernel::add<mpFlow::dtype::index>(
+template void mpFlow::numeric::matrixKernel::add<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index*);
 
@@ -62,7 +62,7 @@ __global__ void scaleKernel(type scalar, mpFlow::dtype::size rows, type* result)
 template <
     class type
 >
-void mpFlow::matrixKernel::scale(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::numeric::matrixKernel::scale(dim3 blocks, dim3 threads, cudaStream_t stream,
     type scalar, dtype::size rows, type* result) {
     // call cuda kernel
     scaleKernel<type><<<blocks, threads, 0, stream>>>(scalar, rows, result);
@@ -71,10 +71,10 @@ void mpFlow::matrixKernel::scale(dim3 blocks, dim3 threads, cudaStream_t stream,
 }
 
 // scale specialisation
-template void mpFlow::matrixKernel::scale<mpFlow::dtype::real>(
+template void mpFlow::numeric::matrixKernel::scale<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, mpFlow::dtype::real, mpFlow::dtype::size,
     mpFlow::dtype::real*);
-template void mpFlow::matrixKernel::scale<mpFlow::dtype::index>(
+template void mpFlow::numeric::matrixKernel::scale<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, mpFlow::dtype::index, mpFlow::dtype::size,
     mpFlow::dtype::index*);
 
@@ -96,7 +96,7 @@ __global__ void vectorDotProductKernel(const type* a, const type* b, mpFlow::dty
 template <
     class type
 >
-void mpFlow::matrixKernel::vectorDotProduct(dim3 blocks, dim3 threads,
+void mpFlow::numeric::matrixKernel::vectorDotProduct(dim3 blocks, dim3 threads,
     cudaStream_t stream, const type* a, const type* b, dtype::size rows,
     type* result) {
     // call cuda kernel
@@ -107,10 +107,10 @@ void mpFlow::matrixKernel::vectorDotProduct(dim3 blocks, dim3 threads,
 }
 
 // vector dot product specialisation
-template void mpFlow::matrixKernel::vectorDotProduct<mpFlow::dtype::real>(
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::real*,
     const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::matrixKernel::vectorDotProduct<mpFlow::dtype::index>(
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::index*);
 
@@ -128,19 +128,19 @@ __global__ void sumKernel(const type* vector, mpFlow::dtype::size rows, mpFlow::
     mpFlow::dtype::index lid = threadIdx.x;
 
     // copy data to shared memory
-    __volatile __shared__ type res[mpFlow::matrix::block_size * mpFlow::matrix::block_size];
-    res[lid + threadIdx.y * mpFlow::matrix::block_size] =
+    __volatile __shared__ type res[mpFlow::numeric::matrix::block_size * mpFlow::numeric::matrix::block_size];
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] =
         gid * offset < rows ? vector[gid * offset + column * rows] : 0.0f;
 
     // reduce
-    res[lid + threadIdx.y * mpFlow::matrix::block_size] +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::matrix::block_size] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::matrix::block_size] +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::matrix::block_size] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::matrix::block_size] +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::matrix::block_size] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::matrix::block_size] +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::matrix::block_size] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
     __syncthreads();
 
     // stop rest of worker
@@ -149,14 +149,14 @@ __global__ void sumKernel(const type* vector, mpFlow::dtype::size rows, mpFlow::
     }
 
     // write to global memory
-    result[gid * offset + column * rows] = res[lid + threadIdx.y * mpFlow::matrix::block_size];
+    result[gid * offset + column * rows] = res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size];
 }
 
 // sum kernel wrapper
 template <
     class type
 >
-void mpFlow::matrixKernel::sum(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::numeric::matrixKernel::sum(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* vector, dtype::size rows, dtype::size offset, type* result) {
     // call cuda kernel
     sumKernel<type><<<blocks, threads, 0, stream>>>(vector, rows, offset, result);
@@ -165,10 +165,10 @@ void mpFlow::matrixKernel::sum(dim3 blocks, dim3 threads, cudaStream_t stream,
 }
 
 // sum specialisation
-template void mpFlow::matrixKernel::sum<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::numeric::matrixKernel::sum<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::matrixKernel::sum<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::numeric::matrixKernel::sum<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::index*);
 
@@ -182,7 +182,7 @@ __global__ void minKernel(const type* vector, mpFlow::dtype::size rows, mpFlow::
     mpFlow::dtype::index lid = threadIdx.x;
 
     // copy data to shared memory
-    __volatile __shared__ type res[mpFlow::matrix::block_size];
+    __volatile __shared__ type res[mpFlow::numeric::matrix::block_size];
     res[lid] = gid * offset < rows ? vector[gid * offset] : NAN;
 
     // reduce
@@ -204,7 +204,7 @@ __global__ void minKernel(const type* vector, mpFlow::dtype::size rows, mpFlow::
 template <
     class type
 >
-void mpFlow::matrixKernel::min(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::numeric::matrixKernel::min(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* vector, dtype::size rows, dtype::size offset, type* result) {
     // call cuda kernel
     minKernel<type><<<blocks, threads, 0, stream>>>(vector, rows, offset, result);
@@ -213,10 +213,10 @@ void mpFlow::matrixKernel::min(dim3 blocks, dim3 threads, cudaStream_t stream,
 }
 
 // min specialisation
-template void mpFlow::matrixKernel::min<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::numeric::matrixKernel::min<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::matrixKernel::min<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::numeric::matrixKernel::min<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::index*);
 
@@ -230,7 +230,7 @@ __global__ void maxKernel(const type* vector, mpFlow::dtype::size rows, mpFlow::
     mpFlow::dtype::index lid = threadIdx.x;
 
     // copy data to shared memory
-    __volatile __shared__ type res[mpFlow::matrix::block_size];
+    __volatile __shared__ type res[mpFlow::numeric::matrix::block_size];
     res[lid] = gid * offset < rows ? vector[gid * offset] : NAN;
 
     // reduce
@@ -252,7 +252,7 @@ __global__ void maxKernel(const type* vector, mpFlow::dtype::size rows, mpFlow::
 template <
     class type
 >
-void mpFlow::matrixKernel::max(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::numeric::matrixKernel::max(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* vector, dtype::size rows, dtype::size offset, type* result) {
     // call cuda kernel
     maxKernel<type><<<blocks, threads, 0, stream>>>(vector, rows, offset, result);
@@ -261,9 +261,9 @@ void mpFlow::matrixKernel::max(dim3 blocks, dim3 threads, cudaStream_t stream,
 }
 
 // max specialisation
-template void mpFlow::matrixKernel::max<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::numeric::matrixKernel::max<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::matrixKernel::max<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::numeric::matrixKernel::max<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::index*);

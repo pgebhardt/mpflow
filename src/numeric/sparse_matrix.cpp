@@ -10,11 +10,11 @@
 template <
     class type
 >
-mpFlow::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<type>> matrix,
+mpFlow::numeric::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<type>> matrix,
     cudaStream_t stream) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::SparseMatrix: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::SparseMatrix: matrix == nullptr");
     }
 
     // create empty sparse matrix
@@ -28,13 +28,13 @@ mpFlow::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<type>> mat
 template <
     class type
 >
-void mpFlow::SparseMatrix<type>::init(dtype::size rows, dtype::size columns) {
+void mpFlow::numeric::SparseMatrix<type>::init(dtype::size rows, dtype::size columns) {
     // check input
     if (rows == 0) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::init: rows == 0");
+        throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::init: rows == 0");
     }
     if (columns == 0) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::init: columns == 0");
+        throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::init: columns == 0");
     }
 
     // init struct
@@ -58,12 +58,12 @@ void mpFlow::SparseMatrix<type>::init(dtype::size rows, dtype::size columns) {
     // create matrices
     if (cudaMalloc((void**)&this->values_, sizeof(type) *
         this->data_rows() * sparseMatrix::block_size) != cudaSuccess) {
-        throw std::logic_error("mpFlow::numeric::SparseMatrix::init: create memory");
+        throw std::logic_error("mpFlow::numeric::numeric::SparseMatrix::init: create memory");
     }
 
     if (cudaMalloc((void**)&this->column_ids_, sizeof(dtype::index) *
         this->data_rows() * sparseMatrix::block_size) != cudaSuccess) {
-        throw std::logic_error("mpFlow::numeric::SparseMatrix::init: create memory");
+        throw std::logic_error("mpFlow::numeric::numeric::SparseMatrix::init: create memory");
     }
 }
 
@@ -71,7 +71,7 @@ void mpFlow::SparseMatrix<type>::init(dtype::size rows, dtype::size columns) {
 template <
     class type
 >
-mpFlow::SparseMatrix<type>::~SparseMatrix() {
+mpFlow::numeric::SparseMatrix<type>::~SparseMatrix() {
     // release matrices
     cudaFree(this->values_);
     cudaFree(this->column_ids_);
@@ -82,11 +82,11 @@ mpFlow::SparseMatrix<type>::~SparseMatrix() {
 template <
     class type
 >
-void mpFlow::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<type>> matrix,
+void mpFlow::numeric::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<type>> matrix,
     cudaStream_t stream) {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::convert: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::convert: matrix == nullptr");
     }
 
     // create elementCount matrix
@@ -94,8 +94,8 @@ void mpFlow::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<type>> mat
     auto maxCount = std::make_shared<Matrix<dtype::index>>(this->data_rows(), 1, stream);
 
     // execute kernel
-    sparseMatrixKernel::convert(this->data_rows() / mpFlow::matrix::block_size,
-        mpFlow::matrix::block_size, stream, matrix->device_data(), matrix->data_rows(),
+    sparseMatrixKernel::convert(this->data_rows() / matrix::block_size,
+        matrix::block_size, stream, matrix->device_data(), matrix->data_rows(),
         matrix->data_columns(), this->values(), this->column_ids(),
         elementCount->device_data());
 
@@ -112,15 +112,15 @@ void mpFlow::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<type>> mat
 template <
     class type
 >
-std::shared_ptr<mpFlow::Matrix<type>> mpFlow::SparseMatrix<type>::toMatrix(
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::SparseMatrix<type>::toMatrix(
     cudaStream_t stream) {
     // create empty matrix
     auto matrix = std::make_shared<Matrix<type>>(this->rows(),
         this->columns(), stream);
 
     // convert to matrix
-    sparseMatrixKernel::convertToMatrix(this->data_rows() / mpFlow::matrix::block_size,
-        mpFlow::matrix::block_size, stream, this->values(), this->column_ids(),
+    sparseMatrixKernel::convertToMatrix(this->data_rows() / matrix::block_size,
+        matrix::block_size, stream, this->values(), this->column_ids(),
         this->density(), matrix->data_rows(), matrix->device_data());
 
     return matrix;
@@ -130,21 +130,21 @@ std::shared_ptr<mpFlow::Matrix<type>> mpFlow::SparseMatrix<type>::toMatrix(
 template <
     class type
 >
-void mpFlow::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<type>> matrix,
+void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<type>> matrix,
     cudaStream_t stream, std::shared_ptr<Matrix<type>> result) const {
     // check input
     if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::multiply: matrix == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::multiply: matrix == nullptr");
     }
     if (result == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::multiply: result == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::multiply: result == nullptr");
     }
 
     // check size
     if ((result->data_rows() != this->data_rows()) ||
         (this->data_columns() != matrix->data_rows()) ||
         (result->data_columns() != matrix->data_columns())) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::multiply: shape does not match");
+        throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::multiply: shape does not match");
     }
 
     // kernel dimension
@@ -159,5 +159,5 @@ void mpFlow::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<type>> ma
 }
 
 // specialisations
-template class mpFlow::SparseMatrix<mpFlow::dtype::real>;
-template class mpFlow::SparseMatrix<mpFlow::dtype::index>;
+template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::real>;
+template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::index>;

@@ -9,13 +9,13 @@
 #include "common.h"
 #include "cuda_error.h"
 #include "dtype.h"
-#include "constants.h"
 #include "mathematics.h"
-#include "matrix.h"
-#include "sparse_matrix.h"
-#include "mesh.h"
 
 // numeric solver
+#include "numeric/constants.h"
+#include "numeric/matrix.h"
+#include "numeric/sparse_matrix.h"
+#include "numeric/irregular_mesh.h"
 #include "numeric/conjugate.h"
 #include "numeric/fast_conjugate.h"
 #include "numeric/pre_conjugate.h"

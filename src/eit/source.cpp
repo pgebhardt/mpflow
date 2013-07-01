@@ -6,9 +6,9 @@
 #include "mpflow/mpflow.h"
 
 mpFlow::EIT::source::Source::Source(std::string type, const std::vector<dtype::real>& values,
-    std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
-    dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-    std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
+    std::shared_ptr<numeric::IrregularMesh> mesh, std::shared_ptr<Electrodes> electrodes,
+    dtype::size component_count, std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
     cudaStream_t stream)
     : type_(type), mesh_(mesh), electrodes_(electrodes), drive_pattern_(drive_pattern),
         measurement_pattern_(measurement_pattern), values_(values),
@@ -36,20 +36,20 @@ mpFlow::EIT::source::Source::Source(std::string type, const std::vector<dtype::r
     }
 
     // create matrices
-    this->pattern_ = std::make_shared<Matrix<dtype::real>>(
+    this->pattern_ = std::make_shared<numeric::Matrix<dtype::real>>(
         this->electrodes()->count(), this->drive_count() + this->measurement_count(), stream);
-    this->d_matrix_ = std::make_shared<Matrix<dtype::real>>(this->electrodes()->count(),
+    this->d_matrix_ = std::make_shared<numeric::Matrix<dtype::real>>(this->electrodes()->count(),
         this->electrodes()->count(), stream);
-    this->w_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
+    this->w_matrix_ = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
         this->electrodes()->count(), stream);
-    this->x_matrix_ = std::make_shared<Matrix<dtype::real>>(this->electrodes()->count(),
+    this->x_matrix_ = std::make_shared<numeric::Matrix<dtype::real>>(this->electrodes()->count(),
         this->mesh()->nodes()->rows(), stream);
-    this->z_matrix_ = std::make_shared<Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
+    this->z_matrix_ = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->nodes()->rows(),
         this->mesh()->nodes()->rows(), stream);
 
     // excitation matrices
     for (dtype::index component = 0; component < this->component_count(); ++component) {
-        this->excitation_.push_back(std::make_shared<Matrix<dtype::real>>(
+        this->excitation_.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
             this->mesh()->nodes()->rows() + this->electrodes()->count(),
             this->drive_count() + this->measurement_count(), stream));
     }
@@ -71,9 +71,9 @@ mpFlow::EIT::source::Source::Source(std::string type, const std::vector<dtype::r
 }
 
 mpFlow::EIT::source::Source::Source(std::string type, dtype::real value,
-    std::shared_ptr<Mesh> mesh, std::shared_ptr<Electrodes> electrodes,
-    dtype::size component_count, std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-    std::shared_ptr<Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
+    std::shared_ptr<numeric::IrregularMesh> mesh, std::shared_ptr<Electrodes> electrodes,
+    dtype::size component_count, std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern, cublasHandle_t handle,
     cudaStream_t stream)
     : Source(type, std::vector<dtype::real>(drive_pattern->columns(), value),
         mesh, electrodes, component_count, drive_pattern, measurement_pattern, handle,
@@ -85,10 +85,10 @@ template <
     class basis_function_type
 >
 mpFlow::EIT::source::Current<basis_function_type>::Current(
-    const std::vector<dtype::real>& current, std::shared_ptr<Mesh> mesh,
+    const std::vector<dtype::real>& current, std::shared_ptr<numeric::IrregularMesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
-    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
     : Source("current", current, mesh, electrodes, component_count,
         drive_pattern, measurement_pattern, handle, stream) {
@@ -102,10 +102,10 @@ template <
     class basis_function_type
 >
 mpFlow::EIT::source::Current<basis_function_type>::Current(
-    dtype::real current, std::shared_ptr<Mesh> mesh,
+    dtype::real current, std::shared_ptr<numeric::IrregularMesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
-    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
     : Current(std::vector<dtype::real>(drive_pattern->columns(), current),
         mesh, electrodes, component_count, drive_pattern, measurement_pattern,
@@ -240,10 +240,10 @@ template <
     class basis_function_type
 >
 mpFlow::EIT::source::Voltage<basis_function_type>::Voltage(
-    const std::vector<dtype::real>& voltage, std::shared_ptr<Mesh> mesh,
+    const std::vector<dtype::real>& voltage, std::shared_ptr<numeric::IrregularMesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
-    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
     : Source("voltage", voltage, mesh, electrodes, component_count,
         drive_pattern, measurement_pattern, handle, stream) {
@@ -270,10 +270,10 @@ template <
     class basis_function_type
 >
 mpFlow::EIT::source::Voltage<basis_function_type>::Voltage(
-    dtype::real voltage, std::shared_ptr<Mesh> mesh,
+    dtype::real voltage, std::shared_ptr<numeric::IrregularMesh> mesh,
     std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
-    std::shared_ptr<Matrix<dtype::real>> drive_pattern,
-    std::shared_ptr<Matrix<dtype::real>> measurement_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
+    std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
     cublasHandle_t handle, cudaStream_t stream)
     : Voltage(std::vector<dtype::real>(drive_pattern->columns(), voltage),
         mesh, electrodes, component_count, drive_pattern, measurement_pattern,

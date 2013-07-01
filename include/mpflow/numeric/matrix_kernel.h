@@ -3,11 +3,12 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef MPFLOW_INCLUDE_MATRIX_KERNEL_H
-#define MPFLOW_INCLUDE_MATRIX_KERNEL_H
+#ifndef MPFLOW_INCLUDE_NUMERIC_MATRIX_KERNEL_H
+#define MPFLOW_INCLUDE_NUMERIC_MATRIX_KERNEL_H
 
-// namespace mpFlow
+// namespace mpFlow::numeric
 namespace mpFlow {
+namespace numeric {
     // matrix kernel
     namespace matrixKernel {
         // add kernel
@@ -52,6 +53,7 @@ namespace mpFlow {
         void max(dim3 blocks, dim3 threads, cudaStream_t stream,
             const type* vector, dtype::size rows, dtype::size offset, type* result);
     }
+}
 }
 
 #endif
