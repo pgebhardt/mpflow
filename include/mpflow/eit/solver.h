@@ -12,7 +12,6 @@ namespace EIT {
 namespace solver {
     // class for solving differential EIT
     template <
-        class numerical_forward_solver_type,
         class numerical_inverse_solver_type
     >
     class Solver {
@@ -32,7 +31,7 @@ namespace solver {
 
         // accessors
         std::shared_ptr<mpFlow::EIT::model::Base> model() { return this->model_; }
-        std::shared_ptr<Forward<numerical_forward_solver_type>> forward_solver() {
+        std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver() {
             return this->forward_solver_;
         }
         std::shared_ptr<Inverse<numerical_inverse_solver_type>> inverse_solver() {
@@ -40,17 +39,17 @@ namespace solver {
         }
         std::shared_ptr<numeric::Matrix<dtype::real>> gamma() { return this->gamma_; }
         std::shared_ptr<numeric::Matrix<dtype::real>> dgamma() { return this->dgamma_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> measurement(dtype::index index) {
-            return this->measurement_[index];
+        std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& measurement() {
+            return this->measurement_;
         }
-        std::shared_ptr<numeric::Matrix<dtype::real>> calculation(dtype::index index) {
-            return this->calculation_[index];
+        std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& calculation() {
+            return this->calculation_;
         }
 
     private:
         // member
         std::shared_ptr<mpFlow::EIT::model::Base> model_;
-        std::shared_ptr<Forward<numerical_forward_solver_type>> forward_solver_;
+        std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver_;
         std::shared_ptr<Inverse<numerical_inverse_solver_type>> inverse_solver_;
         std::shared_ptr<numeric::Matrix<dtype::real>> gamma_;
         std::shared_ptr<numeric::Matrix<dtype::real>> dgamma_;

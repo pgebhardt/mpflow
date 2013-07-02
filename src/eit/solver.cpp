@@ -7,10 +7,9 @@
 
 // create solver
 template <
-    class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
-mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::Solver(
+mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::Solver(
     std::shared_ptr<model::Base> model, dtype::index parallel_images,
     dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : model_(model) {
@@ -23,7 +22,7 @@ mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_sol
     }
 
     // create forward solver
-    this->forward_solver_ = std::make_shared<Forward<numerical_forward_solver_type>>(
+    this->forward_solver_ = std::make_shared<Forward<numeric::SparseConjugate>>(
         this->model(), handle, stream);
 
     // create inverse solver
@@ -50,10 +49,9 @@ mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_sol
 
 // pre solve for accurate initial jacobian
 template <
-    class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
-void mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::preSolve(
+void mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::preSolve(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
@@ -77,11 +75,10 @@ void mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_invers
 
 // solve differential
 template <
-    class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::solve_differential(
+    mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::solve_differential(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
@@ -89,19 +86,18 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     }
 
     // solve
-    this->inverse_solver()->solve(this->model()->jacobian(), this->calculation_,
-        this->measurement_, 180, handle, stream, this->dgamma());
+    this->inverse_solver()->solve(this->model()->jacobian(), this->calculation(),
+        this->measurement(), 180, handle, stream, this->dgamma());
 
     return this->dgamma();
 }
 
 // solve absolute
 template <
-    class numerical_forward_solver_type,
     class numerical_inverse_solver_type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::solver::Solver<numerical_forward_solver_type, numerical_inverse_solver_type>::solve_absolute(
+    mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::solve_absolute(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
@@ -118,7 +114,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> calculation(
         1, this->forward_solver()->voltage());
     this->inverse_solver()->solve(this->model()->jacobian(), calculation,
-        this->measurement_, 180, handle, stream, this->dgamma());
+        this->measurement(), 180, handle, stream, this->dgamma());
 
     // add to gamma
     this->gamma()->add(this->dgamma(), stream);
@@ -127,5 +123,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 }
 
 // specialisation
-template class mpFlow::EIT::solver::Solver<mpFlow::numeric::SparseConjugate, mpFlow::numeric::Conjugate>;
-template class mpFlow::EIT::solver::Solver<mpFlow::numeric::SparseConjugate, mpFlow::numeric::FastConjugate>;
+template class mpFlow::EIT::solver::Solver<mpFlow::numeric::Conjugate>;
+template class mpFlow::EIT::solver::Solver<mpFlow::numeric::FastConjugate>;
