@@ -14,7 +14,10 @@ fasteit = sconshelper.Library(name='mpflow', env=env, arguments=ARGUMENTS,
     source_suffix=['cu'],
     CXXFLAGS=[
         '-std=c++11',
-        '-O3',
+        '-O4',
+        ],
+    LINKFLAGS=[
+        '-O4',
         ],
     NVCCFLAGS=[
         '-Xcompiler',
