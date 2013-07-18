@@ -30,7 +30,6 @@ namespace solver {
             cudaStream_t stream);
 
         // accessors
-        std::shared_ptr<mpFlow::EIT::model::Base> model() { return this->model_; }
         std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver() {
             return this->forward_solver_;
         }
@@ -48,7 +47,6 @@ namespace solver {
 
     private:
         // member
-        std::shared_ptr<mpFlow::EIT::model::Base> model_;
         std::shared_ptr<Forward<numeric::SparseConjugate>> forward_solver_;
         std::shared_ptr<Inverse<numerical_inverse_solver_type>> inverse_solver_;
         std::shared_ptr<numeric::Matrix<dtype::real>> gamma_;
