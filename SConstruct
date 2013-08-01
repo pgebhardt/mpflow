@@ -1,4 +1,5 @@
 import sconshelper
+from subprocess import Popen, PIPE
 
 # create environment
 env = Environment()
@@ -8,6 +9,10 @@ env.Tool('cuda')
 
 # use clang++
 env.Replace(CXX='clang++')
+
+# get current git version
+gitproc = Popen(['git', 'describe', '--tags', '--long'], stdout=PIPE)
+version = '\\\"{}\\\"'.format(gitproc.communicate()[0].rstrip())
 
 # create library
 fasteit = sconshelper.Library(name='mpflow', env=env, arguments=ARGUMENTS,
@@ -42,4 +47,7 @@ fasteit = sconshelper.Library(name='mpflow', env=env, arguments=ARGUMENTS,
         'pthread',
         'dl'
         ],
+    CPPDEFINES={
+        'GIT_VERSION': version,
+        },
     )

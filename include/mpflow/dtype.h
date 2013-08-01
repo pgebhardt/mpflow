@@ -6,7 +6,7 @@
 #ifndef MPFLOW_INCLUDE_DTYPE_H
 #define MPFLOW_INCLUDE_DTYPE_H
 
-//namespace mpFlow
+// namespace mpFlow::dtype
 namespace mpFlow {
 namespace dtype {
     // basic scalar types

@@ -7,6 +7,7 @@
 #define MPFLOW_INCLUDE_MPFLOW_H
 
 #include "common.h"
+#include "version.h"
 #include "cuda_error.h"
 #include "dtype.h"
 #include "mathematics.h"
