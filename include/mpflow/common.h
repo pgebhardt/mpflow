@@ -26,4 +26,7 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+// eigen for easier array handling on cpu
+#include <Eigen/Dense>
+
 #endif

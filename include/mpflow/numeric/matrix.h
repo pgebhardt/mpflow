@@ -79,31 +79,21 @@ namespace numeric {
 
     // namespace matrix
     namespace matrix {
-        // load matrix from stream
+        // converts matrix to eigen array
         template <
             class type
         >
-        std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream* istream,
+        Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> toEigen(
+            std::shared_ptr<Matrix<type>> matrix);
+
+        // converts eigen array to matrix
+        template <
+            class mpflow_type,
+            class eigen_type
+        >
+        std::shared_ptr<Matrix<mpflow_type>> fromEigen(
+            const Eigen::Ref<Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic>>& array,
             cudaStream_t stream);
-
-        // load matrix from file
-        template <
-            class type
-        >
-        std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
-            cudaStream_t stream);
-
-        // save matrix to stream
-        template <
-            class type
-        >
-        void savetxt(const std::shared_ptr<Matrix<type>> matrix, std::ostream* ostream);
-
-        // save matrix to file
-        template <
-            class type
-        >
-        void savetxt(const std::string filename, const std::shared_ptr<Matrix<type>> matrix);
     }
 }
 }
