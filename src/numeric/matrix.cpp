@@ -443,6 +443,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
     memcpy(matrix->host_data(), mpflow_array.data(), sizeof(mpflow_type) *
         matrix->data_rows() * matrix->data_columns());
 
+    // copy data to device
+    matrix->copyToDevice(stream);
+
     return matrix;
 }
 
