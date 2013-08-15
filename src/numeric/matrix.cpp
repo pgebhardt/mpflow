@@ -397,6 +397,143 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
     while (offset * matrix::block_size < this->data_rows());
 }
 
+// load matrix from stream
+template <
+    class type
+>
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(std::istream* istream,
+    cudaStream_t stream) {
+    // check input
+    if (istream == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::matrix::loadtxt: istream == nullptr");
+    }
+
+    // read matrix
+    std::vector<std::vector<type>> values;
+    std::string line;
+    type value;
+    while (!istream->eof()) {
+        // read line
+        getline(*istream, line);
+
+        // check succes
+        if (istream->fail()) {
+            break;
+        }
+
+        // create string stream
+        std::stringstream line_stream(line);
+
+        // read values of line
+        std::vector<type> row;
+        while (!line_stream.eof()) {
+            // read value
+            line_stream >> value;
+
+            // check read error
+            if (line_stream.bad()) {
+                throw std::logic_error("mpFlow::numeric::matrix::loadtxt: invalid value");
+            }
+
+            row.push_back(value);
+        }
+
+        // add row
+        if (row.size() != 0) {
+            values.push_back(row);
+        }
+    }
+
+    // create matrix
+    auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
+
+    // add values
+    for (dtype::index row = 0; row < matrix->rows(); ++row) {
+        for (dtype::index column = 0; column < matrix->columns(); ++column) {
+            (*matrix)(row, column) = values[row][column];
+        }
+    }
+
+    // copy data to device
+    matrix->copyToDevice(stream);
+
+    return matrix;
+}
+
+// load matrix from file
+template <
+    class type
+>
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(
+    const std::string filename, cudaStream_t stream) {
+    // open file stream
+    std::ifstream file;
+    file.open(filename.c_str());
+
+    // check open
+    if (file.fail()) {
+        throw std::logic_error("mpFlow::numeric::matrix::loadtxt: cannot open file!");
+    }
+
+    // load matrix
+    auto matrix = loadtxt<type>(&file, stream);
+
+    // close file
+    file.close();
+
+    return matrix;
+}
+
+// save matrix to stream
+template <
+    class type
+>
+void mpFlow::numeric::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix,
+    std::ostream* ostream) {
+    // check input
+    if (matrix == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: matrix == nullptr");
+    }
+    if (ostream == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: ostream == nullptr");
+    }
+
+    // write data
+    for (dtype::index row = 0; row < matrix->rows(); ++row) {
+        for (dtype::index column = 0; column < matrix->columns() - 1; ++column) {
+            *ostream << (*matrix)(row, column) << " ";
+        }
+        *ostream << (*matrix)(row, matrix->columns() - 1) << std::endl;
+    }
+}
+
+// save matrix to file
+template <
+    class type
+>
+void mpFlow::numeric::matrix::savetxt(const std::string filename,
+    const std::shared_ptr<Matrix<type>> matrix) {
+    // check input
+    if (matrix == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: matrix == nullptr");
+    }
+
+    // open file stream
+    std::ofstream file;
+    file.open(filename.c_str());
+
+    // check open
+    if (file.fail()) {
+        throw std::logic_error("mpFlow::numeric::matrix::savetxt: cannot open file!");
+    }
+
+    // save matrix
+    savetxt<type>(matrix, &file);
+
+    // close file
+    file.close();
+}
+
 // converts matrix to eigen array
 template <
     class type
@@ -450,6 +587,26 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
 }
 
 // specialisation
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(std::istream*, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(std::istream*, cudaStream_t);
+
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(const std::string, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(const std::string, cudaStream_t);
+
+template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::real>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>, std::ostream*);
+template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::index>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>, std::ostream*);
+
+template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::real>(const std::string,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>);
+template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::index>(const std::string,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>);
+
 template Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
     std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>);
 template Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
