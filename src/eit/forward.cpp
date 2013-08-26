@@ -11,14 +11,11 @@ template <
     class numerical_solver
 >
 mpFlow::EIT::solver::Forward<numerical_solver>::Forward(
-    std::shared_ptr<mpFlow::EIT::model::Base> model, cublasHandle_t handle, cudaStream_t stream)
+    std::shared_ptr<mpFlow::EIT::model::Base> model, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::solver::Forward::Forward: model == nullptr");
-    }
-    if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::solver::Forward::Forward: handle == nullptr");
     }
 
     // create numerical_solver solver

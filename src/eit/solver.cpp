@@ -24,7 +24,7 @@ mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::Solver(
 
     // create forward solver
     this->forward_solver_ = std::make_shared<Forward<numeric::SparseConjugate>>(
-        model, handle, stream);
+        model, stream);
 
     // create inverse solver
     this->inverse_solver_ = std::make_shared<Inverse<numerical_inverse_solver_type>>(

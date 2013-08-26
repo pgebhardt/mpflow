@@ -17,8 +17,7 @@ namespace solver {
     class Forward {
     public:
         // constructor
-        Forward(std::shared_ptr<mpFlow::EIT::model::Base> model, cublasHandle_t handle,
-            cudaStream_t stream);
+        Forward(std::shared_ptr<mpFlow::EIT::model::Base> model, cudaStream_t stream);
 
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dtype::real>> result,
