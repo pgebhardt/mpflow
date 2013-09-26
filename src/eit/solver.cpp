@@ -107,6 +107,12 @@ template <
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::solve_absolute(
     cublasHandle_t handle, cudaStream_t stream) {
+    // only execute method, when parallel_images == 1
+    if (this->measurement().size() != 1) {
+        throw std::runtime_error(
+            "mpFlow::EIT::solver::Solver::solve_absolute: parallel_images != 1");
+    }
+
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
