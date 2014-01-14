@@ -22,8 +22,10 @@
 #include "numeric/pre_conjugate.h"
 #include "numeric/sparse_conjugate.h"
 
+// FEM specific
+#include "fem/basis.h"
+
 // EIT specific
-#include "eit/basis.h"
 #include "eit/electrodes.h"
 #include "eit/source.h"
 #include "eit/model.h"

@@ -395,7 +395,7 @@ void mpFlow::EIT::source::Voltage<model_type>::updateExcitation(cublasHandle_t h
 }
 
 // specialisation
-template class mpFlow::EIT::source::Current<mpFlow::EIT::basis::Linear>;
-template class mpFlow::EIT::source::Voltage<mpFlow::EIT::basis::Linear>;
-template class mpFlow::EIT::source::Current<mpFlow::EIT::basis::Quadratic>;
-template class mpFlow::EIT::source::Voltage<mpFlow::EIT::basis::Quadratic>;
+template class mpFlow::EIT::source::Current<mpFlow::FEM::basis::Linear>;
+template class mpFlow::EIT::source::Voltage<mpFlow::FEM::basis::Linear>;
+template class mpFlow::EIT::source::Current<mpFlow::FEM::basis::Quadratic>;
+template class mpFlow::EIT::source::Voltage<mpFlow::FEM::basis::Quadratic>;

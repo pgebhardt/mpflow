@@ -9,14 +9,14 @@
 using namespace std;
 
 // create basis class
-mpFlow::EIT::basis::${name}::${name}(
+mpFlow::FEM::basis::${name}::${name}(
     std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
     dtype::index one)
-    : mpFlow::EIT::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
+    : mpFlow::FEM::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
     // check one
     if (one >= nodes_per_element) {
         throw std::invalid_argument(
-            "mpFlow::EIT::basis::${name}::${name}: one >= nodes_per_element");
+            "mpFlow::FEM::basis::${name}::${name}: one >= nodes_per_element");
     }
 
     // calc coefficients with gauss
@@ -48,7 +48,7 @@ ${integrateWithBasis}
 ${integrateGradientWithBasis}
 
 // integrate edge
-mpFlow::dtype::real mpFlow::EIT::basis::${name}::integrateBoundaryEdge(
+mpFlow::dtype::real mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
     std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
     // calc coefficients for basis function
@@ -64,7 +64,7 @@ mpFlow::dtype::real mpFlow::EIT::basis::${name}::integrateBoundaryEdge(
 }
 
 // integrate edge with other
-mpFlow::dtype::real mpFlow::EIT::basis::${name}::integrateBoundaryEdgeWithOther(
+mpFlow::dtype::real mpFlow::FEM::basis::${name}::integrateBoundaryEdgeWithOther(
     std::array<dtype::real, nodes_per_edge> nodes, dtype::index self,
     dtype::index other, dtype::real start, dtype::real end) {
     // calc coefficients for basis function

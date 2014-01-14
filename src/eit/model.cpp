@@ -480,14 +480,14 @@ template void mpFlow::EIT::model::reduceMatrix<mpFlow::dtype::index>(
     const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
     std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
 
-template void mpFlow::EIT::model::calcJacobian<mpFlow::EIT::basis::Linear>(
+template void mpFlow::EIT::model::calcJacobian<mpFlow::FEM::basis::Linear>(
     const std::shared_ptr<numeric::Matrix<dtype::real>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
     const std::shared_ptr<numeric::Matrix<dtype::index>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<numeric::Matrix<dtype::real>>);
-template void mpFlow::EIT::model::calcJacobian<mpFlow::EIT::basis::Quadratic>(
+template void mpFlow::EIT::model::calcJacobian<mpFlow::FEM::basis::Quadratic>(
     const std::shared_ptr<numeric::Matrix<dtype::real>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
     const std::shared_ptr<numeric::Matrix<dtype::index>>, const std::shared_ptr<numeric::Matrix<dtype::real>>,
     dtype::size, dtype::size, dtype::real, bool, cudaStream_t, std::shared_ptr<numeric::Matrix<dtype::real>>);
 
-template class mpFlow::EIT::Model<mpFlow::EIT::basis::Linear>;
-template class mpFlow::EIT::Model<mpFlow::EIT::basis::Quadratic>;
+template class mpFlow::EIT::Model<mpFlow::FEM::basis::Linear>;
+template class mpFlow::EIT::Model<mpFlow::FEM::basis::Quadratic>;

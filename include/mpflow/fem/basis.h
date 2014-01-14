@@ -3,12 +3,12 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef MPFLOW_INCLUDE_EIT_BASIS_H
-#define MPFLOW_INCLUDE_EIT_BASIS_H
+#ifndef MPFLOW_INCLUDE_FEM_BASIS_H
+#define MPFLOW_INCLUDE_FEM_BASIS_H
 
-// namespace mpFlow::EIT::basis
+// namespace mpFlow::FEM::basis
 namespace mpFlow {
-namespace EIT {
+namespace FEM {
 namespace basis {
     // abstract basis class
     template <

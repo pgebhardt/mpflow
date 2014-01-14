@@ -153,7 +153,7 @@ class Basis(object):
                 this_coefficients,
                 dtype='mpFlow::dtype::real',
                 custom_args=['std::tuple<dtype::real, dtype::real> point'],
-                name='mpFlow::EIT::basis::{}::evaluate'.format(self.name),
+                name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
                 ),
 
             # model integrals
@@ -161,13 +161,13 @@ class Basis(object):
                 points_args, this_coefficients, other_coefficients,
                 dtype='mpFlow::dtype::real',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
-                name='mpFlow::EIT::basis::{}::integrateWithBasis'.format(self.name),
+                name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
                 ),
             integrateGradientWithBasis=self.integrateGradientWithBasis(
                 points_args, this_coefficients, other_coefficients,
                 dtype='mpFlow::dtype::real',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
-                name='mpFlow::EIT::basis::{}::integrateGradientWithBasis'.format(self.name),
+                name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
                 ),
 
             # integrate boundary
