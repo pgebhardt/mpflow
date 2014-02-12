@@ -9,15 +9,14 @@
 // namespace mpFlow::EIT::solver
 namespace mpFlow {
 namespace EIT {
-namespace solver {
     // forward solver class definition
     template <
         class numerical_solver
     >
-    class Forward {
+    class ForwardSolver {
     public:
         // constructor
-        Forward(std::shared_ptr<mpFlow::EIT::model::Base> model, cudaStream_t stream);
+        ForwardSolver(std::shared_ptr<mpFlow::EIT::model::Base> model, cudaStream_t stream);
 
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dtype::real>> result,
@@ -41,7 +40,6 @@ namespace solver {
         std::shared_ptr<numeric::Matrix<dtype::real>> voltage_;
         std::shared_ptr<numeric::Matrix<dtype::real>> current_;
     };
-}
 }
 }
 

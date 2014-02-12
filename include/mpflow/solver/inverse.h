@@ -3,12 +3,11 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef MPFLOW_INCLDUE_EIT_INVERSE_H
-#define MPFLOW_INCLDUE_EIT_INVERSE_H
+#ifndef MPFLOW_INCLDUE_SOLVER_INVERSE_H
+#define MPFLOW_INCLDUE_SOLVER_INVERSE_H
 
-// namespace mpFlow::EIT::solver
+// namespace mpFlow::solver
 namespace mpFlow {
-namespace EIT {
 namespace solver {
     // inverse solver class definition
     template <
@@ -58,7 +57,6 @@ namespace solver {
         std::shared_ptr<numeric::Matrix<dtype::real>> jacobian_square_;
         dtype::real regularization_factor_;
     };
-}
 }
 }
 

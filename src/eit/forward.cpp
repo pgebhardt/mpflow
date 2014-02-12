@@ -10,12 +10,12 @@
 template <
     class numerical_solver
 >
-mpFlow::EIT::solver::Forward<numerical_solver>::Forward(
+mpFlow::EIT::ForwardSolver<numerical_solver>::ForwardSolver(
     std::shared_ptr<mpFlow::EIT::model::Base> model, cudaStream_t stream)
     : model_(model) {
     // check input
     if (model == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::solver::Forward::Forward: model == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::ForwardSolver: model == nullptr");
     }
 
     // create numerical_solver solver
@@ -37,7 +37,7 @@ mpFlow::EIT::solver::Forward<numerical_solver>::Forward(
 template <
     class numerical_solver
 >
-void mpFlow::EIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
+void mpFlow::EIT::ForwardSolver<numerical_solver>::applyMeasurementPattern(
     std::shared_ptr<numeric::Matrix<dtype::real>> result, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
@@ -71,11 +71,11 @@ void mpFlow::EIT::solver::Forward<numerical_solver>::applyMeasurementPattern(
 template <
     class numerical_solver
 >
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::solver::Forward<numerical_solver>::solve(
+std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::ForwardSolver<numerical_solver>::solve(
     const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps, cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::solver::Forward::solve: gamma == nullptr");
+        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
     }
 
     // update system matrix
@@ -119,4 +119,4 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::solve
 }
 
 // specialisation
-template class mpFlow::EIT::solver::Forward<mpFlow::numeric::SparseConjugate>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::SparseConjugate>;

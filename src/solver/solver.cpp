@@ -7,24 +7,24 @@
 
 // create solver
 template <
+    class forward_solver_type,
     class numerical_inverse_solver_type
 >
-mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::Solver(
-    std::shared_ptr<model::Base> model, dtype::index parallel_images,
+mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::Solver(
+    std::shared_ptr<forward_solver_type> forward_solver, dtype::index parallel_images,
     dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream)
     : forward_solver_(nullptr), inverse_solver_(nullptr), gamma_(nullptr),
     dgamma_(nullptr) {
     // check input
-    if (model == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::solver::Solver::Solver: model == nullptr");
+    if (forward_solver == nullptr) {
+        throw std::invalid_argument("mpFlow::solver::Solver::Solver: forward_solver == nullptr");
     }
     if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::solver::Solver::Solver: handle == nullptr");
+        throw std::invalid_argument("mpFlow::solver::Solver::Solver: handle == nullptr");
     }
 
-    // create forward solver
-    this->forward_solver_ = std::make_shared<Forward<numeric::SparseConjugate>>(
-        model, stream);
+    // save forward solver
+    this->forward_solver_ = forward_solver;
 
     // create inverse solver
     this->inverse_solver_ = std::make_shared<Inverse<numerical_inverse_solver_type>>(
@@ -52,13 +52,14 @@ mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::Solver(
 
 // pre solve for accurate initial jacobian
 template <
+    class forward_solver_type,
     class numerical_inverse_solver_type
 >
-void mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::preSolve(
+void mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::preSolve(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::solver::Solver::pre_solve: handle == nullptr");
+        throw std::invalid_argument("mpFlow::solver::Solver::pre_solve: handle == nullptr");
     }
 
     // forward solving a few steps
@@ -80,15 +81,16 @@ void mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::preSolve(
 
 // solve differential
 template <
+    class forward_solver_type,
     class numerical_inverse_solver_type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::solve_differential(
+    mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::solve_differential(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
-            "mpFlow::EIT::solver::Solver::solve_differential: handle == nullptr");
+            "mpFlow::solver::Solver::solve_differential: handle == nullptr");
     }
 
     // solve
@@ -102,21 +104,22 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
 // solve absolute
 template <
+    class forward_solver_type,
     class numerical_inverse_solver_type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::solver::Solver<numerical_inverse_solver_type>::solve_absolute(
+    mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::solve_absolute(
     cublasHandle_t handle, cudaStream_t stream) {
     // only execute method, when parallel_images == 1
     if (this->measurement().size() != 1) {
         throw std::runtime_error(
-            "mpFlow::EIT::solver::Solver::solve_absolute: parallel_images != 1");
+            "mpFlow::solver::Solver::solve_absolute: parallel_images != 1");
     }
 
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
-            "mpFlow::EIT::solver::Solver::solve_absolute: handle == nullptr");
+            "mpFlow::solver::Solver::solve_absolute: handle == nullptr");
     }
 
     // solve forward
@@ -141,5 +144,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 }
 
 // specialisation
-template class mpFlow::EIT::solver::Solver<mpFlow::numeric::Conjugate>;
-template class mpFlow::EIT::solver::Solver<mpFlow::numeric::FastConjugate>;
+template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::SparseConjugate>, mpFlow::numeric::Conjugate>;
+template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::SparseConjugate>, mpFlow::numeric::FastConjugate>;

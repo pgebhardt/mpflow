@@ -30,7 +30,9 @@
 #include "eit/source.h"
 #include "eit/model.h"
 #include "eit/forward.h"
-#include "eit/inverse.h"
-#include "eit/solver.h"
+
+// basic solver
+#include "solver/inverse.h"
+#include "solver/solver.h"
 
 #endif
