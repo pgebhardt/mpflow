@@ -3,8 +3,8 @@
 // Copyright (C) 2013  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
-#ifndef MPFLOW_INCLDUE_EIT_FORWARD_H
-#define MPFLOW_INCLDUE_EIT_FORWARD_H
+#ifndef MPFLOW_INCLDUE_EIT_FORWARDSOLVER_H
+#define MPFLOW_INCLDUE_EIT_FORWARDSOLVER_H
 
 // namespace mpFlow::EIT::solver
 namespace mpFlow {
