@@ -1,6 +1,6 @@
 // mpFlow
 //
-// Copyright (C) 2013  Patrik Gebhardt
+// Copyright (C) 2014  Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 
 #ifndef MPFLOW_INCLUDE_MPFLOW_H
@@ -30,6 +30,9 @@
 #include "eit/source.h"
 #include "eit/model.h"
 #include "eit/forward.h"
+
+// UWB specific
+#include "uwb/windows.h"
 
 // basic solver
 #include "solver/inverse.h"
