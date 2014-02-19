@@ -62,8 +62,8 @@ template void mpFlow::UWB::modelKernel::reduceMatrix<mpFlow::dtype::index>(dim3,
 
 // update matrix kernel
 static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivityMatrix,
-    const mpFlow::dtype::real* elementalMatrix, const mpFlow::dtype::real* gamma,
-    mpFlow::dtype::real sigmaRef, mpFlow::dtype::size rows, mpFlow::dtype::size columns,
+    const mpFlow::dtype::real* elementalMatrix, const mpFlow::dtype::real* material,
+    mpFlow::dtype::size rows, mpFlow::dtype::size columns,
     mpFlow::dtype::real* matrix_values) {
     // get ids
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
@@ -79,7 +79,7 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 
         value += elementId != mpFlow::dtype::invalid_index ? elementalMatrix[row +
             (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
-            sigmaRef * exp10f(gamma[elementId] / 10.0f) : 0.0f;
+            material[elementId] : 0.0f;
     }
 
     // set residual matrix element
@@ -89,37 +89,37 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 // update matrix kernel wrapper
 void mpFlow::UWB::modelKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::index* connectivityMatrix, const dtype::real* elementalMatrix,
-    const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows, dtype::size columns,
+    const dtype::real* material, dtype::size rows, dtype::size columns,
     dtype::real* matrix_values) {
     // call cuda kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(connectivityMatrix, elementalMatrix,
-        gamma, sigma_ref, rows, columns, matrix_values);
+        material, rows, columns, matrix_values);
 
     CudaCheckError();
 }
 
 // update system matrix kernel
 static __global__ void updateSystemMatrixKernel(
-    const mpFlow::dtype::real* s_matrix_values, const mpFlow::dtype::real* r_matrix_values,
-    const mpFlow::dtype::index* s_matrix_column_ids, const mpFlow::dtype::real* z_matrix,
-    mpFlow::dtype::size density, mpFlow::dtype::real scalar, mpFlow::dtype::size z_matrix_rows,
-    mpFlow::dtype::real* system_matrix_values) {
+    const mpFlow::dtype::real* sMatrixValues, const mpFlow::dtype::real* rMatrixValues,
+    const mpFlow::dtype::index* sMatrixColumnIds, mpFlow::dtype::size density,
+    mpFlow::dtype::real sScalar, mpFlow::dtype::real rScalar,
+    mpFlow::dtype::index rowOffset, mpFlow::dtype::index columnOffset,
+    mpFlow::dtype::real* systemMatrixValues) {
     // get row
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // update system matrix
-    mpFlow::dtype::index column_id = mpFlow::dtype::invalid_index;
+    mpFlow::dtype::index columnId = mpFlow::dtype::invalid_index;
     for (mpFlow::dtype::index column = 0; column < density; ++column) {
         // get column id
-        column_id = s_matrix_column_ids[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        columnId = sMatrixColumnIds[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
         // update system matrix element
-        system_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] =
-            column_id != mpFlow::dtype::invalid_index ?
-            s_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] +
-            r_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] * scalar +
-            z_matrix[row + z_matrix_rows * column_id] :
-            system_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        systemMatrixValues[(row + rowOffset) * mpFlow::numeric::sparseMatrix::block_size + column + columnOffset] =
+            columnId != mpFlow::dtype::invalid_index ?
+            sMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] * sScalar +
+            rMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] * rScalar :
+            systemMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column];
     }
 }
 
@@ -127,13 +127,13 @@ static __global__ void updateSystemMatrixKernel(
 void mpFlow::UWB::modelKernel::updateSystemMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
     const mpFlow::dtype::real* sMatrixValues, const mpFlow::dtype::real* rMatrixValues,
     const mpFlow::dtype::index* sMatrixColumnIds, mpFlow::dtype::size density,
-    mpFlow::dtype::real scalar, mpFlow::dtype::real* systemMatrixValues) {
-    // TODO
-/*
+    mpFlow::dtype::real sScalar, mpFlow::dtype::real rScalar,
+    mpFlow::dtype::index rowOffset, mpFlow::dtype::index columnOffset,
+    mpFlow::dtype::real* systemMatrixValues) {
     // call cuda kernel
     updateSystemMatrixKernel<<<blocks, threads, 0, stream>>>(
-        s_matrix_values, r_matrix_values, s_matrix_column_ids, z_matrix,
-        density, scalar, z_matrix_rows, system_matrix_values);
-*/
+        sMatrixValues, rMatrixValues, sMatrixColumnIds, density,
+        sScalar, rScalar, rowOffset, columnOffset, systemMatrixValues);
+
     CudaCheckError();
 }

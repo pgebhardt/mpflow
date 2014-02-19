@@ -21,14 +21,16 @@ namespace modelKernel {
     // update matrix kernel
     void updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
         const dtype::index* connectivityMatrix, const dtype::real* elementalMatrix,
-        const dtype::real* gamma, dtype::real sigmaRef, dtype::size rows,
-        dtype::size columns, dtype::real* matrixValues);
+        const dtype::real* material, dtype::size rows, dtype::size columns,
+        dtype::real* matrixValues);
 
     // update system matrix kernel
     void updateSystemMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const dtype::real* sMatrixValues, const dtype::real* rMatrixValues,
-        const dtype::index* sMatrixColumnIds, dtype::size density, dtype::real scalar,
-        dtype::real* systemMatrixValues);
+        const mpFlow::dtype::real* sMatrixValues, const mpFlow::dtype::real* rMatrixValues,
+        const mpFlow::dtype::index* sMatrixColumnIds, mpFlow::dtype::size density,
+        mpFlow::dtype::real sScalar, mpFlow::dtype::real rScalar,
+        mpFlow::dtype::index rowOffset, mpFlow::dtype::index columnOffset,
+        mpFlow::dtype::real* systemMatrixValues);
 }
 }
 }

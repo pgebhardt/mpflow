@@ -75,11 +75,13 @@ void mpFlow::UWB::Model<basis_function_type>::init(cublasHandle_t handle, cudaSt
 
     // create gamma
     // TODO: correct definition of real and imaginary part
-    auto realPart = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
-    auto imaginaryPart = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
+    auto epsilonR = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream, 1.0);
+    auto sigma = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh()->elements()->rows(), 1, stream);
 
-    // update model
-    this->update(realPart, imaginaryPart, stream);
+    // init s matrix only once and update rest of model
+    model::updateMatrix(this->elementalSMatrix(), epsilonR, this->connectivityMatrix(),
+        stream, this->sMatrix());
+    this->update(epsilonR, sigma, stream);
 }
 
 // init elemental matrices
@@ -226,28 +228,41 @@ template <
     class basis_function_type
 >
 void mpFlow::UWB::Model<basis_function_type>::update(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> realPart,
-    const std::shared_ptr<numeric::Matrix<dtype::real>> imaginaryPart, cudaStream_t stream) {
-    // TODO
-/*    // update matrices
-    model::updateMatrix(this->elementalSMatrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->sMatrix());
-    model::updateMatrix(this->elementalRMatrix(), gamma, this->connectivity_matrix(),
-        this->sigma_ref(), stream, this->rMatrix());
+    const std::shared_ptr<numeric::Matrix<dtype::real>> epsilonR,
+    const std::shared_ptr<numeric::Matrix<dtype::real>> sigma, cudaStream_t stream) {
+    // TODO: no fixed frequency
+    dtype::real frequency = 1e9;
 
-    // create system matrices for all harmonics
-    dtype::real alpha = 0.0f;
-    for (dtype::index component = 0; component < this->component_count(); ++component) {
-        // calc alpha
-        alpha = math::square(2.0f * component * M_PI / this->mesh()->height());
+    // calc each quadrant of system matrix
+    // top left
+    model::updateMatrix(this->elementalRMatrix(), epsilonR, this->connectivityMatrix(), stream, this->rMatrix());
+    modelKernel::updateSystemMatrix(this->sMatrix()->data_rows() / numeric::matrix::block_size,
+        numeric::matrix::block_size, stream, this->sMatrix()->values(), this->rMatrix()->values(),
+        this->sMatrix()->column_ids(), this->sMatrix()->density(), 1.0,
+        math::square(2.0 * M_PI * frequency) * constants::epsilon0 * constants::mu0,
+        0, 0, this->systemMatrix()->values());
 
-        // update system matrix
-        modelKernel::updateSystemMatrix(this->sMatrix()->data_rows() / numeric::matrix::block_size,
-            numeric::matrix::block_size, stream,
-            this->sMatrix()->values(), this->rMatrix()->values(), this->sMatrix()->column_ids(),
-            this->source()->z_matrix()->device_data(), this->sMatrix()->density(), alpha,
-            this->source()->z_matrix()->data_rows(), this->systemMatrix(component)->values());
-    }*/
+    // bottom right
+    modelKernel::updateSystemMatrix(this->sMatrix()->data_rows() / numeric::matrix::block_size,
+        numeric::matrix::block_size, stream, this->sMatrix()->values(), this->rMatrix()->values(),
+        this->sMatrix()->column_ids(), this->sMatrix()->density(), 1.0,
+        math::square(2.0 * M_PI * frequency) * constants::epsilon0 * constants::mu0,
+        this->sMatrix()->data_rows(), this->sMatrix()->data_columns(), this->systemMatrix()->values());
+
+    // top right
+    model::updateMatrix(this->elementalRMatrix(), sigma, this->connectivityMatrix(), stream, this->rMatrix());
+    modelKernel::updateSystemMatrix(this->sMatrix()->data_rows() / numeric::matrix::block_size,
+        numeric::matrix::block_size, stream, this->sMatrix()->values(), this->rMatrix()->values(),
+        this->sMatrix()->column_ids(), this->sMatrix()->density(), 0.0,
+        -2.0 * M_PI * frequency * constants::mu0,
+        0, this->sMatrix()->data_rows(), this->systemMatrix()->values());
+
+    // bottom left
+    modelKernel::updateSystemMatrix(this->sMatrix()->data_rows() / numeric::matrix::block_size,
+        numeric::matrix::block_size, stream, this->sMatrix()->values(), this->rMatrix()->values(),
+        this->sMatrix()->column_ids(), this->sMatrix()->density(), 0.0,
+        2.0 * M_PI * frequency * constants::mu0,
+        this->sMatrix()->data_rows(), 0, this->systemMatrix()->values());
 }
 
 // reduce matrix
@@ -280,32 +295,31 @@ void mpFlow::UWB::model::reduceMatrix(const std::shared_ptr<numeric::Matrix<type
 
 // update matrix
 void mpFlow::UWB::model::updateMatrix(const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-    const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix,
-    dtype::real sigmaRef, cudaStream_t stream,
-    std::shared_ptr<numeric::SparseMatrix<dtype::real>> matrix) {
+    const std::shared_ptr<numeric::Matrix<dtype::real>> material,
+    const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, cudaStream_t stream,
+    std::shared_ptr<numeric::SparseMatrix<dtype::real>> result) {
     // check input
     if (elements == nullptr) {
         throw std::invalid_argument("mpFlow::UWB::model::updateMatrix: elements == nullptr");
     }
-    if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::UWB::model::updateMatrix: gamma == nullptr");
+    if (material == nullptr) {
+        throw std::invalid_argument("mpFlow::UWB::model::updateMatrix: material == nullptr");
     }
     if (connectivityMatrix == nullptr) {
         throw std::invalid_argument("mpFlow::UWB::model::updateMatrix: connectivityMatrix == nullptr");
     }
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::UWB::model::updateMatrix: matrix == nullptr");
+    if (result == nullptr) {
+        throw std::invalid_argument("mpFlow::UWB::model::updateMatrix: result == nullptr");
     }
 
     // dimension
     dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-    dim3 blocks(matrix->data_rows() / numeric::matrix::block_size, 1);
+    dim3 blocks(material->data_rows() / numeric::matrix::block_size, 1);
 
     // execute kernel
     modelKernel::updateMatrix(blocks, threads, stream,
-        connectivityMatrix->device_data(), elements->device_data(), gamma->device_data(),
-        sigmaRef, connectivityMatrix->data_rows(), connectivityMatrix->data_columns(), matrix->values());
+        connectivityMatrix->device_data(), elements->device_data(), material->device_data(),
+        connectivityMatrix->data_rows(), connectivityMatrix->data_columns(), result->values());
 }
 
 // specialisation

@@ -67,9 +67,9 @@ namespace model {
 
     // update matrix
     void updateMatrix(const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
-        const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-        const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, dtype::real sigmaRef,
-        cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dtype::real>> matrix);
+        const std::shared_ptr<numeric::Matrix<dtype::real>> material,
+        const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, cudaStream_t stream,
+        std::shared_ptr<numeric::SparseMatrix<dtype::real>> result);
 
     // reduce matrix
     template <
@@ -92,8 +92,8 @@ namespace model {
             cublasHandle_t handle, cudaStream_t stream);
 
         // update model
-        virtual void update(const std::shared_ptr<numeric::Matrix<dtype::real>> realPart,
-            const std::shared_ptr<numeric::Matrix<dtype::real>> imaginaryPart, cudaStream_t stream);
+        virtual void update(const std::shared_ptr<numeric::Matrix<dtype::real>> epsilonR,
+            const std::shared_ptr<numeric::Matrix<dtype::real>> sigma, cudaStream_t stream);
 
     protected:
         // init methods
