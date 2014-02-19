@@ -33,6 +33,7 @@
 
 // UWB specific
 #include "uwb/windows.h"
+#include "uwb/model.h"
 
 // basic solver
 #include "solver/inverse.h"
