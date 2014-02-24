@@ -93,7 +93,7 @@ mpFlow::EIT::source::Current<basis_function_type>::Current(
     : Source("current", current, mesh, electrodes, component_count,
         drive_pattern, measurement_pattern, handle, stream) {
     // init complete electrode model
-    this->initCEM(stream);
+    this->initCEM(handle, stream);
 
     // update excitation
     this->updateExcitation(handle, stream);
@@ -116,7 +116,7 @@ mpFlow::EIT::source::Current<basis_function_type>::Current(
 template <
     class basis_function_type
 >
-void mpFlow::EIT::source::Current<basis_function_type>::initCEM(cudaStream_t stream) {
+void mpFlow::EIT::source::Current<basis_function_type>::initCEM(cublasHandle_t, cudaStream_t stream) {
     // needed arrays
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
@@ -261,7 +261,7 @@ mpFlow::EIT::source::Voltage<basis_function_type>::Voltage(
     this->pattern()->copyToDevice(stream);
 
     // init complete electrode model
-    this->initCEM(stream);
+    this->initCEM(handle, stream);
 
     // update excitation
     this->updateExcitation(handle, stream);
@@ -284,66 +284,37 @@ mpFlow::EIT::source::Voltage<basis_function_type>::Voltage(
 template <
     class basis_function_type
 >
-void mpFlow::EIT::source::Voltage<basis_function_type>::initCEM(cudaStream_t) {
-    // needed arrays
-    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
-    std::array<dtype::real, basis_function_type::nodes_per_edge> node_parameter;
-    dtype::real integration_start, integration_end;
+void mpFlow::EIT::source::Voltage<basis_function_type>::initCEM(cublasHandle_t handle, cudaStream_t stream) {
+    // create current source as base for voltage source
+    auto currentSource = std::make_shared<mpFlow::EIT::source::Current<basis_function_type>>(
+        1.0, this->mesh(), this->electrodes(), this->component_count(),
+        this->drive_pattern(), this->measurement_pattern(), handle, stream);
 
-    // init z and w matrices
-    for (dtype::index boundary_element = 0;
-        boundary_element < this->mesh()->boundary()->rows();
-        ++boundary_element) {
-        // get boundary nodes
-        nodes = this->mesh()->boundaryNodes(boundary_element);
+    // guarantee all matrices are available on device
+    currentSource->z_matrix()->copyToDevice(stream);
+    currentSource->x_matrix()->copyToDevice(stream);
+    currentSource->w_matrix()->copyToDevice(stream);
+    cudaStreamSynchronize(stream);
 
-        // sort nodes by parameter
-        std::sort(nodes.begin(), nodes.end(),
-            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
-                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
-                -> bool {
-                    return math::circleParameter(std::get<1>(b),
-                        math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
-        });
+    // calculate cem matrices
+    this->w_matrix()->copy(currentSource->w_matrix(), stream);
+    this->w_matrix()->scalarMultiply(1.0 / (*currentSource->d_matrix())(0, 0), stream);
 
-        // calc parameter offset
-        dtype::real parameter_offset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
+    this->x_matrix()->copy(currentSource->x_matrix(), stream);
+    this->x_matrix()->scalarMultiply(-1.0 / (*currentSource->d_matrix())(0, 0), stream);
 
-        // calc node parameter centered to node 0
-        for (dtype::size i = 0; i < basis_function_type::nodes_per_edge; ++i) {
-            node_parameter[i] = math::circleParameter(std::get<1>(nodes[i]),
-                parameter_offset);
-        }
+    this->z_matrix()->multiply(this->w_matrix(), currentSource->x_matrix(), handle, stream);
+    this->z_matrix()->scalarMultiply(-1.0, stream);
+    this->z_matrix()->add(currentSource->z_matrix(), stream);
 
-        for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
-            // calc integration interval centered to node 0
-            integration_start = math::circleParameter(
-                std::get<0>(this->electrodes()->coordinates(electrode)), parameter_offset);
-            integration_end = math::circleParameter(
-                std::get<1>(this->electrodes()->coordinates(electrode)), parameter_offset);
-
-            // intgrate if integration_start is left of integration_end
-            if (integration_start < integration_end) {
-                // calc w and x matrix elements
-                for (dtype::index i = 0; i < basis_function_type::nodes_per_edge; ++i) {
-                    (*this->w_matrix())(std::get<0>(nodes[i]), electrode) -=
-                        basis_function_type::integrateBoundaryEdge(
-                            node_parameter, i, integration_start, integration_end) /
-                        std::get<0>(this->electrodes()->shape());
-                    (*this->x_matrix())(electrode, std::get<0>(nodes[i])) +=
-                        basis_function_type::integrateBoundaryEdge(
-                            node_parameter, i, integration_start, integration_end) /
-                        std::get<0>(this->electrodes()->shape());
-                }
-            }
-        }
+    for (mpFlow::dtype::index i = 0; i < currentSource->d_matrix()->rows(); ++i) {
+        (*this->d_matrix())(i, i) = 1.0 / (*currentSource->d_matrix())(i, i);
     }
 
-    // init d matrix
-    for (dtype::index electrode = 0; electrode < this->electrodes()->count(); ++electrode) {
-        (*this->d_matrix())(electrode, electrode) = this->electrodes()->impedance() /
-            std::get<0>(this->electrodes()->shape());
-    }
+    this->z_matrix()->copyToHost(stream);
+    this->w_matrix()->copyToHost(stream);
+    this->x_matrix()->copyToHost(stream);
+    cudaStreamSynchronize(stream);
 }
 
 // update excitation
