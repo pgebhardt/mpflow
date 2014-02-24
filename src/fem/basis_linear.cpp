@@ -1,7 +1,22 @@
-// mpFlow
+// --------------------------------------------------------------------
+// This file is part of mpFlow.
 //
-// Copyright (C) 2013  Patrik Gebhardt
+// mpFlow is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 2 of the License, or
+// (at your option) any later version.
+//
+// mpFlow is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
+//
+// Copyright (C) 2014 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
+// --------------------------------------------------------------------
 
 #include <cmath>
 #include "mpflow/mpflow.h"
@@ -39,6 +54,7 @@ mpFlow::FEM::basis::Linear::Linear(
 }
 
 // evaluate basis function
+
 mpFlow::dtype::real mpFlow::FEM::basis::Linear::evaluate(
     std::tuple<dtype::real, dtype::real> point
     ) {
@@ -50,6 +66,7 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::evaluate(
 
 
 // integrate with basis
+
 mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateWithBasis(
     const std::shared_ptr<Linear> other
     ) {
@@ -61,6 +78,7 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateWithBasis(
 
 
 // integrate gradient with basis
+
 mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
     const std::shared_ptr<Linear> other
     ) {
