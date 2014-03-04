@@ -26,7 +26,7 @@ namespace mpFlow {
 namespace solver {
     // inverse solver class definition
     template <
-        class numerical_solver
+        template <template <class> class> class numerical_solver
     >
     class Inverse {
     public:
@@ -54,7 +54,7 @@ namespace solver {
             cublasHandle_t handle, cudaStream_t stream);
 
         // accessors
-        std::shared_ptr<numerical_solver> numeric_solver() { return this->numeric_solver_; }
+        std::shared_ptr<numerical_solver<mpFlow::numeric::Matrix>> numeric_solver() { return this->numeric_solver_; }
         std::shared_ptr<numeric::Matrix<dtype::real>> difference() { return this->difference_; }
         std::shared_ptr<numeric::Matrix<dtype::real>> zeros() { return this->zeros_; }
         std::shared_ptr<numeric::Matrix<dtype::real>> excitation() { return this->excitation_; }
@@ -64,7 +64,7 @@ namespace solver {
 
     private:
         // member
-        std::shared_ptr<numerical_solver> numeric_solver_;
+        std::shared_ptr<numerical_solver<mpFlow::numeric::Matrix>> numeric_solver_;
         std::shared_ptr<numeric::Matrix<dtype::real>> difference_;
         std::shared_ptr<numeric::Matrix<dtype::real>> zeros_;
         std::shared_ptr<numeric::Matrix<dtype::real>> excitation_;

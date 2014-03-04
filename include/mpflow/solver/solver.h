@@ -27,7 +27,7 @@ namespace solver {
     // class for solving differential EIT
     template <
         class forward_solver_type,
-        class numerical_inverse_solver_type
+        template <template <class> class> class numerical_inverse_solver_type
     >
     class Solver {
     public:

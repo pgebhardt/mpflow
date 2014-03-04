@@ -23,7 +23,7 @@
 // create solver
 template <
     class forward_solver_type,
-    class numerical_inverse_solver_type
+    template <template <class> class> class numerical_inverse_solver_type
 >
 mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::Solver(
     std::shared_ptr<forward_solver_type> forward_solver, dtype::index parallel_images,
@@ -68,7 +68,7 @@ mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::Solv
 // pre solve for accurate initial jacobian
 template <
     class forward_solver_type,
-    class numerical_inverse_solver_type
+    template <template <class> class> class numerical_inverse_solver_type
 >
 void mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::preSolve(
     cublasHandle_t handle, cudaStream_t stream) {
@@ -97,7 +97,7 @@ void mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>:
 // solve differential
 template <
     class forward_solver_type,
-    class numerical_inverse_solver_type
+    template <template <class> class> class numerical_inverse_solver_type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::solve_differential(
@@ -120,7 +120,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 // solve absolute
 template <
     class forward_solver_type,
-    class numerical_inverse_solver_type
+    template <template <class> class> class numerical_inverse_solver_type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>::solve_absolute(
@@ -159,5 +159,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 }
 
 // specialisation
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::SparseConjugate>, mpFlow::numeric::Conjugate>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::SparseConjugate>, mpFlow::numeric::FastConjugate>;
+template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient>,
+    mpFlow::numeric::ConjugateGradient>;

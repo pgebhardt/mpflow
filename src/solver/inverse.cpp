@@ -22,7 +22,7 @@
 
 // create inverse_solver
 template <
-    class numerical_solver
+    template <template <class> class> class numerical_solver
 >
 mpFlow::solver::Inverse<numerical_solver>::Inverse(dtype::size element_count,
     dtype::size voltage_count, dtype::index parallel_images,
@@ -43,12 +43,12 @@ mpFlow::solver::Inverse<numerical_solver>::Inverse(dtype::size element_count,
         stream);
 
     // create numeric solver
-    this->numeric_solver_ = std::make_shared<numerical_solver>(element_count, parallel_images, stream);
+    this->numeric_solver_ = std::make_shared<numerical_solver<mpFlow::numeric::Matrix>>(element_count, parallel_images, stream);
 }
 
 // calc system matrix
 template <
-    class numerical_solver
+    template <template <class> class> class numerical_solver
 >
 void mpFlow::solver::Inverse<numerical_solver>::calcSystemMatrix(
     const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian, cublasHandle_t handle,
@@ -92,7 +92,7 @@ void mpFlow::solver::Inverse<numerical_solver>::calcSystemMatrix(
 
 // calc excitation
 template <
-    class numerical_solver
+    template <template <class> class> class numerical_solver
 >
 void mpFlow::solver::Inverse<numerical_solver>::calcExcitation(
     const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian,
@@ -144,7 +144,7 @@ void mpFlow::solver::Inverse<numerical_solver>::calcExcitation(
 
 // inverse solving
 template <
-    class numerical_solver
+    template <template <class> class> class numerical_solver
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::solver::Inverse<numerical_solver>::solve(
     const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian,
@@ -171,11 +171,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::solver::In
 
     // solve system
     this->numeric_solver()->solve(this->system_matrix(), this->excitation(),
-        steps, handle, stream, gamma);
+        steps, false, handle, stream, gamma);
 
     return gamma;
 }
 
 // specialisation
-template class mpFlow::solver::Inverse<mpFlow::numeric::Conjugate>;
-template class mpFlow::solver::Inverse<mpFlow::numeric::FastConjugate>;
+template class mpFlow::solver::Inverse<mpFlow::numeric::ConjugateGradient>;

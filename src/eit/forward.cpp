@@ -23,7 +23,7 @@
 
 // create forward_solver
 template <
-    class numerical_solver
+    template <template <class> class> class numerical_solver
 >
 mpFlow::EIT::ForwardSolver<numerical_solver>::ForwardSolver(
     std::shared_ptr<mpFlow::EIT::model::Base> model, cudaStream_t stream)
@@ -34,7 +34,7 @@ mpFlow::EIT::ForwardSolver<numerical_solver>::ForwardSolver(
     }
 
     // create numerical_solver solver
-    this->numeric_solver_ = std::make_shared<numerical_solver>(
+    this->numeric_solver_ = std::make_shared<numerical_solver<mpFlow::numeric::SparseMatrix>>(
         this->model()->mesh()->nodes()->rows() + this->model()->electrodes()->count(),
         this->model()->source()->drive_count() + this->model()->source()->measurement_count(),
         stream);
@@ -50,7 +50,7 @@ mpFlow::EIT::ForwardSolver<numerical_solver>::ForwardSolver(
 
 // apply pattern
 template <
-    class numerical_solver
+    template <template <class> class> class numerical_solver
 >
 void mpFlow::EIT::ForwardSolver<numerical_solver>::applyMeasurementPattern(
     std::shared_ptr<numeric::Matrix<dtype::real>> result, cudaStream_t stream) {
@@ -84,7 +84,7 @@ void mpFlow::EIT::ForwardSolver<numerical_solver>::applyMeasurementPattern(
 
 // forward solving
 template <
-    class numerical_solver
+    template <template <class> class> class numerical_solver
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::ForwardSolver<numerical_solver>::solve(
     const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps, cudaStream_t stream) {
@@ -100,14 +100,14 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::Forwa
     this->numeric_solver()->solve(this->model()->system_matrix(0),
         this->model()->source()->excitation(0), steps,
         this->model()->source()->type() == "current" ? true : false,
-        stream, this->model()->potential(0));
+        nullptr, stream, this->model()->potential(0));
 
     // solve for higher harmonics
     for (dtype::index component = 1; component < this->model()->component_count(); ++component) {
         this->numeric_solver()->solve(
             this->model()->system_matrix(component),
             this->model()->source()->excitation(component),
-            steps, false, stream, this->model()->potential(component));
+            steps, false, nullptr, stream, this->model()->potential(component));
     }
 
     // calc jacobian
@@ -134,4 +134,4 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::Forwa
 }
 
 // specialisation
-template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::SparseConjugate>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient>;

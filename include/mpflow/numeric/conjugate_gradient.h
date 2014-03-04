@@ -18,26 +18,30 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_NUMERIC_FAST_CONJUGATE_H
-#define MPFLOW_INCLDUE_NUMERIC_FAST_CONJUGATE_H
+#ifndef MPFLOW_INCLDUE_NUMERIC_CONJUGATE_GRADIENT_H
+#define MPFLOW_INCLDUE_NUMERIC_CONJUGATE_GRADIENT_H
 
 // namespace mpFlow::numeric
 namespace mpFlow {
 namespace numeric {
-    // conjugate class definition
-    class FastConjugate {
+    // conjugate gradient class definition
+    template <
+        template <class type> class matrix_type
+    >
+    class ConjugateGradient {
     public:
         // constructor
-        FastConjugate(dtype::size rows, dtype::size columns, cudaStream_t stream);
+        ConjugateGradient(dtype::size rows, dtype::size columns, cudaStream_t stream);
 
         // solve system
-        void solve(const std::shared_ptr<Matrix<dtype::real>> A,
+        void solve(const std::shared_ptr<matrix_type<dtype::real>> A,
             const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
-            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x);
+            bool dcFree, cublasHandle_t handle, cudaStream_t stream,
+            std::shared_ptr<Matrix<dtype::real>> x);
 
         // accessors
-        dtype::size& rows() { return this->rows_; }
-        dtype::size columns() { return 1; }
+        dtype::size rows() { return this->rows_; }
+        dtype::size columns() { return this->columns_; }
         std::shared_ptr<Matrix<dtype::real>> residuum() { return this->residuum_; }
         std::shared_ptr<Matrix<dtype::real>> projection() { return this->projection_; }
         std::shared_ptr<Matrix<dtype::real>> rsold() { return this->rsold_; }
@@ -48,6 +52,7 @@ namespace numeric {
     private:
         // member
         dtype::size rows_;
+        dtype::size columns_;
         std::shared_ptr<Matrix<dtype::real>> residuum_;
         std::shared_ptr<Matrix<dtype::real>> projection_;
         std::shared_ptr<Matrix<dtype::real>> rsold_;
@@ -55,6 +60,19 @@ namespace numeric {
         std::shared_ptr<Matrix<dtype::real>> temp_vector_;
         std::shared_ptr<Matrix<dtype::real>> temp_number_;
     };
+
+    // helper functions
+    namespace conjugateGradient {
+        void addScalar(const std::shared_ptr<Matrix<dtype::real>> scalar,
+            dtype::size rows, dtype::size columns, cudaStream_t stream,
+            std::shared_ptr<Matrix<dtype::real>> vector);
+
+        void updateVector(const std::shared_ptr<Matrix<dtype::real>> x1,
+            dtype::real sign, const std::shared_ptr<Matrix<dtype::real>> x2,
+            const std::shared_ptr<Matrix<dtype::real>> r1,
+            const std::shared_ptr<Matrix<dtype::real>> r2, cudaStream_t stream,
+            std::shared_ptr<Matrix<dtype::real>> result);
+    }
 }
 }
 

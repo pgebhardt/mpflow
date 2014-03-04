@@ -33,10 +33,7 @@
 #include "numeric/matrix.h"
 #include "numeric/sparse_matrix.h"
 #include "numeric/irregular_mesh.h"
-#include "numeric/conjugate.h"
-#include "numeric/fast_conjugate.h"
-#include "numeric/pre_conjugate.h"
-#include "numeric/sparse_conjugate.h"
+#include "numeric/conjugate_gradient.h"
 
 // FEM specific
 #include "fem/basis.h"
