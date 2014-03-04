@@ -238,6 +238,21 @@ namespace mpFlow {
     }
 }
 
+// specialisation for sparse matrices
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<SparseMatrix<type>> A,
+    const std::shared_ptr<Matrix<type>> B, cublasHandle_t, cudaStream_t stream) {
+    // check input
+    if (A == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
+    }
+
+    struct noop_deleter { void operator()(void*) {} };
+    A->multiply(B, stream, std::shared_ptr<mpFlow::numeric::Matrix<type>>(this, noop_deleter()));
+}
+
 // scalar multiply matrix
 template <
     class type

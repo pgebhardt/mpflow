@@ -24,6 +24,9 @@
 // namespace mpFlow::numeric
 namespace mpFlow {
 namespace numeric {
+    // forward declarations
+    template <class type> class SparseMatrix;
+
     // matrix class definition
     template <
         class type
@@ -43,6 +46,9 @@ namespace numeric {
         // mathematical methods
         void add(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream);
         void multiply(const std::shared_ptr<Matrix<type>> A,
+            const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle,
+            cudaStream_t stream);
+        void multiply(const std::shared_ptr<SparseMatrix<type>> A,
             const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle,
             cudaStream_t stream);
         void scalarMultiply(type scalar, cudaStream_t stream);

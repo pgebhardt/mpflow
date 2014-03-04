@@ -57,7 +57,7 @@ void mpFlow::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix<
     }
 
     // calc residuum r = f - A * x
-    A->multiply(x, stream, this->residuum());
+    this->residuum()->multiply(A, x, nullptr, stream);
 
     // regularize for dc free solution
     if (dcFree == true) {
@@ -78,7 +78,7 @@ void mpFlow::numeric::SparseConjugate::solve(const std::shared_ptr<SparseMatrix<
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
-        A->multiply(this->projection(), stream, this->temp_vector());
+        this->temp_vector()->multiply(A, this->projection(), nullptr, stream);
 
         // regularize for dc free solution
         if (dcFree == true) {
