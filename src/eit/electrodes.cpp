@@ -22,8 +22,8 @@
 
 // create electrodes class
 mpFlow::EIT::Electrodes::Electrodes(dtype::size count,
-    std::tuple<dtype::real, dtype::real> shape, dtype::real impedance)
-    : count_(count), coordinates_(count), shape_(shape), impedance_(impedance) {
+    std::tuple<dtype::real, dtype::real> shape)
+    : count(count), coordinates(count), shape(shape) {
     // check input
     if (count == 0) {
         throw std::invalid_argument("mpFlow::EIT::Electrodes::Electrodes: count == 0");
@@ -34,36 +34,33 @@ mpFlow::EIT::Electrodes::Electrodes(dtype::size count,
     if (std::get<1>(shape) <= 0.0) {
         throw std::invalid_argument("mpFlow::EIT::Electrodes::Electrodes: height <= 0.0");
     }
-    if (impedance <= 0.0) {
-        throw std::invalid_argument("mpFlow::EIT::Electrodes::Electrodes: impedance <= 0.0");
-    }
 }
 
 // create electrodes on circular boundary
 std::shared_ptr<mpFlow::EIT::Electrodes> mpFlow::EIT::electrodes::circularBoundary(
     dtype::size count, std::tuple<dtype::real, dtype::real> shape,
-    dtype::real impedance, dtype::real boundary_radius) {
+    dtype::real boundaryRadius) {
     // check radius
-    if (boundary_radius <= 0.0) {
+    if (boundaryRadius <= 0.0) {
         throw std::invalid_argument(
-            "mpFlow::EIT::electrodes::circularBoundary: boundary_radius <= 0.0");
+            "mpFlow::EIT::electrodes::circularBoundary: boundaryRadius <= 0.0");
     }
 
     // create electrodes
-    auto electrodes = std::make_shared<Electrodes>(count, shape, impedance);
+    auto electrodes = std::make_shared<Electrodes>(count, shape);
 
     // fill electrode vectors
     dtype::real angle = 0.0f;
-    dtype::real delta_angle = M_PI / (dtype::real)electrodes->count();
-    for (dtype::index electrode = 0; electrode < electrodes->count(); ++electrode) {
+    dtype::real deltaAngle = M_PI / (dtype::real)electrodes->count;
+    for (dtype::index electrode = 0; electrode < electrodes->count; ++electrode) {
         // calc start angle
-        angle = (dtype::real)electrode * 2.0 * delta_angle;
+        angle = (dtype::real)electrode * 2.0 * deltaAngle;
 
         // calc coordinates
-        electrodes->coordinates(electrode) = std::make_tuple(
-            math::kartesian(std::make_tuple(boundary_radius, angle)),
-            math::kartesian(std::make_tuple(boundary_radius,
-                angle + std::get<0>(shape) / boundary_radius)));
+        electrodes->coordinates[electrode] = std::make_tuple(
+            math::kartesian(std::make_tuple(boundaryRadius, angle)),
+            math::kartesian(std::make_tuple(boundaryRadius,
+                angle + std::get<0>(shape) / boundaryRadius)));
     }
 
     return electrodes;
