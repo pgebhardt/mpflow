@@ -25,32 +25,32 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::Linear::Linear(
-    std::array<std::tuple<dtype::real, dtype::real>, nodes_per_element> nodes,
+    std::array<std::tuple<dtype::real, dtype::real>, nodesPerElement> nodes,
     dtype::index one)
-    : mpFlow::FEM::basis::Basis<nodes_per_edge, nodes_per_element>(nodes, one) {
+    : mpFlow::FEM::basis::Basis<nodesPerEdge, nodesPerElement>(nodes, one) {
     // check one
-    if (one >= nodes_per_element) {
+    if (one >= nodesPerElement) {
         throw std::invalid_argument(
-            "mpFlow::FEM::basis::Linear::Linear: one >= nodes_per_element");
+            "mpFlow::FEM::basis::Linear::Linear: one >= nodesPerElement");
     }
 
     // calc coefficients with gauss
-    std::array<std::array<dtype::real, nodes_per_element>, nodes_per_element> A;
-    std::array<dtype::real, nodes_per_element> b;
-    for (dtype::index node = 0; node < nodes_per_element; ++node) {
+    std::array<std::array<dtype::real, nodesPerElement>, nodesPerElement> A;
+    std::array<dtype::real, nodesPerElement> b;
+    for (dtype::index node = 0; node < nodesPerElement; ++node) {
         b[node] = 0.0;
     }
     b[one] = 1.0;
 
     // fill coefficients
-    for (dtype::index node = 0; node < nodes_per_element; ++node) {
+    for (dtype::index node = 0; node < nodesPerElement; ++node) {
         A[node][0] = (1.0);
         A[node][1] = ((1.0)*(std::get<0>(this->nodes()[node])));
         A[node][2] = ((1.0)*(std::get<1>(this->nodes()[node])));
     }
 
     // calc coefficients
-    this->coefficients() = math::gaussElemination<dtype::real, nodes_per_element>(A, b);
+    this->coefficients() = math::gaussElemination<dtype::real, nodesPerElement>(A, b);
 }
 
 // evaluate basis function
@@ -91,10 +91,10 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
 
 // integrate edge
 mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
-    std::array<dtype::real, nodes_per_edge> nodes, dtype::index one,
+    std::array<dtype::real, nodesPerEdge> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
     // calc coefficients for basis function
-    std::array<dtype::real, nodes_per_edge> coefficients;
+    std::array<dtype::real, nodesPerEdge> coefficients;
     if (one == 0) {
         coefficients[0] = ({
 ((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));
@@ -117,58 +117,6 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
     }
     return ({
 (((((-(coefficients[0]))*(min(max((start),(float)(nodes[0])),(float)(nodes[1]))))+((coefficients[0])*(min(max((end),(float)(nodes[0])),(float)(nodes[1])))))-(((coefficients[1])*((min(max((start),(float)(nodes[0])),(float)(nodes[1])))*(min(max((start),(float)(nodes[0])),(float)(nodes[1])))))/(2)))+(((coefficients[1])*((min(max((end),(float)(nodes[0])),(float)(nodes[1])))*(min(max((end),(float)(nodes[0])),(float)(nodes[1])))))/(2)));
-})
-;
-}
-
-// integrate edge with other
-mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdgeWithOther(
-    std::array<dtype::real, nodes_per_edge> nodes, dtype::index self,
-    dtype::index other, dtype::real start, dtype::real end) {
-    // calc coefficients for basis function
-    std::array<dtype::real, nodes_per_edge> self_coefficients, other_coefficients;
-    if (self == 0) {
-        self_coefficients[0] = ({
-((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));
-})
-;
-        self_coefficients[1] = ({
-((-1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
-})
-;
-    }
-    if (other == 0) {
-        other_coefficients[0] = ({
-((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));
-})
-;
-        other_coefficients[1] = ({
-((-1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
-})
-;
-    }
-    if (self == 1) {
-        self_coefficients[0] = ({
-(((-1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
-})
-;
-        self_coefficients[1] = ({
-((1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
-})
-;
-    }
-    if (other == 1) {
-        other_coefficients[0] = ({
-(((-1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
-})
-;
-        other_coefficients[1] = ({
-((1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
-})
-;
-    }
-    return ({
-((((((((-(self_coefficients[0]))*(other_coefficients[0]))*(min(max((start),(float)(nodes[0])),(float)(nodes[1]))))+(((self_coefficients[0])*(other_coefficients[0]))*(min(max((end),(float)(nodes[0])),(float)(nodes[1])))))-((((self_coefficients[1])*(other_coefficients[1]))*((min(max((start),(float)(nodes[0])),(float)(nodes[1])))*((min(max((start),(float)(nodes[0])),(float)(nodes[1])))*(min(max((start),(float)(nodes[0])),(float)(nodes[1]))))))/(3)))+((((self_coefficients[1])*(other_coefficients[1]))*((min(max((end),(float)(nodes[0])),(float)(nodes[1])))*((min(max((end),(float)(nodes[0])),(float)(nodes[1])))*(min(max((end),(float)(nodes[0])),(float)(nodes[1]))))))/(3)))-(((min(max((start),(float)(nodes[0])),(float)(nodes[1])))*(min(max((start),(float)(nodes[0])),(float)(nodes[1]))))*((((self_coefficients[0])*(other_coefficients[1]))/(2))+(((self_coefficients[1])*(other_coefficients[0]))/(2)))))+(((min(max((end),(float)(nodes[0])),(float)(nodes[1])))*(min(max((end),(float)(nodes[0])),(float)(nodes[1]))))*((((self_coefficients[0])*(other_coefficients[1]))/(2))+(((self_coefficients[1])*(other_coefficients[0]))/(2)))));
 })
 ;
 }

@@ -48,6 +48,53 @@ mpFlow::EIT::ForwardSolver<numerical_solver>::ForwardSolver(
         this->model()->source()->drive_count(), stream);
 }
 
+// init jacobian calculation matrix
+template <
+    template <template <class> class> class numerical_solver
+>
+void mpFlow::FEM::EllipticalEquation<basisFunctionType>::initJacobianCalculationMatrix(
+    cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if (handle == nullptr) {
+        throw std::invalid_argument(
+            "mpFlow::FEM::EllipticalEquation::initJacobianCalculationMatrix: handle == nullptr");
+    }
+
+    // variables
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
+    std::array<std::tuple<dtype::real, dtype::real>,
+       basisFunctionType::nodesPerElement> nodeCoordinates;
+    std::array<std::shared_ptr<basisFunctionType>,
+        basisFunctionType::nodesPerElement> basisFunction;
+
+    // fill connectivity and elementalJacobianMatrix
+    for (dtype::index element = 0; element < this->mesh()->elements()->rows(); ++element) {
+        // get element nodes
+        nodes = this->mesh()->elementNodes(element);
+
+        // extract nodes coordinates
+        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
+            nodeCoordinates[node] = std::get<1>(nodes[node]);
+        }
+
+        // calc corresponding basis functions
+        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
+            basisFunction[node] = std::make_shared<basisFunctionType>(
+                nodeCoordinates, node);
+        }
+
+        // fill matrix
+        for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
+        for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
+            // set elementalJacobianMatrix element
+            (*this->elemental_jacobian_matrix())(element, i +
+                j * basisFunctionType::nodesPerElement) =
+                basisFunction[i]->integrateGradientWithBasis(basisFunction[j]);
+        }
+    }
+    this->elemental_jacobian_matrix()->copyToDevice(stream);
+}
+
 // apply pattern
 template <
     template <template <class> class> class numerical_solver
@@ -132,6 +179,40 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::Forwa
     // default result
     return this->voltage();
 }
+/*
+// calc jacobian
+template <
+    class basisFunctionType
+>
+std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
+    mpFlow::FEM::EllipticalEquation<basisFunctionType>::calcJacobian(
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cudaStream_t stream) {
+    // check input
+    if (gamma == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::calcJacobian: gamma == nullptr");
+    }
 
+    // calc jacobian
+    ellipticalEquation::calcJacobian<basisFunctionType>(
+        gamma, this->potential(0), this->mesh()->elements(),
+        this->elemental_jacobian_matrix(), this->source()->drive_count(),
+        this->source()->measurement_count(), this->sigma_ref(),
+        false, stream, this->jacobian());
+    for (dtype::index component = 1; component < this->component_count(); ++component) {
+        ellipticalEquation::calcJacobian<basisFunctionType>(
+            gamma, this->potential(component), this->mesh()->elements(),
+            this->elemental_jacobian_matrix(), this->source()->drive_count(),
+            this->source()->measurement_count(), this->sigma_ref(),
+            true, stream, this->jacobian());
+    }
+
+    // switch sign if current source
+    if (this->source()->type() == "current") {
+        this->jacobian()->scalarMultiply(-1.0, stream);
+    }
+
+    return this->jacobian();
+}
+*/
 // specialisation
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient>;

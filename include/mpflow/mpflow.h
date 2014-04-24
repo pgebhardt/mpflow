@@ -37,16 +37,12 @@
 
 // FEM specific
 #include "fem/basis.h"
+#include "fem/elliptical_equation.h"
 
 // EIT specific
 #include "eit/electrodes.h"
 #include "eit/source.h"
-#include "eit/model.h"
 #include "eit/forward.h"
-
-// UWB specific
-#include "uwb/windows.h"
-#include "uwb/model.h"
 
 // basic solver
 #include "solver/inverse.h"

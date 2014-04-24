@@ -21,18 +21,18 @@
 #ifndef MPFLOW_INCLDUE_EIT_FORWARDSOLVER_H
 #define MPFLOW_INCLDUE_EIT_FORWARDSOLVER_H
 
-// namespace mpFlow::EIT::solver
 namespace mpFlow {
 namespace EIT {
     // forward solver class definition
     template <
-        template <template <class> class> class numerical_solver
+        class equationType,
+        template <template <class> class> class numericalSolverType
     >
     class ForwardSolver {
     public:
-        // constructor
-        ForwardSolver(std::shared_ptr<mpFlow::EIT::model::Base> model, cudaStream_t stream);
-
+        // initialization
+        ForwardSolver(std::shared_ptr<equationType> equation, cudaStream_t stream);
+        void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dtype::real>> result,
             cudaStream_t stream);
@@ -42,18 +42,19 @@ namespace EIT {
             const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
             cudaStream_t stream);
 
-        // accessors
-        std::shared_ptr<numerical_solver<mpFlow::numeric::SparseMatrix>> numeric_solver() { return this->numeric_solver_; }
-        std::shared_ptr<mpFlow::EIT::model::Base> model() { return this->model_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> voltage() { return this->voltage_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> current() { return this->current_; }
+        // calc jacobian matrix of model
+        std::shared_ptr<numeric::Matrix<dtype::real>> calcJacobian(
+            const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cudaStream_t stream);
 
-    private:
         // member
-        std::shared_ptr<numerical_solver<mpFlow::numeric::SparseMatrix>> numeric_solver_;
-        std::shared_ptr<mpFlow::EIT::model::Base> model_;
-        std::shared_ptr<numeric::Matrix<dtype::real>> voltage_;
-        std::shared_ptr<numeric::Matrix<dtype::real>> current_;
+        std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;
+        std::shared_ptr<equationType> equation;
+        std::shared_ptr<numeric::Matrix<dtype::real>> phi;
+        std::shared_ptr<numeric::Matrix<dtype::real>> current;
+        std::shared_ptr<numeric::Matrix<dtype::real>> electrodeVoltage;
+        std::shared_ptr<numeric::Matrix<dtype::real>> electrodeCurrent;
+        std::shared_ptr<numeric::Matrix<dtype::real>> jacobian;
+        std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
     };
 }
 }
