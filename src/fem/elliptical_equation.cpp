@@ -38,8 +38,19 @@ mpFlow::FEM::EllipticalEquation<basisFunctionType>::EllipticalEquation(
     }
 
     // init matrices
+    this->phi = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->mesh->nodes()->rows(), 1, stream);
+    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->mesh->nodes()->rows(), 1, stream);
+    this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->mesh->elements()->rows(),
+        math::square(basisFunctionType::nodesPerElement), stream);
+    this->excitationMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->mesh->nodes()->rows(), this->boundaryDescriptor->count, stream);
+
     auto commonElementMatrix = this->initElementalMatrices(stream);
     this->initExcitationMatrix(stream);
+    this->initJacobianCalculationMatrix(stream);
 
     // create initial sparse system matrix from common element Matrix
     this->systemMatrix = std::make_shared<numeric::SparseMatrix<dtype::real>>(
@@ -244,6 +255,53 @@ void mpFlow::FEM::EllipticalEquation<basisFunctionType>::initExcitationMatrix(cu
     this->excitationMatrix->copyToDevice(stream);
 }
 
+template <
+    class basisFunctionType
+>
+void mpFlow::FEM::EllipticalEquation<basisFunctionType>
+    ::initJacobianCalculationMatrix(
+    cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if (handle == nullptr) {
+        throw std::invalid_argument(
+            "mpFlow::FEM::EllipticalEquation::initJacobianCalculationMatrix: handle == nullptr");
+    }
+
+    // variables
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
+    std::array<std::tuple<dtype::real, dtype::real>,
+       equationType::basisFunctionType::nodesPerElement> nodeCoordinates;
+    std::array<std::shared_ptr<typename equationType::basisFunctionType>,
+        equationType::basisFunctionType::nodesPerElement> basisFunction;
+
+    // fill connectivity and elementalJacobianMatrix
+    for (dtype::index element = 0; element < this->equation->mesh->elements()->rows(); ++element) {
+        // get element nodes
+        nodes = this->equation->mesh->elementNodes(element);
+
+        // extract nodes coordinates
+        for (dtype::index node = 0; node < equationType::basisFunctionType::nodesPerElement; ++node) {
+            nodeCoordinates[node] = std::get<1>(nodes[node]);
+        }
+
+        // calc corresponding basis functions
+        for (dtype::index node = 0; node < equationType::basisFunctionType::nodesPerElement; ++node) {
+            basisFunction[node] = std::make_shared<typename equationType::basisFunctionType>(
+                nodeCoordinates, node);
+        }
+
+        // fill matrix
+        for (dtype::index i = 0; i < equationType::basisFunctionType::nodesPerElement; ++i)
+        for (dtype::index j = 0; j < equationType::basisFunctionType::nodesPerElement; ++j) {
+            // set elementalJacobianMatrix element
+            (*this->elementalJacobianMatrix)(element, i +
+                j * equationType::basisFunctionType::nodesPerElement) =
+                basisFunction[i]->integrateGradientWithBasis(basisFunction[j]);
+        }
+    }
+    this->elementalJacobianMatrix->copyToDevice(stream);
+}
+
 // update ellipticalEquation
 template <
     class basisFunctionType
@@ -261,6 +319,36 @@ void mpFlow::FEM::EllipticalEquation<basisFunctionType>::update(
         numeric::matrix::block_size, stream, this->sMatrix->values(), this->rMatrix->values(),
         this->sMatrix->column_ids(), this->sMatrix->density(), math::square(k),
         this->systemMatrix->values());
+}
+
+// calc jacobian
+template <
+    class basisFunctionType
+>
+void mpFlow::FEM::EllipticalEquation<basisFunctionType>::calcJacobian(
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
+    dtype::size driveCount, dtype::size measurmentCount, cudaStream_t stream,
+    std::shared_ptr<numeric::Matrix<dtype::real>> jacobian) {
+    // check input
+    if (gamma == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: gamma == nullptr");
+    }
+    if (jacobian == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: jacobian == nullptr");
+    }
+
+    // dimension
+    dim3 blocks(jacobian->data_rows() / numeric::matrix::block_size,
+        jacobian->data_columns() / numeric::matrix::block_size);
+    dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
+
+    // calc jacobian
+    ellipticalEquationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
+        this->phi->potential->device_data(), &this->phi->device_data()[driveCount * this->phi->data_rows()],
+        this->mesh->elements()->device_data(), this->elementalJacobianMatrix->device_data(),
+        gamma->device_data(), this->referenceValue, jacobian->data_rows(), jacobian->data_columns(),
+        this->phi->data_rows(), this->mesh->elements()->rows(), driveCount, measurmentCount,
+        jacobian->device_data());
 }
 
 // reduce matrix
@@ -326,49 +414,6 @@ void mpFlow::FEM::EllipticalEquation<basisFunctionType>::updateMatrix(
     ellipticalEquationKernel::updateMatrix(blocks, threads, stream,
         connectivityMatrix->device_data(), elements->device_data(), gamma->device_data(),
         sigmaRef, connectivityMatrix->data_rows(), connectivityMatrix->data_columns(), matrix->values());
-}
-
-// calc jacobian
-template <
-    class basisFunctionType
->
-void mpFlow::FEM::EllipticalEquation<basisFunctionType>::calcJacobian(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-    const std::shared_ptr<numeric::Matrix<dtype::real>> potential,
-    const std::shared_ptr<numeric::Matrix<dtype::index>> elements,
-    const std::shared_ptr<numeric::Matrix<dtype::real>> elemental_jacobian_matrix,
-    dtype::size drive_count, dtype::size measurment_count, dtype::real sigma_ref,
-    bool additiv, cudaStream_t stream, std::shared_ptr<numeric::Matrix<dtype::real>> jacobian) {
-    // check input
-    if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: gamma == nullptr");
-    }
-    if (potential == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: potential == nullptr");
-    }
-    if (elements == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: elements == nullptr");
-    }
-    if (elemental_jacobian_matrix == nullptr) {
-        throw std::invalid_argument(
-        "mpFlow::FEM::ellipticalEquation::calcJacobian: elemental_jacobian_matrix == nullptr");
-    }
-    if (jacobian == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: jacobian == nullptr");
-    }
-
-    // dimension
-    dim3 blocks(jacobian->data_rows() / numeric::matrix::block_size,
-        jacobian->data_columns() / numeric::matrix::block_size);
-    dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
-
-    // calc jacobian
-    ellipticalEquationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
-        potential->device_data(), &potential->device_data()[drive_count * potential->data_rows()],
-        elements->device_data(), elemental_jacobian_matrix->device_data(),
-        gamma->device_data(), sigma_ref, jacobian->data_rows(), jacobian->data_columns(),
-        potential->data_rows(), elements->rows(), drive_count, measurment_count, additiv,
-        jacobian->device_data());
 }
 
 // specialisation

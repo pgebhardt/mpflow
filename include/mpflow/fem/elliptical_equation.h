@@ -33,7 +33,7 @@ namespace FEM {
 
         // class methods
         // update matrix
-        void updateMatrix(const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
+        static void updateMatrix(const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
             const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
             const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, dtype::real sigmaRef,
             cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dtype::real>> matrix);
@@ -42,18 +42,9 @@ namespace FEM {
         template <
             class type
         >
-        void reduceMatrix(const std::shared_ptr<numeric::Matrix<type>> intermediateMatrix,
+        static void reduceMatrix(const std::shared_ptr<numeric::Matrix<type>> intermediateMatrix,
             const std::shared_ptr<numeric::SparseMatrix<dtype::real>> shape, dtype::index offset,
             cudaStream_t stream, std::shared_ptr<numeric::Matrix<type>> matrix);
-
-        // calc jacobian
-        void calcJacobian(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-            const std::shared_ptr<numeric::Matrix<dtype::real>> potential,
-            const std::shared_ptr<numeric::Matrix<dtype::index>> elements,
-            const std::shared_ptr<numeric::Matrix<dtype::real>> elemental_jacobian_matrix,
-            dtype::size drive_count, dtype::size measurment_count,
-            dtype::real sigma_ref, bool additiv,
-            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dtype::real>> jacobian);
 
         // instance methods
         // constructor
@@ -64,8 +55,12 @@ namespace FEM {
         // init methods
         std::shared_ptr<numeric::Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
         void initExcitationMatrix(cudaStream_t stream);
+        void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
 
-        // update model equations
+        void calcJacobian(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
+            dtype::size driveCount, dtype::size measurmentCount,
+            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dtype::real>> result);
+
         void update(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
             dtype::real k, cudaStream_t stream);
 
@@ -80,6 +75,7 @@ namespace FEM {
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> rMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalSMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalRMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> excitationMatrix;
         dtype::real referenceValue;
     };

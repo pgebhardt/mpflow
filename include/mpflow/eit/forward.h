@@ -31,8 +31,9 @@ namespace EIT {
     class ForwardSolver {
     public:
         // initialization
-        ForwardSolver(std::shared_ptr<equationType> equation, cudaStream_t stream);
-        void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
+        ForwardSolver(std::shared_ptr<equationType> equation,
+            std::shared_ptr<Source> source, cudaStream_t stream);
+
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dtype::real>> result,
             cudaStream_t stream);
@@ -49,12 +50,10 @@ namespace EIT {
         // member
         std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;
         std::shared_ptr<equationType> equation;
-        std::shared_ptr<numeric::Matrix<dtype::real>> phi;
+        std::shared_ptr<Source> source;
+        std::shared_ptr<numeric::Matrix<dtype::real>> voltage;
         std::shared_ptr<numeric::Matrix<dtype::real>> current;
-        std::shared_ptr<numeric::Matrix<dtype::real>> electrodeVoltage;
-        std::shared_ptr<numeric::Matrix<dtype::real>> electrodeCurrent;
         std::shared_ptr<numeric::Matrix<dtype::real>> jacobian;
-        std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
     };
 }
 }
