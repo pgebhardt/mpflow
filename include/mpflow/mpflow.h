@@ -37,10 +37,10 @@
 
 // FEM specific
 #include "fem/basis.h"
+#include "fem/boundary_descriptor.h"
 #include "fem/elliptical_equation.h"
 
 // EIT specific
-#include "eit/electrodes.h"
 #include "eit/source.h"
 #include "eit/forward.h"
 

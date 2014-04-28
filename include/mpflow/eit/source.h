@@ -21,7 +21,6 @@
 #ifndef MPFLOW_INCLDUE_EIT_SOURCE_H
 #define MPFLOW_INCLDUE_EIT_SOURCE_H
 
-// namespace mpFlow::EIT::source
 namespace mpFlow {
 namespace EIT {
 namespace source {
@@ -30,12 +29,12 @@ namespace source {
     public:
         // constructor
         Source(std::string type, const std::vector<dtype::real>& values,
-            std::shared_ptr<numeric::IrregularMesh> mesh, std::shared_ptr<EIT::Electrodes> electrodes,
+            std::shared_ptr<numeric::IrregularMesh> mesh, std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
             dtype::size component_count, std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
             cublasHandle_t handle, cudaStream_t stream);
         Source(std::string type, dtype::real value, std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<EIT::Electrodes> electrodes, dtype::size component_count,
+            std::shared_ptr<FEM::BoundaryDescriptor> electrodes, dtype::size component_count,
             std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
             cublasHandle_t handle, cudaStream_t stream);
@@ -56,7 +55,7 @@ namespace source {
         // accessors
         std::string& type() { return this->type_; }
         std::shared_ptr<numeric::IrregularMesh> mesh() { return this->mesh_; }
-        std::shared_ptr<Electrodes> electrodes() { return this->electrodes_; }
+        std::shared_ptr<FEM::BoundaryDescriptor> electrodes() { return this->electrodes_; }
         std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern() {
             return this->drive_pattern_;
         }
@@ -90,7 +89,7 @@ namespace source {
         // member
         std::string type_;
         std::shared_ptr<numeric::IrregularMesh> mesh_;
-        std::shared_ptr<Electrodes> electrodes_;
+        std::shared_ptr<FEM::BoundaryDescriptor> electrodes_;
         std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern_;
         std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern_;
         std::shared_ptr<numeric::Matrix<dtype::real>> pattern_;
@@ -111,12 +110,12 @@ namespace source {
     public:
         // constructor
         Current(const std::vector<dtype::real>& current, std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+            std::shared_ptr<FEM::BoundaryDescriptor> electrodes, dtype::size component_count,
             std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
             cublasHandle_t handle, cudaStream_t stream);
         Current(dtype::real current, std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+            std::shared_ptr<FEM::BoundaryDescriptor> electrodes, dtype::size component_count,
             std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
             cublasHandle_t handle, cudaStream_t stream);
@@ -137,12 +136,12 @@ namespace source {
     public:
         // constructor
         Voltage(const std::vector<dtype::real>& voltage, std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+            std::shared_ptr<FEM::BoundaryDescriptor> electrodes, dtype::size component_count,
             std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
             cublasHandle_t handle, cudaStream_t stream);
         Voltage(dtype::real voltage, std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<Electrodes> electrodes, dtype::size component_count,
+            std::shared_ptr<FEM::BoundaryDescriptor> electrodes, dtype::size component_count,
             std::shared_ptr<numeric::Matrix<dtype::real>> drive_pattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurement_pattern,
             cublasHandle_t handle, cudaStream_t stream);

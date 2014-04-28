@@ -18,16 +18,15 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLUDE_EIT_ELECTRODES_H
-#define MPFLOW_INCLUDE_EIT_ELECTRODES_H
+#ifndef MPFLOW_INCLUDE_FEM_BOUNDARY_DESCRIPTOR_H
+#define MPFLOW_INCLUDE_FEM_BOUNDARY_DESCRIPTOR_H
 
-// namespace mpFlow
 namespace mpFlow {
-namespace EIT {
-    class Electrodes {
+namespace FEM {
+    class BoundaryDescriptor {
     public:
-        Electrodes(dtype::size count, std::tuple<dtype::real, dtype::real> shape);
-        virtual ~Electrodes() { }
+        BoundaryDescriptor(dtype::size count, std::tuple<dtype::real, dtype::real> shape);
+        virtual ~BoundaryDescriptor() { }
 
         // member
         dtype::size count;
@@ -36,10 +35,9 @@ namespace EIT {
         std::tuple<dtype::real, dtype::real> shape;
     };
 
-    // electrodes helper
-    namespace electrodes {
-        // create electrodes on circular boundary
-        std::shared_ptr<Electrodes> circularBoundary(dtype::size count,
+    namespace boundaryDescriptor {
+        // create BoundaryDescriptor on circular boundary
+        std::shared_ptr<BoundaryDescriptor> circularBoundary(dtype::size count,
             std::tuple<dtype::real, dtype::real> shape, dtype::real boundaryRadius);
     }
 }
