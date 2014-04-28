@@ -27,7 +27,7 @@
 
 #include "mpflow/dtype.h"
 #include "mpflow/numeric/constants.h"
-#include "mpflow/eit/model_kernel.h"
+#include "mpflow/fem/elliptical_equation_kernel.h"
 
 // reduce connectivity and elementalResidual matrix
 template <

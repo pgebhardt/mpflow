@@ -46,7 +46,7 @@ namespace ellipticalEquationKernel {
 
     // calc jacobian kernel
     template <
-        int nodes_per_element
+        int nodesPerElement
     >
     void calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
         const dtype::real* drive_phi, const dtype::real* measurment_phi,

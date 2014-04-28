@@ -25,19 +25,21 @@ template <
     class basisFunctionType
 >
 mpFlow::FEM::EllipticalEquation<basisFunctionType>::EllipticalEquation(
-    std::shared_ptr<numeric::IrregularMesh> mesh, dtype::real referenceValue,
-    cublasHandle_t handle, cudaStream_t stream)
-    : mesh(mesh), referenceValue(referenceValue) {
+    std::shared_ptr<numeric::IrregularMesh> mesh,
+    std::shared_ptr<BoundaryDescriptor> boundaryDescriptor,
+    dtype::real referenceValue, cudaStream_t stream)
+    : mesh(mesh), boundaryDescriptor(boundaryDescriptor), referenceValue(referenceValue) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::EllipticalEquation: mesh == nullptr");
     }
-    if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::EllipticalEquation: handle == nullptr");
+    if (boundaryDescriptor == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::EllipticalEquation: boundaryDescriptor == nullptr");
     }
 
-    // init elemental matrices
+    // init matrices
     auto commonElementMatrix = this->initElementalMatrices(stream);
+    this->initExcitationMatrix(stream);
 
     // create initial sparse system matrix from common element Matrix
     this->systemMatrix = std::make_shared<numeric::SparseMatrix<dtype::real>>(
@@ -185,6 +187,61 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     }
 
     return commonElementMatrix;
+}
+
+template <
+    class basisFunctionType
+>
+void mpFlow::FEM::EllipticalEquation<basisFunctionType>::initExcitationMatrix(cudaStream_t stream) {
+    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
+    std::array<dtype::real, basisFunctionType::nodesPerEdge> nodeParameter;
+    dtype::real integrationStart, integrationEnd;
+
+    // calc excitation matrix
+    for (dtype::index boundaryElement = 0; boundaryElement < this->mesh->boundary()->rows(); ++boundaryElement) {
+        // get boundary nodes
+        nodes = this->mesh->boundaryNodes(boundaryElement);
+
+        // sort nodes by parameter
+        std::sort(nodes.begin(), nodes.end(),
+            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
+                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
+                -> bool {
+                    return math::circleParameter(std::get<1>(b),
+                        math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
+        });
+
+        // calc parameter offset
+        dtype::real parameterOffset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
+
+        // calc node parameter centered to node 0
+        for (dtype::size i = 0; i < nodes.size(); ++i) {
+            nodeParameter[i] = math::circleParameter(std::get<1>(nodes[i]),
+                parameterOffset);
+        }
+
+        for (dtype::index piece = 0; piece < this->boundaryDescriptor->count; ++piece) {
+            // calc integration interval centered to node 0
+            integrationStart = math::circleParameter(
+                std::get<0>(this->boundaryDescriptor->coordinates[piece]),
+                parameterOffset);
+            integrationEnd = math::circleParameter(
+                std::get<1>(this->boundaryDescriptor->coordinates[piece]),
+                parameterOffset);
+
+            // intgrate if integrationStart is left of integrationEnd
+            if (integrationStart < integrationEnd) {
+                // calc element
+                for (dtype::index node = 0; node < basisFunctionType::nodesPerEdge; ++node) {
+                    (*this->excitationMatrix)(std::get<0>(nodes[node]), piece) +=
+                        basisFunctionType::integrateBoundaryEdge(
+                            nodeParameter, node, integrationStart, integrationEnd) /
+                        std::get<0>(this->boundaryDescriptor->shape);
+                }
+            }
+        }
+    }
+    this->excitationMatrix->copyToDevice(stream);
 }
 
 // update ellipticalEquation

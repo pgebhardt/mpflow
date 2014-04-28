@@ -57,11 +57,13 @@ namespace FEM {
 
         // instance methods
         // constructor
-        EllipticalEquation(std::shared_ptr<numeric::IrregularMesh> mesh, dtype::real referenceValue,
-            cublasHandle_t handle, cudaStream_t stream);
+        EllipticalEquation(std::shared_ptr<numeric::IrregularMesh> mesh,
+            std::shared_ptr<BoundaryDescriptor> boundaryDescriptor,
+            dtype::real referenceValue, cudaStream_t stream);
 
         // init methods
         std::shared_ptr<numeric::Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
+        void initExcitationMatrix(cudaStream_t stream);
 
         // update model equations
         void update(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
@@ -69,12 +71,16 @@ namespace FEM {
 
         // member
         std::shared_ptr<numeric::IrregularMesh> mesh;
+        std::shared_ptr<BoundaryDescriptor> boundaryDescriptor;
+        std::shared_ptr<numeric::Matrix<dtype::real>> phi;
+        std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> sMatrix;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> rMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalSMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalRMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::real>> excitationMatrix;
         dtype::real referenceValue;
     };
 }
