@@ -57,7 +57,7 @@ static __global__ void reduceMatrixKernel(const type* intermediate_matrix,
 template <
     class type
 >
-void mpFlow::EIT::modelKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::FEM::ellipticalEquationKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* intermediate_matrix, const dtype::index* column_ids, dtype::size rows,
     dtype::index offset, type* matrix) {
     // call cuda kernel
@@ -68,10 +68,10 @@ void mpFlow::EIT::modelKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStrea
 }
 
 // reduce matrix specialisation
-template void mpFlow::EIT::modelKernel::reduceMatrix<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::FEM::ellipticalEquationKernel::reduceMatrix<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::real*);
-template void mpFlow::EIT::modelKernel::reduceMatrix<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::FEM::ellipticalEquationKernel::reduceMatrix<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
 
@@ -102,7 +102,7 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 }
 
 // update matrix kernel wrapper
-void mpFlow::EIT::modelKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::FEM::ellipticalEquationKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::index* connectivityMatrix, const dtype::real* elementalMatrix,
     const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows, dtype::size columns,
     dtype::real* matrix_values) {
@@ -115,39 +115,37 @@ void mpFlow::EIT::modelKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStrea
 
 // update system matrix kernel
 static __global__ void updateSystemMatrixKernel(
-    const mpFlow::dtype::real* s_matrix_values, const mpFlow::dtype::real* r_matrix_values,
-    const mpFlow::dtype::index* s_matrix_column_ids, const mpFlow::dtype::real* z_matrix,
-    mpFlow::dtype::size density, mpFlow::dtype::real scalar, mpFlow::dtype::size z_matrix_rows,
-    mpFlow::dtype::real* system_matrix_values) {
+    const mpFlow::dtype::real* sMatrixValues, const mpFlow::dtype::real* rMatrixValues,
+    const mpFlow::dtype::index* sMatrixColumnIds, mpFlow::dtype::size density,
+    mpFlow::dtype::real k, mpFlow::dtype::real* systemMatrixValues) {
     // get row
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // update system matrix
-    mpFlow::dtype::index column_id = mpFlow::dtype::invalid_index;
+    mpFlow::dtype::index columnId = mpFlow::dtype::invalid_index;
     for (mpFlow::dtype::index column = 0; column < density; ++column) {
         // get column id
-        column_id = s_matrix_column_ids[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        columnId = sMatrixColumnIds[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
         // update system matrix element
-        system_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] =
-            column_id != mpFlow::dtype::invalid_index ?
-            s_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] +
-            r_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] * scalar +
-            z_matrix[row + z_matrix_rows * column_id] :
-            system_matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        systemMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] =
+            columnId != mpFlow::dtype::invalid_index ?
+            sMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] +
+            rMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] * k :
+            systemMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column];
     }
 }
 
 // update system matrix kernel wrapper
-void mpFlow::EIT::modelKernel::updateSystemMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const mpFlow::dtype::real* s_matrix_values, const mpFlow::dtype::real* r_matrix_values,
-    const mpFlow::dtype::index* s_matrix_column_ids, const mpFlow::dtype::real* z_matrix,
-    mpFlow::dtype::size density, mpFlow::dtype::real scalar, mpFlow::dtype::size z_matrix_rows,
-    mpFlow::dtype::real* system_matrix_values) {
+void mpFlow::FEM::ellipticalEquationKernel::updateSystemMatrix(
+    dim3 blocks, dim3 threads, cudaStream_t stream,
+    const dtype::real* sMatrixValues, const dtype::real* rMatrixValues,
+    const dtype::index* sMatrixColumnIds, dtype::size density, dtype::real k,
+    dtype::real* systemMatrixValues) {
     // call cuda kernel
     updateSystemMatrixKernel<<<blocks, threads, 0, stream>>>(
-        s_matrix_values, r_matrix_values, s_matrix_column_ids, z_matrix,
-        density, scalar, z_matrix_rows, system_matrix_values);
+        sMatrixValues, rMatrixValues, sMatrixColumnIds, density, k,
+        systemMatrixValues);
 
     CudaCheckError();
 }
@@ -161,7 +159,7 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
     const mpFlow::dtype::real* elementalJacobianMatrix, const mpFlow::dtype::real* gamma,
     mpFlow::dtype::real sigmaRef, mpFlow::dtype::size rows, mpFlow::dtype::size columns,
     mpFlow::dtype::size phiRows, mpFlow::dtype::size elementCount,
-    mpFlow::dtype::size driveCount, mpFlow::dtype::size measurmentCount, bool additiv,
+    mpFlow::dtype::size driveCount, mpFlow::dtype::size measurmentCount,
     mpFlow::dtype::real* jacobian) {
     // get id
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
@@ -203,40 +201,34 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
     // diff sigma to gamma
     element *= sigmaRef * exp10f(gamma[column] / 10.0f) / 10.0f;
 
-    // set matrix element
-    if (additiv == true) {
-        jacobian[row + column * rows] += element;
-    }
-    else {
-        jacobian[row + column * rows] = element;
-    }
+    jacobian[row + column * rows] = element;
 }
 
 // calc jacobian kernel wrapper
 template <
     int nodes_per_element
 >
-void mpFlow::EIT::modelKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::FEM::ellipticalEquationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::real* drive_phi, const dtype::real* measurment_phi,
     const dtype::index* connectivity_matrix, const dtype::real* elemental_jacobian_matrix,
     const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows, dtype::size columns,
     dtype::size phi_rows, dtype::size element_count, dtype::size drive_count,
-    dtype::size measurment_count, bool additiv, dtype::real* jacobian) {
+    dtype::size measurment_count, dtype::real* jacobian) {
     // call cuda kernel
     calcJacobianKernel<nodes_per_element><<<blocks, threads, 0, stream>>>(
         drive_phi, measurment_phi, connectivity_matrix, elemental_jacobian_matrix, gamma,
         sigma_ref, rows, columns, phi_rows, element_count, drive_count,
-        measurment_count, additiv, jacobian);
+        measurment_count, jacobian);
 
     CudaCheckError();
 }
 
 // template specialisation
-template void mpFlow::EIT::modelKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::ellipticalEquationKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
-    dtype::size, dtype::size, bool, dtype::real*);
-template void mpFlow::EIT::modelKernel::calcJacobian<6>(dim3, dim3, cudaStream_t,
+    dtype::size, dtype::size, dtype::real*);
+template void mpFlow::FEM::ellipticalEquationKernel::calcJacobian<6>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
-    dtype::size, dtype::size, bool, dtype::real*);
+    dtype::size, dtype::size, dtype::real*);

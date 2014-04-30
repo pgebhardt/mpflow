@@ -259,43 +259,36 @@ template <
     class basisFunctionType
 >
 void mpFlow::FEM::EllipticalEquation<basisFunctionType>
-    ::initJacobianCalculationMatrix(
-    cublasHandle_t handle, cudaStream_t stream) {
-    // check input
-    if (handle == nullptr) {
-        throw std::invalid_argument(
-            "mpFlow::FEM::EllipticalEquation::initJacobianCalculationMatrix: handle == nullptr");
-    }
-
+    ::initJacobianCalculationMatrix(cudaStream_t stream) {
     // variables
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<std::tuple<dtype::real, dtype::real>,
-       equationType::basisFunctionType::nodesPerElement> nodeCoordinates;
-    std::array<std::shared_ptr<typename equationType::basisFunctionType>,
-        equationType::basisFunctionType::nodesPerElement> basisFunction;
+       basisFunctionType::nodesPerElement> nodeCoordinates;
+    std::array<std::shared_ptr<basisFunctionType>,
+        basisFunctionType::nodesPerElement> basisFunction;
 
     // fill connectivity and elementalJacobianMatrix
-    for (dtype::index element = 0; element < this->equation->mesh->elements()->rows(); ++element) {
+    for (dtype::index element = 0; element < this->mesh->elements()->rows(); ++element) {
         // get element nodes
-        nodes = this->equation->mesh->elementNodes(element);
+        nodes = this->mesh->elementNodes(element);
 
         // extract nodes coordinates
-        for (dtype::index node = 0; node < equationType::basisFunctionType::nodesPerElement; ++node) {
+        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
             nodeCoordinates[node] = std::get<1>(nodes[node]);
         }
 
         // calc corresponding basis functions
-        for (dtype::index node = 0; node < equationType::basisFunctionType::nodesPerElement; ++node) {
-            basisFunction[node] = std::make_shared<typename equationType::basisFunctionType>(
+        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
+            basisFunction[node] = std::make_shared<basisFunctionType>(
                 nodeCoordinates, node);
         }
 
         // fill matrix
-        for (dtype::index i = 0; i < equationType::basisFunctionType::nodesPerElement; ++i)
-        for (dtype::index j = 0; j < equationType::basisFunctionType::nodesPerElement; ++j) {
+        for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
+        for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
             // set elementalJacobianMatrix element
             (*this->elementalJacobianMatrix)(element, i +
-                j * equationType::basisFunctionType::nodesPerElement) =
+                j * basisFunctionType::nodesPerElement) =
                 basisFunction[i]->integrateGradientWithBasis(basisFunction[j]);
         }
     }
@@ -344,7 +337,7 @@ void mpFlow::FEM::EllipticalEquation<basisFunctionType>::calcJacobian(
 
     // calc jacobian
     ellipticalEquationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
-        this->phi->potential->device_data(), &this->phi->device_data()[driveCount * this->phi->data_rows()],
+        this->phi->device_data(), &this->phi->device_data()[driveCount * this->phi->data_rows()],
         this->mesh->elements()->device_data(), this->elementalJacobianMatrix->device_data(),
         gamma->device_data(), this->referenceValue, jacobian->data_rows(), jacobian->data_columns(),
         this->phi->data_rows(), this->mesh->elements()->rows(), driveCount, measurmentCount,

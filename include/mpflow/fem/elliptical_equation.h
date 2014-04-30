@@ -55,7 +55,7 @@ namespace FEM {
         // init methods
         std::shared_ptr<numeric::Matrix<dtype::real>> initElementalMatrices(cudaStream_t stream);
         void initExcitationMatrix(cudaStream_t stream);
-        void initJacobianCalculationMatrix(cublasHandle_t handle, cudaStream_t stream);
+        void initJacobianCalculationMatrix(cudaStream_t stream);
 
         void calcJacobian(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
             dtype::size driveCount, dtype::size measurmentCount,
