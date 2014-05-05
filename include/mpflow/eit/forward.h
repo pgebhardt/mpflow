@@ -44,10 +44,6 @@ namespace EIT {
             const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
             cublasHandle_t handle, cudaStream_t stream);
 
-        // calc jacobian matrix of model
-        std::shared_ptr<numeric::Matrix<dtype::real>> calcJacobian(
-            const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cudaStream_t stream);
-
         // member
         std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;
         std::shared_ptr<equationType> equation;

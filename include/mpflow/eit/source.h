@@ -39,9 +39,6 @@ namespace EIT {
             cudaStream_t stream);
         virtual ~Source() { }
 
-        void updateExcitation(std::shared_ptr<numeric::Matrix<dtype::real>> excitation,
-            cublasHandle_t handle, cudaStream_t stream);
-
         // member
         std::string type;
         std::shared_ptr<FEM::BoundaryDescriptor> electrodes;

@@ -126,9 +126,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // update system matrix
     this->equation->update(gamma, 0.0, stream);
-    this->source->updateExcitation(this->excitation, handle, stream);
-    this->excitation->multiply(this->equation->excitationMatrix, this->source->pattern,
-        handle, stream);
+    this->excitation->multiply(this->equation->excitationMatrix,
+        this->source->pattern, handle, stream);
 
     // solve for ground mode
     this->numericalSolver->solve(this->equation->systemMatrix,
@@ -137,10 +136,13 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         nullptr, stream, this->phi);
 
     // calc jacobian
-    this->calcJacobian(gamma, stream);
+    this->equation->calcJacobian(this->phi, gamma, this->source->drivePattern->columns(),
+        this->source->measurementPattern->columns(), stream, this->jacobian);
 
     // current source specific tasks
     if (this->source->type == source::CurrentSourceType) {
+        this->jacobian->scalarMultiply(-1.0, stream);
+
         // calc voltage
         this->applyMeasurementPattern(this->voltage, handle, stream);
 
@@ -155,38 +157,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // default result
     return this->voltage;
-}
-
-// calc jacobian
-template <
-    class equationType,
-    template <template <class> class> class numericalSolverType
->
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::calcJacobian(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cudaStream_t stream) {
-    // check input
-    if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::calcJacobian: gamma == nullptr");
-    }
-
-    // calc jacobian
-    this->equation->calcJacobian(this->phi, gamma, this->source->drivePattern->columns(),
-        this->source->measurementPattern->columns(), stream, this->jacobian);
-/*    for (dtype::index component = 1; component < this->component_count(); ++component) {
-        ellipticalEquation::calcJacobian<basisFunctionType>(
-            gamma, this->potential(component), this->mesh()->elements(),
-            this->elemental_jacobian_matrix(), this->source()->drive_count(),
-            this->source()->measurement_count(), this->sigma_ref(),
-            true, stream, this->jacobian());
-    }*/
-
-    // switch sign if current source
-    if (this->source->type == "current") {
-        this->jacobian->scalarMultiply(-1.0, stream);
-    }
-
-    return this->jacobian;
 }
 
 // specialisation
