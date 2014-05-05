@@ -37,9 +37,10 @@ namespace EIT {
             std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
             cudaStream_t stream);
-
-        // destructor
         virtual ~Source() { }
+
+        void updateExcitation(std::shared_ptr<numeric::Matrix<dtype::real>> excitation,
+            cublasHandle_t handle, cudaStream_t stream);
 
         // member
         std::string type;

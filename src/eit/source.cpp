@@ -71,3 +71,34 @@ mpFlow::EIT::Source::Source(std::string type, dtype::real value,
     : Source(type, std::vector<dtype::real>(drivePattern->columns(), value),
         electrodes, drivePattern, measurementPattern, stream) {
 }
+
+void mpFlow::EIT::Source::updateExcitation(std::shared_ptr<numeric::Matrix<dtype::real>> excitation,
+    cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if (excitation == nullptr) {
+        throw std::invalid_argument("mpFlow::EIT::Source::updateExcitation: excitation == nullptr");
+    }
+    if (handle == nullptr) {
+        throw std::invalid_argument("mpFlow::EIT::Source::updateExcitation: handle == nullptr");
+    }
+
+    cublasSetStream(handle, stream);
+    for (dtype::index i = 0; i < this->pattern->columns(); ++i) {
+        if (cublasScopy(handle, this->pattern->rows(),
+            this->pattern->device_data() + i * this->pattern->data_rows(), 1,
+            excitation->device_data() + i * excitation->data_rows() +
+            excitation->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
+            throw std::logic_error(
+                "mpFlow::EIT::Source::updateExcitation: copy pattern to excitation");
+        }
+    }
+
+    for (dtype::index i = 0; i < this->drivePattern->columns(); ++i) {
+        if (cublasSscal(handle, this->pattern->rows(), &this->values[i],
+            excitation->device_data() + i * excitation->data_rows() +
+            excitation->rows(), 1) != CUBLAS_STATUS_SUCCESS) {
+            throw std::logic_error(
+                "mpFlow::EIT::source::Current::updateExcitation: apply value to pattern");
+        }
+    }
+}

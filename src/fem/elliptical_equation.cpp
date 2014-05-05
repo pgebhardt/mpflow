@@ -344,6 +344,28 @@ void mpFlow::FEM::EllipticalEquation<basisFunctionType>::calcJacobian(
         jacobian->device_data());
 }
 
+template <
+    class basisFunctionType
+>
+template <
+    class sourceType
+>
+void mpFlow::FEM::EllipticalEquation<basisFunctionType>::updateExcitation(
+    const std::shared_ptr<sourceType> source, cublasHandle_t handle,
+    cudaStream_t stream) {
+    // check input
+    if (source == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::updateExcitation: source == nullptr");
+    }
+    if (handle == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::updateExcitation: handle == nullptr");
+    }
+
+    source->updateExcitation(this->excitation, handle, stream);
+    this->excitation->multiply(this->excitationMatrix, source->pattern,
+        handle, stream);
+}
+
 // reduce matrix
 template <
     class basisFunctionType
@@ -426,6 +448,10 @@ template void mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Quadratic>::re
     const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
     const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
     std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
+template void mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Linear>::updateExcitation<
+    mpFlow::EIT::Source>(const std::shared_ptr<mpFlow::EIT::Source>, cublasHandle_t, cudaStream_t);
+template void mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Quadratic>::updateExcitation<
+    mpFlow::EIT::Source>(const std::shared_ptr<mpFlow::EIT::Source>, cublasHandle_t, cudaStream_t);
 
 template class mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Linear>;
 template class mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Quadratic>;

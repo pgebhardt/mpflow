@@ -64,6 +64,12 @@ namespace FEM {
         void update(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
             dtype::real k, cudaStream_t stream);
 
+        template <
+            class sourceType
+        >
+        void updateExcitation(const std::shared_ptr<sourceType> source, cublasHandle_t handle,
+            cudaStream_t stream);
+
         // member
         std::shared_ptr<numeric::IrregularMesh> mesh;
         std::shared_ptr<BoundaryDescriptor> boundaryDescriptor;
