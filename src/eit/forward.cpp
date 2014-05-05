@@ -124,10 +124,19 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: handle == nullptr");
     }
 
-    // update system matrix
+    // update system matrix and excitation for different source types
     this->equation->update(gamma, 0.0, stream);
     this->excitation->multiply(this->equation->excitationMatrix,
         this->source->pattern, handle, stream);
+
+    if (this->source->type == source::VoltageSourceType) {
+        dim3 blocks(this->excitation->data_rows() / numeric::matrix::block_size, 1);
+        dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
+
+        forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
+            this->excitation->device_data(), this->equation->systemMatrix->column_ids(),
+            this->equation->systemMatrix->values());
+    }
 
     // solve for ground mode
     this->numericalSolver->solve(this->equation->systemMatrix,
