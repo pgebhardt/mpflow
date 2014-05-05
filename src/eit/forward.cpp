@@ -47,6 +47,14 @@ mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::ForwardSolver(
         this->source->measurementPattern->columns(), this->source->drivePattern->columns(), stream);
     this->current = std::make_shared<numeric::Matrix<dtype::real>>(
         this->source->measurementPattern->columns(), this->source->drivePattern->columns(), stream);
+    this->phi = std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes()->rows(),
+        this->source->pattern->columns(), stream);
+    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes()->rows(),
+        this->source->pattern->columns(), stream);
+    this->jacobian = std::make_shared<numeric::Matrix<dtype::real>>(
+        math::roundTo(this->source->measurementPattern->columns(), numeric::matrix::block_size) *
+        math::roundTo(this->source->drivePattern->columns(), numeric::matrix::block_size),
+        this->equation->mesh->elements()->rows(), stream);
 }
 
 // apply pattern
@@ -71,20 +79,27 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::solve(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps, cudaStream_t stream) {
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
+    cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
     }
+    if (handle == nullptr) {
+        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: handle == nullptr");
+    }
 
     // update system matrix
     this->equation->update(gamma, 0.0, stream);
+    this->source->updateExcitation(this->excitation, handle, stream);
+    this->excitation->multiply(this->equation->excitationMatrix, this->source->pattern,
+        handle, stream);
 
     // solve for ground mode
     this->numericalSolver->solve(this->equation->systemMatrix,
-        this->equation->excitation, steps,
-        this->source->type == "current" ? true : false,
-        nullptr, stream, this->equation->phi);
+        this->excitation, steps,
+        this->source->type == mpFlow::EIT::source::CurrentSourceType ? true : false,
+        nullptr, stream, this->phi);
 /*
     // solve for higher harmonics
     for (dtype::index component = 1; component < this->equation->component_count(); ++component) {
@@ -132,7 +147,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     }
 
     // calc jacobian
-    this->equation->calcJacobian(gamma, this->source->drivePattern->columns(),
+    this->equation->calcJacobian(this->phi, gamma, this->source->drivePattern->columns(),
         this->source->measurementPattern->columns(), stream, this->jacobian);
 /*    for (dtype::index component = 1; component < this->component_count(); ++component) {
         ellipticalEquation::calcJacobian<basisFunctionType>(

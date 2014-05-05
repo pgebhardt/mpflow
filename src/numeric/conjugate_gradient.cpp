@@ -63,6 +63,7 @@ void mpFlow::numeric::ConjugateGradient<matrix_type>::solve(const std::shared_pt
     }
 
     // calc residuum r = f - A * x
+    std::cout << "A: (" << A->rows() << ", " << A->columns() << "), x: (" << x->rows() << ", " << x->columns() << "), residuum: (" << this->residuum()->rows() << ", " << this->residuum()->columns() << ")" << std::endl;
     this->residuum()->multiply(A, x, handle, stream);
 
     // regularize for dc free solution

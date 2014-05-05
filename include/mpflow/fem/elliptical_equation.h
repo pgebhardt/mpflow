@@ -57,24 +57,17 @@ namespace FEM {
         void initExcitationMatrix(cudaStream_t stream);
         void initJacobianCalculationMatrix(cudaStream_t stream);
 
-        void calcJacobian(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
+        void calcJacobian(const std::shared_ptr<numeric::Matrix<dtype::real>> phi,
+            const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
             dtype::size driveCount, dtype::size measurmentCount,
             cudaStream_t stream, std::shared_ptr<numeric::Matrix<dtype::real>> result);
 
         void update(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
             dtype::real k, cudaStream_t stream);
 
-        template <
-            class sourceType
-        >
-        void updateExcitation(const std::shared_ptr<sourceType> source, cublasHandle_t handle,
-            cudaStream_t stream);
-
         // member
         std::shared_ptr<numeric::IrregularMesh> mesh;
         std::shared_ptr<BoundaryDescriptor> boundaryDescriptor;
-        std::shared_ptr<numeric::Matrix<dtype::real>> phi;
-        std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix;
         std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> sMatrix;

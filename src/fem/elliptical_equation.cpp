@@ -38,10 +38,6 @@ mpFlow::FEM::EllipticalEquation<basisFunctionType>::EllipticalEquation(
     }
 
     // init matrices
-    this->phi = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->nodes()->rows(), 1, stream);
-    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->nodes()->rows(), 1, stream);
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh->elements()->rows(),
         math::square(basisFunctionType::nodesPerElement), stream);
@@ -310,8 +306,7 @@ void mpFlow::FEM::EllipticalEquation<basisFunctionType>::update(
     // update system matrix
     ellipticalEquationKernel::updateSystemMatrix(this->sMatrix->data_rows() / numeric::matrix::block_size,
         numeric::matrix::block_size, stream, this->sMatrix->values(), this->rMatrix->values(),
-        this->sMatrix->column_ids(), this->sMatrix->density(), math::square(k),
-        this->systemMatrix->values());
+        this->sMatrix->column_ids(), this->sMatrix->density(), k, this->systemMatrix->values());
 }
 
 // calc jacobian
@@ -319,10 +314,14 @@ template <
     class basisFunctionType
 >
 void mpFlow::FEM::EllipticalEquation<basisFunctionType>::calcJacobian(
+    const std::shared_ptr<numeric::Matrix<dtype::real>> phi,
     const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
     dtype::size driveCount, dtype::size measurmentCount, cudaStream_t stream,
     std::shared_ptr<numeric::Matrix<dtype::real>> jacobian) {
     // check input
+    if (phi == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: phi == nullptr");
+    }
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: gamma == nullptr");
     }
@@ -337,33 +336,11 @@ void mpFlow::FEM::EllipticalEquation<basisFunctionType>::calcJacobian(
 
     // calc jacobian
     ellipticalEquationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
-        this->phi->device_data(), &this->phi->device_data()[driveCount * this->phi->data_rows()],
+        phi->device_data(), &phi->device_data()[driveCount * phi->data_rows()],
         this->mesh->elements()->device_data(), this->elementalJacobianMatrix->device_data(),
         gamma->device_data(), this->referenceValue, jacobian->data_rows(), jacobian->data_columns(),
-        this->phi->data_rows(), this->mesh->elements()->rows(), driveCount, measurmentCount,
+        phi->data_rows(), this->mesh->elements()->rows(), driveCount, measurmentCount,
         jacobian->device_data());
-}
-
-template <
-    class basisFunctionType
->
-template <
-    class sourceType
->
-void mpFlow::FEM::EllipticalEquation<basisFunctionType>::updateExcitation(
-    const std::shared_ptr<sourceType> source, cublasHandle_t handle,
-    cudaStream_t stream) {
-    // check input
-    if (source == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::updateExcitation: source == nullptr");
-    }
-    if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::EllipticalEquation::updateExcitation: handle == nullptr");
-    }
-
-    source->updateExcitation(this->excitation, handle, stream);
-    this->excitation->multiply(this->excitationMatrix, source->pattern,
-        handle, stream);
 }
 
 // reduce matrix
@@ -448,10 +425,6 @@ template void mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Quadratic>::re
     const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
     const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
     std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
-template void mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Linear>::updateExcitation<
-    mpFlow::EIT::Source>(const std::shared_ptr<mpFlow::EIT::Source>, cublasHandle_t, cudaStream_t);
-template void mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Quadratic>::updateExcitation<
-    mpFlow::EIT::Source>(const std::shared_ptr<mpFlow::EIT::Source>, cublasHandle_t, cudaStream_t);
 
 template class mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Linear>;
 template class mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Quadratic>;

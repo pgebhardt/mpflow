@@ -79,7 +79,8 @@ void mpFlow::solver::Solver<forward_solver_type, numerical_inverse_solver_type>:
 
     // forward solving a few steps
     auto initial_value = this->forward_solver()->solve(this->gamma(),
-        this->forward_solver()->equation->mesh->nodes()->rows() / 4, stream);
+        this->forward_solver()->equation->mesh->nodes()->rows() / 4,
+        handle, stream);
 
     // calc system matrix
     this->inverse_solver()->calcSystemMatrix(this->forward_solver()->jacobian,
@@ -139,7 +140,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // solve forward
     this->forward_solver()->solve(this->gamma(),
-        this->forward_solver()->equation->mesh->nodes()->rows() / 80,  stream);
+        this->forward_solver()->equation->mesh->nodes()->rows() / 80,
+        handle, stream);
 
     // calc inverse system matrix
     this->inverse_solver()->calcSystemMatrix(this->forward_solver()->jacobian,

@@ -41,7 +41,7 @@ namespace EIT {
         // forward solving
         std::shared_ptr<numeric::Matrix<dtype::real>> solve(
             const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
-            cudaStream_t stream);
+            cublasHandle_t handle, cudaStream_t stream);
 
         // calc jacobian matrix of model
         std::shared_ptr<numeric::Matrix<dtype::real>> calcJacobian(
@@ -51,6 +51,8 @@ namespace EIT {
         std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;
         std::shared_ptr<equationType> equation;
         std::shared_ptr<Source> source;
+        std::shared_ptr<numeric::Matrix<dtype::real>> phi;
+        std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
         std::shared_ptr<numeric::Matrix<dtype::real>> voltage;
         std::shared_ptr<numeric::Matrix<dtype::real>> current;
         std::shared_ptr<numeric::Matrix<dtype::real>> jacobian;
