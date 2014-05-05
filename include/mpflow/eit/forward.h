@@ -32,11 +32,12 @@ namespace EIT {
     public:
         // initialization
         ForwardSolver(std::shared_ptr<equationType> equation,
-            std::shared_ptr<Source> source, cudaStream_t stream);
+            std::shared_ptr<Source> source, cublasHandle_t handle,
+            cudaStream_t stream);
 
         // apply pattern
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dtype::real>> result,
-            cudaStream_t stream);
+            cublasHandle_t handle, cudaStream_t stream);
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dtype::real>> solve(
@@ -56,6 +57,7 @@ namespace EIT {
         std::shared_ptr<numeric::Matrix<dtype::real>> voltage;
         std::shared_ptr<numeric::Matrix<dtype::real>> current;
         std::shared_ptr<numeric::Matrix<dtype::real>> jacobian;
+        std::shared_ptr<numeric::Matrix<dtype::real>> electrodesAttachmentMatrix;
     };
 }
 }

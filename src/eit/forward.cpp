@@ -28,12 +28,16 @@ template <
 >
 mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::ForwardSolver(
     std::shared_ptr<equationType> equation, std::shared_ptr<Source> source,
-    cudaStream_t stream)
+    cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
     // check input
     if (equation == nullptr) {
         throw std::invalid_argument(
             "mpFlow::EIT::ForwardSolver::ForwardSolver: equation == nullptr");
+    }
+    if (handle == nullptr) {
+        throw std::invalid_argument(
+            "mpFlow::EIT::ForwardSolver::ForwardSolver: handle == nullptr");
     }
 
     // create numericalSolver solver
@@ -55,6 +59,25 @@ mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::ForwardSolver(
         math::roundTo(this->source->measurementPattern->columns(), numeric::matrix::block_size) *
         math::roundTo(this->source->drivePattern->columns(), numeric::matrix::block_size),
         this->equation->mesh->elements()->rows(), stream);
+     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->source->measurementPattern->columns(),
+        this->equation->mesh->nodes()->rows(), stream);
+
+    // calc electrodes attachement matrix
+    cublasSetStream(handle, stream);
+    dtype::real alpha = 1.0, beta = 0.0;
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
+        this->source->measurementPattern->data_columns(),
+        this->equation->excitationMatrix->data_rows(),
+        this->source->measurementPattern->data_rows(), &alpha,
+        this->source->measurementPattern->device_data(),
+        this->source->measurementPattern->data_rows(),
+        this->equation->excitationMatrix->device_data(),
+        this->equation->excitationMatrix->data_rows(),
+        &beta, this->electrodesAttachmentMatrix->device_data(),
+        this->electrodesAttachmentMatrix->data_rows()) != CUBLAS_STATUS_SUCCESS) {
+        throw std::logic_error("mpFlow::EIT::ForwardSolver: calc voltage calculation");
+    }
 }
 
 // apply pattern
@@ -63,13 +86,25 @@ template <
     template <template <class> class> class numericalSolverType
 >
 void mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::applyMeasurementPattern(
-    std::shared_ptr<numeric::Matrix<dtype::real>> result, cudaStream_t) {
+    std::shared_ptr<numeric::Matrix<dtype::real>> result, cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (result == nullptr) {
-        throw std::invalid_argument("forward::applyPattern: result == nullptr");
+        throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: result == nullptr");
+    }
+    if (handle == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: handle == nullptr");
     }
 
-    // TODO: applyMeasurementPattern
+    // set stream
+    cublasSetStream(handle, stream);
+
+    // add voltage
+    dtype::real alpha = 1.0f, beta = 0.0f;
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->data_rows(),
+        this->source->drivePattern->columns(), this->electrodesAttachmentMatrix->data_columns(), &alpha,
+        this->electrodesAttachmentMatrix->device_data(), this->electrodesAttachmentMatrix->data_rows(),
+        this->phi->device_data(), this->phi->data_rows(), &beta,
+        result->device_data(), result->data_rows());
 }
 
 // forward solving
@@ -100,31 +135,20 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         this->excitation, steps,
         this->source->type == mpFlow::EIT::source::CurrentSourceType ? true : false,
         nullptr, stream, this->phi);
-/*
-    // solve for higher harmonics
-    for (dtype::index component = 1; component < this->equation->component_count(); ++component) {
-        this->numericalSolver->solve(
-            this->equation->system_matrix(component),
-            this->equation->source()->excitation(component),
-            steps, false, nullptr, stream, this->equation->potential(component));
-    }
-*/
+
     // calc jacobian
     this->calcJacobian(gamma, stream);
 
     // current source specific tasks
-    if (this->source->type == "current") {
+    if (this->source->type == source::CurrentSourceType) {
         // calc voltage
-        this->applyMeasurementPattern(this->voltage, stream);
+        this->applyMeasurementPattern(this->voltage, handle, stream);
 
         return this->voltage;
     }
-    else if (this->source->type == "voltage") {
+    else if (this->source->type == source::VoltageSourceType) {
         // calc current
-        this->applyMeasurementPattern(this->current, stream);
-
-        // scale current with electrode height
-        // this->current()->scalarMultiply(std::get<1>(this->equation->electrodes()->shape()), stream);
+        this->applyMeasurementPattern(this->current, handle, stream);
 
         return this->current;
     }
