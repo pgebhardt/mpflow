@@ -36,8 +36,9 @@ namespace EIT {
             cudaStream_t stream);
 
         // apply pattern
-        void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dtype::real>> result,
-            cublasHandle_t handle, cudaStream_t stream);
+        void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dtype::real>> source,
+            std::shared_ptr<numeric::Matrix<dtype::real>> result, cublasHandle_t handle,
+            cudaStream_t stream);
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dtype::real>> solve(

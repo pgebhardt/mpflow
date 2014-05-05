@@ -86,8 +86,12 @@ template <
     template <template <class> class> class numericalSolverType
 >
 void mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::applyMeasurementPattern(
+    const std::shared_ptr<numeric::Matrix<dtype::real>> source,
     std::shared_ptr<numeric::Matrix<dtype::real>> result, cublasHandle_t handle, cudaStream_t stream) {
     // check input
+    if (source == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: source == nullptr");
+    }
     if (result == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: result == nullptr");
     }
@@ -103,7 +107,7 @@ void mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::applyMeasure
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->data_rows(),
         this->source->drivePattern->columns(), this->electrodesAttachmentMatrix->data_columns(), &alpha,
         this->electrodesAttachmentMatrix->device_data(), this->electrodesAttachmentMatrix->data_rows(),
-        this->phi->device_data(), this->phi->data_rows(), &beta,
+        source->device_data(), source->data_rows(), &beta,
         result->device_data(), result->data_rows());
 }
 
@@ -153,13 +157,16 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         this->jacobian->scalarMultiply(-1.0, stream);
 
         // calc voltage
-        this->applyMeasurementPattern(this->voltage, handle, stream);
+        this->applyMeasurementPattern(this->phi, this->voltage, handle, stream);
 
         return this->voltage;
     }
     else if (this->source->type == source::VoltageSourceType) {
+        this->equation->update(gamma, 0.0, stream);
+        this->excitation->multiply(this->equation->systemMatrix, this->phi, handle, stream);
+
         // calc current
-        this->applyMeasurementPattern(this->current, handle, stream);
+        this->applyMeasurementPattern(this->excitation, this->current, handle, stream);
 
         return this->current;
     }
