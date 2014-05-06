@@ -18,26 +18,25 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_EIT_SOURCE_H
-#define MPFLOW_INCLDUE_EIT_SOURCE_H
+#ifndef MPFLOW_INCLDUE_FEM_SOURCE_DESCRIPTOR_H
+#define MPFLOW_INCLDUE_FEM_SOURCE_DESCRIPTOR_H
 
 namespace mpFlow {
-namespace EIT {
-    // source base class
-    class Source {
+namespace FEM {
+    class SourceDescriptor {
     public:
         // constructor
-        Source(std::string type, const std::vector<dtype::real>& values,
+        SourceDescriptor(std::string type, const std::vector<dtype::real>& values,
             std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
             std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
             cudaStream_t stream);
-        Source(std::string type, dtype::real value,
+        SourceDescriptor(std::string type, dtype::real value,
             std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
             std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
             cudaStream_t stream);
-        virtual ~Source() { }
+        virtual ~SourceDescriptor() { }
 
         // member
         std::string type;
@@ -49,9 +48,9 @@ namespace EIT {
     };
 
     // source types
-    namespace source {
-        static std::string const CurrentSourceType = "current";
-        static std::string const VoltageSourceType = "voltage";
+    namespace sourceDescriptor {
+        static std::string const OpenSourceType = "open";
+        static std::string const MixedSourceType = "mixed";
     }
 }
 }

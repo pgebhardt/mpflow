@@ -20,7 +20,7 @@
 
 #include "mpflow/mpflow.h"
 
-mpFlow::EIT::Source::Source(std::string type, const std::vector<dtype::real>& values,
+mpFlow::FEM::SourceDescriptor::SourceDescriptor(std::string type, const std::vector<dtype::real>& values,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
     std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
@@ -29,18 +29,18 @@ mpFlow::EIT::Source::Source(std::string type, const std::vector<dtype::real>& va
         measurementPattern(measurementPattern), values(values) {
     // check input
     if (electrodes == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::Source::Source: electrodes == nullptr");
+        throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: electrodes == nullptr");
     }
     if (drivePattern == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::Source::Source: drivePattern == nullptr");
+        throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: drivePattern == nullptr");
     }
     if (measurementPattern == nullptr) {
         throw std::invalid_argument(
-            "mpFlow::EIT::Source::Source: measurementPattern == nullptr");
+            "mpFlow::FEM::SourceDescriptor::SourceDescriptor: measurementPattern == nullptr");
     }
     if (values.size() != this->drivePattern->columns()) {
         throw std::invalid_argument(
-            "mpFlow::EIT::Source::Source: invalid size of values vector");
+            "mpFlow::FEM::SourceDescriptor::SourceDescriptor: invalid size of values vector");
     }
 
     // create matrices
@@ -63,11 +63,11 @@ mpFlow::EIT::Source::Source(std::string type, const std::vector<dtype::real>& va
     this->pattern->copyToDevice(stream);
 }
 
-mpFlow::EIT::Source::Source(std::string type, dtype::real value,
+mpFlow::FEM::SourceDescriptor::SourceDescriptor(std::string type, dtype::real value,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
     std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
     cudaStream_t stream)
-    : Source(type, std::vector<dtype::real>(drivePattern->columns(), value),
+    : SourceDescriptor(type, std::vector<dtype::real>(drivePattern->columns(), value),
         electrodes, drivePattern, measurementPattern, stream) {
 }

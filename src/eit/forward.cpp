@@ -27,7 +27,7 @@ template <
     template <template <class> class> class numericalSolverType
 >
 mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::ForwardSolver(
-    std::shared_ptr<equationType> equation, std::shared_ptr<Source> source,
+    std::shared_ptr<equationType> equation, std::shared_ptr<FEM::SourceDescriptor> source,
     cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
     // check input
@@ -133,7 +133,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     this->excitation->multiply(this->equation->excitationMatrix,
         this->source->pattern, handle, stream);
 
-    if (this->source->type == source::VoltageSourceType) {
+    if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
         dim3 blocks(this->excitation->data_rows() / numeric::matrix::block_size, 1);
         dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
 
@@ -145,7 +145,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     // solve for ground mode
     this->numericalSolver->solve(this->equation->systemMatrix,
         this->excitation, steps,
-        this->source->type == mpFlow::EIT::source::CurrentSourceType ? true : false,
+        this->source->type == FEM::sourceDescriptor::OpenSourceType ? true : false,
         nullptr, stream, this->phi);
 
     // calc jacobian
@@ -153,7 +153,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         this->source->measurementPattern->columns(), stream, this->jacobian);
 
     // current source specific tasks
-    if (this->source->type == source::CurrentSourceType) {
+    if (this->source->type == FEM::sourceDescriptor::OpenSourceType) {
         this->jacobian->scalarMultiply(-1.0, stream);
 
         // calc voltage
@@ -161,7 +161,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
         return this->voltage;
     }
-    else if (this->source->type == source::VoltageSourceType) {
+    else if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
         this->equation->update(gamma, 0.0, stream);
         this->excitation->multiply(this->equation->systemMatrix, this->phi, handle, stream);
 
