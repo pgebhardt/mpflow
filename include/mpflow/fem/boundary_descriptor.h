@@ -38,7 +38,8 @@ namespace FEM {
     namespace boundaryDescriptor {
         // create BoundaryDescriptor on circular boundary
         std::shared_ptr<BoundaryDescriptor> circularBoundary(dtype::size count,
-            std::tuple<dtype::real, dtype::real> shape, dtype::real boundaryRadius);
+            std::tuple<dtype::real, dtype::real> shape, dtype::real boundaryRadius,
+            dtype::real offset);
     }
 }
 }

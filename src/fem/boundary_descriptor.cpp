@@ -37,7 +37,7 @@ mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(dtype::size count,
 
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor::circularBoundary(
     dtype::size count, std::tuple<dtype::real, dtype::real> shape,
-    dtype::real boundaryRadius) {
+    dtype::real boundaryRadius, dtype::real offset) {
     // check radius
     if (boundaryRadius <= 0.0) {
         throw std::invalid_argument(
@@ -51,7 +51,7 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor
     dtype::real deltaAngle = M_PI / (dtype::real)descriptor->count;
     for (dtype::index electrode = 0; electrode < descriptor->count; ++electrode) {
         // calc start angle
-        angle = (dtype::real)electrode * 2.0 * deltaAngle;
+        angle = (dtype::real)electrode * 2.0 * deltaAngle + offset / boundaryRadius;
 
         // calc coordinates
         descriptor->coordinates[electrode] = std::make_tuple(
