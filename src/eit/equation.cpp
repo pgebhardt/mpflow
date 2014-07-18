@@ -257,7 +257,6 @@ template <
 void mpFlow::EIT::Equation<basisFunctionType>
     ::initJacobianCalculationMatrix(cudaStream_t stream) {
     // variables
-    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<std::tuple<dtype::real, dtype::real>,
        basisFunctionType::nodesPerElement> nodeCoordinates;
     std::array<std::shared_ptr<basisFunctionType>,
@@ -266,7 +265,7 @@ void mpFlow::EIT::Equation<basisFunctionType>
     // fill connectivity and elementalJacobianMatrix
     for (dtype::index element = 0; element < this->mesh->elements()->rows(); ++element) {
         // get element nodes
-        nodes = this->mesh->elementNodes(element);
+        auto nodes = this->mesh->elementNodes(element);
 
         // extract nodes coordinates
         for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
@@ -316,8 +315,8 @@ template <
 void mpFlow::EIT::Equation<basisFunctionType>::calcJacobian(
     const std::shared_ptr<numeric::Matrix<dtype::real>> phi,
     const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-    dtype::size driveCount, dtype::size measurmentCount, cudaStream_t stream,
-    std::shared_ptr<numeric::Matrix<dtype::real>> jacobian) {
+    dtype::size driveCount, dtype::size measurmentCount, bool additiv,
+    cudaStream_t stream, std::shared_ptr<numeric::Matrix<dtype::real>> jacobian) {
     // check input
     if (phi == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::calcJacobian: phi == nullptr");
@@ -339,7 +338,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::calcJacobian(
         phi->device_data(), &phi->device_data()[driveCount * phi->data_rows()],
         this->mesh->elements()->device_data(), this->elementalJacobianMatrix->device_data(),
         gamma->device_data(), this->referenceValue, jacobian->data_rows(), jacobian->data_columns(),
-        phi->data_rows(), this->mesh->elements()->rows(), driveCount, measurmentCount,
+        phi->data_rows(), this->mesh->elements()->rows(), driveCount, measurmentCount, additiv,
         jacobian->device_data());
 }
 

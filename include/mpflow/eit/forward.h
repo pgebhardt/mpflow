@@ -32,13 +32,13 @@ namespace EIT {
     public:
         // initialization
         ForwardSolver(std::shared_ptr<equationType> equation,
-            std::shared_ptr<FEM::SourceDescriptor> source, cublasHandle_t handle,
-            cudaStream_t stream);
+            std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
+            cublasHandle_t handle, cudaStream_t stream);
 
         // apply pattern
         void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dtype::real>> source,
-            std::shared_ptr<numeric::Matrix<dtype::real>> result, cublasHandle_t handle,
-            cudaStream_t stream);
+            std::shared_ptr<numeric::Matrix<dtype::real>> result, bool additiv,
+            cublasHandle_t handle, cudaStream_t stream);
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dtype::real>> solve(
@@ -49,7 +49,7 @@ namespace EIT {
         std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;
         std::shared_ptr<equationType> equation;
         std::shared_ptr<FEM::SourceDescriptor> source;
-        std::shared_ptr<numeric::Matrix<dtype::real>> phi;
+        std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> phi;
         std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
         std::shared_ptr<numeric::Matrix<dtype::real>> voltage;
         std::shared_ptr<numeric::Matrix<dtype::real>> current;

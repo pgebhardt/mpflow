@@ -59,7 +59,7 @@ namespace EIT {
 
         void calcJacobian(const std::shared_ptr<numeric::Matrix<dtype::real>> phi,
             const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-            dtype::size driveCount, dtype::size measurmentCount,
+            dtype::size driveCount, dtype::size measurmentCount, bool additiv,
             cudaStream_t stream, std::shared_ptr<numeric::Matrix<dtype::real>> result);
 
         void update(const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,

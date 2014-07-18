@@ -54,7 +54,7 @@ namespace equationKernel {
         const dtype::real* elemental_jacobian_matrix, const dtype::real* gamma,
         dtype::real sigma_ref, dtype::size rows, dtype::size columns,
         dtype::size phi_rows, dtype::size element_count, dtype::size drive_count,
-        dtype::size measurment_count, dtype::real* jacobian);
+        dtype::size measurment_count, bool additiv, dtype::real* jacobian);
 }
 }
 }
