@@ -176,5 +176,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 }
 
 // specialisation
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Linear>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::EllipticalEquation<mpFlow::FEM::basis::Quadratic>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::EIT::Equation<mpFlow::FEM::basis::Linear>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::EIT::Equation<mpFlow::FEM::basis::Quadratic>, mpFlow::numeric::ConjugateGradient>;

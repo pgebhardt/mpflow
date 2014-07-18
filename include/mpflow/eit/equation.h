@@ -18,16 +18,16 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_FEM_ELLIPTICAL_EQUATION_H
-#define MPFLOW_INCLDUE_FEM_ELLIPTICAL_EQUATION_H
+#ifndef MPFLOW_INCLDUE_EIT_EQUATION_H
+#define MPFLOW_INCLDUE_EIT_EQUATION_H
 
 namespace mpFlow {
-namespace FEM {
+namespace EIT {
     // model class describing an elliptical differential equation
     template <
         class _basisFunctionType
     >
-    class EllipticalEquation {
+    class Equation {
     public:
         typedef _basisFunctionType basisFunctionType;
 
@@ -48,8 +48,8 @@ namespace FEM {
 
         // instance methods
         // constructor
-        EllipticalEquation(std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<BoundaryDescriptor> boundaryDescriptor,
+        Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
+            std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor,
             dtype::real referenceValue, cudaStream_t stream);
 
         // init methods
@@ -67,7 +67,7 @@ namespace FEM {
 
         // member
         std::shared_ptr<numeric::IrregularMesh> mesh;
-        std::shared_ptr<BoundaryDescriptor> boundaryDescriptor;
+        std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix;
         std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> sMatrix;

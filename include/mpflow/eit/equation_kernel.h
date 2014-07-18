@@ -18,12 +18,12 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_FEM_ELLIPTICAL_EQUATION_KERNEL_H
-#define MPFLOW_INCLDUE_FEM_ELLIPTICAL_EQUATION_KERNEL_H
+#ifndef MPFLOW_INCLDUE_EIT_EQUATION_KERNEL_H
+#define MPFLOW_INCLDUE_EIT_EQUATION_KERNEL_H
 
 namespace mpFlow {
-namespace FEM {
-namespace ellipticalEquationKernel {
+namespace EIT {
+namespace equationKernel {
     // reduce connectivity and elemental matrices
     template <
         class type

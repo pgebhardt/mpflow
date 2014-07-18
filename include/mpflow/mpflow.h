@@ -38,10 +38,10 @@
 // FEM specific
 #include "fem/basis.h"
 #include "fem/boundary_descriptor.h"
-#include "fem/elliptical_equation.h"
 #include "fem/source_descriptor.h"
 
 // EIT specific
+#include "eit/equation.h"
 #include "eit/forward.h"
 
 // basic solver
