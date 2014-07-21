@@ -63,11 +63,11 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcSystemMatrix(
     dtype::real alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare->data_rows(),
-        this->jacobianSquare->data_columns(), jacobian->data_rows(), &alpha,
-        jacobian->device_data(), jacobian->data_rows(), jacobian->device_data(),
-        jacobian->data_rows(), &beta, this->jacobianSquare->device_data(),
-        this->jacobianSquare->data_rows())
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare->dataRows,
+        this->jacobianSquare->dataCols, jacobian->dataRows, &alpha,
+        jacobian->deviceData, jacobian->dataRows, jacobian->deviceData,
+        jacobian->dataRows, &beta, this->jacobianSquare->deviceData,
+        this->jacobianSquare->dataRows)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("mpFlow::EIT::InverseSolver::calcSystemMatrix: calc Jt * J");
     }
@@ -77,12 +77,12 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcSystemMatrix(
 
     // add lambda * Jt * J * Jt * J to systemMatrix
     beta = this->regularizationFactor;
-    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare->data_columns(),
-        this->jacobianSquare->data_rows(), this->jacobianSquare->data_columns(),
-        &beta, this->jacobianSquare->device_data(),
-        this->jacobianSquare->data_rows(), this->jacobianSquare->device_data(),
-        this->jacobianSquare->data_rows(), &alpha, this->systemMatrix->device_data(),
-        this->systemMatrix->data_rows()) != CUBLAS_STATUS_SUCCESS) {
+    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare->dataCols,
+        this->jacobianSquare->dataRows, this->jacobianSquare->dataCols,
+        &beta, this->jacobianSquare->deviceData,
+        this->jacobianSquare->dataRows, this->jacobianSquare->deviceData,
+        this->jacobianSquare->dataRows, &alpha, this->systemMatrix->deviceData,
+        this->systemMatrix->dataRows) != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
             "mpFlow::EIT::InverseSolver::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
     }
@@ -110,9 +110,9 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
 
     // copy measuredVoltage to dVoltage
     for (dtype::index image = 0; image < this->numericalSolver->columns(); ++image) {
-        if (cublasScopy(handle, this->difference->data_rows(),
-            measurement[image]->device_data(), 1,
-            (dtype::real*)(this->difference->device_data() + image * this->difference->data_rows()), 1)
+        if (cublasScopy(handle, this->difference->dataRows,
+            measurement[image]->deviceData, 1,
+            (dtype::real*)(this->difference->deviceData + image * this->difference->dataRows), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "mpFlow::EIT::InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
@@ -120,9 +120,9 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
 
         // substract calculatedVoltage
         dtype::real alpha = -1.0f;
-        if (cublasSaxpy(handle, this->difference->data_rows(), &alpha,
-            calculation[image]->device_data(), 1,
-            (dtype::real*)(this->difference->device_data() + image * this->difference->data_rows()), 1)
+        if (cublasSaxpy(handle, this->difference->dataRows, &alpha,
+            calculation[image]->deviceData, 1,
+            (dtype::real*)(this->difference->deviceData + image * this->difference->dataRows), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "mpFlow::EIT::InverseSolver::calcExcitation: substract calculatedVoltage");
@@ -132,9 +132,9 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
     // calc excitation
     dtype::real alpha = 1.0f;
     dtype::real beta = 0.0f;
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, jacobian->data_columns(), this->difference->data_columns(),
-        jacobian->data_rows(), &alpha, jacobian->device_data(), jacobian->data_rows(), this->difference->device_data(),
-        this->difference->data_rows(), &beta, this->excitation->device_data(), this->excitation->data_rows())
+    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, jacobian->dataCols, this->difference->dataCols,
+        jacobian->dataRows, &alpha, jacobian->deviceData, jacobian->dataRows, this->difference->deviceData,
+        this->difference->dataRows, &beta, this->excitation->deviceData, this->excitation->dataRows)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("mpFlow::EIT::InverseSolver::calcExcitation: calc excitation");
     }

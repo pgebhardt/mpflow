@@ -38,26 +38,26 @@ mpFlow::FEM::SourceDescriptor::SourceDescriptor(std::string type, const std::vec
         throw std::invalid_argument(
             "mpFlow::FEM::SourceDescriptor::SourceDescriptor: measurementPattern == nullptr");
     }
-    if (values.size() != this->drivePattern->columns()) {
+    if (values.size() != this->drivePattern->cols) {
         throw std::invalid_argument(
             "mpFlow::FEM::SourceDescriptor::SourceDescriptor: invalid size of values vector");
     }
 
     // create matrices
     this->pattern = std::make_shared<numeric::Matrix<dtype::real>>(this->electrodes->count,
-        this->drivePattern->columns() + this->measurementPattern->columns(), stream);
+        this->drivePattern->cols + this->measurementPattern->cols, stream);
 
     // fill pattern matrix with drive pattern
-    for (dtype::index column = 0; column < this->drivePattern->columns(); ++column)
+    for (dtype::index column = 0; column < this->drivePattern->cols; ++column)
     for (dtype::index row = 0; row < this->electrodes->count; ++row) {
         (*this->pattern)(row, column) = this->values[column] * (*this->drivePattern)(row, column);
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index column = 0; column < this->measurementPattern->columns(); ++column)
+    for (dtype::index column = 0; column < this->measurementPattern->cols; ++column)
     for (dtype::index row = 0; row < this->electrodes->count; ++row) {
-        (*this->pattern)(row, column + this->drivePattern->columns()) =
+        (*this->pattern)(row, column + this->drivePattern->cols) =
             (*this->measurementPattern)(row, column);
     }
     this->pattern->copyToDevice(stream);
@@ -68,6 +68,6 @@ mpFlow::FEM::SourceDescriptor::SourceDescriptor(std::string type, dtype::real va
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
     std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
     cudaStream_t stream)
-    : SourceDescriptor(type, std::vector<dtype::real>(drivePattern->columns(), value),
+    : SourceDescriptor(type, std::vector<dtype::real>(drivePattern->cols, value),
         electrodes, drivePattern, measurementPattern, stream) {
 }

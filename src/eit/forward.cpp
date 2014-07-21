@@ -43,42 +43,42 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<
         mpFlow::numeric::SparseMatrix>>(
-        this->equation->mesh->nodes()->rows(),
-        this->source->drivePattern->columns() + this->source->measurementPattern->columns(), stream);
+        this->equation->mesh->nodes->rows,
+        this->source->drivePattern->cols + this->source->measurementPattern->cols, stream);
 
     // create matrices
     this->voltage = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->source->measurementPattern->columns(), this->source->drivePattern->columns(), stream);
+        this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
     for (dtype::index component = 0; component < components; ++component) {
-        this->phi.push_back(std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes()->rows(),
-            this->source->pattern->columns(), stream));
+        this->phi.push_back(std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes->rows,
+            this->source->pattern->cols, stream));
     }
-    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes()->rows(),
-        this->source->pattern->columns(), stream);
+    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes->rows,
+        this->source->pattern->cols, stream);
     this->jacobian = std::make_shared<numeric::Matrix<dtype::real>>(
-        math::roundTo(this->source->measurementPattern->columns(), numeric::matrix::block_size) *
-        math::roundTo(this->source->drivePattern->columns(), numeric::matrix::block_size),
-        this->equation->mesh->elements()->rows(), stream);
+        math::roundTo(this->source->measurementPattern->cols, numeric::matrix::block_size) *
+        math::roundTo(this->source->drivePattern->cols, numeric::matrix::block_size),
+        this->equation->mesh->elements->rows, stream);
 
 
     // TODO: To be moved to new BoundaryValues class
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->source->measurementPattern->columns(),
-        this->equation->mesh->nodes()->rows(), stream);
+        this->source->measurementPattern->cols,
+        this->equation->mesh->nodes->rows, stream);
 
     // calc electrodes attachement matrix
     cublasSetStream(handle, stream);
     dtype::real alpha = 1.0, beta = 0.0;
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        this->source->measurementPattern->data_columns(),
-        this->equation->excitationMatrix->data_rows(),
-        this->source->measurementPattern->data_rows(), &alpha,
-        this->source->measurementPattern->device_data(),
-        this->source->measurementPattern->data_rows(),
-        this->equation->excitationMatrix->device_data(),
-        this->equation->excitationMatrix->data_rows(),
-        &beta, this->electrodesAttachmentMatrix->device_data(),
-        this->electrodesAttachmentMatrix->data_rows()) != CUBLAS_STATUS_SUCCESS) {
+        this->source->measurementPattern->dataCols,
+        this->equation->excitationMatrix->dataRows,
+        this->source->measurementPattern->dataRows, &alpha,
+        this->source->measurementPattern->deviceData,
+        this->source->measurementPattern->dataRows,
+        this->equation->excitationMatrix->deviceData,
+        this->equation->excitationMatrix->dataRows,
+        &beta, this->electrodesAttachmentMatrix->deviceData,
+        this->electrodesAttachmentMatrix->dataRows) != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("mpFlow::EIT::ForwardSolver: calc voltage calculation");
     }
 }
@@ -108,11 +108,11 @@ void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMe
 
     // add voltage
     dtype::real alpha = 1.0f, beta = additiv ? 1.0 : 0.0;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->data_rows(),
-        this->source->drivePattern->columns(), this->electrodesAttachmentMatrix->data_columns(), &alpha,
-        this->electrodesAttachmentMatrix->device_data(), this->electrodesAttachmentMatrix->data_rows(),
-        source->device_data(), source->data_rows(), &beta,
-        result->device_data(), result->data_rows());
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
+        this->source->drivePattern->cols, this->electrodesAttachmentMatrix->dataCols, &alpha,
+        this->electrodesAttachmentMatrix->deviceData, this->electrodesAttachmentMatrix->dataRows,
+        source->deviceData, source->dataRows, &beta,
+        result->deviceData, result->dataRows);
 }
 
 // forward solving
@@ -135,9 +135,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     // calculate common excitation for all 2.5D model components
     for (dtype::index component = 0; component < this->phi.size(); ++component) {
         // 2.5D model constants
-        dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height());
-        dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height()) :
-            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape) / this->equation->mesh->height()) /
+        dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
+        dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height) :
+            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape) / this->equation->mesh->height) /
                 (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape)));
 
         // update system matrix and excitation for different 2.5D components
@@ -152,8 +152,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             nullptr, stream, this->phi[component]);
 
         // calc jacobian
-        this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->columns(),
-            this->source->measurementPattern->columns(), component == 0 ? false : true,
+        this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,
+            this->source->measurementPattern->cols, component == 0 ? false : true,
             stream, this->jacobian);
 
         // calc voltage

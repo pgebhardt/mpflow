@@ -29,12 +29,12 @@ namespace numeric {
 
     // matrix class definition
     template <
-        class type
+        class type = dtype::real
     >
     class Matrix {
     public:
         // constructor and destructor
-        Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream,
+        Matrix(dtype::size rows, dtype::size cols, cudaStream_t stream,
             type value=0);
         virtual ~Matrix();
 
@@ -55,47 +55,38 @@ namespace numeric {
         void vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
             const std::shared_ptr<Matrix<type>> B, cudaStream_t stream);
 
+
         // reduce methods
         void sum(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream);
         void min(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream);
         void max(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream);
 
         // accessors
-        const type* host_data() const { return this->host_data_; }
-        const type* device_data() const { return this->device_data_; }
-        dtype::size rows() const { return this->rows_; }
-        dtype::size columns() const { return this->columns_; }
-        dtype::size data_rows() const { return this->data_rows_; }
-        dtype::size data_columns() const { return this->data_columns_; }
         const type& operator() (dtype::index i, dtype::index j) const {
             // check index
-            if ((i >= this->rows()) || (j >= this->columns())) {
+            if ((i >= this->rows) || (j >= this->cols)) {
                 throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
             }
 
-            return this->host_data_[i + j * this->data_rows()];
+            return this->hostData[i + j * this->dataRows];
         }
 
         // mutators
-        type* device_data() { return this->device_data_; }
         type& operator() (dtype::index i, dtype::index j) {
             // check index
-            if ((i >= this->rows()) || (j >= this->columns())) {
+            if ((i >= this->rows) || (j >= this->cols)) {
                 throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
             }
 
-            return this->host_data_[i + j * this->data_rows()];
+            return this->hostData[i + j * this->dataRows];
         }
-        type* host_data() { return this->host_data_; }
 
-    // member
-    private:
-        type* host_data_;
-        type* device_data_;
-        dtype::size rows_;
-        dtype::size columns_;
-        dtype::size data_rows_;
-        dtype::size data_columns_;
+        type* hostData;
+        type* deviceData;
+        dtype::size rows;
+        dtype::size cols;
+        dtype::size dataRows;
+        dtype::size dataCols;
     };
 
     // namespace matrix

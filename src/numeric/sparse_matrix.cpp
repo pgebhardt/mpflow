@@ -33,7 +33,7 @@ mpFlow::numeric::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<t
     }
 
     // create empty sparse matrix
-    this->init(matrix->rows(), matrix->columns());
+    this->init(matrix->rows, matrix->cols);
 
     // convert to sparse_matrix
     this->convert(matrix, stream);
@@ -53,31 +53,28 @@ void mpFlow::numeric::SparseMatrix<type>::init(dtype::size rows, dtype::size col
     }
 
     // init struct
-    this->rows_ = rows;
-    this->columns_ = columns;
-    this->data_rows_ = rows;
-    this->data_columns_ = columns;
-    this->density_ = 0;
-    this->values_ = nullptr;
-    this->column_ids_ = nullptr;
+    this->rows = rows;
+    this->cols = columns;
+    this->dataRows = rows;
+    this->dataCols = columns;
+    this->density = 0;
 
     // correct size to block size
-    if ((this->rows() % matrix::block_size != 0) && (this->rows() != 1)) {
-        this->data_rows_ = math::roundTo(this->rows(), matrix::block_size);
+    if ((this->rows % matrix::block_size != 0) && (this->rows != 1)) {
+        this->dataRows = math::roundTo(this->rows, matrix::block_size);
     }
-    if ((this->columns() % matrix::block_size != 0) && (this->columns() != 1)) {
-        this->data_columns_ = math::roundTo(this->columns(), matrix::block_size);
+    if ((this->cols % matrix::block_size != 0) && (this->cols != 1)) {
+        this->dataCols = math::roundTo(this->cols, matrix::block_size);
     }
-
 
     // create matrices
-    if (cudaMalloc((void**)&this->values_, sizeof(type) *
-        this->data_rows() * sparseMatrix::block_size) != cudaSuccess) {
+    if (cudaMalloc((void**)&this->values, sizeof(type) *
+        this->dataRows * sparseMatrix::block_size) != cudaSuccess) {
         throw std::logic_error("mpFlow::numeric::numeric::SparseMatrix::init: create memory");
     }
 
-    if (cudaMalloc((void**)&this->column_ids_, sizeof(dtype::index) *
-        this->data_rows() * sparseMatrix::block_size) != cudaSuccess) {
+    if (cudaMalloc((void**)&this->columnIds, sizeof(dtype::index) *
+        this->dataRows * sparseMatrix::block_size) != cudaSuccess) {
         throw std::logic_error("mpFlow::numeric::numeric::SparseMatrix::init: create memory");
     }
 }
@@ -88,8 +85,8 @@ template <
 >
 mpFlow::numeric::SparseMatrix<type>::~SparseMatrix() {
     // release matrices
-    cudaFree(this->values_);
-    cudaFree(this->column_ids_);
+    cudaFree(this->values);
+    cudaFree(this->columnIds);
     CudaCheckError();
 }
 
@@ -105,14 +102,14 @@ void mpFlow::numeric::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<t
     }
 
     // create elementCount matrix
-    auto elementCount = std::make_shared<Matrix<dtype::index>>(this->data_rows(), 1, stream);
-    auto maxCount = std::make_shared<Matrix<dtype::index>>(this->data_rows(), 1, stream);
+    auto elementCount = std::make_shared<Matrix<dtype::index>>(this->dataRows, 1, stream);
+    auto maxCount = std::make_shared<Matrix<dtype::index>>(this->dataRows, 1, stream);
 
     // execute kernel
-    sparseMatrixKernel::convert(this->data_rows() / matrix::block_size,
-        matrix::block_size, stream, matrix->device_data(), matrix->data_rows(),
-        matrix->data_columns(), this->values(), this->column_ids(),
-        elementCount->device_data());
+    sparseMatrixKernel::convert(this->dataRows / matrix::block_size,
+        matrix::block_size, stream, matrix->deviceData, matrix->dataRows,
+        matrix->dataCols, this->values, this->columnIds,
+        elementCount->deviceData);
 
     // get max count
     maxCount->max(elementCount, stream);
@@ -120,7 +117,7 @@ void mpFlow::numeric::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<t
     cudaStreamSynchronize(stream);
 
     // save density
-    this->density() = (*maxCount)(0, 0);
+    this->density = (*maxCount)(0, 0);
 }
 
 // convert to matrix
@@ -130,13 +127,13 @@ template <
 std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::SparseMatrix<type>::toMatrix(
     cudaStream_t stream) {
     // create empty matrix
-    auto matrix = std::make_shared<Matrix<type>>(this->rows(),
-        this->columns(), stream);
+    auto matrix = std::make_shared<Matrix<type>>(this->rows,
+        this->cols, stream);
 
     // convert to matrix
-    sparseMatrixKernel::convertToMatrix(this->data_rows() / matrix::block_size,
-        matrix::block_size, stream, this->values(), this->column_ids(),
-        this->density(), matrix->data_rows(), matrix->device_data());
+    sparseMatrixKernel::convertToMatrix(this->dataRows / matrix::block_size,
+        matrix::block_size, stream, this->values, this->columnIds,
+        this->density, matrix->dataRows, matrix->deviceData);
 
     return matrix;
 }
@@ -156,21 +153,21 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<
     }
 
     // check size
-    if ((result->data_rows() != this->data_rows()) ||
-        (this->data_columns() != matrix->data_rows()) ||
-        (result->data_columns() != matrix->data_columns())) {
+    if ((result->dataRows != this->dataRows) ||
+        (this->dataCols != matrix->dataRows) ||
+        (result->dataCols != matrix->dataCols)) {
         throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::multiply: shape does not match");
     }
 
     // kernel dimension
-    dim3 blocks((result->data_rows() + sparseMatrix::block_size - 1) / sparseMatrix::block_size,
-        (result->data_columns() + sparseMatrix::block_size - 1) / sparseMatrix::block_size);
+    dim3 blocks((result->dataRows + sparseMatrix::block_size - 1) / sparseMatrix::block_size,
+        (result->dataCols + sparseMatrix::block_size - 1) / sparseMatrix::block_size);
     dim3 threads(sparseMatrix::block_size, sparseMatrix::block_size);
 
     // execute kernel
-    sparseMatrixKernel::multiply(blocks, threads, stream, this->values(), this->column_ids(),
-        matrix->device_data(), result->data_rows(), matrix->data_rows(),
-        result->data_columns(), this->density(), result->device_data());
+    sparseMatrixKernel::multiply(blocks, threads, stream, this->values, this->columnIds,
+        matrix->deviceData, result->dataRows, matrix->dataRows,
+        result->dataCols, this->density, result->deviceData);
 }
 
 // specialisations

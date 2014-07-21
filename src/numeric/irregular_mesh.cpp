@@ -24,14 +24,14 @@
 mpFlow::numeric::IrregularMesh::IrregularMesh(std::shared_ptr<numeric::Matrix<dtype::real>> nodes,
     std::shared_ptr<numeric::Matrix<dtype::index>> elements,
     std::shared_ptr<numeric::Matrix<dtype::index>> boundary, dtype::real radius, dtype::real height)
-    : nodes_(nodes), elements_(elements), boundary_(boundary), radius_(radius),
-        height_(height) {
+    : nodes(nodes), elements(elements), boundary(boundary), radius(radius),
+        height(height) {
     // check input
     if (nodes == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes == nullptr");
     }
-    if (nodes->columns() != 2) {
-        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->columns() != 2");
+    if (nodes->cols != 2) {
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->cols != 2");
     }
     if (elements == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: elements == nullptr");
@@ -53,18 +53,18 @@ std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
     // result array
     std::vector<std::tuple<dtype::index,
         std::tuple<dtype::real, dtype::real>>> result(
-        this->elements()->columns());
+        this->elements->cols);
 
     // get node index and coordinate
     dtype::index index = dtype::invalid_index;
     std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
-    for (dtype::index node = 0; node < this->elements()->columns(); ++node) {
+    for (dtype::index node = 0; node < this->elements->cols; ++node) {
         // get index
-        index = (*this->elements())(element, node);
+        index = (*this->elements)(element, node);
 
         // get coordinates
-        coordinates = std::make_tuple((*this->nodes())(index, 0),
-            (*this->nodes())(index, 1));
+        coordinates = std::make_tuple((*this->nodes)(index, 0),
+            (*this->nodes)(index, 1));
 
         // add to array
         result[node] = std::make_tuple(index, coordinates);
@@ -79,18 +79,18 @@ std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
     // result vector
     std::vector<std::tuple<dtype::index,
         std::tuple<dtype::real, dtype::real>>> result(
-        this->boundary()->columns());
+        this->boundary->cols);
 
     // get node index and coordinate
     dtype::index index = -1;
     std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
-    for (dtype::index node = 0; node < this->boundary()->columns(); ++node) {
+    for (dtype::index node = 0; node < this->boundary->cols; ++node) {
         // get index
-        index = (*this->boundary())(element, node);
+        index = (*this->boundary)(element, node);
 
         // get coordinates
-        coordinates = std::make_tuple((*this->nodes())(index, 0),
-            (*this->nodes())(index, 1));
+        coordinates = std::make_tuple((*this->nodes)(index, 0),
+            (*this->nodes)(index, 1));
 
         // add to array
         result[node] = std::make_tuple(index, coordinates);
@@ -126,7 +126,7 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     std::vector<std::array<mpFlow::dtype::index, 2> > already_calc_midpoints(0);
     std::vector<std::array<mpFlow::dtype::real, 2> > new_calc_nodes(0);
     std::vector<std::array<mpFlow::dtype::index, 6> > quadratic_elements_vector(
-        elements_old->rows());
+        elements_old->rows);
     std::vector<std::array<mpFlow::dtype::index, 2> > current_edge(2);
     std::vector<std::array<mpFlow::dtype::real, 2> > quadratic_node_vector(0);
     std::vector<std::array<mpFlow::dtype::real, 2> > node_from_linear(1);
@@ -137,23 +137,23 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     mpFlow::dtype::index new_bound = 0;
 
     // copy existing elements vom matrix to vector
-    for (mpFlow::dtype::index element = 0; element < elements_old->rows(); ++element)
+    for (mpFlow::dtype::index element = 0; element < elements_old->rows; ++element)
     for (mpFlow::dtype::index element_node = 0; element_node < 3; ++element_node) {
         quadratic_elements_vector[element][element_node] = (*elements_old)(element, element_node);
     }
 
     // calculate new midpoints between existing ones
-    for (mpFlow::dtype::index element = 0; element < elements_old->rows(); ++element)
-    for (mpFlow::dtype::index element_node = 0; element_node < elements_old->columns();
+    for (mpFlow::dtype::index element = 0; element < elements_old->rows; ++element)
+    for (mpFlow::dtype::index element_node = 0; element_node < elements_old->cols;
         ++element_node) {
         // get current edge
         current_edge[0][0] = (*elements_old)(element, element_node);
         current_edge[0][1] = (*elements_old)(element,
-            (element_node + 1)%elements_old->columns());
+            (element_node + 1)%elements_old->cols);
 
         // get current edge inverted
         current_edge[1][0] = (*elements_old)(element,
-            (element_node + 1)%elements_old->columns());
+            (element_node + 1)%elements_old->cols);
         current_edge[1][1] = (*elements_old)(element, element_node);
 
         //check if midpoint for current adge was calculated before
@@ -161,14 +161,14 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
             current_edge[0]);
         if(index != already_calc_midpoints.end()) {
             // midpoint already exists, using existing one. check for inverted coords too
-            quadratic_elements_vector[element][element_node + 3] = nodes_old->rows() +
+            quadratic_elements_vector[element][element_node + 3] = nodes_old->rows +
                 std::distance(already_calc_midpoints.begin(), index);
         } else {
             index = std::find(already_calc_midpoints.begin(),
                 already_calc_midpoints.end(), current_edge[1]);
 
             if(index != already_calc_midpoints.end()) {
-                quadratic_elements_vector[element][element_node + 3] = nodes_old->rows() +
+                quadratic_elements_vector[element][element_node + 3] = nodes_old->rows +
                 std::distance(already_calc_midpoints.begin(), index);
             } else {
                 // midpoint does not exist. calculate new one
@@ -188,13 +188,13 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
 
                 // set new node for current element andd adjust node index
                 quadratic_elements_vector[element][element_node + 3] = 
-                    (new_calc_nodes.size() - 1 + nodes_old->rows());
+                    (new_calc_nodes.size() - 1 + nodes_old->rows);
             }
         }
     }
 
     // copy nodes from linear mesh and new nodes to one vector
-    for (mpFlow::dtype::index node = 0; node < nodes_old->rows(); ++node) {
+    for (mpFlow::dtype::index node = 0; node < nodes_old->rows; ++node) {
         node_from_linear[0][0] = (*nodes_old)(node, 0);
         node_from_linear[0][1] = (*nodes_old)(node, 1);
         quadratic_node_vector.push_back(node_from_linear[0]);
@@ -204,7 +204,7 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     }
 
     // calculate new boundary Matrix
-    for(mpFlow::dtype::index bound = 0; bound < boundary_old->rows(); ++bound){
+    for(mpFlow::dtype::index bound = 0; bound < boundary_old->rows; ++bound){
         // get current bound
         linear_bound[0][0] = (*boundary_old)(bound,0);
         linear_bound[0][1] = (*boundary_old)(bound,1);
@@ -218,11 +218,11 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
             already_calc_midpoints.end(), linear_bound[0]);
         if(index != already_calc_midpoints.end()) {
             // get midpoint index of current bound or invertetd bound
-            new_bound = std::distance(already_calc_midpoints.begin(), index) + nodes_old->rows();
+            new_bound = std::distance(already_calc_midpoints.begin(), index) + nodes_old->rows;
         } else {
             index = std::find(already_calc_midpoints.begin(),
                 already_calc_midpoints.end(), linear_bound_inverted[0]);
-            new_bound = std::distance(already_calc_midpoints.begin(), index) + nodes_old->rows();
+            new_bound = std::distance(already_calc_midpoints.begin(), index) + nodes_old->rows;
         }
 
         // set midpoint in the middle of current bound

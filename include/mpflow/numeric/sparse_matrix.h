@@ -31,8 +31,8 @@ namespace numeric {
     class SparseMatrix {
     public:
         // constructor and destructor
-        SparseMatrix(dtype::size rows, dtype::size columns, cudaStream_t) {
-            this->init(rows, columns);
+        SparseMatrix(dtype::size rows, dtype::size cols, cudaStream_t) {
+            this->init(rows, cols);
         }
 
         SparseMatrix(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);
@@ -45,35 +45,22 @@ namespace numeric {
         void multiply(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream,
             std::shared_ptr<Matrix<type>> result) const;
 
-        // accessors
-        dtype::size rows() const { return this->rows_; }
-        dtype::size columns() const { return this->columns_; }
-        dtype::size data_rows() const { return this->data_rows_; }
-        dtype::size data_columns() const { return this->data_columns_; }
-        dtype::size density() const { return this->density_; }
-        const type* values() const { return this->values_; }
-        const dtype::index* column_ids() const { return this->column_ids_; }
-
-        // mutators:
-        type* values() { return this->values_; }
-        dtype::index* column_ids() { return this->column_ids_; }
-        dtype::size& density() { return this->density_; }
+        // member
+        dtype::size rows;
+        dtype::size cols;
+        dtype::size dataRows;
+        dtype::size dataCols;
+        dtype::size density;
+        type* values;
+        dtype::index* columnIds;
 
     private:
         // init empty sparse matrix
-        void init(dtype::size rows, dtype::size columns);
+        void init(dtype::size rows, dtype::size cols);
 
         // convert to sparse matrix
         void convert(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);
 
-        // member
-        dtype::size rows_;
-        dtype::size columns_;
-        dtype::size data_rows_;
-        dtype::size data_columns_;
-        dtype::size density_;
-        type* values_;
-        dtype::index* column_ids_;
     };
 }
 }

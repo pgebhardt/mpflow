@@ -23,9 +23,9 @@
 
 // create conjugateGradient solver
 template <
-    template <class type> class matrix_type
+    template <class type> class matrixType
 >
-mpFlow::numeric::ConjugateGradient<matrix_type>::ConjugateGradient(dtype::size rows, dtype::size columns, cudaStream_t stream)
+mpFlow::numeric::ConjugateGradient<matrixType>::ConjugateGradient(dtype::size rows, dtype::size columns, cudaStream_t stream)
     : rows_(rows), columns_(columns) {
     // check input
     if (rows < 1) {
@@ -46,9 +46,9 @@ mpFlow::numeric::ConjugateGradient<matrix_type>::ConjugateGradient(dtype::size r
 
 // solve conjugateGradient sparse
 template <
-    template <class type> class matrix_type
+    template <class type> class matrixType
 >
-void mpFlow::numeric::ConjugateGradient<matrix_type>::solve(const std::shared_ptr<matrix_type<dtype::real>> A,
+void mpFlow::numeric::ConjugateGradient<matrixType>::solve(const std::shared_ptr<matrixType<dtype::real>> A,
     const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations, bool dcFree,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
     // check input
@@ -131,15 +131,14 @@ void mpFlow::numeric::conjugateGradient::addScalar(
     }
 
     // kernel dimension
-    dim3 blocks(vector->data_rows() / matrix::block_size,
-        vector->data_columns() == 1 ? 1 :
-        vector->data_columns() / matrix::block_size);
+    dim3 blocks(vector->dataRows / matrix::block_size,
+        vector->dataCols == 1 ? 1 : vector->dataCols / matrix::block_size);
     dim3 threads(matrix::block_size,
-        vector->data_columns() == 1 ? 1 : matrix::block_size);
+        vector->dataCols == 1 ? 1 : matrix::block_size);
 
     // execute kernel
-    conjugateGradientKernel::addScalar(blocks, threads, stream, scalar->device_data(),
-        vector->data_rows(), rows, columns, vector->device_data());
+    conjugateGradientKernel::addScalar(blocks, threads, stream, scalar->deviceData,
+        vector->dataRows, rows, columns, vector->deviceData);
 }
 
 // update vector
@@ -167,16 +166,14 @@ void mpFlow::numeric::conjugateGradient::updateVector(
     }
 
     // kernel dimension
-    dim3 blocks(result->data_rows() / matrix::block_size,
-        result->data_columns() == 1 ? 1 :
-        result->data_columns() / matrix::block_size);
-    dim3 threads(matrix::block_size,
-        result->data_columns() == 1 ? 1 : matrix::block_size);
+    dim3 blocks(result->dataRows / matrix::block_size,
+        result->dataCols == 1 ? 1 : result->dataCols / matrix::block_size);
+    dim3 threads(matrix::block_size, result->dataCols == 1 ? 1 : matrix::block_size);
 
     // execute kernel
-    conjugateGradientKernel::updateVector(blocks, threads, stream, x1->device_data(), sign,
-        x2->device_data(), r1->device_data(), r2->device_data(), result->data_rows(),
-        result->device_data());
+    conjugateGradientKernel::updateVector(blocks, threads, stream, x1->deviceData, sign,
+        x2->deviceData, r1->deviceData, r2->deviceData, result->dataRows,
+        result->deviceData);
 }
 
 // specialisations

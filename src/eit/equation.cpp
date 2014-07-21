@@ -39,10 +39,10 @@ mpFlow::EIT::Equation<basisFunctionType>::Equation(
 
     // init matrices
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->elements()->rows(),
+        this->mesh->elements->rows,
         math::square(basisFunctionType::nodesPerElement), stream);
     this->excitationMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->nodes()->rows(), this->boundaryDescriptor->count, stream);
+        this->mesh->nodes->rows, this->boundaryDescriptor->count, stream);
 
     auto commonElementMatrix = this->initElementalMatrices(stream);
     this->initExcitationMatrix(stream);
@@ -53,7 +53,7 @@ mpFlow::EIT::Equation<basisFunctionType>::Equation(
         commonElementMatrix, stream);
 
     // update ellipticalEquation
-    auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->elements()->rows(), 1, stream);
+    auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->elements->rows, 1, stream);
     this->update(gamma, 0.0, stream);
 }
 
@@ -66,8 +66,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     cudaStream_t stream) {
     // create intermediate matrices
     std::vector<std::vector<dtype::index>> elementCount(
-        this->mesh->nodes()->rows(), std::vector<dtype::index>(
-        this->mesh->nodes()->rows(), 0));
+        this->mesh->nodes->rows, std::vector<dtype::index>(
+        this->mesh->nodes->rows, 0));
     std::vector<std::vector<std::vector<dtype::index>>> connectivityMatrices;
     std::vector<std::vector<std::vector<dtype::real>>> elementalSMatrices,
         elementalRMatrices;
@@ -78,7 +78,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         basisFunctionType::nodesPerElement> nodeCoordinates;
     std::array<std::shared_ptr<basisFunctionType>,
         basisFunctionType::nodesPerElement> basisFunction;
-    for (dtype::index element = 0; element < this->mesh->elements()->rows(); ++element) {
+    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
         // get element nodes
         nodes = this->mesh->elementNodes(element);
 
@@ -101,14 +101,14 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             auto level = elementCount[std::get<0>(nodes[i])][std::get<0>(nodes[j])];
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(std::vector<std::vector<dtype::index>>(
-                    this->mesh->nodes()->rows(), std::vector<dtype::index>(
-                    this->mesh->nodes()->rows(), dtype::invalid_index)));
+                    this->mesh->nodes->rows, std::vector<dtype::index>(
+                    this->mesh->nodes->rows, dtype::invalid_index)));
                 elementalSMatrices.push_back(std::vector<std::vector<dtype::real>>(
-                    this->mesh->nodes()->rows(), std::vector<dtype::real>(
-                    this->mesh->nodes()->rows(), 0.0)));
+                    this->mesh->nodes->rows, std::vector<dtype::real>(
+                    this->mesh->nodes->rows, 0.0)));
                 elementalRMatrices.push_back(std::vector<std::vector<dtype::real>>(
-                    this->mesh->nodes()->rows(), std::vector<dtype::real>(
-                    this->mesh->nodes()->rows(), 0.0)));
+                    this->mesh->nodes->rows, std::vector<dtype::real>(
+                    this->mesh->nodes->rows, 0.0)));
             }
 
             // set connectivity element
@@ -130,8 +130,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // determine nodes with common element
     auto commonElementMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->nodes()->rows(), this->mesh->nodes()->rows(), stream);
-    for (dtype::index element = 0; element < this->mesh->elements()->rows(); ++element) {
+        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
+    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
         nodes = this->mesh->elementNodes(element);
 
         for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
@@ -149,24 +149,24 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        this->mesh->nodes()->rows(),
+        this->mesh->nodes->rows,
         numeric::sparseMatrix::block_size * connectivityMatrices.size(), stream, dtype::invalid_index);
-    this->elementalSMatrix = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->nodes()->rows(),
+    this->elementalSMatrix = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->nodes->rows,
         numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->nodes()->rows(),
+    this->elementalRMatrix = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->nodes->rows,
         numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
     auto connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        this->mesh->nodes()->rows(), this->mesh->nodes()->rows(), stream,
+        this->mesh->nodes->rows, this->mesh->nodes->rows, stream,
         dtype::invalid_index);
     auto elementalSMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->nodes()->rows(), this->mesh->nodes()->rows(), stream);
+        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
     auto elementalRMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->nodes()->rows(), this->mesh->nodes()->rows(), stream);
+        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
     for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
-        for (dtype::index element = 0; element < this->mesh->elements()->rows(); ++element) {
+        for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
             // get element nodes
             nodes = this->mesh->elementNodes(element);
 
@@ -205,7 +205,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::initExcitationMatrix(cudaStream_t
     dtype::real integrationStart, integrationEnd;
 
     // calc excitation matrix
-    for (dtype::index boundaryElement = 0; boundaryElement < this->mesh->boundary()->rows(); ++boundaryElement) {
+    for (dtype::index boundaryElement = 0; boundaryElement < this->mesh->boundary->rows; ++boundaryElement) {
         // get boundary nodes
         nodes = this->mesh->boundaryNodes(boundaryElement);
 
@@ -263,7 +263,7 @@ void mpFlow::EIT::Equation<basisFunctionType>
         basisFunctionType::nodesPerElement> basisFunction;
 
     // fill connectivity and elementalJacobianMatrix
-    for (dtype::index element = 0; element < this->mesh->elements()->rows(); ++element) {
+    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
         // get element nodes
         auto nodes = this->mesh->elementNodes(element);
 
@@ -303,9 +303,9 @@ void mpFlow::EIT::Equation<basisFunctionType>::update(
         this->referenceValue, stream, this->rMatrix);
 
     // update system matrix
-    equationKernel::updateSystemMatrix(this->sMatrix->data_rows() / numeric::matrix::block_size,
-        numeric::matrix::block_size, stream, this->sMatrix->values(), this->rMatrix->values(),
-        this->sMatrix->column_ids(), this->sMatrix->density(), k, this->systemMatrix->values());
+    equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
+        numeric::matrix::block_size, stream, this->sMatrix->values, this->rMatrix->values,
+        this->sMatrix->columnIds, this->sMatrix->density, k, this->systemMatrix->values);
 }
 
 // calc jacobian
@@ -329,17 +329,17 @@ void mpFlow::EIT::Equation<basisFunctionType>::calcJacobian(
     }
 
     // dimension
-    dim3 blocks(jacobian->data_rows() / numeric::matrix::block_size,
-        jacobian->data_columns() / numeric::matrix::block_size);
+    dim3 blocks(jacobian->dataRows / numeric::matrix::block_size,
+        jacobian->dataCols / numeric::matrix::block_size);
     dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
 
     // calc jacobian
     equationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
-        phi->device_data(), &phi->device_data()[driveCount * phi->data_rows()],
-        this->mesh->elements()->device_data(), this->elementalJacobianMatrix->device_data(),
-        gamma->device_data(), this->referenceValue, jacobian->data_rows(), jacobian->data_columns(),
-        phi->data_rows(), this->mesh->elements()->rows(), driveCount, measurmentCount, additiv,
-        jacobian->device_data());
+        phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
+        this->mesh->elements->deviceData, this->elementalJacobianMatrix->deviceData,
+        gamma->deviceData, this->referenceValue, jacobian->dataRows, jacobian->dataCols,
+        phi->dataRows, this->mesh->elements->rows, driveCount, measurmentCount, additiv,
+        jacobian->deviceData);
 }
 
 // reduce matrix
@@ -365,13 +365,13 @@ void mpFlow::EIT::Equation<basisFunctionType>::reduceMatrix(
     }
 
     // block size
-    dim3 blocks(matrix->data_rows() / numeric::matrix::block_size, 1);
+    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
     dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
 
     // reduce matrix
     equationKernel::reduceMatrix<type>(blocks, threads, stream,
-        intermediateMatrix->device_data(), shape->column_ids(), matrix->data_rows(),
-        offset, matrix->device_data());
+        intermediateMatrix->deviceData, shape->columnIds, matrix->dataRows,
+        offset, matrix->deviceData);
 }
 
 // update matrix
@@ -399,12 +399,12 @@ void mpFlow::EIT::Equation<basisFunctionType>::updateMatrix(
 
     // dimension
     dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-    dim3 blocks(matrix->data_rows() / numeric::matrix::block_size, 1);
+    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
 
     // execute kernel
     equationKernel::updateMatrix(blocks, threads, stream,
-        connectivityMatrix->device_data(), elements->device_data(), gamma->device_data(),
-        sigmaRef, connectivityMatrix->data_rows(), connectivityMatrix->data_columns(), matrix->values());
+        connectivityMatrix->deviceData, elements->deviceData, gamma->deviceData,
+        sigmaRef, connectivityMatrix->dataRows, connectivityMatrix->dataCols, matrix->values);
 }
 
 // specialisation

@@ -30,32 +30,31 @@
 template<
     class type
 >
-mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cudaStream_t stream,
-    type value)
-    : host_data_(nullptr), device_data_(nullptr), rows_(rows), columns_(columns),
-        data_rows_(rows), data_columns_(columns) {
+mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
+    cudaStream_t stream, type value)
+    : rows(rows), cols(cols), dataRows(rows), dataCols(cols) {
     // check input
     if (rows == 0) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::Matrix: rows == 0");
     }
-    if (columns == 0) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::Matrix: columns == 0");
+    if (cols == 0) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::Matrix: cols == 0");
     }
 
     // cuda error
     cudaError_t error = cudaSuccess;
 
     // correct size to block size
-    if ((this->rows() % matrix::block_size != 0) && (this->rows() != 1)) {
-        this->data_rows_ = math::roundTo(this->rows(), matrix::block_size);
+    if ((this->rows % matrix::block_size != 0) && (this->rows != 1)) {
+        this->dataRows = math::roundTo(this->rows, matrix::block_size);
     }
-    if ((this->columns() % matrix::block_size != 0) && (this->columns() != 1)) {
-        this->data_columns_ = math::roundTo(this->columns(), matrix::block_size);
+    if ((this->cols % matrix::block_size != 0) && (this->cols != 1)) {
+        this->dataCols = math::roundTo(this->cols, matrix::block_size);
     }
 
     // create matrix host data memory
-    error = cudaHostAlloc((void**)&this->host_data_, sizeof(type) *
-        this->data_rows() * this->data_columns(), cudaHostAllocDefault);
+    error = cudaHostAlloc((void**)&this->hostData, sizeof(type) *
+        this->dataRows * this->dataCols, cudaHostAllocDefault);
 
     CudaCheckError();
 
@@ -65,8 +64,8 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cud
     }
 
     // create matrix device data memory
-    error = cudaMalloc((void**)&this->device_data_,
-        sizeof(type) * this->data_rows() * this->data_columns());
+    error = cudaMalloc((void**)&this->deviceData,
+        sizeof(type) * this->dataRows * this->dataCols);
 
     CudaCheckError();
 
@@ -76,9 +75,9 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size columns, cud
     }
 
     // init data with 0.0
-    for (dtype::size i = 0; i < this->data_rows(); i++) {
-        for (dtype::size j = 0; j < this->data_columns(); j++) {
-            this->host_data()[i + this->data_rows() * j] = value;
+    for (dtype::size i = 0; i < this->dataRows; i++) {
+        for (dtype::size j = 0; j < this->dataCols; j++) {
+            this->hostData[i + this->dataRows * j] = value;
         }
     }
     this->copyToDevice(stream);
@@ -90,11 +89,11 @@ template <
 >
 mpFlow::numeric::Matrix<type>::~Matrix() {
     // free matrix host data
-    cudaFreeHost(this->host_data_);
+    cudaFreeHost(this->hostData);
     CudaCheckError();
 
     // free matrix device data
-    cudaFree(this->device_data_);
+    cudaFree(this->deviceData);
     CudaCheckError();
 }
 
@@ -110,15 +109,15 @@ void mpFlow::numeric::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> oth
     }
 
     // check size
-    if ((other->rows() != this->rows()) ||
-        (other->columns() != this->columns())) {
+    if ((other->rows != this->rows) ||
+        (other->cols != this->cols)) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::copy: shape does not match");
     }
 
     // copy data
     CudaSafeCall(
-        cudaMemcpyAsync(this->device_data(), other->device_data(),
-        sizeof(type) * this->data_rows() * this->data_columns(),
+        cudaMemcpyAsync(this->deviceData, other->deviceData,
+        sizeof(type) * this->dataRows * this->dataCols,
         cudaMemcpyDeviceToDevice, stream));
 
     CudaCheckError();
@@ -131,8 +130,8 @@ template <
 void mpFlow::numeric::Matrix<type>::copyToDevice(cudaStream_t stream) {
     // copy host buffer to device
     CudaSafeCall(
-        cudaMemcpyAsync(this->device_data(), this->host_data(),
-            sizeof(type) * this->data_rows() * this->data_columns(),
+        cudaMemcpyAsync(this->deviceData, this->hostData,
+            sizeof(type) * this->dataRows * this->dataCols,
             cudaMemcpyHostToDevice, stream));
 
     CudaCheckError();
@@ -145,8 +144,8 @@ template <
 void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t stream) {
     // copy host buffer to device
     CudaSafeCall(
-        cudaMemcpyAsync(this->host_data(), this->device_data(),
-            sizeof(type) * this->data_rows() * this->data_columns(),
+        cudaMemcpyAsync(this->hostData, this->deviceData,
+            sizeof(type) * this->dataRows * this->dataCols,
             cudaMemcpyDeviceToHost, stream));
 
     CudaCheckError();
@@ -164,20 +163,20 @@ void mpFlow::numeric::Matrix<type>::add(const std::shared_ptr<Matrix<type>> valu
     }
 
     // check size
-    if ((this->rows() != value->rows()) ||
-        (this->columns() != value->columns())) {
+    if ((this->rows != value->rows) ||
+        (this->cols != value->cols)) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::add: shape does not match");
     }
 
     // dimension
-    dim3 blocks(this->data_rows() == 1 ? 1 : this->data_rows() / matrix::block_size,
-        this->data_columns() == 1 ? 1 : this->data_columns() / matrix::block_size);
-    dim3 threads(this->data_rows() == 1 ? 1 : matrix::block_size,
-        this->data_columns() == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
+        this->dataCols == 1 ? 1 : matrix::block_size);
 
     // call kernel
-    matrixKernel::add(blocks, threads, stream, value->device_data(),
-        this->data_rows(), this->device_data());
+    matrixKernel::add(blocks, threads, stream, value->deviceData,
+        this->dataRows, this->deviceData);
 }
 
 
@@ -208,9 +207,9 @@ namespace mpFlow {
         }
 
         // check size
-        if ((A->columns() != B->rows()) ||
-            (this->rows() != A->rows()) ||
-            (this->columns() != B->columns())) {
+        if ((A->cols != B->rows) ||
+            (this->rows != A->rows) ||
+            (this->cols != B->cols)) {
             throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: shape does not match");
         }
 
@@ -221,17 +220,17 @@ namespace mpFlow {
         dtype::real alpha = 1.0f;
         dtype::real beta = 0.0f;
 
-        if (B->data_columns() == 1) {
-            if (cublasSgemv(handle, CUBLAS_OP_N, A->data_rows(), A->data_columns(), &alpha, A->device_data(),
-                A->data_rows(), B->device_data(), 1, &beta, this->device_data(), 1)
+        if (B->dataCols == 1) {
+            if (cublasSgemv(handle, CUBLAS_OP_N, A->dataRows, A->dataCols, &alpha, A->deviceData,
+                A->dataRows, B->deviceData, 1, &beta, this->deviceData, 1)
                 != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
             }
         }
         else {
-            if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->data_rows(), B->data_columns(), A->data_columns(),
-                &alpha, A->device_data(), A->data_rows(), B->device_data(), B->data_rows(), &beta,
-                this->device_data(), this->data_rows()) != CUBLAS_STATUS_SUCCESS) {
+            if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
+                &alpha, A->deviceData, A->dataRows, B->deviceData, B->dataRows, &beta,
+                this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
             }
         }
@@ -259,14 +258,14 @@ template <
 >
 void mpFlow::numeric::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
     // dimension
-    dim3 blocks(this->data_rows() == 1 ? 1 : this->data_rows() / matrix::block_size,
-        this->data_columns() == 1 ? 1 : this->data_columns() / matrix::block_size);
-    dim3 threads(this->data_rows() == 1 ? 1 : matrix::block_size,
-        this->data_columns() == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
+        this->dataCols == 1 ? 1 : matrix::block_size);
 
     // call kernel
     matrixKernel::scale<type>(blocks, threads, stream, scalar,
-        this->data_rows(), this->device_data());
+        this->dataRows, this->deviceData);
 }
 
 // vector dot product
@@ -284,25 +283,25 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matri
     }
 
     // check size
-    if ((this->rows() != A->rows()) ||
-        (this->rows() != B->rows())) {
+    if ((this->rows != A->rows) ||
+        (this->rows != B->rows)) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: shape does not match");
     }
 
     // get minimum colums
-    dtype::size columns = std::min(std::min(this->data_columns(),
-        A->data_columns()), B->data_columns());
+    dtype::size columns = std::min(std::min(this->dataCols,
+        A->dataCols), B->dataCols);
 
     // kernel dimension
-    dim3 blocks(this->data_rows() / matrix::block_size,
+    dim3 blocks(this->dataRows / matrix::block_size,
         columns == 1 ? 1 : columns / matrix::block_size);
     dim3 threads(matrix::block_size,
         columns == 1 ? 1 : matrix::block_size);
 
     // call dot kernel
     matrixKernel::vectorDotProduct<type>(blocks, threads, stream,
-        A->device_data(), B->device_data(), this->data_rows(),
-        this->device_data());
+        A->deviceData, B->deviceData, this->dataRows,
+        this->deviceData);
 
     // sum
     struct noop_deleter { void operator()(void*) {} };
@@ -321,23 +320,23 @@ void mpFlow::numeric::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> valu
     }
 
     // check size
-    if (this->rows() != value->rows()) {
+    if (this->rows != value->rows) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::sum: shape does not match");
     }
 
     // get minimum columns
-    dtype::size columns = std::min(this->data_columns(), value->data_columns());
+    dtype::size columns = std::min(this->dataCols, value->dataCols);
 
     // kernel settings
-    dim3 blocks(this->data_rows() / matrix::block_size,
+    dim3 blocks(this->dataRows / matrix::block_size,
         columns == 1 ? 1 : columns / matrix::block_size);
     dim3 threads(matrix::block_size,
         columns == 1 ? 1 : matrix::block_size);
     dtype::size offset = 1;
 
     // start kernel once
-    matrixKernel::sum<type>(blocks, threads, stream, value->device_data(),
-        this->data_rows(), offset, this->device_data());
+    matrixKernel::sum<type>(blocks, threads, stream, value->deviceData,
+        this->dataRows, offset, this->deviceData);
 
     // start kernel
     do {
@@ -346,11 +345,11 @@ void mpFlow::numeric::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> valu
         blocks.x = (blocks.x + matrix::block_size - 1) /
             matrix::block_size;
 
-        matrixKernel::sum(blocks, threads, stream, this->device_data(),
-            this->data_rows(), offset, this->device_data());
+        matrixKernel::sum(blocks, threads, stream, this->deviceData,
+            this->dataRows, offset, this->deviceData);
 
     }
-    while (offset * matrix::block_size < this->data_rows());
+    while (offset * matrix::block_size < this->dataRows);
 }
 
 // min
@@ -365,17 +364,17 @@ void mpFlow::numeric::Matrix<type>::min(const std::shared_ptr<Matrix<type>> valu
     }
 
     // check size
-    if (this->rows() != value->rows()) {
+    if (this->rows != value->rows) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::min: shape does not match");
     }
 
     // kernel settings
-    dtype::size blocks = this->data_rows() / matrix::block_size;
+    dtype::size blocks = this->dataRows / matrix::block_size;
     dtype::size offset = 1;
 
     // start kernel once
     matrixKernel::min<type>(blocks, matrix::block_size, stream,
-        value->device_data(), this->rows(), offset, this->device_data());
+        value->deviceData, this->rows, offset, this->deviceData);
 
     // start kernel
     do {
@@ -384,10 +383,10 @@ void mpFlow::numeric::Matrix<type>::min(const std::shared_ptr<Matrix<type>> valu
         blocks = (blocks + matrix::block_size - 1) / matrix::block_size;
 
         matrixKernel::min<type>(blocks, matrix::block_size, stream,
-            this->device_data(), this->rows(), offset, this->device_data());
+            this->deviceData, this->rows, offset, this->deviceData);
 
     }
-    while (offset * matrix::block_size < this->data_rows());
+    while (offset * matrix::block_size < this->dataRows);
 }
 
 // max
@@ -402,17 +401,17 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
     }
 
     // check size
-    if (this->rows() != value->rows()) {
+    if (this->rows != value->rows) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::max: shape does not match");
     }
 
     // kernel settings
-    dtype::size blocks = this->data_rows() / matrix::block_size;
+    dtype::size blocks = this->dataRows / matrix::block_size;
     dtype::size offset = 1;
 
     // start kernel once
     matrixKernel::max<type>(blocks, matrix::block_size, stream,
-        value->device_data(), this->rows(), offset, this->device_data());
+        value->deviceData, this->rows, offset, this->deviceData);
 
     // start kernel
     do {
@@ -421,10 +420,10 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
         blocks = (blocks + matrix::block_size - 1) / matrix::block_size;
 
         matrixKernel::max<type>(blocks, matrix::block_size, stream,
-            this->device_data(), this->rows(), offset, this->device_data());
+            this->deviceData, this->rows, offset, this->deviceData);
 
     }
-    while (offset * matrix::block_size < this->data_rows());
+    while (offset * matrix::block_size < this->dataRows);
 }
 
 // load matrix from stream
@@ -478,8 +477,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(
     auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
 
     // add values
-    for (dtype::index row = 0; row < matrix->rows(); ++row) {
-        for (dtype::index column = 0; column < matrix->columns(); ++column) {
+    for (dtype::index row = 0; row < matrix->rows; ++row) {
+        for (dtype::index column = 0; column < matrix->cols; ++column) {
             (*matrix)(row, column) = values[row][column];
         }
     }
@@ -529,11 +528,11 @@ void mpFlow::numeric::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix
     }
 
     // write data
-    for (dtype::index row = 0; row < matrix->rows(); ++row) {
-        for (dtype::index column = 0; column < matrix->columns() - 1; ++column) {
+    for (dtype::index row = 0; row < matrix->rows; ++row) {
+        for (dtype::index column = 0; column < matrix->cols - 1; ++column) {
             *ostream << (*matrix)(row, column) << " ";
         }
-        *ostream << (*matrix)(row, matrix->columns() - 1) << std::endl;
+        *ostream << (*matrix)(row, matrix->cols - 1) << std::endl;
     }
 }
 
@@ -577,14 +576,14 @@ Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEi
 
     // create eigen array with mpflow_type
     Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> array(
-        matrix->data_rows(), matrix->data_columns());
+        matrix->dataRows, matrix->dataCols);
 
     // copy data
-    memcpy(array.data(), matrix->host_data(), sizeof(type) *
+    memcpy(array.data(), matrix->hostData, sizeof(type) *
         array.rows() * array.cols());
 
     // resize array
-    array.conservativeResize(matrix->rows(), matrix->columns());
+    array.conservativeResize(matrix->rows, matrix->cols);
 
     return array;
 }
@@ -604,11 +603,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
     // create mpflow matrix and resize eigen array to correct size
     auto matrix = std::make_shared<Matrix<mpflow_type>>(mpflow_array.rows(),
         mpflow_array.cols(), stream);
-    mpflow_array.conservativeResize(matrix->data_rows(), matrix->data_columns());
+    mpflow_array.conservativeResize(matrix->dataRows, matrix->dataCols);
 
     // copy data
-    memcpy(matrix->host_data(), mpflow_array.data(), sizeof(mpflow_type) *
-        matrix->data_rows() * matrix->data_columns());
+    memcpy(matrix->hostData, mpflow_array.data(), sizeof(mpflow_type) *
+        matrix->dataRows * matrix->dataCols);
 
     // copy data to device
     matrix->copyToDevice(stream);

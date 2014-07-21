@@ -39,20 +39,12 @@ namespace numeric {
         std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
             boundaryNodes(dtype::index element);
 
-        // accessors
-        std::shared_ptr<Matrix<dtype::real>> nodes() { return this->nodes_; }
-        std::shared_ptr<Matrix<dtype::index>> elements() { return this->elements_; }
-        std::shared_ptr<Matrix<dtype::index>> boundary() { return this->boundary_; }
-        dtype::real radius() { return this->radius_; }
-        dtype::real height() { return this->height_; }
-
-    private:
         // member
-        std::shared_ptr<Matrix<dtype::real>> nodes_;
-        std::shared_ptr<Matrix<dtype::index>> elements_;
-        std::shared_ptr<Matrix<dtype::index>> boundary_;
-        dtype::real radius_;
-        dtype::real height_;
+        std::shared_ptr<Matrix<dtype::real>> nodes;
+        std::shared_ptr<Matrix<dtype::index>> elements;
+        std::shared_ptr<Matrix<dtype::index>> boundary;
+        dtype::real radius;
+        dtype::real height;
     };
 
     // mesh helper

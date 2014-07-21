@@ -42,20 +42,20 @@ mpFlow::EIT::Solver<basisFunctionType>::Solver(std::shared_ptr<mpFlow::EIT::Equa
 
     // create inverse EIT
     this->inverseSolver = std::make_shared<InverseSolver<numeric::ConjugateGradient>>(
-        equation->mesh->elements()->rows(), forwardSolver->voltage->data_rows() *
-        forwardSolver->voltage->data_columns(), parallelImages, regularizationFactor,
+        equation->mesh->elements->rows, forwardSolver->voltage->dataRows *
+        forwardSolver->voltage->dataCols, parallelImages, regularizationFactor,
         handle, stream);
 
     // create matrices
     this->gamma = std::make_shared<numeric::Matrix<dtype::real>>(
-        equation->mesh->elements()->rows(), parallelImages, stream);
+        equation->mesh->elements->rows, parallelImages, stream);
     this->dGamma = std::make_shared<numeric::Matrix<dtype::real>>(
-        equation->mesh->elements()->rows(), parallelImages, stream);
+        equation->mesh->elements->rows, parallelImages, stream);
     for (dtype::index image = 0; image < parallelImages; ++image) {
         this->measurement.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
-            source->measurementPattern->columns(), source->drivePattern->columns(), stream));
+            source->measurementPattern->cols, source->drivePattern->cols, stream));
         this->calculation.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
-            source->measurementPattern->columns(), source->drivePattern->columns(), stream));
+            source->measurementPattern->cols, source->drivePattern->cols, stream));
     }
 }
 
@@ -72,7 +72,7 @@ void mpFlow::EIT::Solver<basisFunctionType>::preSolve(
 
     // forward solving a few steps
     auto initialValue = this->forwardSolver->solve(this->gamma,
-        this->forwardSolver->equation->mesh->nodes()->rows() / 4,
+        this->forwardSolver->equation->mesh->nodes->rows / 4,
         handle, stream);
 
     // calc system matrix
@@ -104,7 +104,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     // solve
     this->inverseSolver->solve(this->forwardSolver->jacobian,
         this->calculation, this->measurement,
-        this->forwardSolver->equation->mesh->elements()->rows() / 8,
+        this->forwardSolver->equation->mesh->elements->rows / 8,
         handle, stream, this->dGamma);
 
     return this->dGamma;
@@ -131,7 +131,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // solve forward
     this->forwardSolver->solve(this->gamma,
-        this->forwardSolver->equation->mesh->nodes()->rows() / 80,
+        this->forwardSolver->equation->mesh->nodes->rows / 80,
         handle, stream);
 
     // calc inverse system matrix
@@ -142,7 +142,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> calculation(
         1, this->forwardSolver->voltage);
     this->inverseSolver->solve(this->forwardSolver->jacobian, calculation,
-        this->measurement, this->forwardSolver->equation->mesh->elements()->rows() / 8,
+        this->measurement, this->forwardSolver->equation->mesh->elements->rows / 8,
         handle, stream, this->dGamma);
 
     // add to gamma
