@@ -43,9 +43,7 @@
 // EIT specific
 #include "eit/equation.h"
 #include "eit/forward.h"
-
-// basic solver
-#include "solver/inverse.h"
-#include "solver/solver.h"
+#include "eit/inverse.h"
+#include "eit/solver.h"
 
 #endif

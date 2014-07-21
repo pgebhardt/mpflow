@@ -18,21 +18,20 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_SOLVER_INVERSE_H
-#define MPFLOW_INCLDUE_SOLVER_INVERSE_H
+#ifndef MPFLOW_INCLDUE_EIT_INVERSE_SOLVER_H
+#define MPFLOW_INCLDUE_EIT_INVERSE_SOLVER_H
 
-// namespace mpFlow::solver
 namespace mpFlow {
-namespace solver {
+namespace EIT {
     // inverse solver class definition
     template <
-        template <template <class> class> class numerical_solver
+        template <template <class> class> class numericalSolverType
     >
-    class Inverse {
+    class InverseSolver {
     public:
         // constructor
-        Inverse(dtype::size element_count, dtype::size voltage_count, dtype::index parallel_images,
-            dtype::real regularization_factor, cublasHandle_t handle, cudaStream_t stream);
+        InverseSolver(dtype::size elementCount, dtype::size measurementCount, dtype::index parallelImages,
+            dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
 
     public:
         // inverse solving
@@ -53,24 +52,14 @@ namespace solver {
             const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& measurement,
             cublasHandle_t handle, cudaStream_t stream);
 
-        // accessors
-        std::shared_ptr<numerical_solver<mpFlow::numeric::Matrix>> numeric_solver() { return this->numeric_solver_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> difference() { return this->difference_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> zeros() { return this->zeros_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> excitation() { return this->excitation_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> system_matrix() { return this->system_matrix_; }
-        std::shared_ptr<numeric::Matrix<dtype::real>> jacobian_square() { return this->jacobian_square_; }
-        dtype::real& regularization_factor() { return this->regularization_factor_; }
-
-    private:
         // member
-        std::shared_ptr<numerical_solver<mpFlow::numeric::Matrix>> numeric_solver_;
-        std::shared_ptr<numeric::Matrix<dtype::real>> difference_;
-        std::shared_ptr<numeric::Matrix<dtype::real>> zeros_;
-        std::shared_ptr<numeric::Matrix<dtype::real>> excitation_;
-        std::shared_ptr<numeric::Matrix<dtype::real>> system_matrix_;
-        std::shared_ptr<numeric::Matrix<dtype::real>> jacobian_square_;
-        dtype::real regularization_factor_;
+        std::shared_ptr<numericalSolverType<mpFlow::numeric::Matrix>> numericalSolver;
+        std::shared_ptr<numeric::Matrix<dtype::real>> difference;
+        std::shared_ptr<numeric::Matrix<dtype::real>> zeros;
+        std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
+        std::shared_ptr<numeric::Matrix<dtype::real>> systemMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::real>> jacobianSquare;
+        dtype::real regularizationFactor;
     };
 }
 }
