@@ -25,13 +25,13 @@ namespace mpFlow {
 namespace EIT {
     // forward solver class definition
     template <
-        class equationType,
+        class basisFunctionType,
         template <template <class> class> class numericalSolverType
     >
     class ForwardSolver {
     public:
         // initialization
-        ForwardSolver(std::shared_ptr<equationType> equation,
+        ForwardSolver(std::shared_ptr<Equation<basisFunctionType>> equation,
             std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
             cublasHandle_t handle, cudaStream_t stream);
 
@@ -47,12 +47,11 @@ namespace EIT {
 
         // member
         std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;
-        std::shared_ptr<equationType> equation;
+        std::shared_ptr<Equation<basisFunctionType>> equation;
         std::shared_ptr<FEM::SourceDescriptor> source;
         std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> phi;
         std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
         std::shared_ptr<numeric::Matrix<dtype::real>> voltage;
-        std::shared_ptr<numeric::Matrix<dtype::real>> current;
         std::shared_ptr<numeric::Matrix<dtype::real>> jacobian;
         std::shared_ptr<numeric::Matrix<dtype::real>> electrodesAttachmentMatrix;
     };

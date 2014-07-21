@@ -23,11 +23,11 @@
 
 // create forward_solver
 template <
-    class equationType,
+    class basisFunctionType,
     template <template <class> class> class numericalSolverType
 >
-mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::ForwardSolver(
-    std::shared_ptr<equationType> equation, std::shared_ptr<FEM::SourceDescriptor> source,
+mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolver(
+    std::shared_ptr<Equation<basisFunctionType>> equation, std::shared_ptr<FEM::SourceDescriptor> source,
     dtype::index components, cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
     // check input
@@ -48,8 +48,6 @@ mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::ForwardSolver(
 
     // create matrices
     this->voltage = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->source->measurementPattern->columns(), this->source->drivePattern->columns(), stream);
-    this->current = std::make_shared<numeric::Matrix<dtype::real>>(
         this->source->measurementPattern->columns(), this->source->drivePattern->columns(), stream);
     for (dtype::index component = 0; component < components; ++component) {
         this->phi.push_back(std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes()->rows(),
@@ -87,10 +85,10 @@ mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::ForwardSolver(
 
 // apply pattern
 template <
-    class equationType,
+    class basisFunctionType,
     template <template <class> class> class numericalSolverType
 >
-void mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::applyMeasurementPattern(
+void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMeasurementPattern(
     const std::shared_ptr<numeric::Matrix<dtype::real>> source,
     std::shared_ptr<numeric::Matrix<dtype::real>> result, bool additiv,
     cublasHandle_t handle, cudaStream_t stream) {
@@ -119,11 +117,11 @@ void mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::applyMeasure
 
 // forward solving
 template <
-    class equationType,
+    class basisFunctionType,
     template <template <class> class> class numericalSolverType
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::ForwardSolver<equationType, numericalSolverType>::solve(
+    mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::solve(
     const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
@@ -134,15 +132,19 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: handle == nullptr");
     }
 
+    // calculate common excitation for all 2.5D model components
     for (dtype::index component = 0; component < this->phi.size(); ++component) {
-        // update system matrix and excitation for different 2.5D components
-        this->equation->update(gamma, math::square(2.0 * component * M_PI / this->equation->mesh->height()), stream);
+        // 2.5D model constants
+        dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height());
+        dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height()) :
+            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape) / this->equation->mesh->height()) /
+                (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape)));
 
+        // update system matrix and excitation for different 2.5D components
+        this->equation->update(gamma, alpha, stream);
         this->excitation->multiply(this->equation->excitationMatrix,
             this->source->pattern, handle, stream);
-        this->excitation->scalarMultiply(component == 0 ? (1.0 / this->equation->mesh->height()) :
-            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape) / this->equation->mesh->height()) /
-                (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape))), stream);
+        this->excitation->scalarMultiply(beta, stream);
 
         // solve for ground mode
         this->numericalSolver->solve(this->equation->systemMatrix,
@@ -166,5 +168,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 }
 
 // specialisation
-template class mpFlow::EIT::ForwardSolver<mpFlow::EIT::Equation<mpFlow::FEM::basis::Linear>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::EIT::Equation<mpFlow::FEM::basis::Quadratic>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient>;
