@@ -20,19 +20,18 @@
 
 #include "mpflow/mpflow.h"
 
-mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(dtype::size count,
-    std::tuple<dtype::real, dtype::real> shape)
-    : count(count), coordinates(count), shape(shape) {
+mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
+    const std::vector<std::tuple<dtype::real, dtype::real>>& shapes)
+    : count(shapes.size()), coordinates(shapes.size()), shapes(shapes) {
     // check input
-    if (count == 0) {
+    if (this->count == 0) {
         throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: count == 0");
     }
-    if (std::get<0>(shape) <= 0.0) {
-        throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: width <= 0.0");
-    }
-    if (std::get<1>(shape) <= 0.0) {
-        throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: height <= 0.0");
-    }
+}
+
+mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(dtype::size count,
+    std::tuple<dtype::real, dtype::real> shape)
+    : BoundaryDescriptor(std::vector<std::tuple<dtype::real, dtype::real>>(count, shape)) {
 }
 
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor::circularBoundary(

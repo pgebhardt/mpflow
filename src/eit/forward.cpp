@@ -137,8 +137,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         // 2.5D model constants
         dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
         dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height) :
-            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape) / this->equation->mesh->height) /
-                (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shape)));
+            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0]) / this->equation->mesh->height) /
+                (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0])));
 
         // update system matrix and excitation for different 2.5D components
         this->equation->update(gamma, alpha, stream);

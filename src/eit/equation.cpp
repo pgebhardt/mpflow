@@ -228,6 +228,13 @@ void mpFlow::EIT::Equation<basisFunctionType>::initExcitationMatrix(cudaStream_t
         }
 
         for (dtype::index piece = 0; piece < this->boundaryDescriptor->count; ++piece) {
+            // skip boundary part, if radii dont match
+            if (std::abs(
+                std::get<0>(math::polar(std::get<0>(this->boundaryDescriptor->coordinates[piece]))) -
+                std::get<0>(math::polar(std::get<1>(nodes[0])))) > 0.0001) {
+                continue;
+            }
+
             // calc integration interval centered to node 0
             integrationStart = math::circleParameter(
                 std::get<0>(this->boundaryDescriptor->coordinates[piece]),
@@ -243,7 +250,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::initExcitationMatrix(cudaStream_t
                     (*this->excitationMatrix)(std::get<0>(nodes[node]), piece) +=
                         basisFunctionType::integrateBoundaryEdge(
                             nodeParameter, node, integrationStart, integrationEnd) /
-                        std::get<0>(this->boundaryDescriptor->shape);
+                        std::get<0>(this->boundaryDescriptor->shapes[piece]);
                 }
             }
         }

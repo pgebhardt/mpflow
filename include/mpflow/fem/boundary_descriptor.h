@@ -25,6 +25,7 @@ namespace mpFlow {
 namespace FEM {
     class BoundaryDescriptor {
     public:
+        BoundaryDescriptor(const std::vector<std::tuple<dtype::real, dtype::real>>& shapes);
         BoundaryDescriptor(dtype::size count, std::tuple<dtype::real, dtype::real> shape);
         virtual ~BoundaryDescriptor() { }
 
@@ -32,7 +33,7 @@ namespace FEM {
         dtype::size count;
         std::vector<std::tuple<std::tuple<dtype::real, dtype::real>,
             std::tuple<dtype::real, dtype::real>>> coordinates;
-        std::tuple<dtype::real, dtype::real> shape;
+        std::vector<std::tuple<dtype::real, dtype::real>> shapes;
     };
 
     namespace boundaryDescriptor {
