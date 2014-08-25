@@ -38,9 +38,9 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor
     dtype::size count, std::tuple<dtype::real, dtype::real> shape,
     dtype::real boundaryRadius, dtype::real offset) {
     // check radius
-    if (boundaryRadius <= 0.0) {
+    if (boundaryRadius == 0.0) {
         throw std::invalid_argument(
-            "mpFlow::FEM::boundaryDescriptor::circularBoundary: boundaryRadius <= 0.0");
+            "mpFlow::FEM::boundaryDescriptor::circularBoundary: boundaryRadius == 0.0");
     }
 
     auto descriptor = std::make_shared<BoundaryDescriptor>(count, shape);

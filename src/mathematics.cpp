@@ -68,7 +68,7 @@ mpFlow::dtype::real mpFlow::math::circleParameter(
 
     // correct angle
     angle -= offset / std::get<0>(polar_point);
-    angle += (angle < M_PI) ? 2.0f * M_PI : 0.0f;
+    angle += (angle < -M_PI) ? 2.0f * M_PI : 0.0f;
     angle -= (angle > M_PI) ? 2.0f * M_PI : 0.0f;
 
     // calc parameter
