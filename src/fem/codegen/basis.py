@@ -130,12 +130,12 @@ class Basis(object):
     def render(self, template):
         # arguments
         points_args = [[
-            'std::get<0>(this->nodes()[{}])'.format(i),
-            'std::get<1>(this->nodes()[{}])'.format(i)]
+            'std::get<0>(this->nodes[{}])'.format(i),
+            'std::get<1>(this->nodes[{}])'.format(i)]
             for i in range(self.nodes_per_element)]
 
-        this_coefficients = ['this->coefficients()[{}]'.format(i) for i in range(self.nodes_per_element)]
-        other_coefficients = ['other->coefficients()[{}]'.format(i) for i in range(self.nodes_per_element)]
+        this_coefficients = ['this->coefficients[{}]'.format(i) for i in range(self.nodes_per_element)]
+        other_coefficients = ['other->coefficients[{}]'.format(i) for i in range(self.nodes_per_element)]
 
         # render template
         return template.render(
@@ -145,13 +145,13 @@ class Basis(object):
             # coefficients in constructor
             coefficients=[
                 symbolic(self.basis_function)(
-                    ['std::get<0>(this->nodes()[node])', 'std::get<1>(this->nodes()[node])'],
+                    ['std::get<0>(this->nodes[node])', 'std::get<1>(this->nodes[node])'],
                     [0.0] * i + [1.0] + [0.0] * (self.nodes_per_element - i - 1))
                 for i in range(self.nodes_per_element)],
 
             # evaluate basis function
             evaluate=self.evaluate(
-                ['std::get<{}>(point)'.format(i) for i in range(self.nodes_per_edge)],
+                ['std::get<{}>(point)'.format(i) for i in range(2)],
                 this_coefficients,
                 dtype='mpFlow::dtype::real',
                 custom_args=['std::tuple<dtype::real, dtype::real> point'],
@@ -180,4 +180,92 @@ class Basis(object):
                 ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 'start', 'end').expand(),
+            )
+
+class EdgeBasis(object):
+    def __init__(self, nodeBasis):
+        # call base class init
+        super(EdgeBasis, self).__init__()
+
+        # save arguments
+        self.name = 'Edge'
+        self.nodeBasis = nodeBasis
+
+    @kernel
+    def evaluate(self, point, length, ci, cj):
+        x, y = point
+
+        # basis function
+        ui = self.nodeBasis.basis_function([x, y], ci)
+        uj = self.nodeBasis.basis_function([x, y], cj)
+
+        return [length * (ui * uj.diff(x) - uj * ui.diff(x)),
+            length * (ui * uj.diff(y) - uj * ui.diff(y))]
+
+    @kernel
+    def integrateWithBasis(self, points, lengthI, lengthJ, ci1, ci2, cj1, cj2):
+        # create coordinats
+        x, y = symbols('x, y')
+
+        # create edge based basis functions basis function
+        Ni = self.evaluate.symbolic.function(self, [x, y], lengthI, ci1, ci2)
+        Nj = self.evaluate.symbolic.function(self, [x, y], lengthJ, cj1, cj2)
+
+        # integrate on triangle
+        integrant = Ni[0] * Nj[0] + Ni[1] * Nj[1]
+        return integrateOnTriangle(integrant, x, y, points)
+
+    @kernel
+    def integrateGradientWithBasis(self, points, lengthI, lengthJ, ci1, ci2, cj1, cj2):
+        # create coordinats
+        x, y = symbols('x, y')
+
+        # create edge based basis functions basis function
+        Ni = self.evaluate.symbolic.function(self, [x, y], lengthI, ci1, ci2)
+        Nj = self.evaluate.symbolic.function(self, [x, y], lengthJ, cj1, cj2)
+
+        # integrate on triangle
+        integrant = (Ni[1].diff(x) - Ni[0].diff(y)) * (Nj[1].diff(x) - Nj[0].diff(y))
+        return integrateOnTriangle(integrant, x, y, points)
+
+    def render(self, template):
+        # arguments
+        points_args = [[
+            'std::get<0>(this->nodes[{}])'.format(i),
+            'std::get<1>(this->nodes[{}])'.format(i)]
+            for i in range(self.nodeBasis.nodes_per_element)]
+
+        # coefficients
+        ci1 = ['this->nodeBasis[0].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        ci2 = ['this->nodeBasis[1].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj1 = ['other->nodeBasis[0].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj2 = ['other->nodeBasis[1].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+
+        # render template
+        return template.render(
+            # class name
+            name=self.name,
+
+            # evaluate basis function
+            evaluate=self.evaluate(
+                ['std::get<{}>(point)'.format(i) for i in range(2)],
+                'this->length', ci1, ci2,
+                dtype='std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>',
+                custom_args=['std::tuple<dtype::real, dtype::real> point'],
+                name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
+                ),
+
+            # model integrals
+            integrateWithBasis=self.integrateWithBasis(
+                points_args, 'this->length', 'other->length', ci1, ci2, cj1, cj2,
+                dtype='mpFlow::dtype::real',
+                custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
+                name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
+                ),
+            integrateGradientWithBasis=self.integrateGradientWithBasis(
+                points_args, 'this->length', 'other->length', ci1, ci2, cj1, cj2,
+                dtype='mpFlow::dtype::real',
+                custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
+                name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
+                ),
             )

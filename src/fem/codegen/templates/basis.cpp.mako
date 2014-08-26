@@ -50,7 +50,7 @@ mpFlow::FEM::basis::${name}::${name}(
     }
 
     // calc coefficients
-    this->coefficients() = math::gaussElemination<dtype::real, nodesPerElement>(A, b);
+    this->coefficients = math::gaussElemination<dtype::real, nodesPerElement>(A, b);
 }
 
 // evaluate basis function

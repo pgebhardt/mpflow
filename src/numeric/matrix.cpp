@@ -645,6 +645,8 @@ template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::n
     const Eigen::Ref<Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
     const Eigen::Ref<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
+    const Eigen::Ref<Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::numeric::matrix::fromEigen(
     const Eigen::Ref<Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
 

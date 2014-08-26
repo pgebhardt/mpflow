@@ -39,7 +39,19 @@ ${dtype} ${name}(
     % endif
     ) {
 % endif
+% if expression:
     return ${expression};
+% elif listExpression:
+    return std::make_tuple(
+    % for i in range(len(listExpression)):
+        % if i != len(listExpression) - 1:
+        ${listExpression[i].expand(dtype=dtype)},
+        % else:
+        ${listExpression[i].expand(dtype=dtype)}
+        % endif
+    % endfor
+        );
+% endif
 % if header == True:
 }
 % endif

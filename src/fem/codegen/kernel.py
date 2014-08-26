@@ -43,10 +43,15 @@ def kernel(function):
         # get expression
         expression = sym(*args)
 
+        if type(expression) is list:
+            kargs.setdefault('listExpression', expression)
+
+        else:
+            kargs.setdefault('expression', expression.expand(dtype=kargs['dtype']))
+
         # render kernel template
         return template.render(
             args=[arg for arg in args if isinstance(arg, str)],
-            expression=expression.expand(dtype=kargs['dtype']),
             **kargs
             )
 
