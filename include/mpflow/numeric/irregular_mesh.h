@@ -65,6 +65,11 @@ namespace numeric {
             const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements_old,
             const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> boundary_old,
             cudaStream_t stream);
+
+        std::tuple<
+            std::vector<std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>,
+            std::vector<std::array<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>, 3>>>
+            calculateGlobalEdgeIndices(std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements);
     }
 }
 }

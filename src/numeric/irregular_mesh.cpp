@@ -266,3 +266,37 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     // return quadratic mesh matrices
     return std::make_tuple(nodes_new, elements_new, boundary_new);
 }
+
+std::tuple<
+    std::vector<std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>,
+    std::vector<std::array<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>, 3>>>
+    mpFlow::numeric::irregularMesh::calculateGlobalEdgeIndices(
+        std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements) {
+    std::vector<std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>> edges;
+    std::vector<std::array<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>, 3>> localEdgeConnections(elements->rows);
+
+    // find all unique edges
+    for (dtype::index element = 0; element < elements->rows; ++element)
+    for (dtype::index i = 0; i < 3; ++i) {
+        // sort edge to guarantee constant global edge orientation
+        auto edge = (*elements)(element, i) < (*elements)(element, (i + 1) % 3) ?
+            std::make_tuple((*elements)(element, i), (*elements)(element, (i + 1) % 3)) :
+            std::make_tuple((*elements)(element, (i + 1) % 3), (*elements)(element, i));
+
+        // add edge to edges vector, if it was not already inserted
+        auto edgePosition = std::find(edges.begin(), edges.end(), edge);
+        if (edgePosition != edges.end()) {
+            localEdgeConnections[element][i] = std::make_tuple(std::distance(edges.begin(), edgePosition),
+                (*elements)(element, i) < (*elements)(element, (i + 1) % 3) ?
+                std::make_tuple(i, (i + 1) % 3) : std::make_tuple((i + 1) % 3, i));
+        }
+        else {
+            edges.push_back(edge);
+            localEdgeConnections[element][i] = std::make_tuple(edges.size() - 1,
+                (*elements)(element, i) < (*elements)(element, (i + 1) % 3) ?
+                std::make_tuple(i, (i + 1) % 3) : std::make_tuple((i + 1) % 3, i));
+        }
+    }
+
+    return std::make_tuple(edges, localEdgeConnections);
+}
