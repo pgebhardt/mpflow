@@ -97,6 +97,21 @@ mpFlow::numeric::Matrix<type>::~Matrix() {
     CudaCheckError();
 }
 
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::fill(type value, cudaStream_t stream) {
+    // dimension
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
+        this->dataCols == 1 ? 1 : matrix::block_size);
+
+    // call kernel
+    matrixKernel::fill(blocks, threads, stream, value,
+        this->dataRows, this->deviceData);
+}
+
 // copy matrix
 template <
     class type

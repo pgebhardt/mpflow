@@ -37,6 +37,7 @@ namespace numeric {
         Matrix(dtype::size rows, dtype::size cols, cudaStream_t stream,
             type value=0);
         virtual ~Matrix();
+        void fill(type value, cudaStream_t stream);
 
         // copy methods
         void copy(const std::shared_ptr<Matrix<type>> other, cudaStream_t stream);
@@ -54,7 +55,6 @@ namespace numeric {
         void scalarMultiply(type scalar, cudaStream_t stream);
         void vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
             const std::shared_ptr<Matrix<type>> B, cudaStream_t stream);
-
 
         // reduce methods
         void sum(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream);

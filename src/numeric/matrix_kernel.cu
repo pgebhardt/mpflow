@@ -26,6 +26,38 @@
 #include "mpflow/numeric/constants.h"
 #include "mpflow/numeric/matrix_kernel.h"
 
+// fill kernel
+template <
+    class type
+>
+__global__ void fillKernel(const type value, mpFlow::dtype::size rows, type* result) {
+    // get ids
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // add B to A
+    result[row + column * rows] = value;
+}
+
+// fill kernel wrapper
+template <
+    class type
+>
+void mpFlow::numeric::matrixKernel::fill(dim3 blocks, dim3 threads, cudaStream_t stream,
+    const type value, mpFlow::dtype::size rows, type* result) {
+    // call cuda kernel
+    fillKernel<type><<<blocks, threads, 0, stream>>>(value, rows, result);
+
+    CudaCheckError();
+}
+
+// fill specialisation
+template void mpFlow::numeric::matrixKernel::fill<mpFlow::dtype::real>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::real,
+    mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::numeric::matrixKernel::fill<mpFlow::dtype::index>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::index,
+    mpFlow::dtype::size, mpFlow::dtype::index*);
 
 // add kernel
 template <

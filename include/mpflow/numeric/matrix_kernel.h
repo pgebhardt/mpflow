@@ -26,6 +26,13 @@ namespace mpFlow {
 namespace numeric {
     // matrix kernel
     namespace matrixKernel {
+        // fill kernel
+        template <
+            class type
+        >
+        void fill(dim3 blocks, dim3 threads, cudaStream_t stream,
+            const type value, dtype::size rows, type* result);
+
         // add kernel
         template <
             class type
