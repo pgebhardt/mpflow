@@ -19,7 +19,7 @@
 // --------------------------------------------------------------------
 
 #include "mpflow/mpflow.h"
-#include "mpflow/eit/equation_kernel.h"
+#include "mpflow/fem/equation_kernel.h"
 
 template <
     class basisFunctionType
@@ -310,7 +310,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::update(
         this->referenceValue, stream, this->rMatrix);
 
     // update system matrix
-    equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
+    FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
         numeric::matrix::block_size, stream, this->sMatrix->values, this->rMatrix->values,
         this->sMatrix->columnIds, this->sMatrix->density, k, this->systemMatrix->values);
 }
@@ -341,7 +341,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::calcJacobian(
     dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
 
     // calc jacobian
-    equationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
+    FEM::equationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
         phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
         this->mesh->elements->deviceData, this->elementalJacobianMatrix->deviceData,
         gamma->deviceData, this->referenceValue, jacobian->dataRows, jacobian->dataCols,
@@ -376,7 +376,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::reduceMatrix(
     dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
 
     // reduce matrix
-    equationKernel::reduceMatrix<type>(blocks, threads, stream,
+    FEM::equationKernel::reduceMatrix<type>(blocks, threads, stream,
         intermediateMatrix->deviceData, shape->columnIds, matrix->dataRows,
         offset, matrix->deviceData);
 }
@@ -409,7 +409,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::updateMatrix(
     dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
 
     // execute kernel
-    equationKernel::updateMatrix(blocks, threads, stream,
+    FEM::equationKernel::updateMatrix(blocks, threads, stream,
         connectivityMatrix->deviceData, elements->deviceData, gamma->deviceData,
         sigmaRef, connectivityMatrix->dataRows, connectivityMatrix->dataCols, matrix->values);
 }

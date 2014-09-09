@@ -27,7 +27,7 @@
 
 #include "mpflow/dtype.h"
 #include "mpflow/numeric/constants.h"
-#include "mpflow/eit/equation_kernel.h"
+#include "mpflow/fem/equation_kernel.h"
 
 // reduce connectivity and elementalResidual matrix
 template <
@@ -57,7 +57,7 @@ static __global__ void reduceMatrixKernel(const type* intermediate_matrix,
 template <
     class type
 >
-void mpFlow::EIT::equationKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::FEM::equationKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
     const type* intermediate_matrix, const dtype::index* column_ids, dtype::size rows,
     dtype::index offset, type* matrix) {
     // call cuda kernel
@@ -68,10 +68,10 @@ void mpFlow::EIT::equationKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaSt
 }
 
 // reduce matrix specialisation
-template void mpFlow::EIT::equationKernel::reduceMatrix<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::real*);
-template void mpFlow::EIT::equationKernel::reduceMatrix<mpFlow::dtype::index>(dim3, dim3,
+template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
 
@@ -102,7 +102,7 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 }
 
 // update matrix kernel wrapper
-void mpFlow::EIT::equationKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::FEM::equationKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::index* connectivityMatrix, const dtype::real* elementalMatrix,
     const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows, dtype::size columns,
     dtype::real* matrix_values) {
@@ -137,7 +137,7 @@ static __global__ void updateSystemMatrixKernel(
 }
 
 // update system matrix kernel wrapper
-void mpFlow::EIT::equationKernel::updateSystemMatrix(
+void mpFlow::FEM::equationKernel::updateSystemMatrix(
     dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::real* sMatrixValues, const dtype::real* rMatrixValues,
     const dtype::index* sMatrixColumnIds, dtype::size density, dtype::real k,
@@ -213,7 +213,7 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
 template <
     int nodes_per_element
 >
-void mpFlow::EIT::equationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
+void mpFlow::FEM::equationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::real* drive_phi, const dtype::real* measurment_phi,
     const dtype::index* connectivity_matrix, const dtype::real* elemental_jacobian_matrix,
     const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows, dtype::size columns,
@@ -229,11 +229,11 @@ void mpFlow::EIT::equationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaSt
 }
 
 // template specialisation
-template void mpFlow::EIT::equationKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);
-template void mpFlow::EIT::equationKernel::calcJacobian<6>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<6>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);

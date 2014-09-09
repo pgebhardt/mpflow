@@ -18,11 +18,11 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_EIT_EQUATION_KERNEL_H
-#define MPFLOW_INCLDUE_EIT_EQUATION_KERNEL_H
+#ifndef MPFLOW_INCLDUE_FEM_EQUATION_KERNEL_H
+#define MPFLOW_INCLDUE_FEM_EQUATION_KERNEL_H
 
 namespace mpFlow {
-namespace EIT {
+namespace FEM {
 namespace equationKernel {
     // reduce connectivity and elemental matrices
     template <

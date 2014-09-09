@@ -46,4 +46,7 @@
 #include "eit/inverse.h"
 #include "eit/solver.h"
 
+// MWI specific
+#include "mwi/equation.h"
+
 #endif
