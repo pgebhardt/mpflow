@@ -35,6 +35,10 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
         throw std::invalid_argument(
             "mpFlow::EIT::ForwardSolver::ForwardSolver: equation == nullptr");
     }
+    if (components < 1) {
+        throw std::invalid_argument(
+            "mpFlow::EIT::ForwardSolver::ForwardSolver: components < 1");
+    }
     if (handle == nullptr) {
         throw std::invalid_argument(
             "mpFlow::EIT::ForwardSolver::ForwardSolver: handle == nullptr");
@@ -170,3 +174,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 // specialisation
 template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB>;

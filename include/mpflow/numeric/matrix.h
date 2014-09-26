@@ -53,6 +53,10 @@ namespace numeric {
             const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle,
             cudaStream_t stream);
         void scalarMultiply(type scalar, cudaStream_t stream);
+        void elementwiseMultiply(const std::shared_ptr<Matrix<type>> A,
+            const std::shared_ptr<Matrix<type>> B, cudaStream_t stream);
+        void elementwiseDivision(const std::shared_ptr<Matrix<type>> A,
+            const std::shared_ptr<Matrix<type>> B, cudaStream_t stream);
         void vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
             const std::shared_ptr<Matrix<type>> B, cudaStream_t stream);
 

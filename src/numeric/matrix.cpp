@@ -283,24 +283,24 @@ void mpFlow::numeric::Matrix<type>::scalarMultiply(type scalar, cudaStream_t str
         this->dataRows, this->deviceData);
 }
 
-// vector dot product
+// elementwise multiply
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
+void mpFlow::numeric::Matrix<type>::elementwiseMultiply(const std::shared_ptr<Matrix<type>> A,
     const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
     // check input
     if (A == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: A == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseMultiply: A == nullptr");
     }
     if (B == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: B == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseMultiply: B == nullptr");
     }
 
     // check size
     if ((this->rows != A->rows) ||
         (this->rows != B->rows)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: shape does not match");
+        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseMultiply: shape does not match");
     }
 
     // get minimum colums
@@ -313,10 +313,56 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matri
     dim3 threads(matrix::block_size,
         columns == 1 ? 1 : matrix::block_size);
 
-    // call dot kernel
-    matrixKernel::vectorDotProduct<type>(blocks, threads, stream,
+    // call kernel
+    matrixKernel::elementwiseMultiply<type>(blocks, threads, stream,
         A->deviceData, B->deviceData, this->dataRows,
         this->deviceData);
+}
+
+// elementwise division
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::elementwiseDivision(const std::shared_ptr<Matrix<type>> A,
+    const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
+    // check input
+    if (A == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseDivision: A == nullptr");
+    }
+    if (B == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseDivision: B == nullptr");
+    }
+
+    // check size
+    if ((this->rows != A->rows) ||
+        (this->rows != B->rows)) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseDivision: shape does not match");
+    }
+
+    // get minimum colums
+    dtype::size columns = std::min(std::min(this->dataCols,
+        A->dataCols), B->dataCols);
+
+    // kernel dimension
+    dim3 blocks(this->dataRows / matrix::block_size,
+        columns == 1 ? 1 : columns / matrix::block_size);
+    dim3 threads(matrix::block_size,
+        columns == 1 ? 1 : matrix::block_size);
+
+    // call kernel
+    matrixKernel::elementwiseDivision<type>(blocks, threads, stream,
+        A->deviceData, B->deviceData, this->dataRows,
+        this->deviceData);
+}
+
+// vector dot product
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
+    const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
+    // elementwise multiply
+    this->elementwiseMultiply(A, B, stream);
 
     // sum
     struct noop_deleter { void operator()(void*) {} };

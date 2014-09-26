@@ -203,6 +203,16 @@ class EdgeBasis(object):
             length * (ui * uj.diff(y) - uj * ui.diff(y))]
 
     @kernel
+    def rot(self, point, length, ci, cj):
+        # create coordinats
+        x, y = symbols('x, y')
+
+        # create edge based basis function
+        N = self.evaluate.symbolic.function(self, [x, y], length, ci, cj)
+
+        return N[1].diff(x) - N[0].diff(y)
+
+    @kernel
     def integrateWithBasis(self, points, lengthI, lengthJ, ci1, ci2, cj1, cj2):
         # create coordinats
         x, y = symbols('x, y')
@@ -253,6 +263,13 @@ class EdgeBasis(object):
                 dtype='std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>',
                 custom_args=['std::tuple<dtype::real, dtype::real> point'],
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
+                ),
+            rot=self.rot(
+                ['std::get<{}>(point)'.format(i) for i in range(2)],
+                'this->length', ci1, ci2,
+                dtype='mpFlow::dtype::real',
+                custom_args=['std::tuple<dtype::real, dtype::real> point'],
+                name='mpFlow::FEM::basis::{}::rot'.format(self.name),
                 ),
 
             # model integrals
