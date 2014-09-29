@@ -175,7 +175,7 @@ __global__ void elementwiseDivisionKernel(const type* a, const type* b, mpFlow::
     result[row + column * rows] = a[row + column * rows] / b[row + column * rows];
 }
 
-// elementwise multiply kernel wrapper
+// elementwise division kernel wrapper
 template <
     class type
 >
@@ -189,7 +189,7 @@ void mpFlow::numeric::matrixKernel::elementwiseDivision(dim3 blocks, dim3 thread
     CudaCheckError();
 }
 
-// elementwise multiply specialisation
+// elementwise division specialisation
 template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::real*,
     const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::real*);

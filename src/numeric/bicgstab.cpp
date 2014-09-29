@@ -77,7 +77,17 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixTy
     // Choose an arbitrary vector rHat such that (r, rHat) != 0, e.g. rHat = r
     this->rHat->copy(r, stream);
 
+    cudaStreamSynchronize(stream);
+    this->r->copyToHost(stream);
+    this->rHat->copyToHost(stream);
+    std::cout << "r: " << (*this->r)(0, 0) << ", rHat: " << (*this->rHat)(0, 0) << std::endl;
+
     // iterate
+    auto error = std::make_shared<Matrix<dtype::real>>(this->r->rows, this->r->cols, stream);
+    error->vectorDotProduct(this->r, this->r, stream);
+    error->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+
     for (dtype::index step = 0; step < iterations; ++step) {
         // roh = (rHat, r)
         this->rohOld->copy(this->roh, stream);
@@ -120,6 +130,14 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixTy
         // r = s - omega * t
         bicgstab::updateVector(this->s, -1.0, this->t, this->omega, stream,
             this->r);
+
+        error->vectorDotProduct(this->r, this->r, stream);
+        error->copyToHost(stream);
+        for (dtype::index i = 0; i < error->cols; ++i) {
+            if (sqrt((*error)(0, i)) <= 1e-6) {
+                return;
+            }
+        }
     }
 }
 
