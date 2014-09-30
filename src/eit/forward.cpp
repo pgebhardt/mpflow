@@ -70,7 +70,6 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
         this->source->measurementPattern->cols,
         this->equation->mesh->nodes->rows, stream);
 
-    // calc electrodes attachement matrix
     cublasSetStream(handle, stream);
     dtype::real alpha = 1.0, beta = 0.0;
     if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
@@ -144,8 +143,25 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0]) / this->equation->mesh->height) /
                 (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0])));
 
-        // update system matrix and excitation for different 2.5D components
+        // update system matrix for different 2.5D components
         this->equation->update(gamma, alpha, stream);
+
+        // apply mixed boundary conditions, if applicably
+        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+            dim3 blocks(this->equation->excitationMatrix->dataRows / numeric::matrix::block_size,
+                this->equation->excitationMatrix->dataCols == 1 ? 1 :
+                this->equation->excitationMatrix->dataCols / numeric::matrix::block_size);
+            dim3 threads(numeric::matrix::block_size,
+                this->equation->excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::block_size);
+
+            forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
+                this->equation->excitationMatrix->deviceData,
+                this->equation->systemMatrix->columnIds,
+                this->equation->systemMatrix->values,
+                this->equation->excitationMatrix->dataRows);
+        }
+
+        // calculate excitation matrix
         this->excitation->multiply(this->equation->excitationMatrix,
             this->source->pattern, handle, stream);
         this->excitation->scalarMultiply(beta, stream);

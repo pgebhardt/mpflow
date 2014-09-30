@@ -29,11 +29,12 @@
 // calc voltage kernel
 static __global__ void applyMixedBoundaryConditionKernel(
     mpFlow::dtype::real* excitation, const mpFlow::dtype::index* columnIds,
-    mpFlow::dtype::real* values) {
+    mpFlow::dtype::real* values, mpFlow::dtype::index rows) {
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index col = blockIdx.y * blockDim.y + threadIdx.y;
 
     // clip excitation value
-    excitation[row] = excitation[row] > 0.0f ? 1.0f : (excitation[row] < 0.0f ? -1.0f : 0.0);
+    excitation[row + col * rows] = excitation[row + col * rows] != 0.0f ? 1.0f : 0.0f;
 
     // clear matrix row and set diagonal element to 1, if excitation element != 0
     mpFlow::dtype::index columnId = mpFlow::dtype::invalid_index;
@@ -43,9 +44,10 @@ static __global__ void applyMixedBoundaryConditionKernel(
         // get column id
         columnId = columnIds[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
-        values[row * mpFlow::numeric::sparseMatrix::block_size + column] =
-            excitation[row] != 0.0f ? (columnId == row ? 1.0f : 0.0f) :
-            values[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        if (excitation[row + col * rows] != 0.0) {
+            values[row * mpFlow::numeric::sparseMatrix::block_size + column] =
+                columnId == row ? 1.0f : 0.0f;
+        }
     }
 }
 
@@ -53,10 +55,10 @@ static __global__ void applyMixedBoundaryConditionKernel(
 void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition(
     dim3 blocks, dim3 threads, cudaStream_t stream,
     dtype::real* excitation, const dtype::index* columnIds,
-    dtype::real* values) {
+    dtype::real* values, dtype::index rows) {
     // call cuda kernel
     applyMixedBoundaryConditionKernel<<<blocks, threads, 0, stream>>>(
-        excitation, columnIds, values);
+        excitation, columnIds, values, rows);
 
     CudaCheckError();
 }

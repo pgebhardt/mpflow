@@ -37,7 +37,7 @@ mpFlow::numeric::BiCGSTAB<matrixType>::BiCGSTAB(dtype::size rows, dtype::size co
 
     // create matrices
     this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->rHat = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->rHat = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
     this->roh = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
     this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
     this->alpha = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
@@ -75,12 +75,7 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixTy
     this->r->add(f, stream);
 
     // Choose an arbitrary vector rHat such that (r, rHat) != 0, e.g. rHat = r
-    this->rHat->copy(r, stream);
-
-    cudaStreamSynchronize(stream);
-    this->r->copyToHost(stream);
-    this->rHat->copyToHost(stream);
-    std::cout << "r: " << (*this->r)(0, 0) << ", rHat: " << (*this->rHat)(0, 0) << std::endl;
+    // this->rHat->copy(r, stream);
 
     // iterate
     auto error = std::make_shared<Matrix<dtype::real>>(this->r->rows, this->r->cols, stream);
@@ -131,12 +126,15 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixTy
         bicgstab::updateVector(this->s, -1.0, this->t, this->omega, stream,
             this->r);
 
+        // check error bound for all column vectors of residuum
         error->vectorDotProduct(this->r, this->r, stream);
         error->copyToHost(stream);
+
         for (dtype::index i = 0; i < error->cols; ++i) {
-            if (sqrt((*error)(0, i)) <= 1e-6) {
-                return;
+            if (sqrt((*error)(0, i)) >= 1e-6) {
+                break;
             }
+            return;
         }
     }
 }

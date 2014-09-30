@@ -26,7 +26,7 @@ namespace EIT {
 namespace forwardKernel {
     void applyMixedBoundaryCondition(dim3 blocks, dim3 threads, cudaStream_t stream,
         dtype::real* excitation, const dtype::index* columnIds,
-        dtype::real* values);
+        dtype::real* values, dtype::index rows);
 }
 }
 }
