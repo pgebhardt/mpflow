@@ -47,6 +47,7 @@ mpFlow::numeric::BiCGSTAB<matrixType>::BiCGSTAB(dtype::size rows, dtype::size co
     this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
     this->t = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
     this->s = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->error = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
     this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
     this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
 }
@@ -77,12 +78,12 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixTy
     // Choose an arbitrary vector rHat such that (r, rHat) != 0, e.g. rHat = r
     // this->rHat->copy(r, stream);
 
-    // iterate
-    auto error = std::make_shared<Matrix<dtype::real>>(this->r->rows, this->r->cols, stream);
-    error->vectorDotProduct(this->r, this->r, stream);
-    error->copyToHost(stream);
+    // initialize current error vector
+    this->error->vectorDotProduct(this->r, this->r, stream);
+    this->error->copyToHost(stream);
     cudaStreamSynchronize(stream);
 
+    // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // roh = (rHat, r)
         this->rohOld->copy(this->roh, stream);
@@ -127,11 +128,12 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixTy
             this->r);
 
         // check error bound for all column vectors of residuum
-        error->vectorDotProduct(this->r, this->r, stream);
-        error->copyToHost(stream);
+        this->error->vectorDotProduct(this->r, this->r, stream);
+        this->error->copyToHost(stream);
+        cudaStreamSynchronize(stream);
 
         for (dtype::index i = 0; i < error->cols; ++i) {
-            if (sqrt((*error)(0, i)) >= 1e-6) {
+            if (sqrt((*this->error)(0, i)) >= 1e-6) {
                 break;
             }
             return;

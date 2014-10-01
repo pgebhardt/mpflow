@@ -52,6 +52,7 @@ namespace numeric {
         std::shared_ptr<Matrix<dtype::real>> p;
         std::shared_ptr<Matrix<dtype::real>> t;
         std::shared_ptr<Matrix<dtype::real>> s;
+        std::shared_ptr<Matrix<dtype::real>> error;
         std::shared_ptr<Matrix<dtype::real>> temp1;
         std::shared_ptr<Matrix<dtype::real>> temp2;
     };
