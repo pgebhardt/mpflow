@@ -109,7 +109,7 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
     cublasSetStream(handle, stream);
 
     // copy measuredVoltage to dVoltage
-    for (dtype::index image = 0; image < this->numericalSolver->columns(); ++image) {
+    for (dtype::index image = 0; image < this->numericalSolver->cols; ++image) {
         if (cublasScopy(handle, this->difference->dataRows,
             measurement[image]->deviceData, 1,
             (dtype::real*)(this->difference->deviceData + image * this->difference->dataRows), 1)

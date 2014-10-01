@@ -51,7 +51,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
         this->source->drivePattern->cols + this->source->measurementPattern->cols, stream);
 
     // create matrices
-    this->voltage = std::make_shared<numeric::Matrix<dtype::real>>(
+    this->result = std::make_shared<numeric::Matrix<dtype::real>>(
         this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
     for (dtype::index component = 0; component < components; ++component) {
         this->phi.push_back(std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes->rows,
@@ -64,11 +64,25 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
         math::roundTo(this->source->drivePattern->cols, numeric::matrix::block_size),
         this->equation->mesh->elements->rows, stream);
 
-
     // TODO: To be moved to new BoundaryValues class
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->source->measurementPattern->cols,
         this->equation->mesh->nodes->rows, stream);
+
+    // apply mixed boundary conditions, if applicably
+    if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+        dim3 blocks(this->equation->excitationMatrix->dataRows / numeric::matrix::block_size,
+            this->equation->excitationMatrix->dataCols == 1 ? 1 :
+            this->equation->excitationMatrix->dataCols / numeric::matrix::block_size);
+        dim3 threads(numeric::matrix::block_size,
+            this->equation->excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::block_size);
+
+        forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
+            this->equation->excitationMatrix->deviceData,
+            this->equation->systemMatrix->columnIds,
+            this->equation->systemMatrix->values,
+            this->equation->excitationMatrix->dataRows);
+    }
 
     cublasSetStream(handle, stream);
     dtype::real alpha = 1.0, beta = 0.0;
@@ -82,7 +96,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
         this->equation->excitationMatrix->dataRows,
         &beta, this->electrodesAttachmentMatrix->deviceData,
         this->electrodesAttachmentMatrix->dataRows) != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("mpFlow::EIT::ForwardSolver: calc voltage calculation");
+        throw std::logic_error("mpFlow::EIT::ForwardSolver: calc result calculation");
     }
 }
 
@@ -109,7 +123,7 @@ void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMe
     // set stream
     cublasSetStream(handle, stream);
 
-    // add voltage
+    // add result
     dtype::real alpha = 1.0f, beta = additiv ? 1.0 : 0.0;
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
         this->source->drivePattern->cols, this->electrodesAttachmentMatrix->dataCols, &alpha,
@@ -176,15 +190,28 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             this->source->measurementPattern->cols, component == 0 ? false : true,
             stream, this->jacobian);
 
-        // calc voltage
-        this->applyMeasurementPattern(this->phi[component], this->voltage,
-            component == 0 ? false : true, handle, stream);
+        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+            this->equation->update(gamma, alpha, stream);
+
+            auto temp = std::make_shared<numeric::Matrix<dtype::real>>(
+                this->phi[component]->rows, this->phi[component]->cols, stream);
+            temp->multiply(this->equation->systemMatrix,
+                this->phi[component], handle, stream);
+
+            this->applyMeasurementPattern(temp, this->result,
+                component == 0 ? false : true, handle, stream);
+        }
+        else {
+            // calc voltage
+            this->applyMeasurementPattern(this->phi[component], this->result,
+                component == 0 ? false : true, handle, stream);
+        }
     }
 
     // current source specific tasks
     this->jacobian->scalarMultiply(-1.0, stream);
 
-    return this->voltage;
+    return this->result;
 }
 
 // specialisation

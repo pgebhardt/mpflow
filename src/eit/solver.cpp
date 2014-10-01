@@ -42,8 +42,8 @@ mpFlow::EIT::Solver<basisFunctionType>::Solver(std::shared_ptr<mpFlow::EIT::Equa
 
     // create inverse EIT
     this->inverseSolver = std::make_shared<InverseSolver<numeric::ConjugateGradient>>(
-        equation->mesh->elements->rows, forwardSolver->voltage->dataRows *
-        forwardSolver->voltage->dataCols, parallelImages, regularizationFactor,
+        equation->mesh->elements->rows, forwardSolver->result->dataRows *
+        forwardSolver->result->dataCols, parallelImages, regularizationFactor,
         handle, stream);
 
     // create matrices
@@ -140,7 +140,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // solve inverse
     std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> calculation(
-        1, this->forwardSolver->voltage);
+        1, this->forwardSolver->result);
     this->inverseSolver->solve(this->forwardSolver->jacobian, calculation,
         this->measurement, this->forwardSolver->equation->mesh->elements->rows / 8,
         handle, stream, this->dGamma);

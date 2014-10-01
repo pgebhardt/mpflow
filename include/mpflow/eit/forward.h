@@ -51,7 +51,7 @@ namespace EIT {
         std::shared_ptr<FEM::SourceDescriptor> source;
         std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> phi;
         std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
-        std::shared_ptr<numeric::Matrix<dtype::real>> voltage;
+        std::shared_ptr<numeric::Matrix<dtype::real>> result;
         std::shared_ptr<numeric::Matrix<dtype::real>> jacobian;
         std::shared_ptr<numeric::Matrix<dtype::real>> electrodesAttachmentMatrix;
     };
