@@ -25,23 +25,23 @@
 template <
     template <class type> class matrixType
 >
-mpFlow::numeric::ConjugateGradient<matrixType>::ConjugateGradient(dtype::size rows, dtype::size columns, cudaStream_t stream)
-    : rows_(rows), columns_(columns) {
+mpFlow::numeric::ConjugateGradient<matrixType>::ConjugateGradient(dtype::size rows, dtype::size cols, cudaStream_t stream)
+    : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
         throw std::invalid_argument("mpFlow::numeric::ConjugateGradient::ConjugateGradient: rows <= 1");
     }
-    if (columns < 1) {
-        throw std::invalid_argument("mpFlow::numeric::ConjugateGradient::ConjugateGradient: columns <= 1");
+    if (cols < 1) {
+        throw std::invalid_argument("mpFlow::numeric::ConjugateGradient::ConjugateGradient: cols <= 1");
     }
 
     // create matrices
-    this->residuum_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->projection_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->rsold_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->rsnew_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->temp_vector_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
-    this->temp_number_ = std::make_shared<Matrix<dtype::real>>(this->rows(), this->columns(), stream);
+    this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->roh = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
 }
 
 // solve conjugateGradient sparse
@@ -63,57 +63,67 @@ void mpFlow::numeric::ConjugateGradient<matrixType>::solve(const std::shared_ptr
     }
 
     // calc residuum r = f - A * x
-    this->residuum()->multiply(A, x, handle, stream);
+    this->r->multiply(A, x, handle, stream);
 
     // regularize for dc free solution
     if (dcFree == true) {
-        this->temp_number()->sum(x, stream);
-        conjugateGradient::addScalar(this->temp_number(), this->rows(), this->columns(),
-            stream, this->residuum());
+        this->temp1->sum(x, stream);
+        conjugateGradient::addScalar(this->temp1, this->rows, this->cols,
+            stream, this->r);
     }
 
-    this->residuum()->scalarMultiply(-1.0, stream);
-    this->residuum()->add(f, stream);
+    this->r->scalarMultiply(-1.0, stream);
+    this->r->add(f, stream);
 
     // p = r
-    this->projection()->copy(this->residuum(), stream);
+    this->p->copy(this->r, stream);
 
     // calc rsold
-    this->rsold()->vectorDotProduct(this->residuum(), this->residuum(), stream);
+    this->rohOld->vectorDotProduct(this->r, this->r, stream);
 
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
-        this->temp_vector()->multiply(A, this->projection(), handle, stream);
+        this->temp1->multiply(A, this->p, handle, stream);
 
         // regularize for dc free solution
         if (dcFree == true) {
-            this->temp_number()->sum(this->projection(), stream);
-            conjugateGradient::addScalar(this->temp_number(), this->rows(), this->columns(),
-                stream, this->temp_vector());
+            this->temp2->sum(this->p, stream);
+            conjugateGradient::addScalar(this->temp2, this->rows, this->cols,
+                stream, this->temp1);
         }
 
         // calc p * A * p
-        this->temp_number()->vectorDotProduct(this->projection(),
-            this->temp_vector(), stream);
+        this->temp2->vectorDotProduct(this->p, this->temp1, stream);
 
         // update residuum
-        conjugateGradient::updateVector(this->residuum(), -1.0f, this->temp_vector(),
-            this->rsold(), this->temp_number(), stream, this->residuum());
+        conjugateGradient::updateVector(this->r, -1.0f, this->temp1,
+            this->rohOld, this->temp2, stream, this->r);
 
         // update x
-        conjugateGradient::updateVector(x, 1.0f, this->projection(), this->rsold(),
-            this->temp_number(), stream, x);
+        conjugateGradient::updateVector(x, 1.0f, this->p, this->rohOld,
+            this->temp2, stream, x);
 
         // calc rsnew
-        this->rsnew()->vectorDotProduct(this->residuum(), this->residuum(), stream);
+        this->roh->vectorDotProduct(this->r, this->r, stream);
+
+        // check error bound for all column vectors of residuum
+        this->roh->copyToHost(stream);
+        cudaStreamSynchronize(stream);
+
+        for (dtype::index i = 0; i < this->roh->cols; ++i) {
+            if (sqrt((*this->roh)(0, i)) >= 1e-6) {
+                break;
+            }
+            return;
+        }
 
         // update projection
-        conjugateGradient::updateVector(this->residuum(), 1.0f, this->projection(),
-            this->rsnew(), this->rsold(), stream, this->projection());
+        conjugateGradient::updateVector(this->r, 1.0f, this->p,
+            this->roh, this->rohOld, stream, this->p);
 
         // copy rsnew to rsold
-        this->rsold()->copy(this->rsnew(), stream);
+        this->rohOld->copy(this->roh, stream);
     }
 }
 

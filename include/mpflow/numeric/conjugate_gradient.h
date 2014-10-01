@@ -39,26 +39,15 @@ namespace numeric {
             bool dcFree, cublasHandle_t handle, cudaStream_t stream,
             std::shared_ptr<Matrix<dtype::real>> x);
 
-        // accessors
-        dtype::size rows() { return this->rows_; }
-        dtype::size columns() { return this->columns_; }
-        std::shared_ptr<Matrix<dtype::real>> residuum() { return this->residuum_; }
-        std::shared_ptr<Matrix<dtype::real>> projection() { return this->projection_; }
-        std::shared_ptr<Matrix<dtype::real>> rsold() { return this->rsold_; }
-        std::shared_ptr<Matrix<dtype::real>> rsnew() { return this->rsnew_; }
-        std::shared_ptr<Matrix<dtype::real>> temp_vector() { return this->temp_vector_; }
-        std::shared_ptr<Matrix<dtype::real>> temp_number() { return this->temp_number_; }
-
-    private:
         // member
-        dtype::size rows_;
-        dtype::size columns_;
-        std::shared_ptr<Matrix<dtype::real>> residuum_;
-        std::shared_ptr<Matrix<dtype::real>> projection_;
-        std::shared_ptr<Matrix<dtype::real>> rsold_;
-        std::shared_ptr<Matrix<dtype::real>> rsnew_;
-        std::shared_ptr<Matrix<dtype::real>> temp_vector_;
-        std::shared_ptr<Matrix<dtype::real>> temp_number_;
+        dtype::size rows;
+        dtype::size cols;
+        std::shared_ptr<Matrix<dtype::real>> r;
+        std::shared_ptr<Matrix<dtype::real>> p;
+        std::shared_ptr<Matrix<dtype::real>> roh;
+        std::shared_ptr<Matrix<dtype::real>> rohOld;
+        std::shared_ptr<Matrix<dtype::real>> temp1;
+        std::shared_ptr<Matrix<dtype::real>> temp2;
     };
 
     // helper functions
