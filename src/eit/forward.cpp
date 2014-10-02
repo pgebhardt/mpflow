@@ -127,7 +127,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             this->source->pattern, handle, stream);
         this->excitation->scalarMultiply(beta, stream);
 
-        // solve for ground mode
+        // solve linear system
         this->numericalSolver->solve(this->equation->systemMatrix,
             this->excitation, steps, nullptr, stream, this->phi[component],
             1e-6, component == 0 ? true : false);
@@ -137,26 +137,26 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             this->source->measurementPattern->cols, component == 0 ? false : true,
             stream, this->jacobian);
 
+        // calculate electrode voltage or current, depends on the type of source
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
             this->equation->update(gamma, alpha, stream);
 
-            auto temp = std::make_shared<numeric::Matrix<dtype::real>>(
-                this->phi[component]->rows, this->phi[component]->cols, stream);
-            temp->multiply(this->equation->systemMatrix,
+            this->excitation->multiply(this->equation->systemMatrix,
                 this->phi[component], handle, stream);
 
-            this->applyMeasurementPattern(temp, this->result,
+            this->applyMeasurementPattern(this->excitation, this->result,
                 component == 0 ? false : true, handle, stream);
         }
         else {
-            // calc voltage
             this->applyMeasurementPattern(this->phi[component], this->result,
                 component == 0 ? false : true, handle, stream);
         }
     }
 
-    // current source specific tasks
-    this->jacobian->scalarMultiply(-1.0, stream);
+    // current source specific correction for jacobian matrix
+    if (this->source->type == FEM::sourceDescriptor::OpenSourceType) {
+        this->jacobian->scalarMultiply(-1.0, stream);
+    }
 
     return this->result;
 }
