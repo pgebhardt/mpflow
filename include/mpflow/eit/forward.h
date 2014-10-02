@@ -35,15 +35,17 @@ namespace EIT {
             std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
             cublasHandle_t handle, cudaStream_t stream);
 
-        // apply pattern
-        void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dtype::real>> source,
-            std::shared_ptr<numeric::Matrix<dtype::real>> result, bool additiv,
-            cublasHandle_t handle, cudaStream_t stream);
-
         // forward solving
         std::shared_ptr<numeric::Matrix<dtype::real>> solve(
             const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
             cublasHandle_t handle, cudaStream_t stream);
+
+        // helper methods
+        void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dtype::real>> source,
+            std::shared_ptr<numeric::Matrix<dtype::real>> result, bool additiv,
+            cublasHandle_t handle, cudaStream_t stream);
+        void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dtype::real>> excitationMatrix,
+            std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix, cudaStream_t stream);
 
         // member
         std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;

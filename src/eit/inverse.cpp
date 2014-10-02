@@ -169,7 +169,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::Inver
 
     // solve system
     this->numericalSolver->solve(this->systemMatrix, this->excitation,
-        steps, false, handle, stream, gamma);
+        steps, handle, stream, gamma);
 
     return gamma;
 }

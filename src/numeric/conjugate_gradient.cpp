@@ -48,9 +48,11 @@ mpFlow::numeric::ConjugateGradient<matrixType>::ConjugateGradient(dtype::size ro
 template <
     template <class type> class matrixType
 >
-void mpFlow::numeric::ConjugateGradient<matrixType>::solve(const std::shared_ptr<matrixType<dtype::real>> A,
-    const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations, bool dcFree,
-    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
+void mpFlow::numeric::ConjugateGradient<matrixType>::solve(
+    const std::shared_ptr<matrixType<dtype::real>> A,
+    const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
+    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x,
+    dtype::real tolerance, bool dcFree) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::ConjugateGradient::solve: A == nullptr");
@@ -108,14 +110,16 @@ void mpFlow::numeric::ConjugateGradient<matrixType>::solve(const std::shared_ptr
         this->roh->vectorDotProduct(this->r, this->r, stream);
 
         // check error bound for all column vectors of residuum
-        this->roh->copyToHost(stream);
-        cudaStreamSynchronize(stream);
+        if (tolerance > 0.0) {
+            this->roh->copyToHost(stream);
+            cudaStreamSynchronize(stream);
 
-        for (dtype::index i = 0; i < this->roh->cols; ++i) {
-            if (sqrt((*this->roh)(0, i)) >= 1e-6) {
-                break;
+            for (dtype::index i = 0; i < this->roh->cols; ++i) {
+                if (sqrt((*this->roh)(0, i)) >= 1e-6) {
+                    break;
+                }
+                return;
             }
-            return;
         }
 
         // update projection

@@ -56,9 +56,11 @@ mpFlow::numeric::BiCGSTAB<matrixType>::BiCGSTAB(dtype::size rows, dtype::size co
 template <
     template <class type> class matrixType
 >
-void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixType<dtype::real>> A,
-    const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations, bool,
-    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x) {
+void mpFlow::numeric::BiCGSTAB<matrixType>::solve(
+    const std::shared_ptr<matrixType<dtype::real>> A,
+    const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
+    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x,
+    dtype::real tolerance, bool) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: A == nullptr");
@@ -128,15 +130,17 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(const std::shared_ptr<matrixTy
             this->r);
 
         // check error bound for all column vectors of residuum
-        this->error->vectorDotProduct(this->r, this->r, stream);
-        this->error->copyToHost(stream);
-        cudaStreamSynchronize(stream);
+        if (tolerance > 0.0) {
+            this->error->vectorDotProduct(this->r, this->r, stream);
+            this->error->copyToHost(stream);
+            cudaStreamSynchronize(stream);
 
-        for (dtype::index i = 0; i < error->cols; ++i) {
-            if (sqrt((*this->error)(0, i)) >= 1e-6) {
-                break;
+            for (dtype::index i = 0; i < error->cols; ++i) {
+                if (sqrt((*this->error)(0, i)) >= tolerance) {
+                    break;
+                }
+                return;
             }
-            return;
         }
     }
 }

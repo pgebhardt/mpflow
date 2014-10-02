@@ -36,8 +36,8 @@ namespace numeric {
         // solve system
         void solve(const std::shared_ptr<matrix_type<dtype::real>> A,
             const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
-            bool dcFree, cublasHandle_t handle, cudaStream_t stream,
-            std::shared_ptr<Matrix<dtype::real>> x);
+            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x,
+            dtype::real tolerance=0.0, bool dcFree=false);
 
         // member
         dtype::size rows;

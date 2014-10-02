@@ -71,17 +71,8 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
 
     // apply mixed boundary conditions, if applicably
     if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
-        dim3 blocks(this->equation->excitationMatrix->dataRows / numeric::matrix::block_size,
-            this->equation->excitationMatrix->dataCols == 1 ? 1 :
-            this->equation->excitationMatrix->dataCols / numeric::matrix::block_size);
-        dim3 threads(numeric::matrix::block_size,
-            this->equation->excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::block_size);
-
-        forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
-            this->equation->excitationMatrix->deviceData,
-            this->equation->systemMatrix->columnIds,
-            this->equation->systemMatrix->values,
-            this->equation->excitationMatrix->dataRows);
+        this->applyMixedBoundaryCondition(this->equation->excitationMatrix,
+            this->equation->systemMatrix, stream);
     }
 
     cublasSetStream(handle, stream);
@@ -100,7 +91,77 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
     }
 }
 
-// apply pattern
+// forward solving
+template <
+    class basisFunctionType,
+    template <template <class> class> class numericalSolverType
+>
+std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
+    mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::solve(
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
+    cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if (gamma == nullptr) {
+        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
+    }
+    if (handle == nullptr) {
+        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: handle == nullptr");
+    }
+
+    // calculate common excitation for all 2.5D model components
+    for (dtype::index component = 0; component < this->phi.size(); ++component) {
+        // 2.5D model constants
+        dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
+        dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height) :
+            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0]) / this->equation->mesh->height) /
+                (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0])));
+
+        // update system matrix for different 2.5D components
+        this->equation->update(gamma, alpha, stream);
+        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+            this->applyMixedBoundaryCondition(this->equation->excitationMatrix,
+                this->equation->systemMatrix, stream);
+        }
+
+        this->excitation->multiply(this->equation->excitationMatrix,
+            this->source->pattern, handle, stream);
+        this->excitation->scalarMultiply(beta, stream);
+
+        // solve for ground mode
+        this->numericalSolver->solve(this->equation->systemMatrix,
+            this->excitation, steps, nullptr, stream, this->phi[component],
+            1e-6, component == 0 ? true : false);
+
+        // calc jacobian
+        this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,
+            this->source->measurementPattern->cols, component == 0 ? false : true,
+            stream, this->jacobian);
+
+        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+            this->equation->update(gamma, alpha, stream);
+
+            auto temp = std::make_shared<numeric::Matrix<dtype::real>>(
+                this->phi[component]->rows, this->phi[component]->cols, stream);
+            temp->multiply(this->equation->systemMatrix,
+                this->phi[component], handle, stream);
+
+            this->applyMeasurementPattern(temp, this->result,
+                component == 0 ? false : true, handle, stream);
+        }
+        else {
+            // calc voltage
+            this->applyMeasurementPattern(this->phi[component], this->result,
+                component == 0 ? false : true, handle, stream);
+        }
+    }
+
+    // current source specific tasks
+    this->jacobian->scalarMultiply(-1.0, stream);
+
+    return this->result;
+}
+
+// helper methods
 template <
     class basisFunctionType,
     template <template <class> class> class numericalSolverType
@@ -132,86 +193,29 @@ void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMe
         result->deviceData, result->dataRows);
 }
 
-// forward solving
 template <
     class basisFunctionType,
     template <template <class> class> class numericalSolverType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::solve(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
-    cublasHandle_t handle, cudaStream_t stream) {
+void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMixedBoundaryCondition(
+    std::shared_ptr<numeric::Matrix<dtype::real>> excitationMatrix,
+    std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix, cudaStream_t stream) {
     // check input
-    if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
+    if (excitationMatrix == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::applyMixedBoundaryCondition: excitationMatrix == nullptr");
     }
-    if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: handle == nullptr");
-    }
-
-    // calculate common excitation for all 2.5D model components
-    for (dtype::index component = 0; component < this->phi.size(); ++component) {
-        // 2.5D model constants
-        dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
-        dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height) :
-            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0]) / this->equation->mesh->height) /
-                (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0])));
-
-        // update system matrix for different 2.5D components
-        this->equation->update(gamma, alpha, stream);
-
-        // apply mixed boundary conditions, if applicably
-        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
-            dim3 blocks(this->equation->excitationMatrix->dataRows / numeric::matrix::block_size,
-                this->equation->excitationMatrix->dataCols == 1 ? 1 :
-                this->equation->excitationMatrix->dataCols / numeric::matrix::block_size);
-            dim3 threads(numeric::matrix::block_size,
-                this->equation->excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::block_size);
-
-            forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
-                this->equation->excitationMatrix->deviceData,
-                this->equation->systemMatrix->columnIds,
-                this->equation->systemMatrix->values,
-                this->equation->excitationMatrix->dataRows);
-        }
-
-        // calculate excitation matrix
-        this->excitation->multiply(this->equation->excitationMatrix,
-            this->source->pattern, handle, stream);
-        this->excitation->scalarMultiply(beta, stream);
-
-        // solve for ground mode
-        this->numericalSolver->solve(this->equation->systemMatrix,
-            this->excitation, steps, component == 0 ? true : false,
-            nullptr, stream, this->phi[component]);
-
-        // calc jacobian
-        this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,
-            this->source->measurementPattern->cols, component == 0 ? false : true,
-            stream, this->jacobian);
-
-        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
-            this->equation->update(gamma, alpha, stream);
-
-            auto temp = std::make_shared<numeric::Matrix<dtype::real>>(
-                this->phi[component]->rows, this->phi[component]->cols, stream);
-            temp->multiply(this->equation->systemMatrix,
-                this->phi[component], handle, stream);
-
-            this->applyMeasurementPattern(temp, this->result,
-                component == 0 ? false : true, handle, stream);
-        }
-        else {
-            // calc voltage
-            this->applyMeasurementPattern(this->phi[component], this->result,
-                component == 0 ? false : true, handle, stream);
-        }
+    if (systemMatrix == nullptr) {
+        throw std::invalid_argument("fastEIT::ForwardSolver::applyMixedBoundaryCondition: systemMatrix == nullptr");
     }
 
-    // current source specific tasks
-    this->jacobian->scalarMultiply(-1.0, stream);
+    dim3 blocks(excitationMatrix->dataRows / numeric::matrix::block_size,
+        excitationMatrix->dataCols == 1 ? 1 : excitationMatrix->dataCols / numeric::matrix::block_size);
+    dim3 threads(numeric::matrix::block_size,
+        excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::block_size);
 
-    return this->result;
+    forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
+        excitationMatrix->deviceData, excitationMatrix->dataRows,
+        systemMatrix->columnIds, systemMatrix->values);
 }
 
 // specialisation

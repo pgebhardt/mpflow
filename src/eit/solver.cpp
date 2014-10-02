@@ -130,8 +130,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     }
 
     // solve forward
-    this->forwardSolver->solve(this->gamma,
-        this->forwardSolver->equation->mesh->nodes->rows / 80,
+    this->forwardSolver->solve(this->gamma, this->forwardSolver->equation->mesh->nodes->rows,
         handle, stream);
 
     // calc inverse system matrix

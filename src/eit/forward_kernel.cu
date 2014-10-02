@@ -28,8 +28,8 @@
 
 // calc voltage kernel
 static __global__ void applyMixedBoundaryConditionKernel(
-    mpFlow::dtype::real* excitation, const mpFlow::dtype::index* columnIds,
-    mpFlow::dtype::real* values, mpFlow::dtype::index rows) {
+    mpFlow::dtype::real* excitation, mpFlow::dtype::index rows,
+    const mpFlow::dtype::index* columnIds, mpFlow::dtype::real* values) {
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     mpFlow::dtype::index col = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -54,11 +54,11 @@ static __global__ void applyMixedBoundaryConditionKernel(
 // calc voltage kernel wrapper
 void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition(
     dim3 blocks, dim3 threads, cudaStream_t stream,
-    dtype::real* excitation, const dtype::index* columnIds,
-    dtype::real* values, dtype::index rows) {
+    dtype::real* excitation, dtype::index rows,
+    const dtype::index* columnIds, dtype::real* values) {
     // call cuda kernel
     applyMixedBoundaryConditionKernel<<<blocks, threads, 0, stream>>>(
-        excitation, columnIds, values, rows);
+        excitation, rows, columnIds, values);
 
     CudaCheckError();
 }
