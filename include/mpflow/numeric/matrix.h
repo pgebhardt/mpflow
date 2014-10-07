@@ -95,6 +95,11 @@ namespace numeric {
 
     // namespace matrix
     namespace matrix {
+        // defines if all instances of the Matrix class should use zero-copy,
+        // e.g. for Jetson TK1, or not, default is to not use it
+        void enableZeroCopy();
+        static bool useZeroCopy = false;
+
         // load matrix from stream
         template <
             class type

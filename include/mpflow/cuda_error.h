@@ -19,7 +19,7 @@
 // --------------------------------------------------------------------
 
 // Define this to turn on error checking
-// #define CUDA_ERROR_CHECK
+#define CUDA_ERROR_CHECK
 
 #ifndef MPFLOW_INCLUDE_CUDA_ERROR_H
 #define MPFLOW_INCLUDE_CUDA_ERROR_H
@@ -33,6 +33,8 @@ inline void __cudaSafeCall(cudaError, const char*, const int) { }
 inline void __cudaCheckError(const char*, const int) { }
 
 #else
+
+#include <cstdio>
 
 inline void __cudaSafeCall(cudaError err, const char *file, const int line) {
     if (cudaSuccess != err) {
