@@ -19,7 +19,7 @@
 // --------------------------------------------------------------------
 
 // Define this to turn on error checking
-#define CUDA_ERROR_CHECK
+// #define CUDA_ERROR_CHECK
 
 #ifndef MPFLOW_INCLUDE_CUDA_ERROR_H
 #define MPFLOW_INCLUDE_CUDA_ERROR_H
