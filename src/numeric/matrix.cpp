@@ -34,8 +34,8 @@ template <
     class type
 >
 mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
-    cudaStream_t stream, type value)
-    : rows(rows), cols(cols), dataRows(rows), dataCols(cols) {
+    cudaStream_t stream, type value, bool allocateHostMemory)
+    : hostData(nullptr), deviceData(nullptr), rows(rows), cols(cols), dataRows(rows), dataCols(cols) {
     // check input
     if (rows == 0) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::Matrix: rows == 0");
@@ -55,27 +55,16 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
         this->dataCols = math::roundTo(this->cols, matrix::block_size);
     }
 
-    // use different memory allocation models for different device architectures
-    if (matrix::useZeroCopy) {
-        // create matrix host data memory
-        error = cudaHostAlloc((void**)&this->hostData, sizeof(type) *
-            this->dataRows * this->dataCols, cudaHostAllocMapped);
+    // create matrix device data memory
+    error = cudaMalloc((void**)&this->deviceData,
+        sizeof(type) * this->dataRows * this->dataCols);
 
-        CudaCheckError();
-        if (error != cudaSuccess) {
-            throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create host data memory");
-        }
-
-        // create matrix device data memory
-        error = cudaHostGetDevicePointer((void**)&this->deviceData,
-            (void*)this->hostData, 0);
-
-        CudaCheckError();
-        if (error != cudaSuccess) {
-            throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create device data memory");
-        }
+    CudaCheckError();
+    if (error != cudaSuccess) {
+        throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create device data memory");
     }
-    else {
+
+    if (allocateHostMemory) {
         // create matrix host data memory
         error = cudaHostAlloc((void**)&this->hostData, sizeof(type) *
             this->dataRows * this->dataCols, cudaHostAllocDefault);
@@ -85,23 +74,17 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
             throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create host data memory");
         }
 
-        // create matrix device data memory
-        error = cudaMalloc((void**)&this->deviceData,
-            sizeof(type) * this->dataRows * this->dataCols);
-
-        CudaCheckError();
-        if (error != cudaSuccess) {
-            throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create device data memory");
+        // init data with 0.0
+        for (dtype::size i = 0; i < this->dataRows; i++) {
+            for (dtype::size j = 0; j < this->dataCols; j++) {
+                this->hostData[i + this->dataRows * j] = value;
+            }
         }
+        this->copyToDevice(stream);
     }
-
-    // init data with 0.0
-    for (dtype::size i = 0; i < this->dataRows; i++) {
-        for (dtype::size j = 0; j < this->dataCols; j++) {
-            this->hostData[i + this->dataRows * j] = value;
-        }
+    else {
+        this->fill(value, stream);
     }
-    this->copyToDevice(stream);
 }
 
 // release matrix
@@ -109,15 +92,15 @@ template <
     class type
 >
 mpFlow::numeric::Matrix<type>::~Matrix() {
-    // free matrix host data
-    cudaFreeHost(this->hostData);
-    CudaCheckError();
-
-    if (!matrix::useZeroCopy) {
-        // free matrix device data
-        cudaFree(this->deviceData);
+    if (this->hostData != nullptr) {
+        // free matrix host data
+        cudaFreeHost(this->hostData);
         CudaCheckError();
     }
+
+    // free matrix device data
+    cudaFree(this->deviceData);
+    CudaCheckError();
 }
 
 template <
@@ -166,15 +149,17 @@ template <
     class type
 >
 void mpFlow::numeric::Matrix<type>::copyToDevice(cudaStream_t stream) {
-    if (!matrix::useZeroCopy) {
-        // copy host buffer to device
-        CudaSafeCall(
-            cudaMemcpyAsync(this->deviceData, this->hostData,
-                sizeof(type) * this->dataRows * this->dataCols,
-                cudaMemcpyHostToDevice, stream));
-
-        CudaCheckError();
+    if (this->hostData == nullptr) {
+        throw std::logic_error("mpFlow::numeric::Matrix::copyToDevice: host memory was not allocated");
     }
+
+    // copy host buffer to device
+    CudaSafeCall(
+        cudaMemcpyAsync(this->deviceData, this->hostData,
+            sizeof(type) * this->dataRows * this->dataCols,
+            cudaMemcpyHostToDevice, stream));
+
+    CudaCheckError();
 }
 
 // copy to host
@@ -182,15 +167,17 @@ template <
     class type
 >
 void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t stream) {
-    if (!matrix::useZeroCopy) {
-        // copy host buffer to device
-        CudaSafeCall(
-            cudaMemcpyAsync(this->hostData, this->deviceData,
-                sizeof(type) * this->dataRows * this->dataCols,
-                cudaMemcpyDeviceToHost, stream));
-
-        CudaCheckError();
+    if (this->hostData == nullptr) {
+        throw std::logic_error("mpFlow::numeric::Matrix::copyToHost: host memory was not allocated");
     }
+
+    // copy host buffer to device
+    CudaSafeCall(
+        cudaMemcpyAsync(this->hostData, this->deviceData,
+            sizeof(type) * this->dataRows * this->dataCols,
+            cudaMemcpyDeviceToHost, stream));
+
+    CudaCheckError();
 }
 
 // add matrix
@@ -514,18 +501,6 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
     while (offset * matrix::block_size < this->dataRows);
 }
 
-void mpFlow::numeric::matrix::enableZeroCopy() {
-    // set cuda and mpFlow flag
-    cudaError_t error = cudaSetDeviceFlags(cudaDeviceMapHost);
-
-    CudaCheckError();
-    if (error != cudaSuccess) {
-        throw std::logic_error("mpFlow::numeric::Matrix::enableZeroCopy: cannot enable zero copy");
-    }
-
-    matrix::useZeroCopy = true;
-}
-
 // load matrix from stream
 template <
     class type
@@ -623,6 +598,9 @@ void mpFlow::numeric::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix
     if (matrix == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: matrix == nullptr");
     }
+    if (matrix->hostData == nullptr) {
+        throw std::logic_error("mpFlow::numeric::matrix::savetxt: host memory was not allocated");
+    }
     if (ostream == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: ostream == nullptr");
     }
@@ -645,6 +623,9 @@ void mpFlow::numeric::matrix::savetxt(const std::string filename,
     // check input
     if (matrix == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: matrix == nullptr");
+    }
+    if (matrix->hostData == nullptr) {
+        throw std::logic_error("mpFlow::numeric::matrix::savetxt: host memory was not allocated");
     }
 
     // open file stream

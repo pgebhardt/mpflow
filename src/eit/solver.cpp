@@ -53,9 +53,9 @@ mpFlow::EIT::Solver<basisFunctionType>::Solver(std::shared_ptr<mpFlow::EIT::Equa
         equation->mesh->elements->rows, parallelImages, stream);
     for (dtype::index image = 0; image < parallelImages; ++image) {
         this->measurement.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
-            source->measurementPattern->cols, source->drivePattern->cols, stream));
+            source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
         this->calculation.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
-            source->measurementPattern->cols, source->drivePattern->cols, stream));
+            source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
     }
 }
 

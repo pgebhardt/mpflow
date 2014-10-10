@@ -183,7 +183,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         connectivityMatrix->copyToDevice(stream);
         elementalSMatrix->copyToDevice(stream);
         elementalRMatrix->copyToDevice(stream);
-        cudaStreamSynchronize(stream);
 
         reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
             this->connectivityMatrix);
@@ -191,6 +190,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             this->elementalSMatrix);
         reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
             this->elementalRMatrix);
+        cudaStreamSynchronize(stream);
     }
 
     return commonElementMatrix;

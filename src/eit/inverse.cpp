@@ -34,11 +34,10 @@ mpFlow::EIT::InverseSolver<numericalSolverType>::InverseSolver(dtype::size eleme
     }
 
     // create matrices
-    this->difference = std::make_shared<numeric::Matrix<dtype::real>>(measurementCount, parallelImages, stream);
-    this->zeros = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, parallelImages, stream);
-    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, parallelImages, stream);
-    this->systemMatrix = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, elementCount, stream);
-    this->jacobianSquare = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, elementCount, stream);
+    this->difference = std::make_shared<numeric::Matrix<dtype::real>>(measurementCount, parallelImages, stream, 0.0, false);
+    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, parallelImages, stream, 0.0, false);
+    this->systemMatrix = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, elementCount, stream, 0.0, false);
+    this->jacobianSquare = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, elementCount, stream, 0.0, false);
 
     // create numerical EIT
     this->numericalSolver = std::make_shared<numericalSolverType<mpFlow::numeric::Matrix>>(elementCount, parallelImages, stream);
@@ -162,7 +161,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::Inver
     }
 
     // reset gamma
-    gamma->copy(this->zeros, stream);
+    gamma->fill(0.0, stream);
 
     // calc excitation
     this->calcExcitation(jacobian, calculation, measurement, handle, stream);

@@ -80,12 +80,12 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
     this->jacobian = std::make_shared<numeric::Matrix<dtype::real>>(
         math::roundTo(this->source->measurementPattern->cols, numeric::matrix::block_size) *
         math::roundTo(this->source->drivePattern->cols, numeric::matrix::block_size),
-        this->equation->mesh->elements->rows, stream);
+        this->equation->mesh->elements->rows, stream, 0.0, false);
 
     // TODO: To be moved to new BoundaryValues class
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->source->measurementPattern->cols,
-        this->equation->mesh->nodes->rows, stream);
+        this->equation->mesh->nodes->rows, stream, 0.0, false);
 
     // apply mixed boundary conditions, if applicably
     if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {

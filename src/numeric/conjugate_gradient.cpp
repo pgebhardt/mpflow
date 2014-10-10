@@ -36,12 +36,12 @@ mpFlow::numeric::ConjugateGradient<matrixType>::ConjugateGradient(dtype::size ro
     }
 
     // create matrices
-    this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
     this->roh = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
 }
 
 // solve conjugateGradient sparse

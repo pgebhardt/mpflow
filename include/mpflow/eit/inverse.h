@@ -55,7 +55,6 @@ namespace EIT {
         // member
         std::shared_ptr<numericalSolverType<mpFlow::numeric::Matrix>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dtype::real>> difference;
-        std::shared_ptr<numeric::Matrix<dtype::real>> zeros;
         std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
         std::shared_ptr<numeric::Matrix<dtype::real>> systemMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> jacobianSquare;

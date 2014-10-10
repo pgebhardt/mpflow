@@ -36,20 +36,20 @@ mpFlow::numeric::BiCGSTAB<matrixType>::BiCGSTAB(dtype::size rows, dtype::size co
     }
 
     // create matrices
-    this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->rHat = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
-    this->roh = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
-    this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
-    this->alpha = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
-    this->beta = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->omega = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0);
-    this->nu = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->t = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->s = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->rHat = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
+    this->roh = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
+    this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
+    this->alpha = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
+    this->beta = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->omega = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
+    this->nu = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->t = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->s = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
     this->error = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
+    this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
 }
 
 // solve bicgstab sparse

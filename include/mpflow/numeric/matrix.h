@@ -35,7 +35,7 @@ namespace numeric {
     public:
         // constructor and destructor
         Matrix(dtype::size rows, dtype::size cols, cudaStream_t stream,
-            type value=0);
+            type value=0, bool allocateHostMemory=true);
         virtual ~Matrix();
         void fill(type value, cudaStream_t stream);
 
@@ -68,6 +68,9 @@ namespace numeric {
         // accessors
         const type& operator() (dtype::index i, dtype::index j) const {
             // check index
+            if (this->hostData == nullptr) {
+                throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
+            }
             if ((i >= this->rows) || (j >= this->cols)) {
                 throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
             }
@@ -78,6 +81,9 @@ namespace numeric {
         // mutators
         type& operator() (dtype::index i, dtype::index j) {
             // check index
+            if (this->hostData == nullptr) {
+                throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
+            }
             if ((i >= this->rows) || (j >= this->cols)) {
                 throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
             }
@@ -95,11 +101,6 @@ namespace numeric {
 
     // namespace matrix
     namespace matrix {
-        // defines if all instances of the Matrix class should use zero-copy,
-        // e.g. for Jetson TK1, or not, default is to not use it
-        void enableZeroCopy();
-        static bool useZeroCopy = false;
-
         // load matrix from stream
         template <
             class type
