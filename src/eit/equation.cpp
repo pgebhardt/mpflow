@@ -39,10 +39,11 @@ mpFlow::EIT::Equation<basisFunctionType>::Equation(
 
     // init matrices
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->elements->rows,
-        math::square(basisFunctionType::nodesPerElement), stream);
+        this->mesh->elements->rows, math::square(basisFunctionType::nodesPerElement),
+        stream, 0.0, false);
     this->excitationMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->nodes->rows, this->boundaryDescriptor->count, stream);
+        this->mesh->nodes->rows, this->boundaryDescriptor->count, stream,
+        0.0, false);
 
     auto commonElementMatrix = this->initElementalMatrices(stream);
     this->initExcitationMatrix(stream);
@@ -53,7 +54,8 @@ mpFlow::EIT::Equation<basisFunctionType>::Equation(
         commonElementMatrix, stream);
 
     // update ellipticalEquation
-    auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->elements->rows, 1, stream);
+    auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->elements->rows, 1,
+        stream, 0.0, false);
     this->update(gamma, 0.0, stream);
 }
 
@@ -149,12 +151,12 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        this->mesh->nodes->rows,
-        numeric::sparseMatrix::block_size * connectivityMatrices.size(), stream, dtype::invalid_index);
+        this->mesh->nodes->rows, numeric::sparseMatrix::block_size * connectivityMatrices.size(),
+        stream, dtype::invalid_index, false);
     this->elementalSMatrix = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->nodes->rows,
-        numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream);
+        numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream, false);
     this->elementalRMatrix = std::make_shared<numeric::Matrix<dtype::real>>(this->mesh->nodes->rows,
-        numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
+        numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream, false);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
@@ -205,6 +207,8 @@ void mpFlow::EIT::Equation<basisFunctionType>::initExcitationMatrix(cudaStream_t
     dtype::real integrationStart, integrationEnd;
 
     // calc excitation matrix
+    auto excitationMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
     for (dtype::index boundaryElement = 0; boundaryElement < this->mesh->boundary->rows; ++boundaryElement) {
         // get boundary nodes
         nodes = this->mesh->boundaryNodes(boundaryElement);
@@ -247,7 +251,7 @@ void mpFlow::EIT::Equation<basisFunctionType>::initExcitationMatrix(cudaStream_t
             if (integrationStart < integrationEnd) {
                 // calc element
                 for (dtype::index node = 0; node < basisFunctionType::nodesPerEdge; ++node) {
-                    (*this->excitationMatrix)(std::get<0>(nodes[node]), piece) +=
+                    (*excitationMatrix)(std::get<0>(nodes[node]), piece) +=
                         basisFunctionType::integrateBoundaryEdge(
                             nodeParameter, node, integrationStart, integrationEnd) /
                         std::get<0>(this->boundaryDescriptor->shapes[piece]);
@@ -255,7 +259,9 @@ void mpFlow::EIT::Equation<basisFunctionType>::initExcitationMatrix(cudaStream_t
             }
         }
     }
-    this->excitationMatrix->copyToDevice(stream);
+
+    excitationMatrix->copyToDevice(stream);
+    this->excitationMatrix->copy(excitationMatrix, stream);
 }
 
 template <
@@ -270,6 +276,8 @@ void mpFlow::EIT::Equation<basisFunctionType>
         basisFunctionType::nodesPerElement> basisFunction;
 
     // fill connectivity and elementalJacobianMatrix
+    auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
         // get element nodes
         auto nodes = this->mesh->elementNodes(element);
@@ -289,12 +297,14 @@ void mpFlow::EIT::Equation<basisFunctionType>
         for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
         for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
             // set elementalJacobianMatrix element
-            (*this->elementalJacobianMatrix)(element, i +
+            (*elementalJacobianMatrix)(element, i +
                 j * basisFunctionType::nodesPerElement) =
                 basisFunction[i]->integrateGradientWithBasis(basisFunction[j]);
         }
     }
-    this->elementalJacobianMatrix->copyToDevice(stream);
+
+    elementalJacobianMatrix->copyToDevice(stream);
+    this->elementalJacobianMatrix->copy(elementalJacobianMatrix, stream);
 }
 
 // update ellipticalEquation
