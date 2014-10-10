@@ -31,16 +31,11 @@ fasteit = sconshelper.Library(name='mpflow', env=env, arguments=ARGUMENTS,
     NVCCFLAGS=[
         '-Xcompiler',
         '-fpic',
-        '-m64',
         '-O3',
-        '-arch=sm_30',
-        '--compiler-options',
-        '-O3',
-        '--compiler-options',
-        '-fno-strict-aliasing',
-        '-use_fast_math',
+        '-gencode=arch=compute_32,code=sm_32',
         '--ptxas-options=-v',
-        '-lineinfo',
+        '--compiler-options',
+        '-O3',
         ],
     NVCCINC=[
         '-Iinclude',
@@ -48,8 +43,6 @@ fasteit = sconshelper.Library(name='mpflow', env=env, arguments=ARGUMENTS,
     LIBS=[
         'cudart',
         'cublas',
-        'pthread',
-        'dl'
         ],
     CPPDEFINES={
         'GIT_VERSION': version,
