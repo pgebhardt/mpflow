@@ -36,8 +36,6 @@ mpFlow::FEM::basis::${name}::${name} (
 // evaluate basis function
 ${evaluate}
 
-${rot}
-
 // integrate with basis
 ${integrateWithBasis}
 

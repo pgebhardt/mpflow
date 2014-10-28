@@ -18,15 +18,16 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLUDE_CONSTANTS_H
-#define MPFLOW_INCLUDE_CONSTANTS_H
+#ifndef MPFLOW_INCLDUE_MWI_EQUATION_KERNEL_H
+#define MPFLOW_INCLDUE_MWI_EQUATION_KERNEL_H
 
 namespace mpFlow {
-namespace constants {
-    // electromagnetic wave
-    const mpFlow::dtype::real epsilon0 = 8.8541878176e-12;
-    const mpFlow::dtype::real mu0 = 1.2566370614e-6;
-    const mpFlow::dtype::real c0 = 1.0 / std::sqrt(epsilon0 * mu0);
+namespace MWI {
+namespace equationKernel {
+    void assembleComplexSystem(dim3 blocks, dim3 threads, cudaStream_t stream,
+        const dtype::real* realValues, const dtype::index* realColumnIds, dtype::index realRows,
+        const dtype::real* imaginaryValues, dtype::real* completeValues, dtype::index* completeColumnIds);
+}
 }
 }
 

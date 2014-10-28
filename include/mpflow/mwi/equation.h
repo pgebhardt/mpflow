@@ -60,6 +60,12 @@ namespace MWI {
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> rMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalRMatrix;
     };
+
+    namespace equation {
+        void assembleComplexSystem(const std::shared_ptr<numeric::SparseMatrix<dtype::real>> realPart,
+            const std::shared_ptr<numeric::Matrix<dtype::real>> imaginaryPart,
+            std::shared_ptr<numeric::SparseMatrix<dtype::real>> output, cudaStream_t stream);
+    }
 }
 }
 

@@ -100,7 +100,6 @@ namespace basis {
         dtype::real integrateWithBasis(const std::shared_ptr<Edge> other);
         dtype::real integrateGradientWithBasis(const std::shared_ptr<Edge> other);
         std::tuple<dtype::real, dtype::real> evaluate(std::tuple<dtype::real, dtype::real> point);
-        dtype::real rot(std::tuple<dtype::real, dtype::real> point);
 
         // member
         std::array<std::tuple<dtype::real, dtype::real>, Linear::nodesPerElement> nodes;

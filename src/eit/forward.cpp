@@ -89,7 +89,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
 
     // apply mixed boundary conditions, if applicably
     if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
-        this->applyMixedBoundaryCondition(this->equation->excitationMatrix,
+        forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
             this->equation->systemMatrix, stream);
     }
 
@@ -145,7 +145,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         time.restart();
 
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
-            this->applyMixedBoundaryCondition(this->equation->excitationMatrix,
+            forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
                 this->equation->systemMatrix, stream);
 
             cudaStreamSynchronize(stream);
@@ -240,11 +240,7 @@ void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMe
         result->deviceData, result->dataRows);
 }
 
-template <
-    class basisFunctionType,
-    template <template <class> class> class numericalSolverType
->
-void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMixedBoundaryCondition(
+void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
     std::shared_ptr<numeric::Matrix<dtype::real>> excitationMatrix,
     std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix, cudaStream_t stream) {
     // check input

@@ -51,17 +51,6 @@ std::tuple<mpFlow::dtype::real, mpFlow::dtype::real> mpFlow::FEM::basis::Edge::e
 }
 
 
-
-mpFlow::dtype::real mpFlow::FEM::basis::Edge::rot(
-    std::tuple<dtype::real, dtype::real> point
-    ) {
-    return ({
-(((-(this->length))*(((-(this->nodeBasis[0].coefficients[1]))*(this->nodeBasis[1].coefficients[2]))+((this->nodeBasis[0].coefficients[2])*(this->nodeBasis[1].coefficients[1]))))+((this->length)*(((this->nodeBasis[0].coefficients[1])*(this->nodeBasis[1].coefficients[2]))-((this->nodeBasis[0].coefficients[2])*(this->nodeBasis[1].coefficients[1])))));
-})
-;
-}
-
-
 // integrate with basis
 
 mpFlow::dtype::real mpFlow::FEM::basis::Edge::integrateWithBasis(

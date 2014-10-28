@@ -74,11 +74,10 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
             throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create host data memory");
         }
 
-        // init data with 0.0
-        for (dtype::size i = 0; i < this->dataRows; i++) {
-            for (dtype::size j = 0; j < this->dataCols; j++) {
-                this->hostData[i + this->dataRows * j] = value;
-            }
+        // init data with default value
+        for (dtype::size row = 0; row < this->dataRows; ++row)
+        for (dtype::size col = 0; col < this->dataCols; ++col) {
+            this->hostData[row + this->dataRows * col] = value;
         }
         this->copyToDevice(stream);
     }

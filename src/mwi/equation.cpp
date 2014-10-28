@@ -20,6 +20,7 @@
 
 #include "mpflow/mpflow.h"
 #include "mpflow/fem/equation_kernel.h"
+#include "mpflow/mwi/equation_kernel.h"
 
 mpFlow::MWI::Equation::Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
     cudaStream_t stream)
@@ -204,6 +205,44 @@ void mpFlow::MWI::Equation::updateMatrix(
     FEM::equationKernel::updateMatrix(blocks, threads, stream,
         connectivityMatrix->deviceData, elements->deviceData, gamma->deviceData,
         sigmaRef, connectivityMatrix->dataRows, connectivityMatrix->dataCols, matrix->values);
+}
+
+void mpFlow::MWI::equation::assembleComplexSystem(
+    const std::shared_ptr<numeric::SparseMatrix<dtype::real>> realPart,
+    const std::shared_ptr<numeric::Matrix<dtype::real>> imaginaryPart,
+    std::shared_ptr<numeric::SparseMatrix<dtype::real>> output, cudaStream_t stream) {
+    // check input
+    if (realPart == nullptr) {
+        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: realPart == nullptr");
+    }
+    if (imaginaryPart == nullptr) {
+        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: imaginaryPart == nullptr");
+    }
+    if (output == nullptr) {
+        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: output == nullptr");
+    }
+
+    // check sizes
+    if (imaginaryPart->cols != 1) {
+        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: imaginaryPart has to be column vector");
+    }
+    if (realPart->rows != imaginaryPart->rows) {
+        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: realPart->rows != imaginaryPart->rows");
+    }
+    if (output->dataRows != realPart->dataRows * 2) {
+        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: output->dataRows != realPart->dataRows * 2");
+    }
+
+    // dimension
+    dim3 threads(numeric::matrix::block_size, 1);
+    dim3 blocks(output->dataRows / numeric::matrix::block_size, 1);
+
+    // call kernel
+    equationKernel::assembleComplexSystem(blocks, threads, stream,
+        realPart->values, realPart->columnIds, realPart->dataRows,
+        imaginaryPart->deviceData, output->values, output->columnIds);
+
+    output->density = realPart->density + 1;
 }
 
 // specialisation

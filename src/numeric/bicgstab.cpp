@@ -135,6 +135,8 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(
             this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
+            std::cout << "step: " << step << " error: " << sqrt((*this->error)(0, 0)) << std::endl;
+
             for (dtype::index i = 0; i < error->cols; ++i) {
                 if (sqrt((*this->error)(0, i)) >= tolerance) {
                     break;
