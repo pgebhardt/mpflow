@@ -25,8 +25,7 @@ fasteit = sconshelper.Library(name='mpflow', env=env, arguments=ARGUMENTS,
         '-O3',
         ],
     CPPPATH=[
-        '/usr/include/eigen3/',
-        '/usr/local/include/eigen3/',
+        '/usr/local/include',
         ],
     NVCCFLAGS=[
         '-Xcompiler',
