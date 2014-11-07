@@ -114,8 +114,6 @@ void mpFlow::numeric::ConjugateGradient<matrixType>::solve(
             this->roh->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
-            std::cout << "step: " << step << " error: " << sqrt((*this->roh)(0, 0)) << std::endl;
-
             for (dtype::index i = 0; i < this->roh->cols; ++i) {
                 if (sqrt((*this->roh)(0, i)) >= tolerance) {
                     break;

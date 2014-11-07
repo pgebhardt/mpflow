@@ -80,6 +80,7 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
             this->hostData[row + this->dataRows * col] = value;
         }
         this->copyToDevice(stream);
+        cudaStreamSynchronize(stream);
     }
     else {
         this->fill(value, stream);
@@ -137,8 +138,8 @@ void mpFlow::numeric::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> oth
     // copy data
     CudaSafeCall(
         cudaMemcpyAsync(this->deviceData, other->deviceData,
-        sizeof(type) * this->dataRows * this->dataCols,
-        cudaMemcpyDeviceToDevice, stream));
+            sizeof(type) * this->dataRows * this->dataCols,
+            cudaMemcpyDeviceToDevice, stream));
 
     CudaCheckError();
 }
@@ -219,10 +220,12 @@ void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>
 
 // specialisation for dtype::real
 namespace mpFlow {
+namespace numeric {
     template <>
-    void numeric::Matrix<dtype::real>::multiply(const std::shared_ptr<Matrix<dtype::real>> A,
-        const std::shared_ptr<Matrix<dtype::real>> B, cublasHandle_t handle,
-        cudaStream_t stream) {
+    void Matrix<mpFlow::dtype::real>::multiply(
+        const std::shared_ptr<Matrix<dtype::real>> A,
+        const std::shared_ptr<Matrix<dtype::real>> B,
+        cublasHandle_t handle, cudaStream_t stream) {
         // check input
         if (A == nullptr) {
             throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
@@ -263,6 +266,7 @@ namespace mpFlow {
             }
         }
     }
+}
 }
 
 // specialisation for sparse matrices
