@@ -138,7 +138,7 @@ def generate(env):
     env.Append(CPPPATH=[
         '/'.join([cudaToolkitPath, 'include']),
     ])
-    env.Append(LIBS=['stdc++','m','cudart'])
+    env.Append(LIBS=['stdc++','m'])
 
     # NVCC compiler flags.
     env['NVCCFLAGS'] = ''
