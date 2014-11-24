@@ -18,26 +18,8 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#include <chrono>
 #include "mpflow/mpflow.h"
 #include "mpflow/eit/forward_kernel.h"
-
-class Time {
-private:
-    std::chrono::high_resolution_clock::time_point time_;
-
-public:
-    Time() {
-        this->restart();
-    }
-    void restart() {
-        this->time_ = std::chrono::high_resolution_clock::now();
-    }
-    double elapsed() {
-        return std::chrono::duration_cast<std::chrono::duration<double>>(
-            std::chrono::high_resolution_clock::now() - this->time_).count();
-    }
-};
 
 // create forward_solver
 template <
@@ -128,9 +110,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // calculate common excitation for all 2.5D model components
     for (dtype::index component = 0; component < this->phi.size(); ++component) {
-        std::cout << std::endl << "component: " << component << std::endl;
-        Time time;
-
         // 2.5D model constants
         dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
         dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height) :
@@ -140,44 +119,24 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         // update system matrix for different 2.5D components
         this->equation->update(gamma, alpha, stream);
 
-        cudaStreamSynchronize(stream);
-        std::cout << "update equation: " << time.elapsed() * 1e3 << " ms" << std::endl;
-        time.restart();
-
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
             forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
                 this->equation->systemMatrix, stream);
-
-            cudaStreamSynchronize(stream);
-            std::cout << "apply mixed boundary conditions: " << time.elapsed() * 1e3 << " ms" << std::endl;
-            time.restart();
         }
 
         this->excitation->multiply(this->equation->excitationMatrix,
             this->source->pattern, handle, stream);
         this->excitation->scalarMultiply(beta, stream);
 
-        cudaStreamSynchronize(stream);
-        std::cout << "calculate excitation: " << time.elapsed() * 1e3 << " ms" << std::endl;
-        time.restart();
-
         // solve linear system
         this->numericalSolver->solve(this->equation->systemMatrix,
             this->excitation, steps, nullptr, stream, this->phi[component],
             1e-6, component == 0 ? true : false);
 
-        cudaStreamSynchronize(stream);
-        std::cout << "solve linear system: " << time.elapsed() * 1e3 << " ms" << std::endl;
-        time.restart();
-
         // calc jacobian
         this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,
             this->source->measurementPattern->cols, component == 0 ? false : true,
             stream, this->jacobian);
-
-        cudaStreamSynchronize(stream);
-        std::cout << "calculate jacobian: " << time.elapsed() * 1e3 << " ms" << std::endl;
-        time.restart();
 
         // calculate electrode voltage or current, depends on the type of source
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
@@ -193,11 +152,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             this->applyMeasurementPattern(this->phi[component], this->result,
                 component == 0 ? false : true, handle, stream);
         }
-
-        cudaStreamSynchronize(stream);
-        std::cout << "calculate voltage/current: " << time.elapsed() * 1e3 << " ms" << std::endl;
-        time.restart();
-
     }
 
     // current source specific correction for jacobian matrix
