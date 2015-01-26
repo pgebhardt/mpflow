@@ -58,6 +58,9 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcSystemMatrix(
         throw std::invalid_argument("mpFlow::EIT::InverseSolver::calcSystemMatrix: handle == nullptr");
     }
 
+    // switch to correct stream
+    cublasSetStream(handle, stream);
+
     // cublas coeficients
     dtype::real alpha = 1.0f, beta = 0.0f;
 
