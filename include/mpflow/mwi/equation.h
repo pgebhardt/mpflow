@@ -48,6 +48,7 @@ namespace MWI {
 
         // init methods
         void initElementalMatrices(cudaStream_t stream);
+        void initJacobianCalculationMatrix(cudaStream_t stream);
 
         void update(const std::shared_ptr<numeric::Matrix<dtype::real>> beta,
             dtype::real kB, cudaStream_t stream);
@@ -59,6 +60,7 @@ namespace MWI {
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> sMatrix;
         std::shared_ptr<numeric::SparseMatrix<dtype::real>> rMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalRMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
     };
 
     namespace equation {

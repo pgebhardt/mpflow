@@ -31,7 +31,11 @@ mpFlow::MWI::Equation::Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
     }
 
     // init matrices
+    this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->mesh->elements->rows, math::square(3), stream, 0.0, false);
+
     this->initElementalMatrices(stream);
+    this->initJacobianCalculationMatrix(stream);
 }
 
 // init elemental matrices
@@ -130,6 +134,43 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
             this->elementalRMatrix);
     }
 }
+
+void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
+    // calculate indices of unique mesh edges
+    auto globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
+    auto edges = std::get<0>(globalEdgeIndex);
+
+    // fill connectivity and elementalJacobianMatrix
+    auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+        this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
+    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
+        auto localEdges = std::get<1>(globalEdgeIndex)[element];
+
+        // extract coordinats of node points of element
+        std::array<std::tuple<dtype::real, dtype::real>, 3> points;
+        dtype::index i = 0;
+        for (const auto& point : mesh->elementNodes(element)) {
+            points[i] = std::get<1>(point);
+            i++;
+        }
+
+        // fill matrix
+        for (dtype::index i = 0; i < 3; ++i)
+        for (dtype::index j = 0; j < 3; ++j) {
+            // evaluate integral equations
+            auto edgeI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
+            auto edgeJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
+
+            // set elementalJacobianMatrix element
+            (*elementalJacobianMatrix)(element, i + j * 3) =
+                edgeI->integrateGradientWithBasis(edgeJ);
+        }
+    }
+
+    elementalJacobianMatrix->copyToDevice(stream);
+    this->elementalJacobianMatrix->copy(elementalJacobianMatrix, stream);
+}
+
 
 void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<dtype::real>> beta,
     dtype::real k, cudaStream_t stream) {
