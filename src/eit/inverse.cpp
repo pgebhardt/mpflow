@@ -22,11 +22,12 @@
 
 // create inverse_solver
 template <
-    template <template <class> class> class numericalSolverType
+    class dataType,
+    template <class, template <class> class> class numericalSolverType
 >
-mpFlow::EIT::InverseSolver<numericalSolverType>::InverseSolver(dtype::size elementCount,
+mpFlow::EIT::InverseSolver<dataType, numericalSolverType>::InverseSolver(dtype::size elementCount,
     dtype::size measurementCount, dtype::index parallelImages,
-    dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream)
+    dataType regularizationFactor, cublasHandle_t handle, cudaStream_t stream)
     : regularizationFactor(regularizationFactor) {
     // check input
     if (handle == nullptr) {
@@ -34,21 +35,22 @@ mpFlow::EIT::InverseSolver<numericalSolverType>::InverseSolver(dtype::size eleme
     }
 
     // create matrices
-    this->difference = std::make_shared<numeric::Matrix<dtype::real>>(measurementCount, parallelImages, stream, 0.0, false);
-    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, parallelImages, stream, 0.0, false);
-    this->systemMatrix = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, elementCount, stream, 0.0, false);
-    this->jacobianSquare = std::make_shared<numeric::Matrix<dtype::real>>(elementCount, elementCount, stream, 0.0, false);
+    this->difference = std::make_shared<numeric::Matrix<dataType>>(measurementCount, parallelImages, stream, 0.0, false);
+    this->excitation = std::make_shared<numeric::Matrix<dataType>>(elementCount, parallelImages, stream, 0.0, false);
+    this->systemMatrix = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
+    this->jacobianSquare = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
 
     // create numerical EIT
-    this->numericalSolver = std::make_shared<numericalSolverType<mpFlow::numeric::Matrix>>(elementCount, parallelImages, stream);
+    this->numericalSolver = std::make_shared<numericalSolverType<dataType, mpFlow::numeric::Matrix>>(elementCount, parallelImages, stream);
 }
 
 // calc system matrix
 template <
-    template <template <class> class> class numericalSolverType
+    class dataType,
+    template <class, template <class> class> class numericalSolverType
 >
-void mpFlow::EIT::InverseSolver<numericalSolverType>::calcSystemMatrix(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian, cublasHandle_t handle,
+void mpFlow::EIT::InverseSolver<dataType, numericalSolverType>::calcSystemMatrix(
+    const std::shared_ptr<numeric::Matrix<dataType>> jacobian, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (jacobian == nullptr) {
@@ -62,10 +64,10 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcSystemMatrix(
     cublasSetStream(handle, stream);
 
     // cublas coeficients
-    dtype::real alpha = 1.0f, beta = 0.0f;
+    dataType alpha = 1.0f, beta = 0.0f;
 
     // calc Jt * J
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare->dataRows,
+    if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare->dataRows,
         this->jacobianSquare->dataCols, jacobian->dataRows, &alpha,
         jacobian->deviceData, jacobian->dataRows, jacobian->deviceData,
         jacobian->dataRows, &beta, this->jacobianSquare->deviceData,
@@ -79,7 +81,7 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcSystemMatrix(
 
     // add lambda * Jt * J * Jt * J to systemMatrix
     beta = this->regularizationFactor;
-    if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare->dataCols,
+    if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare->dataCols,
         this->jacobianSquare->dataRows, this->jacobianSquare->dataCols,
         &beta, this->jacobianSquare->deviceData,
         this->jacobianSquare->dataRows, this->jacobianSquare->deviceData,
@@ -92,12 +94,13 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcSystemMatrix(
 
 // calc excitation
 template <
-    template <template <class> class> class numericalSolverType
+    class dataType,
+    template <class, template <class> class> class numericalSolverType
 >
-void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian,
-    const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& calculation,
-    const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& measurement, cublasHandle_t handle,
+void mpFlow::EIT::InverseSolver<dataType, numericalSolverType>::calcExcitation(
+    const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
+    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
+    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement, cublasHandle_t handle,
     cudaStream_t stream) {
     // check input
     if (jacobian == nullptr) {
@@ -112,19 +115,19 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
 
     // copy measuredVoltage to dVoltage
     for (dtype::index image = 0; image < this->numericalSolver->cols; ++image) {
-        if (cublasScopy(handle, this->difference->dataRows,
+        if (numeric::cublasWrapper<dataType>::copy(handle, this->difference->dataRows,
             measurement[image]->deviceData, 1,
-            (dtype::real*)(this->difference->deviceData + image * this->difference->dataRows), 1)
+            (dataType*)(this->difference->deviceData + image * this->difference->dataRows), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "mpFlow::EIT::InverseSolver::calcExcitation: copy measuredVoltage to dVoltage");
         }
 
         // substract calculatedVoltage
-        dtype::real alpha = -1.0f;
-        if (cublasSaxpy(handle, this->difference->dataRows, &alpha,
+        dataType alpha = -1.0f;
+        if (numeric::cublasWrapper<dataType>::axpy(handle, this->difference->dataRows, &alpha,
             calculation[image]->deviceData, 1,
-            (dtype::real*)(this->difference->deviceData + image * this->difference->dataRows), 1)
+            (dataType*)(this->difference->deviceData + image * this->difference->dataRows), 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::logic_error(
                 "mpFlow::EIT::InverseSolver::calcExcitation: substract calculatedVoltage");
@@ -132,9 +135,9 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
     }
 
     // calc excitation
-    dtype::real alpha = 1.0f;
-    dtype::real beta = 0.0f;
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, jacobian->dataCols, this->difference->dataCols,
+    dataType alpha = 1.0f;
+    dataType beta = 0.0f;
+    if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, jacobian->dataCols, this->difference->dataCols,
         jacobian->dataRows, &alpha, jacobian->deviceData, jacobian->dataRows, this->difference->deviceData,
         this->difference->dataRows, &beta, this->excitation->deviceData, this->excitation->dataRows)
         != CUBLAS_STATUS_SUCCESS) {
@@ -144,14 +147,16 @@ void mpFlow::EIT::InverseSolver<numericalSolverType>::calcExcitation(
 
 // inverse solving
 template <
-    template <template <class> class> class numericalSolverType
+    class dataType,
+    template <class, template <class> class> class numericalSolverType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::InverseSolver<numericalSolverType>::solve(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian,
-    const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& calculation,
-    const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& measurement, dtype::size steps,
+std::shared_ptr<mpFlow::numeric::Matrix<dataType>>
+    mpFlow::EIT::InverseSolver<dataType, numericalSolverType>::solve(
+    const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
+    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
+    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement, dtype::size steps,
     cublasHandle_t handle, cudaStream_t stream,
-    std::shared_ptr<numeric::Matrix<dtype::real>> gamma) {
+    std::shared_ptr<numeric::Matrix<dataType>> gamma) {
     // check input
     if (jacobian == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::InverseSolver::solve: jacobian == nullptr");
@@ -177,4 +182,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::EIT::Inver
 }
 
 // specialisation
-template class mpFlow::EIT::InverseSolver<mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::InverseSolver<mpFlow::dtype::real, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::InverseSolver<mpFlow::dtype::complex, mpFlow::numeric::ConjugateGradient>;

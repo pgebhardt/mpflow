@@ -26,7 +26,7 @@ namespace EIT {
     // forward solver class definition
     template <
         class basisFunctionType,
-        template <template <class> class> class numericalSolverType
+        template <class, template <class> class> class numericalSolverType
     >
     class ForwardSolver {
     public:
@@ -46,7 +46,8 @@ namespace EIT {
             cublasHandle_t handle, cudaStream_t stream);
 
         // member
-        std::shared_ptr<numericalSolverType<mpFlow::numeric::SparseMatrix>> numericalSolver;
+        std::shared_ptr<numericalSolverType<dtype::real,
+            mpFlow::numeric::SparseMatrix>> numericalSolver;
         std::shared_ptr<Equation<basisFunctionType>> equation;
         std::shared_ptr<FEM::SourceDescriptor> source;
         std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> phi;

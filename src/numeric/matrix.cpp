@@ -213,106 +213,47 @@ void mpFlow::numeric::Matrix<type>::add(const std::shared_ptr<Matrix<type>> valu
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>,
-    const std::shared_ptr<Matrix<type>>, cublasHandle_t, cudaStream_t) {
-    throw std::logic_error("mpFlow::numeric::Matrix::multiply: not supported dtype");
-}
-
-// specialisation for dtype::real and dtype::complex
-namespace mpFlow {
-namespace numeric {
-    template <>
-    void Matrix<mpFlow::dtype::real>::multiply(
-        const std::shared_ptr<Matrix<dtype::real>> A,
-        const std::shared_ptr<Matrix<dtype::real>> B,
-        cublasHandle_t handle, cudaStream_t stream) {
-        // check input
-        if (A == nullptr) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
-        }
-        if (B == nullptr) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: B == nullptr");
-        }
-        if (handle == NULL) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: handle == NULL");
-        }
-
-        // check size
-        if ((A->cols != B->rows) ||
-            (this->rows != A->rows) ||
-            (this->cols != B->cols)) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: shape does not match");
-        }
-
-        // set cublas stream
-        cublasSetStream(handle, stream);
-
-        // multiply matrices
-        dtype::real alpha = 1.0f;
-        dtype::real beta = 0.0f;
-
-        if (B->dataCols == 1) {
-            if (cublasSgemv(handle, CUBLAS_OP_N, A->dataRows, A->dataCols, &alpha, A->deviceData,
-                A->dataRows, B->deviceData, 1, &beta, this->deviceData, 1)
-                != CUBLAS_STATUS_SUCCESS) {
-                throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
-            }
-        }
-        else {
-            if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
-                &alpha, A->deviceData, A->dataRows, B->deviceData, B->dataRows, &beta,
-                this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
-                throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
-            }
-        }
+void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>> A,
+    const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle, cudaStream_t stream) {
+    // check input
+    if (A == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
+    }
+    if (B == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: B == nullptr");
+    }
+    if (handle == NULL) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: handle == NULL");
     }
 
-    template <>
-    void Matrix<mpFlow::dtype::complex>::multiply(
-        const std::shared_ptr<Matrix<dtype::complex>> A,
-        const std::shared_ptr<Matrix<dtype::complex>> B,
-        cublasHandle_t handle, cudaStream_t stream) {
-        // check input
-        if (A == nullptr) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
-        }
-        if (B == nullptr) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: B == nullptr");
-        }
-        if (handle == NULL) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: handle == NULL");
-        }
+    // check size
+    if ((A->cols != B->rows) ||
+        (this->rows != A->rows) ||
+        (this->cols != B->cols)) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: shape does not match");
+    }
 
-        // check size
-        if ((A->cols != B->rows) ||
-            (this->rows != A->rows) ||
-            (this->cols != B->cols)) {
-            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: shape does not match");
-        }
+    // set cublas stream
+    cublasSetStream(handle, stream);
 
-        // set cublas stream
-        cublasSetStream(handle, stream);
+    // multiply matrices
+    type alpha = 1.0f;
+    type beta = 0.0f;
 
-        // multiply matrices
-        dtype::complex alpha = 1.0f;
-        dtype::complex beta = 0.0f;
-
-        if (B->dataCols == 1) {
-            if (cublasDgemv(handle, CUBLAS_OP_N, A->dataRows, A->dataCols, (const double*)&alpha, (const double*)A->deviceData,
-                A->dataRows, (const double*)B->deviceData, 1, (const double*)&beta, (double*)this->deviceData, 1)
-                != CUBLAS_STATUS_SUCCESS) {
-                throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
-            }
-        }
-        else {
-            if (cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
-                (const double*)&alpha, (const double*)A->deviceData, A->dataRows, (const double*)B->deviceData,
-                B->dataRows, (const double*)&beta, (double*)this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
-                throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
-            }
+    if (B->dataCols == 1) {
+        if (cublasWrapper<type>::gemv(handle, CUBLAS_OP_N, A->dataRows, A->dataCols, &alpha, A->deviceData,
+            A->dataRows, B->deviceData, 1, &beta, this->deviceData, 1)
+            != CUBLAS_STATUS_SUCCESS) {
+            throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
         }
     }
-}
+    else {
+        if (cublasWrapper<type>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
+            &alpha, A->deviceData, A->dataRows, B->deviceData, B->dataRows, &beta,
+            this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
+            throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
+        }
+    }
 }
 
 // specialisation for sparse matrices
@@ -513,6 +454,16 @@ void mpFlow::numeric::Matrix<type>::min(const std::shared_ptr<Matrix<type>> valu
     while (offset * matrix::block_size < this->dataRows);
 }
 
+namespace mpFlow {
+namespace numeric {
+    template <>
+    void Matrix<dtype::complex>::min(const std::shared_ptr<Matrix<dtype::complex>>,
+    cudaStream_t) {
+        throw std::logic_error("mpFlow::numeric::Matrix::min: not possible for complex values");
+    }
+}
+}
+
 // max
 template <
     class type
@@ -548,6 +499,16 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
 
     }
     while (offset * matrix::block_size < this->dataRows);
+}
+
+namespace mpFlow {
+namespace numeric {
+    template <>
+    void Matrix<dtype::complex>::max(const std::shared_ptr<Matrix<dtype::complex>>,
+    cudaStream_t) {
+        throw std::logic_error("mpFlow::numeric::Matrix::max: not possible for complex values");
+    }
+}
 }
 
 // load matrix from stream

@@ -41,7 +41,7 @@ mpFlow::EIT::Solver<basisFunctionType>::Solver(std::shared_ptr<mpFlow::EIT::Equa
         equation, source, components, handle, stream);
 
     // create inverse EIT
-    this->inverseSolver = std::make_shared<InverseSolver<numeric::ConjugateGradient>>(
+    this->inverseSolver = std::make_shared<InverseSolver<dtype::real, numeric::ConjugateGradient>>(
         equation->mesh->elements->rows, forwardSolver->result->dataRows *
         forwardSolver->result->dataCols, parallelImages, regularizationFactor,
         handle, stream);

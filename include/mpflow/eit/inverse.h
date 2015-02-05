@@ -25,40 +25,41 @@ namespace mpFlow {
 namespace EIT {
     // inverse solver class definition
     template <
-        template <template <class> class> class numericalSolverType
+        class dataType,
+        template <class, template <class> class> class numericalSolverType
     >
     class InverseSolver {
     public:
         // constructor
         InverseSolver(dtype::size elementCount, dtype::size measurementCount, dtype::index parallelImages,
-            dtype::real regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
+            dataType regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
 
     public:
         // inverse solving
-        std::shared_ptr<numeric::Matrix<dtype::real>> solve(
-            const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian,
-            const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& calculation,
-            const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& measurement,
+        std::shared_ptr<numeric::Matrix<dataType>> solve(
+            const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
+            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
+            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement,
             dtype::size steps, cublasHandle_t handle, cudaStream_t stream,
-            std::shared_ptr<numeric::Matrix<dtype::real>> gamma);
+            std::shared_ptr<numeric::Matrix<dataType>> gamma);
 
         // calc system matrix
-        void calcSystemMatrix(const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian,
+        void calcSystemMatrix(const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
             cublasHandle_t handle, cudaStream_t stream);
 
         // calc excitation
-        void calcExcitation(const std::shared_ptr<numeric::Matrix<dtype::real>> jacobian,
-            const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& calculation,
-            const std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>>& measurement,
+        void calcExcitation(const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
+            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
+            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement,
             cublasHandle_t handle, cudaStream_t stream);
 
         // member
-        std::shared_ptr<numericalSolverType<mpFlow::numeric::Matrix>> numericalSolver;
-        std::shared_ptr<numeric::Matrix<dtype::real>> difference;
-        std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
-        std::shared_ptr<numeric::Matrix<dtype::real>> systemMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::real>> jacobianSquare;
-        dtype::real regularizationFactor;
+        std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::Matrix>> numericalSolver;
+        std::shared_ptr<numeric::Matrix<dataType>> difference;
+        std::shared_ptr<numeric::Matrix<dataType>> excitation;
+        std::shared_ptr<numeric::Matrix<dataType>> systemMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> jacobianSquare;
+        dataType regularizationFactor;
     };
 }
 }

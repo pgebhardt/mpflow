@@ -191,6 +191,9 @@ void mpFlow::numeric::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cu
 template void mpFlow::numeric::sparseMatrixKernel::convert<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::size,
     mpFlow::dtype::real*, mpFlow::dtype::index*, mpFlow::dtype::index*);
+template void mpFlow::numeric::sparseMatrixKernel::convert<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::complex*, mpFlow::dtype::size, mpFlow::dtype::size,
+    mpFlow::dtype::complex*, mpFlow::dtype::index*, mpFlow::dtype::index*);
 template void mpFlow::numeric::sparseMatrixKernel::convert<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::size,
     mpFlow::dtype::index*, mpFlow::dtype::index*, mpFlow::dtype::index*);
@@ -199,6 +202,9 @@ template void mpFlow::numeric::sparseMatrixKernel::convert<mpFlow::dtype::index>
 template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::real* matrix);
+template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::index*,
+    mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::complex* matrix);
 template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::index* matrix);
@@ -208,6 +214,10 @@ template void mpFlow::numeric::sparseMatrixKernel::multiply<mpFlow::dtype::real>
     cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
     const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::numeric::sparseMatrixKernel::multiply<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::index*,
+    const mpFlow::dtype::complex*, mpFlow::dtype::size, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::complex*);
 template void mpFlow::numeric::sparseMatrixKernel::multiply<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::size,

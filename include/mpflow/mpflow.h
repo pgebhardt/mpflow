@@ -29,6 +29,7 @@
 #include "mathematics.h"
 
 // numeric solver
+#include "numeric/cublas_wrapper.h"
 #include "numeric/constants.h"
 #include "numeric/matrix.h"
 #include "numeric/sparse_matrix.h"

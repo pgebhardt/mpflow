@@ -24,7 +24,7 @@
 // create forward_solver
 template <
     class basisFunctionType,
-    template <template <class> class> class numericalSolverType
+    template <class, template <class> class> class numericalSolverType
 >
 mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolver(
     std::shared_ptr<Equation<basisFunctionType>> equation, std::shared_ptr<FEM::SourceDescriptor> source,
@@ -46,7 +46,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
 
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<
-        mpFlow::numeric::SparseMatrix>>(
+        dtype::real, numeric::SparseMatrix>>(
         this->equation->mesh->nodes->rows,
         this->source->drivePattern->cols + this->source->measurementPattern->cols, stream);
 
@@ -94,7 +94,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
 // forward solving
 template <
     class basisFunctionType,
-    template <template <class> class> class numericalSolverType
+    template <class, template <class> class> class numericalSolverType
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::solve(
@@ -165,7 +165,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 // helper methods
 template <
     class basisFunctionType,
-    template <template <class> class> class numericalSolverType
+    template <class, template <class> class> class numericalSolverType
 >
 void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMeasurementPattern(
     const std::shared_ptr<numeric::Matrix<dtype::real>> source,
@@ -218,5 +218,6 @@ void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
 // specialisation
 template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB>;
+// TODO: BiCGSTAB upgrade
+// template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB>;
+// template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB>;
