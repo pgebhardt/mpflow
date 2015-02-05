@@ -218,7 +218,7 @@ void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>
     throw std::logic_error("mpFlow::numeric::Matrix::multiply: not supported dtype");
 }
 
-// specialisation for dtype::real
+// specialisation for dtype::real and dtype::complex
 namespace mpFlow {
 namespace numeric {
     template <>
@@ -262,6 +262,52 @@ namespace numeric {
             if (cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
                 &alpha, A->deviceData, A->dataRows, B->deviceData, B->dataRows, &beta,
                 this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
+                throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
+            }
+        }
+    }
+
+    template <>
+    void Matrix<mpFlow::dtype::complex>::multiply(
+        const std::shared_ptr<Matrix<dtype::complex>> A,
+        const std::shared_ptr<Matrix<dtype::complex>> B,
+        cublasHandle_t handle, cudaStream_t stream) {
+        // check input
+        if (A == nullptr) {
+            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
+        }
+        if (B == nullptr) {
+            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: B == nullptr");
+        }
+        if (handle == NULL) {
+            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: handle == NULL");
+        }
+
+        // check size
+        if ((A->cols != B->rows) ||
+            (this->rows != A->rows) ||
+            (this->cols != B->cols)) {
+            throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: shape does not match");
+        }
+
+        // set cublas stream
+        cublasSetStream(handle, stream);
+
+        // multiply matrices
+        dtype::complex alpha = 1.0f;
+        dtype::complex beta = 0.0f;
+
+        if (B->dataCols == 1) {
+            if (cublasDgemv(handle, CUBLAS_OP_N, A->dataRows, A->dataCols, (const double*)&alpha, (const double*)A->deviceData,
+                A->dataRows, (const double*)B->deviceData, 1, (const double*)&beta, (double*)this->deviceData, 1)
+                != CUBLAS_STATUS_SUCCESS) {
+                throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
+            }
+        }
+        else {
+            if (cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
+                (const double*)&alpha, (const double*)A->deviceData, A->dataRows, (const double*)B->deviceData,
+                B->dataRows, (const double*)&beta, (double*)this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
                 throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
             }
         }
@@ -731,8 +777,11 @@ template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::
     const Eigen::Ref<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
     const Eigen::Ref<Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
+    const Eigen::Ref<Eigen::Array<long, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::numeric::matrix::fromEigen(
     const Eigen::Ref<Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic>>&, cudaStream_t);
 
 template class mpFlow::numeric::Matrix<mpFlow::dtype::real>;
+template class mpFlow::numeric::Matrix<mpFlow::dtype::complex>;
 template class mpFlow::numeric::Matrix<mpFlow::dtype::index>;

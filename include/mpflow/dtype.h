@@ -27,6 +27,7 @@ namespace dtype {
     // basic scalar types
     typedef unsigned int size;
     typedef float real;
+    typedef thrust::complex<real> complex;
     typedef unsigned int index;
 
     // invalid index

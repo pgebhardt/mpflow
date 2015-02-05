@@ -20,6 +20,7 @@
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include <thrust/complex.h>
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/dtype.h"

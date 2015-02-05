@@ -20,6 +20,7 @@
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include <thrust/complex.h>
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/dtype.h"
@@ -55,6 +56,9 @@ void mpFlow::numeric::matrixKernel::fill(dim3 blocks, dim3 threads, cudaStream_t
 template void mpFlow::numeric::matrixKernel::fill<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::real,
     mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::numeric::matrixKernel::fill<mpFlow::dtype::complex>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::complex,
+    mpFlow::dtype::size, mpFlow::dtype::complex*);
 template void mpFlow::numeric::matrixKernel::fill<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index,
     mpFlow::dtype::size, mpFlow::dtype::index*);
@@ -88,6 +92,9 @@ void mpFlow::numeric::matrixKernel::add(dim3 blocks, dim3 threads, cudaStream_t 
 template void mpFlow::numeric::matrixKernel::add<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::real*,
     mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::numeric::matrixKernel::add<mpFlow::dtype::complex>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::complex*,
+    mpFlow::dtype::size, mpFlow::dtype::complex*);
 template void mpFlow::numeric::matrixKernel::add<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index*);
@@ -121,6 +128,9 @@ void mpFlow::numeric::matrixKernel::scale(dim3 blocks, dim3 threads, cudaStream_
 template void mpFlow::numeric::matrixKernel::scale<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, mpFlow::dtype::real, mpFlow::dtype::size,
     mpFlow::dtype::real*);
+template void mpFlow::numeric::matrixKernel::scale<mpFlow::dtype::complex>(
+    dim3, dim3, cudaStream_t, mpFlow::dtype::complex, mpFlow::dtype::size,
+    mpFlow::dtype::complex*);
 template void mpFlow::numeric::matrixKernel::scale<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, mpFlow::dtype::index, mpFlow::dtype::size,
     mpFlow::dtype::index*);
@@ -157,6 +167,9 @@ void mpFlow::numeric::matrixKernel::elementwiseMultiply(dim3 blocks, dim3 thread
 template void mpFlow::numeric::matrixKernel::elementwiseMultiply<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::real*,
     const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::numeric::matrixKernel::elementwiseMultiply<mpFlow::dtype::complex>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::complex*,
+    const mpFlow::dtype::complex*, mpFlow::dtype::size, mpFlow::dtype::complex*);
 template void mpFlow::numeric::matrixKernel::elementwiseMultiply<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::index*);
@@ -193,6 +206,9 @@ void mpFlow::numeric::matrixKernel::elementwiseDivision(dim3 blocks, dim3 thread
 template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::real>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::real*,
     const mpFlow::dtype::real*, mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::complex>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::complex*,
+    const mpFlow::dtype::complex*, mpFlow::dtype::size, mpFlow::dtype::complex*);
 template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::index*);
@@ -235,6 +251,47 @@ __global__ void sumKernel(const type* vector, mpFlow::dtype::size rows, mpFlow::
     result[gid * offset + column * rows] = res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size];
 }
 
+// complex specialisation
+template <>
+__global__ void sumKernel(const mpFlow::dtype::complex* vector, mpFlow::dtype::size rows,
+    mpFlow::dtype::size offset, mpFlow::dtype::complex* result) {
+    // get column
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // get id
+    mpFlow::dtype::index gid = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index lid = threadIdx.x;
+
+    // copy data to shared memory
+    __shared__ mpFlow::dtype::complex res[mpFlow::numeric::matrix::block_size * mpFlow::numeric::matrix::block_size];
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] =
+        gid * offset < rows ? vector[gid * offset + column * rows] : 0.0f;
+    __syncthreads();
+
+    // reduce
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    __syncthreads();
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    __syncthreads();
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    __syncthreads();
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
+        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    __syncthreads();
+
+    // stop rest of worker
+    if (lid != 0) {
+        return;
+    }
+
+    // write to global memory
+    result[gid * offset + column * rows] = res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size];
+
+}
+
 // sum kernel wrapper
 template <
     class type
@@ -251,6 +308,9 @@ void mpFlow::numeric::matrixKernel::sum(dim3 blocks, dim3 threads, cudaStream_t 
 template void mpFlow::numeric::matrixKernel::sum<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::numeric::matrixKernel::sum<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::complex*, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::complex*);
 template void mpFlow::numeric::matrixKernel::sum<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::index*);
