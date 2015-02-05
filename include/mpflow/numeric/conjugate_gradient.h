@@ -26,7 +26,8 @@ namespace mpFlow {
 namespace numeric {
     // conjugate gradient class definition
     template <
-        template <class type> class matrix_type
+        class dataType,
+        template <class type> class matrixType
     >
     class ConjugateGradient {
     public:
@@ -34,33 +35,39 @@ namespace numeric {
         ConjugateGradient(dtype::size rows, dtype::size columns, cudaStream_t stream);
 
         // solve system
-        void solve(const std::shared_ptr<matrix_type<dtype::real>> A,
-            const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
-            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x,
+        void solve(const std::shared_ptr<matrixType<dataType>> A,
+            const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
             dtype::real tolerance=0.0, bool dcFree=false);
 
         // member
         dtype::size rows;
         dtype::size cols;
-        std::shared_ptr<Matrix<dtype::real>> r;
-        std::shared_ptr<Matrix<dtype::real>> p;
-        std::shared_ptr<Matrix<dtype::real>> roh;
-        std::shared_ptr<Matrix<dtype::real>> rohOld;
-        std::shared_ptr<Matrix<dtype::real>> temp1;
-        std::shared_ptr<Matrix<dtype::real>> temp2;
+        std::shared_ptr<Matrix<dataType>> r;
+        std::shared_ptr<Matrix<dataType>> p;
+        std::shared_ptr<Matrix<dataType>> roh;
+        std::shared_ptr<Matrix<dataType>> rohOld;
+        std::shared_ptr<Matrix<dataType>> temp1;
+        std::shared_ptr<Matrix<dataType>> temp2;
     };
 
     // helper functions
     namespace conjugateGradient {
-        void addScalar(const std::shared_ptr<Matrix<dtype::real>> scalar,
+        template <
+            class dataType
+        >
+        void addScalar(const std::shared_ptr<Matrix<dataType>> scalar,
             dtype::size rows, dtype::size columns, cudaStream_t stream,
-            std::shared_ptr<Matrix<dtype::real>> vector);
+            std::shared_ptr<Matrix<dataType>> vector);
 
-        void updateVector(const std::shared_ptr<Matrix<dtype::real>> x1,
-            dtype::real sign, const std::shared_ptr<Matrix<dtype::real>> x2,
-            const std::shared_ptr<Matrix<dtype::real>> r1,
-            const std::shared_ptr<Matrix<dtype::real>> r2, cudaStream_t stream,
-            std::shared_ptr<Matrix<dtype::real>> result);
+        template <
+            class dataType
+        >
+        void updateVector(const std::shared_ptr<Matrix<dataType>> x1,
+            dtype::real sign, const std::shared_ptr<Matrix<dataType>> x2,
+            const std::shared_ptr<Matrix<dataType>> r1,
+            const std::shared_ptr<Matrix<dataType>> r2, cudaStream_t stream,
+            std::shared_ptr<Matrix<dataType>> result);
     }
 }
 }

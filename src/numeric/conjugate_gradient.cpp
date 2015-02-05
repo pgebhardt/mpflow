@@ -23,9 +23,10 @@
 
 // create conjugateGradient solver
 template <
+    class dataType,
     template <class type> class matrixType
 >
-mpFlow::numeric::ConjugateGradient<matrixType>::ConjugateGradient(dtype::size rows, dtype::size cols, cudaStream_t stream)
+mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(dtype::size rows, dtype::size cols, cudaStream_t stream)
     : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
@@ -36,22 +37,23 @@ mpFlow::numeric::ConjugateGradient<matrixType>::ConjugateGradient(dtype::size ro
     }
 
     // create matrices
-    this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->roh = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->r = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->p = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->roh = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
+    this->rohOld = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->temp1 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->temp2 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
 }
 
 // solve conjugateGradient sparse
 template <
+    class dataType,
     template <class type> class matrixType
 >
-void mpFlow::numeric::ConjugateGradient<matrixType>::solve(
-    const std::shared_ptr<matrixType<dtype::real>> A,
-    const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
-    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x,
+void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
+    const std::shared_ptr<matrixType<dataType>> A,
+    const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
     dtype::real tolerance, bool dcFree) {
     // check input
     if (A == nullptr) {
@@ -99,11 +101,11 @@ void mpFlow::numeric::ConjugateGradient<matrixType>::solve(
         this->temp2->vectorDotProduct(this->p, this->temp1, stream);
 
         // update residuum
-        conjugateGradient::updateVector(this->r, -1.0f, this->temp1,
+        conjugateGradient::updateVector<dataType>(this->r, -1.0f, this->temp1,
             this->rohOld, this->temp2, stream, this->r);
 
         // update x
-        conjugateGradient::updateVector(x, 1.0f, this->p, this->rohOld,
+        conjugateGradient::updateVector<dataType>(x, 1.0f, this->p, this->rohOld,
             this->temp2, stream, x);
 
         // calc rsnew
@@ -115,7 +117,7 @@ void mpFlow::numeric::ConjugateGradient<matrixType>::solve(
             cudaStreamSynchronize(stream);
 
             for (dtype::index i = 0; i < this->roh->cols; ++i) {
-                if (sqrt((*this->roh)(0, i)) >= tolerance) {
+                if (abs(sqrt((*this->roh)(0, i))) >= tolerance) {
                     break;
                 }
                 return;
@@ -123,7 +125,7 @@ void mpFlow::numeric::ConjugateGradient<matrixType>::solve(
         }
 
         // update projection
-        conjugateGradient::updateVector(this->r, 1.0f, this->p,
+        conjugateGradient::updateVector<dataType>(this->r, 1.0f, this->p,
             this->roh, this->rohOld, stream, this->p);
 
         // copy rsnew to rsold
@@ -132,10 +134,13 @@ void mpFlow::numeric::ConjugateGradient<matrixType>::solve(
 }
 
 // add scalar
+template <
+    class dataType
+>
 void mpFlow::numeric::conjugateGradient::addScalar(
-    const std::shared_ptr<Matrix<dtype::real>> scalar,
+    const std::shared_ptr<Matrix<dataType>> scalar,
     dtype::size rows, dtype::size columns, cudaStream_t stream,
-    std::shared_ptr<Matrix<dtype::real>> vector) {
+    std::shared_ptr<Matrix<dataType>> vector) {
     // check input
     if (scalar == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::conjugateGradient::addScalar: scalar == nullptr");
@@ -151,17 +156,20 @@ void mpFlow::numeric::conjugateGradient::addScalar(
         vector->dataCols == 1 ? 1 : matrix::block_size);
 
     // execute kernel
-    conjugateGradientKernel::addScalar(blocks, threads, stream, scalar->deviceData,
+    conjugateGradientKernel::addScalar<dataType>(blocks, threads, stream, scalar->deviceData,
         vector->dataRows, rows, columns, vector->deviceData);
 }
 
 // update vector
+template <
+    class dataType
+>
 void mpFlow::numeric::conjugateGradient::updateVector(
-    const std::shared_ptr<Matrix<dtype::real>> x1, dtype::real sign,
-    const std::shared_ptr<Matrix<dtype::real>> x2,
-    const std::shared_ptr<Matrix<dtype::real>> r1,
-    const std::shared_ptr<Matrix<dtype::real>> r2, cudaStream_t stream,
-    std::shared_ptr<Matrix<dtype::real>> result) {
+    const std::shared_ptr<Matrix<dataType>> x1, dtype::real sign,
+    const std::shared_ptr<Matrix<dataType>> x2,
+    const std::shared_ptr<Matrix<dataType>> r1,
+    const std::shared_ptr<Matrix<dataType>> r2, cudaStream_t stream,
+    std::shared_ptr<Matrix<dataType>> result) {
     // check input
     if (x1 == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::conjugateGradient::addScalar: x1 == nullptr");
@@ -185,11 +193,13 @@ void mpFlow::numeric::conjugateGradient::updateVector(
     dim3 threads(matrix::block_size, result->dataCols == 1 ? 1 : matrix::block_size);
 
     // execute kernel
-    conjugateGradientKernel::updateVector(blocks, threads, stream, x1->deviceData, sign,
+    conjugateGradientKernel::updateVector<dataType>(blocks, threads, stream, x1->deviceData, sign,
         x2->deviceData, r1->deviceData, r2->deviceData, result->dataRows,
         result->deviceData);
 }
 
 // specialisations
-template class mpFlow::numeric::ConjugateGradient<mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::ConjugateGradient<mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::real, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::complex, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::real, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::complex, mpFlow::numeric::SparseMatrix>;

@@ -27,15 +27,21 @@ namespace numeric {
     // namespace conjugateGradientKernel
     namespace conjugateGradientKernel {
         // add scalar kernel
+        template <
+            class dataType
+        >
         void addScalar(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const dtype::real* scalar, dtype::size vector_rows,
-            dtype::size rows, dtype::size columns, dtype::real* vector);
+            const dataType* scalar, dtype::size vector_rows,
+            dtype::size rows, dtype::size columns, dataType* vector);
 
         // update vector kernel
+        template <
+            class dataType
+        >
         void updateVector(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const dtype::real* x1, const dtype::real sign, const dtype::real* x2,
-            const dtype::real* r1, const dtype::real* r2, dtype::size rows,
-            dtype::real* result);
+            const dataType* x1, const dtype::real sign, const dataType* x2,
+            const dataType* r1, const dataType* r2, dtype::size rows,
+            dataType* result);
     }
 }
 }
