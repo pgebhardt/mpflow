@@ -21,12 +21,7 @@
 #ifndef MPFLOW_INCLUDE_COMMON_H
 #define MPFLOW_INCLUDE_COMMON_H
 
-#include <cstdlib>
-#include <cstdio>
-#include <cmath>
-
 // std lib includes
-#include <assert.h>
 #include <stdexcept>
 #include <string>
 #include <istream>
@@ -40,6 +35,7 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <thrust/complex.h>
+#include <complex>
 
 // eigen for easier array handling on cpu
 #include <Eigen/Dense>

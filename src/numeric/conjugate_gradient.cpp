@@ -113,6 +113,9 @@ void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
 
         // check error bound for all column vectors of residuum
         if (tolerance > 0.0) {
+            using namespace std;
+            using namespace thrust;
+
             this->roh->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
