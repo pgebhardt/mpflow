@@ -76,26 +76,31 @@ namespace numeric {
 
     // dtype::complex
     template <>
-    class cublasWrapper<cuComplex> {
+    class cublasWrapper<mpFlow::dtype::complex> {
     public:
-        template <typename... Args>
-        static cublasStatus_t copy(Args&&... args) {
-            return cublasCcopy(std::forward<Args>(args)...);
+        static cublasStatus_t copy(cublasHandle_t handle, int n, const dtype::complex* x,
+            int incx, dtype::complex* y, int incy) {
+            return cublasCcopy(handle, n, (const cuComplex*)x, incx, (cuComplex*)y, incy);
         }
 
-        template <typename... Args>
-        static cublasStatus_t axpy(Args&&... args) {
-            return cublasCaxpy(std::forward<Args>(args)...);
+        static cublasStatus_t axpy(cublasHandle_t handle, int n, const dtype::complex* alpha,
+        const dtype::complex* x, int incx, dtype::complex* y, int incy) {
+            return cublasCaxpy(handle, n, (const cuComplex*)alpha, (const cuComplex*)x,
+                incx, (cuComplex*)y, incy);
         }
 
-        template <typename... Args>
-        static cublasStatus_t gemm(Args&&... args) {
-            return cublasCgemm(std::forward<Args>(args)...);
+        static cublasStatus_t gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+            int m, int n, int k, const dtype::complex* alpha, const dtype::complex* A, int lda,
+            const dtype::complex* B, int ldb, const dtype::complex* beta, dtype::complex* C, int ldc) {
+            return cublasCgemm(handle, transa, transb, m, n, k, (const cuComplex*)alpha, (const cuComplex*)A,
+                lda, (const cuComplex*)B, ldb, (const cuComplex*)beta, (cuComplex*)C, ldc);
         }
 
-        template <typename... Args>
-        static cublasStatus_t gemv(Args&&... args) {
-            return cublasCgemv(std::forward<Args>(args)...);
+        static cublasStatus_t gemv(cublasHandle_t handle, cublasOperation_t trans, int m, int n,
+            const dtype::complex* alpha, const dtype::complex* A, int lda, const dtype::complex* x,
+            int incx, const dtype::complex* beta, dtype::complex* y, int incy) {
+            return cublasCgemv(handle, trans, m, n, (const cuComplex*)alpha, (const cuComplex*)A,
+                lda, (const cuComplex*)x, incx, (const cuComplex*)beta, (cuComplex*)y, incy);
         }
     };
 }
