@@ -18,20 +18,25 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_EIT_INVERSE_SOLVER_H
-#define MPFLOW_INCLDUE_EIT_INVERSE_SOLVER_H
+#ifndef MPFLOW_INCLDUE_SOLVER_INVERSE_H
+#define MPFLOW_INCLDUE_SOLVER_INVERSE_H
 
 namespace mpFlow {
-namespace EIT {
+namespace solver {
     // inverse solver class definition
     template <
         class dataType,
         template <class, template <class> class> class numericalSolverType
     >
-    class InverseSolver {
+    class Inverse {
     public:
+        enum RegularizationType {
+            diagonal,
+            square
+        };
+
         // constructor
-        InverseSolver(dtype::size elementCount, dtype::size measurementCount, dtype::index parallelImages,
+        Inverse(dtype::size elementCount, dtype::size measurementCount, dtype::index parallelImages,
             dataType regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
 
     public:
@@ -45,7 +50,7 @@ namespace EIT {
 
         // calc system matrix
         void calcSystemMatrix(const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
-            cublasHandle_t handle, cudaStream_t stream);
+            RegularizationType regularizationType, cublasHandle_t handle, cudaStream_t stream);
 
         // calc excitation
         void calcExcitation(const std::shared_ptr<numeric::Matrix<dataType>> jacobian,

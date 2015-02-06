@@ -46,7 +46,7 @@ namespace EIT {
 
         // member
         std::shared_ptr<ForwardSolver<basisFunctionType, numeric::ConjugateGradient>> forwardSolver;
-        std::shared_ptr<InverseSolver<dtype::real, numeric::ConjugateGradient>> inverseSolver;
+        std::shared_ptr<solver::Inverse<dtype::real, numeric::ConjugateGradient>> inverseSolver;
         std::shared_ptr<numeric::Matrix<dtype::real>> gamma;
         std::shared_ptr<numeric::Matrix<dtype::real>> dGamma;
         std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> measurement;
