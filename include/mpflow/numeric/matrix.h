@@ -119,13 +119,15 @@ namespace numeric {
         template <
             class type
         >
-        void savetxt(const std::shared_ptr<Matrix<type>> matrix, std::ostream* ostream);
+        void savetxt(const std::shared_ptr<Matrix<type>> matrix, std::ostream* ostream,
+            char delimiter=' ');
 
         // save matrix to file
         template <
             class type
         >
-        void savetxt(const std::string filename, const std::shared_ptr<Matrix<type>> matrix);
+        void savetxt(const std::string filename, const std::shared_ptr<Matrix<type>> matrix,
+            char delimiter=' ');
 
         // converts matrix to eigen array
         template <
