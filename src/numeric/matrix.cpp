@@ -516,7 +516,7 @@ template <
     class type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(std::istream* istream,
-    cudaStream_t stream) {
+    cudaStream_t stream, char delimiter) {
     // check input
     if (istream == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::matrix::loadtxt: istream == nullptr");
@@ -542,7 +542,12 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(
         std::vector<type> row;
         while (!line_stream.eof()) {
             // read value
-            line_stream >> value;
+            std::string token;
+            std::getline(line_stream, token, delimiter);
+
+            // extract value
+            std::stringstream valueStream(token);
+            valueStream >> value;
 
             // check read error
             if (line_stream.bad()) {
@@ -579,7 +584,7 @@ template <
     class type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(
-    const std::string filename, cudaStream_t stream) {
+    const std::string filename, cudaStream_t stream, char delimiter) {
     // open file stream
     std::ifstream file;
     file.open(filename.c_str());
@@ -590,7 +595,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(
     }
 
     // load matrix
-    auto matrix = loadtxt<type>(&file, stream);
+    auto matrix = loadtxt<type>(&file, stream, delimiter);
 
     // close file
     file.close();
@@ -708,14 +713,14 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
 
 // specialisation
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(std::istream*, cudaStream_t);
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(std::istream*, cudaStream_t, char);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(std::istream*, cudaStream_t);
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(std::istream*, cudaStream_t, char);
 
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(const std::string, cudaStream_t);
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(const std::string, cudaStream_t, char);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(const std::string, cudaStream_t);
+    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(const std::string, cudaStream_t, char);
 
 template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::real>(
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>, std::ostream*);

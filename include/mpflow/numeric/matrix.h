@@ -106,14 +106,14 @@ namespace numeric {
             class type
         >
         std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream* istream,
-            cudaStream_t stream=nullptr);
+            cudaStream_t stream=nullptr, char delimiter=' ');
 
         // load matrix from file
         template <
             class type
         >
         std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
-            cudaStream_t stream=nullptr);
+            cudaStream_t stream=nullptr, char delimiter=' ');
 
         // save matrix to stream
         template <
