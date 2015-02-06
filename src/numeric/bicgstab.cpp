@@ -23,9 +23,10 @@
 
 // create bicgstab solver
 template <
-    template <class type> class matrixType
+    class dataType,
+    template <class> class matrixType
 >
-mpFlow::numeric::BiCGSTAB<matrixType>::BiCGSTAB(dtype::size rows, dtype::size cols, cudaStream_t stream)
+mpFlow::numeric::BiCGSTAB<dataType, matrixType>::BiCGSTAB(dtype::size rows, dtype::size cols, cudaStream_t stream)
     : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
@@ -36,30 +37,31 @@ mpFlow::numeric::BiCGSTAB<matrixType>::BiCGSTAB(dtype::size rows, dtype::size co
     }
 
     // create matrices
-    this->r = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->rHat = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
-    this->roh = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
-    this->rohOld = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
-    this->alpha = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
-    this->beta = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->omega = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 1.0, false);
-    this->nu = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->p = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->t = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->s = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->error = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream);
-    this->temp1 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
-    this->temp2 = std::make_shared<Matrix<dtype::real>>(this->rows, this->cols, stream, 0.0, false);
+    this->r = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->rHat = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
+    this->roh = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
+    this->rohOld = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
+    this->alpha = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
+    this->beta = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->omega = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
+    this->nu = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->p = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->t = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->s = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->error = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
+    this->temp1 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->temp2 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
 }
 
 // solve bicgstab sparse
 template <
+    class dataType,
     template <class type> class matrixType
 >
-void mpFlow::numeric::BiCGSTAB<matrixType>::solve(
-    const std::shared_ptr<matrixType<dtype::real>> A,
-    const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
-    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x,
+void mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
+    const std::shared_ptr<matrixType<dataType>> A,
+    const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
     dtype::real tolerance, bool) {
     // check input
     if (A == nullptr) {
@@ -131,12 +133,15 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(
 
         // check error bound for all column vectors of residuum
         if (tolerance > 0.0) {
+            using namespace std;
+            using namespace thrust;
+
             this->error->vectorDotProduct(this->r, this->r, stream);
             this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
-            for (dtype::index i = 0; i < error->cols; ++i) {
-                if (sqrt((*this->error)(0, i)) >= tolerance) {
+            for (dtype::index i = 0; i < this->roh->cols; ++i) {
+                if (abs(sqrt((*this->roh)(0, i))) >= tolerance) {
                     break;
                 }
                 return;
@@ -146,11 +151,14 @@ void mpFlow::numeric::BiCGSTAB<matrixType>::solve(
 }
 
 // update vector
+template <
+    class dataType
+>
 void mpFlow::numeric::bicgstab::updateVector(
-    const std::shared_ptr<Matrix<dtype::real>> x1, dtype::real sign,
-    const std::shared_ptr<Matrix<dtype::real>> x2,
-    const std::shared_ptr<Matrix<dtype::real>> scalar, cudaStream_t stream,
-    std::shared_ptr<Matrix<dtype::real>> result) {
+    const std::shared_ptr<Matrix<dataType>> x1, dtype::real sign,
+    const std::shared_ptr<Matrix<dataType>> x2,
+    const std::shared_ptr<Matrix<dataType>> scalar, cudaStream_t stream,
+    std::shared_ptr<Matrix<dataType>> result) {
     // check input
     if (x1 == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::conjugateGradient::addScalar: x1 == nullptr");
@@ -176,5 +184,7 @@ void mpFlow::numeric::bicgstab::updateVector(
 }
 
 // specialisations
-template class mpFlow::numeric::BiCGSTAB<mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::BiCGSTAB<mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::real, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::real, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::complex, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::complex, mpFlow::numeric::SparseMatrix>;

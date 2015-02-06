@@ -218,6 +218,5 @@ void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
 // specialisation
 template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient>;
-// TODO: BiCGSTAB upgrade
-// template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB>;
-// template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB>;

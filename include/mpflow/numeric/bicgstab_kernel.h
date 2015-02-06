@@ -25,9 +25,12 @@ namespace mpFlow {
 namespace numeric {
     namespace bicgstabKernel {
         // update vector kernel
+        template <
+            class dataType
+        >
         void updateVector(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const dtype::real* x1, const dtype::real sign, const dtype::real* x2,
-            const dtype::real* scalar, dtype::size rows, dtype::real* result);
+            const dataType* x1, const dtype::real sign, const dataType* x2,
+            const dataType* scalar, dtype::size rows, dataType* result);
     }
 }
 }

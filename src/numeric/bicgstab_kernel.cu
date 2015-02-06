@@ -28,10 +28,12 @@
 #include "mpflow/numeric/bicgstab_kernel.h"
 
 // update vector kernel
-static __global__ void updateVectorKernel(const mpFlow::dtype::real* x1,
-    const mpFlow::dtype::real sign, const mpFlow::dtype::real* x2,
-    const mpFlow::dtype::real* scalar, mpFlow::dtype::size rows,
-    mpFlow::dtype::real* result) {
+template <
+    class dataType
+>
+static __global__ void updateVectorKernel(const dataType* x1,
+    const mpFlow::dtype::real sign, const dataType* x2, const dataType* scalar,
+    mpFlow::dtype::size rows, dataType* result) {
     // get ids
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
@@ -42,13 +44,25 @@ static __global__ void updateVectorKernel(const mpFlow::dtype::real* x1,
 }
 
 // update vector kernel wrapper
+template <
+    class dataType
+>
 void mpFlow::numeric::bicgstabKernel::updateVector(dim3 blocks, dim3 threads,
-    cudaStream_t stream, const dtype::real* x1, const dtype::real sign,
-    const dtype::real* x2, const dtype::real* scalar, dtype::size rows,
-    dtype::real* result) {
+    cudaStream_t stream, const dataType* x1, const dtype::real sign,
+    const dataType* x2, const dataType* scalar, dtype::size rows,
+    dataType* result) {
     // call cuda kernel
     updateVectorKernel<<<blocks, threads, 0, stream>>>(x1, sign, x2, scalar, rows,
         result);
 
     CudaCheckError();
 }
+
+template void mpFlow::numeric::bicgstabKernel::updateVector<mpFlow::dtype::real>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::real,
+    const mpFlow::dtype::real*, const mpFlow::dtype::real*, mpFlow::dtype::size,
+    mpFlow::dtype::real*);
+template void mpFlow::numeric::bicgstabKernel::updateVector<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::real,
+    const mpFlow::dtype::complex*, const mpFlow::dtype::complex*, mpFlow::dtype::size,
+    mpFlow::dtype::complex*);

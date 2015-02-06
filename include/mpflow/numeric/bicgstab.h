@@ -25,7 +25,8 @@ namespace mpFlow {
 namespace numeric {
     // conjugate gradient class definition
     template <
-        template <class type> class matrix_type
+        class dataType,
+        template <class> class matrixType
     >
     class BiCGSTAB {
     public:
@@ -33,36 +34,39 @@ namespace numeric {
         BiCGSTAB(dtype::size rows, dtype::size cols, cudaStream_t stream);
 
         // solve system
-        void solve(const std::shared_ptr<matrix_type<dtype::real>> A,
-            const std::shared_ptr<Matrix<dtype::real>> f, dtype::size iterations,
-            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dtype::real>> x,
+        void solve(const std::shared_ptr<matrixType<dataType>> A,
+            const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
             dtype::real tolerance=0.0, bool dcFree=false);
 
         // member
         dtype::size rows;
         dtype::size cols;
-        std::shared_ptr<Matrix<dtype::real>> r;
-        std::shared_ptr<Matrix<dtype::real>> rHat;
-        std::shared_ptr<Matrix<dtype::real>> roh;
-        std::shared_ptr<Matrix<dtype::real>> rohOld;
-        std::shared_ptr<Matrix<dtype::real>> alpha;
-        std::shared_ptr<Matrix<dtype::real>> beta;
-        std::shared_ptr<Matrix<dtype::real>> omega;
-        std::shared_ptr<Matrix<dtype::real>> nu;
-        std::shared_ptr<Matrix<dtype::real>> p;
-        std::shared_ptr<Matrix<dtype::real>> t;
-        std::shared_ptr<Matrix<dtype::real>> s;
-        std::shared_ptr<Matrix<dtype::real>> error;
-        std::shared_ptr<Matrix<dtype::real>> temp1;
-        std::shared_ptr<Matrix<dtype::real>> temp2;
+        std::shared_ptr<Matrix<dataType>> r;
+        std::shared_ptr<Matrix<dataType>> rHat;
+        std::shared_ptr<Matrix<dataType>> roh;
+        std::shared_ptr<Matrix<dataType>> rohOld;
+        std::shared_ptr<Matrix<dataType>> alpha;
+        std::shared_ptr<Matrix<dataType>> beta;
+        std::shared_ptr<Matrix<dataType>> omega;
+        std::shared_ptr<Matrix<dataType>> nu;
+        std::shared_ptr<Matrix<dataType>> p;
+        std::shared_ptr<Matrix<dataType>> t;
+        std::shared_ptr<Matrix<dataType>> s;
+        std::shared_ptr<Matrix<dataType>> error;
+        std::shared_ptr<Matrix<dataType>> temp1;
+        std::shared_ptr<Matrix<dataType>> temp2;
     };
 
     // helper functions
     namespace bicgstab {
-        void updateVector(const std::shared_ptr<Matrix<dtype::real>> x1,
-            dtype::real sign, const std::shared_ptr<Matrix<dtype::real>> x2,
-            const std::shared_ptr<Matrix<dtype::real>> scalar, cudaStream_t stream,
-            std::shared_ptr<Matrix<dtype::real>> result);
+        template <
+            class dataType
+        >
+        void updateVector(const std::shared_ptr<Matrix<dataType>> x1,
+            dtype::real sign, const std::shared_ptr<Matrix<dataType>> x2,
+            const std::shared_ptr<Matrix<dataType>> scalar, cudaStream_t stream,
+            std::shared_ptr<Matrix<dataType>> result);
     }
 }
 }

@@ -27,7 +27,7 @@ namespace numeric {
     // conjugate gradient class definition
     template <
         class dataType,
-        template <class type> class matrixType
+        template <class> class matrixType
     >
     class ConjugateGradient {
     public:
