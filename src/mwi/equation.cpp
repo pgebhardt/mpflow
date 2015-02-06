@@ -47,7 +47,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(edges.size(), edges.size());
     std::array<Eigen::ArrayXXi, 2> connectivityMatrices = {{
         Eigen::ArrayXXi::Zero(edges.size(), edges.size()), Eigen::ArrayXXi::Zero(edges.size(), edges.size()) }};
-    auto sMatrix = std::make_shared<numeric::Matrix<dtype::real>>(edges.size(), edges.size(), stream);
+    auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(), edges.size(), stream);
     std::array<Eigen::ArrayXXf, 2> elementalRMatrices = {{
         Eigen::ArrayXXf::Zero(edges.size(), edges.size()), Eigen::ArrayXXf::Zero(edges.size(), edges.size()) }};
 
@@ -89,18 +89,18 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     sMatrix->copyToDevice(stream);
 
     // create sparse matrices
-    this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::real>>(
+    this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
         sMatrix, stream);
-    this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::real>>(
+    this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
         sMatrix, stream);
-    this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::real>>(
+    this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
         sMatrix, stream);
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
         edges.size(),numeric::sparseMatrix::block_size * connectivityMatrices.size(),
         stream, dtype::invalid_index);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dtype::real>>(edges.size(),
+    this->elementalRMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(),
         numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
@@ -108,7 +108,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     auto connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
         connectivityMatrices[0].rows(), connectivityMatrices[0].cols(), stream,
         dtype::invalid_index);
-    auto elementalRMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+    auto elementalRMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(
         elementalRMatrices[0].rows(), elementalRMatrices[0].cols(), stream);
 
     for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
@@ -171,8 +171,8 @@ void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
 }
 
 
-void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<dtype::real>> beta,
-    dtype::real k, cudaStream_t stream) {
+void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<dtype::complex>> beta,
+    dtype::complex k, cudaStream_t stream) {
     // check input
     if (beta == nullptr) {
         throw std::invalid_argument("mpFlow::MWI::Equation::update: beta == nullptr");
@@ -180,7 +180,7 @@ void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<dtype::
 
     // update matrices
     FEM::equation::updateMatrix(this->elementalRMatrix, beta, this->connectivityMatrix,
-        1.0f, stream, this->rMatrix);
+        dtype::complex(1.0, 0.0), stream, this->rMatrix);
 
     // update system matrix
     FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,

@@ -34,16 +34,16 @@ namespace MWI {
         void initElementalMatrices(cudaStream_t stream);
         void initJacobianCalculationMatrix(cudaStream_t stream);
 
-        void update(const std::shared_ptr<numeric::Matrix<dtype::real>> beta,
-            dtype::real kB, cudaStream_t stream);
+        void update(const std::shared_ptr<numeric::Matrix<dtype::complex>> beta,
+            dtype::complex k, cudaStream_t stream);
 
         // member
         std::shared_ptr<numeric::IrregularMesh> mesh;
-        std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dtype::complex>> systemMatrix;
         std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
-        std::shared_ptr<numeric::SparseMatrix<dtype::real>> sMatrix;
-        std::shared_ptr<numeric::SparseMatrix<dtype::real>> rMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::real>> elementalRMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dtype::complex>> sMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dtype::complex>> rMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::complex>> elementalRMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
     };
 }
