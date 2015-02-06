@@ -186,11 +186,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         elementalSMatrix->copyToDevice(stream);
         elementalRMatrix->copyToDevice(stream);
 
-        reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
+        FEM::equation::reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
             this->connectivityMatrix);
-        reduceMatrix(elementalSMatrix, this->sMatrix, level, stream,
+        FEM::equation::reduceMatrix(elementalSMatrix, this->sMatrix, level, stream,
             this->elementalSMatrix);
-        reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
+        FEM::equation::reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
             this->elementalRMatrix);
         cudaStreamSynchronize(stream);
     }
@@ -314,9 +314,9 @@ template <
 void mpFlow::EIT::Equation<basisFunctionType>::update(
     const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::real k, cudaStream_t stream) {
     // update matrices
-    updateMatrix(this->elementalSMatrix, gamma, this->connectivityMatrix,
+    FEM::equation::updateMatrix(this->elementalSMatrix, gamma, this->connectivityMatrix,
         this->referenceValue, stream, this->sMatrix);
-    updateMatrix(this->elementalRMatrix, gamma, this->connectivityMatrix,
+    FEM::equation::updateMatrix(this->elementalRMatrix, gamma, this->connectivityMatrix,
         this->referenceValue, stream, this->rMatrix);
 
     // update system matrix
@@ -359,88 +359,6 @@ void mpFlow::EIT::Equation<basisFunctionType>::calcJacobian(
         jacobian->deviceData);
 }
 
-// reduce matrix
-template <
-    class basisFunctionType
->
-template <
-    class type
->
-void mpFlow::EIT::Equation<basisFunctionType>::reduceMatrix(
-    const std::shared_ptr<numeric::Matrix<type>> intermediateMatrix,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>> shape, dtype::index offset,
-    cudaStream_t stream, std::shared_ptr<numeric::Matrix<type>> matrix) {
-    // check input
-    if (intermediateMatrix == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::reduceMatrix: intermediateMatrix == nullptr");
-    }
-    if (shape == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::reduceMatrix: shape == nullptr");
-    }
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::reduceMatrix: matrix == nullptr");
-    }
-
-    // block size
-    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
-    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-
-    // reduce matrix
-    FEM::equationKernel::reduceMatrix<type>(blocks, threads, stream,
-        intermediateMatrix->deviceData, shape->columnIds, matrix->dataRows,
-        offset, matrix->deviceData);
-}
-
-// update matrix
-template <
-    class basisFunctionType
->
-void mpFlow::EIT::Equation<basisFunctionType>::updateMatrix(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-    const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix,
-    dtype::real sigmaRef, cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dtype::real>> matrix) {
-    // check input
-    if (elements == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::updateMatrix: elements == nullptr");
-    }
-    if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::updateMatrix: gamma == nullptr");
-    }
-    if (connectivityMatrix == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::updateMatrix: connectivityMatrix == nullptr");
-    }
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ellipticalEquation::updateMatrix: matrix == nullptr");
-    }
-
-    // dimension
-    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
-
-    // execute kernel
-    FEM::equationKernel::updateMatrix(blocks, threads, stream,
-        connectivityMatrix->deviceData, elements->deviceData, gamma->deviceData,
-        sigmaRef, connectivityMatrix->dataRows, connectivityMatrix->dataCols, matrix->values);
-}
-
 // specialisation
-template void mpFlow::EIT::Equation<mpFlow::FEM::basis::Linear>::reduceMatrix<mpFlow::dtype::real>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>);
-template void mpFlow::EIT::Equation<mpFlow::FEM::basis::Linear>::reduceMatrix<mpFlow::dtype::index>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
-template void mpFlow::EIT::Equation<mpFlow::FEM::basis::Quadratic>::reduceMatrix<mpFlow::dtype::real>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>);
-template void mpFlow::EIT::Equation<mpFlow::FEM::basis::Quadratic>::reduceMatrix<mpFlow::dtype::index>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
-
 template class mpFlow::EIT::Equation<mpFlow::FEM::basis::Linear>;
 template class mpFlow::EIT::Equation<mpFlow::FEM::basis::Quadratic>;

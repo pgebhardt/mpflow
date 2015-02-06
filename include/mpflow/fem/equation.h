@@ -18,15 +18,29 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_MWI_EQUATION_KERNEL_H
-#define MPFLOW_INCLDUE_MWI_EQUATION_KERNEL_H
+#ifndef MPFLOW_INCLDUE_FEM_EQUATION_H
+#define MPFLOW_INCLDUE_FEM_EQUATION_H
 
 namespace mpFlow {
-namespace MWI {
-namespace equationKernel {
-    void assembleComplexSystem(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const dtype::real* realValues, const dtype::index* realColumnIds, dtype::index realRows,
-        const dtype::real* imaginaryValues, dtype::real* completeValues, dtype::index* completeColumnIds);
+namespace FEM {
+namespace equation {
+    // reduce matrix
+    template <
+        class dataType,
+        class shapeDataType
+    >
+    void reduceMatrix(const std::shared_ptr<numeric::Matrix<dataType>> intermediateMatrix,
+        const std::shared_ptr<numeric::SparseMatrix<shapeDataType>> shape, dtype::index offset,
+        cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> matrix);
+
+    // update matrix
+    template <
+        class dataType
+    >
+    void updateMatrix(const std::shared_ptr<numeric::Matrix<dataType>> elements,
+        const std::shared_ptr<numeric::Matrix<dataType>> gamma,
+        const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, dataType referenceValue,
+        cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dataType>> matrix);
 }
 }
 }

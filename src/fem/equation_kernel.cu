@@ -72,30 +72,35 @@ void mpFlow::FEM::equationKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaSt
 template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::real>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::real*);
+template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::index*,
+    mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::complex*);
 template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
 
 // update matrix kernel
+template <
+    class dataType
+>
 static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivityMatrix,
-    const mpFlow::dtype::real* elementalMatrix, const mpFlow::dtype::real* gamma,
-    mpFlow::dtype::real sigmaRef, mpFlow::dtype::size rows, mpFlow::dtype::size columns,
-    mpFlow::dtype::real* matrix_values) {
+    const dataType* elementalMatrix, const dataType* gamma,
+    dataType referenceValue, mpFlow::dtype::size rows, mpFlow::dtype::size columns,
+    dataType* matrix_values) {
     // get ids
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc residual matrix element
-    mpFlow::dtype::real value = 0.0f;
+    dataType value = 0.0f;
     mpFlow::dtype::index elementId = mpFlow::dtype::invalid_index;
     for (mpFlow::dtype::index k = 0; k < columns / mpFlow::numeric::sparseMatrix::block_size; ++k) {
         // get element id
-        elementId = connectivityMatrix[row +
-            (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows];
+        elementId = connectivityMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows];
 
-        value += elementId != mpFlow::dtype::invalid_index ? elementalMatrix[row +
-            (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
-            sigmaRef * exp10f(gamma[elementId] / 10.0f) : 0.0f;
+        value += elementId != mpFlow::dtype::invalid_index ?
+            elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
+            referenceValue * exp(log(10.0f) * gamma[elementId] / 10.0f) : 0.0f;
     }
 
     // set residual matrix element
@@ -103,22 +108,37 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 }
 
 // update matrix kernel wrapper
+template <
+    class dataType
+>
 void mpFlow::FEM::equationKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const dtype::index* connectivityMatrix, const dtype::real* elementalMatrix,
-    const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows, dtype::size columns,
-    dtype::real* matrix_values) {
+    const dtype::index* connectivityMatrix, const dataType* elementalMatrix,
+    const dataType* gamma, dataType referenceValue, dtype::size rows, dtype::size columns,
+    dataType* matrix_values) {
     // call cuda kernel
     updateMatrixKernel<<<blocks, threads, 0, stream>>>(connectivityMatrix, elementalMatrix,
-        gamma, sigma_ref, rows, columns, matrix_values);
+        gamma, referenceValue, rows, columns, matrix_values);
 
     CudaCheckError();
 }
 
+template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::real>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::real*,
+    const mpFlow::dtype::real*, mpFlow::dtype::real, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::complex*,
+    const mpFlow::dtype::complex*, mpFlow::dtype::complex, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::complex*);
+
 // update system matrix kernel
+template <
+    class dataType
+>
 static __global__ void updateSystemMatrixKernel(
-    const mpFlow::dtype::real* sMatrixValues, const mpFlow::dtype::real* rMatrixValues,
+    const dataType* sMatrixValues, const dataType* rMatrixValues,
     const mpFlow::dtype::index* sMatrixColumnIds, mpFlow::dtype::size density,
-    mpFlow::dtype::real k, mpFlow::dtype::real* systemMatrixValues) {
+    dataType k, dataType* systemMatrixValues) {
     // get row
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -138,11 +158,14 @@ static __global__ void updateSystemMatrixKernel(
 }
 
 // update system matrix kernel wrapper
+template <
+    class dataType
+>
 void mpFlow::FEM::equationKernel::updateSystemMatrix(
     dim3 blocks, dim3 threads, cudaStream_t stream,
-    const dtype::real* sMatrixValues, const dtype::real* rMatrixValues,
-    const dtype::index* sMatrixColumnIds, dtype::size density, dtype::real k,
-    dtype::real* systemMatrixValues) {
+    const dataType* sMatrixValues, const dataType* rMatrixValues,
+    const dtype::index* sMatrixColumnIds, dtype::size density, dataType k,
+    dataType* systemMatrixValues) {
     // call cuda kernel
     updateSystemMatrixKernel<<<blocks, threads, 0, stream>>>(
         sMatrixValues, rMatrixValues, sMatrixColumnIds, density, k,
@@ -150,6 +173,15 @@ void mpFlow::FEM::equationKernel::updateSystemMatrix(
 
     CudaCheckError();
 }
+
+template void mpFlow::FEM::equationKernel::updateSystemMatrix<mpFlow::dtype::real>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::real*,
+    const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::real,
+    mpFlow::dtype::real*);
+template void mpFlow::FEM::equationKernel::updateSystemMatrix<mpFlow::dtype::complex>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::complex*,
+    const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::complex,
+    mpFlow::dtype::complex*);
 
 // calc jacobian kernel
 template <

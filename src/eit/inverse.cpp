@@ -79,6 +79,16 @@ void mpFlow::EIT::InverseSolver<dataType, numericalSolverType>::calcSystemMatrix
     // copy jacobianSquare to systemMatrix
     this->systemMatrix->copy(this->jacobianSquare, stream);
 
+    auto diag = std::make_shared<numeric::Matrix<dataType>>(this->systemMatrix->rows,
+        this->systemMatrix->cols, stream);
+    for (dtype::index row = 0; row < diag->rows; ++row) {
+        (*diag)(row, row) = this->regularizationFactor;
+    }
+    diag->copyToDevice(stream);
+
+    this->systemMatrix->add(diag, stream);
+
+    /*
     // add lambda * Jt * J * Jt * J to systemMatrix
     beta = this->regularizationFactor;
     if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare->dataCols,
@@ -89,7 +99,7 @@ void mpFlow::EIT::InverseSolver<dataType, numericalSolverType>::calcSystemMatrix
         this->systemMatrix->dataRows) != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error(
             "mpFlow::EIT::InverseSolver::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
-    }
+    }*/
 }
 
 // calc excitation

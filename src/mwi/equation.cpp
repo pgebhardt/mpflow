@@ -20,7 +20,6 @@
 
 #include "mpflow/mpflow.h"
 #include "mpflow/fem/equation_kernel.h"
-#include "mpflow/mwi/equation_kernel.h"
 
 mpFlow::MWI::Equation::Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
     cudaStream_t stream)
@@ -128,9 +127,9 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
         elementalRMatrix->copyToDevice(stream);
         cudaStreamSynchronize(stream);
 
-        reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
+        FEM::equation::reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
             this->connectivityMatrix);
-        reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
+        FEM::equation::reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
             this->elementalRMatrix);
     }
 }
@@ -180,118 +179,11 @@ void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<dtype::
     }
 
     // update matrices
-    updateMatrix(this->elementalRMatrix, beta, this->connectivityMatrix,
-        1.0, stream, this->rMatrix);
+    FEM::equation::updateMatrix(this->elementalRMatrix, beta, this->connectivityMatrix,
+        1.0f, stream, this->rMatrix);
 
     // update system matrix
     FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
         numeric::matrix::block_size, stream, this->sMatrix->values, this->rMatrix->values,
         this->sMatrix->columnIds, this->sMatrix->density, k, this->systemMatrix->values);
 }
-
-// reduce matrix
-template <
-    class type
->
-void mpFlow::MWI::Equation::reduceMatrix(
-    const std::shared_ptr<numeric::Matrix<type>> intermediateMatrix,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>> shape, dtype::index offset,
-    cudaStream_t stream, std::shared_ptr<numeric::Matrix<type>> matrix) {
-    // check input
-    if (intermediateMatrix == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::ellipticalEquation::reduceMatrix: intermediateMatrix == nullptr");
-    }
-    if (shape == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::ellipticalEquation::reduceMatrix: shape == nullptr");
-    }
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::ellipticalEquation::reduceMatrix: matrix == nullptr");
-    }
-
-    // block size
-    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
-    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-
-    // reduce matrix
-    FEM::equationKernel::reduceMatrix<type>(blocks, threads, stream,
-        intermediateMatrix->deviceData, shape->columnIds, matrix->dataRows,
-        offset, matrix->deviceData);
-}
-
-// update matrix
-void mpFlow::MWI::Equation::updateMatrix(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-    const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix,
-    dtype::real sigmaRef, cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dtype::real>> matrix) {
-    // check input
-    if (elements == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::ellipticalEquation::updateMatrix: elements == nullptr");
-    }
-    if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::ellipticalEquation::updateMatrix: gamma == nullptr");
-    }
-    if (connectivityMatrix == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::ellipticalEquation::updateMatrix: connectivityMatrix == nullptr");
-    }
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::ellipticalEquation::updateMatrix: matrix == nullptr");
-    }
-
-    // dimension
-    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
-
-    // execute kernel
-    FEM::equationKernel::updateMatrix(blocks, threads, stream,
-        connectivityMatrix->deviceData, elements->deviceData, gamma->deviceData,
-        sigmaRef, connectivityMatrix->dataRows, connectivityMatrix->dataCols, matrix->values);
-}
-
-void mpFlow::MWI::equation::assembleComplexSystem(
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>> realPart,
-    const std::shared_ptr<numeric::Matrix<dtype::real>> imaginaryPart,
-    std::shared_ptr<numeric::SparseMatrix<dtype::real>> output, cudaStream_t stream) {
-    // check input
-    if (realPart == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: realPart == nullptr");
-    }
-    if (imaginaryPart == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: imaginaryPart == nullptr");
-    }
-    if (output == nullptr) {
-        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: output == nullptr");
-    }
-
-    // check sizes
-    if (imaginaryPart->cols != 1) {
-        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: imaginaryPart has to be column vector");
-    }
-    if (realPart->rows != imaginaryPart->rows) {
-        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: realPart->rows != imaginaryPart->rows");
-    }
-    if (output->dataRows != realPart->dataRows * 2) {
-        throw std::invalid_argument("mpFlow::MWI::equation::assembleComplexSystem: output->dataRows != realPart->dataRows * 2");
-    }
-
-    // dimension
-    dim3 threads(numeric::matrix::block_size, 1);
-    dim3 blocks(output->dataRows / numeric::matrix::block_size, 1);
-
-    // call kernel
-    equationKernel::assembleComplexSystem(blocks, threads, stream,
-        realPart->values, realPart->columnIds, realPart->dataRows,
-        imaginaryPart->deviceData, output->values, output->columnIds);
-
-    output->density = realPart->density + 1;
-}
-
-// specialisation
-template void mpFlow::MWI::Equation::reduceMatrix<mpFlow::dtype::real>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>);
-template void mpFlow::MWI::Equation::reduceMatrix<mpFlow::dtype::index>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);

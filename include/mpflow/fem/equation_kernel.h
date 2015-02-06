@@ -26,23 +26,29 @@ namespace FEM {
 namespace equationKernel {
     // reduce connectivity and elemental matrices
     template <
-        class type
+        class dataType
     >
     void reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const type* intermediate_matrix, const dtype::index* column_ids,
-        dtype::size rows, dtype::index offset, type* matrix);
+        const dataType* intermediate_matrix, const dtype::index* column_ids,
+        dtype::size rows, dtype::index offset, dataType* matrix);
 
     // update matrix kernel
+    template <
+        class dataType
+    >
     void updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const dtype::index* connectivity_matrix, const dtype::real* elemental_matrix,
-        const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows,
-        dtype::size columns, dtype::real* matrix_values);
+        const dtype::index* connectivity_matrix, const dataType* elemental_matrix,
+        const dataType* gamma, dataType referenceValue, dtype::size rows,
+        dtype::size columns, dataType* matrix_values);
 
     // update system matrix kernel
+    template <
+        class dataType
+    >
     void updateSystemMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const dtype::real* sMatrixValues, const dtype::real* rMatrixValues,
-        const dtype::index* sMatrixColumnIds, dtype::size density, dtype::real k,
-        dtype::real* systemMatrixValues);
+        const dataType* sMatrixValues, const dataType* rMatrixValues,
+        const dtype::index* sMatrixColumnIds, dtype::size density, dataType k,
+        dataType* systemMatrixValues);
 
     // calc jacobian kernel
     template <

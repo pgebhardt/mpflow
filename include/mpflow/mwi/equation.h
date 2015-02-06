@@ -26,22 +26,6 @@ namespace MWI {
     // model class describing an 2D TE Helmholz equation
     class Equation {
     public:
-        // class methods
-        // update matrix
-        static void updateMatrix(const std::shared_ptr<numeric::Matrix<dtype::real>> elements,
-            const std::shared_ptr<numeric::Matrix<dtype::real>> gamma,
-            const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, dtype::real sigmaRef,
-            cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dtype::real>> matrix);
-
-        // reduce matrix
-        template <
-            class type
-        >
-        static void reduceMatrix(const std::shared_ptr<numeric::Matrix<type>> intermediateMatrix,
-            const std::shared_ptr<numeric::SparseMatrix<dtype::real>> shape, dtype::index offset,
-            cudaStream_t stream, std::shared_ptr<numeric::Matrix<type>> matrix);
-
-        // instance methods
         // constructor
         Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
             cudaStream_t stream);
@@ -62,12 +46,6 @@ namespace MWI {
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalRMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
     };
-
-    namespace equation {
-        void assembleComplexSystem(const std::shared_ptr<numeric::SparseMatrix<dtype::real>> realPart,
-            const std::shared_ptr<numeric::Matrix<dtype::real>> imaginaryPart,
-            std::shared_ptr<numeric::SparseMatrix<dtype::real>> output, cudaStream_t stream);
-    }
 }
 }
 
