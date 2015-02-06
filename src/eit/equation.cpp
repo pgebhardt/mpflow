@@ -67,32 +67,21 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::EIT::Equation<basisFunctionType>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
-    std::vector<std::vector<dtype::index>> elementCount(
-        this->mesh->nodes->rows, std::vector<dtype::index>(
-        this->mesh->nodes->rows, 0));
-    std::vector<std::vector<std::vector<dtype::index>>> connectivityMatrices;
-    std::vector<std::vector<std::vector<dtype::real>>> elementalSMatrices,
-        elementalRMatrices;
+    Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(this->mesh->nodes->rows,
+        this->mesh->nodes->rows);
+    std::vector<Eigen::ArrayXXi> connectivityMatrices;
+    std::vector<Eigen::ArrayXXf> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
-    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
-    std::array<std::tuple<dtype::real, dtype::real>,
-        basisFunctionType::nodesPerElement> nodeCoordinates;
-    std::array<std::shared_ptr<basisFunctionType>,
-        basisFunctionType::nodesPerElement> basisFunction;
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        // get element nodes
-        nodes = this->mesh->elementNodes(element);
+        // get nodes points of element
+        auto nodes = mesh->elementNodes(element);
 
-        // extract coordinates
-        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
-            nodeCoordinates[node] = std::get<1>(nodes[node]);
-        }
-
-        // calc corresponding basis functions
-        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
-            basisFunction[node] = std::make_shared<basisFunctionType>(
-                nodeCoordinates, node);
+        // extract coordinats of node points of element
+        std::array<std::tuple<dtype::real, dtype::real>,
+            basisFunctionType::nodesPerElement> points;
+        for (dtype::index i = 0; i < points.size(); ++i) {
+            points[i] = std::get<1>(nodes[i]);
         }
 
         // set connectivity and elemental residual matrix elements
@@ -100,33 +89,35 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            auto level = elementCount[std::get<0>(nodes[i])][std::get<0>(nodes[j])];
+            size_t level = elementCount(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
             if (connectivityMatrices.size() <= level) {
-                connectivityMatrices.push_back(std::vector<std::vector<dtype::index>>(
-                    this->mesh->nodes->rows, std::vector<dtype::index>(
-                    this->mesh->nodes->rows, dtype::invalid_index)));
-                elementalSMatrices.push_back(std::vector<std::vector<dtype::real>>(
-                    this->mesh->nodes->rows, std::vector<dtype::real>(
-                    this->mesh->nodes->rows, 0.0)));
-                elementalRMatrices.push_back(std::vector<std::vector<dtype::real>>(
-                    this->mesh->nodes->rows, std::vector<dtype::real>(
-                    this->mesh->nodes->rows, 0.0)));
+                connectivityMatrices.push_back(Eigen::ArrayXXi::Ones(
+                    this->mesh->nodes->rows, this->mesh->nodes->rows)
+                    * dtype::invalid_index);
+                elementalSMatrices.push_back(Eigen::ArrayXXf::Zero(
+                    this->mesh->nodes->rows, this->mesh->nodes->rows));
+                elementalRMatrices.push_back(Eigen::ArrayXXf::Zero(
+                    this->mesh->nodes->rows, this->mesh->nodes->rows));
             }
 
             // set connectivity element
-            connectivityMatrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
+            connectivityMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
                 element;
 
+            // create basis functions
+            auto basisI = std::make_shared<basisFunctionType>(points, i);
+            auto basisJ = std::make_shared<basisFunctionType>(points, j);
+
             // set elemental system element
-            elementalSMatrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
-                basisFunction[i]->integrateGradientWithBasis(basisFunction[j]);
+            elementalSMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                basisI->integrateGradientWithBasis(basisJ);
 
             // set elemental residual element
-            elementalRMatrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])] =
-                basisFunction[i]->integrateWithBasis(basisFunction[j]);
+            elementalRMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
+                basisI->integrateWithBasis(basisJ);
 
             // increment element count
-            elementCount[std::get<0>(nodes[i])][std::get<0>(nodes[j])]++;
+            elementCount(std::get<0>(nodes[i]), std::get<0>(nodes[j]))++;
         }
     }
 
@@ -134,7 +125,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     auto commonElementMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        nodes = this->mesh->elementNodes(element);
+        auto nodes = this->mesh->elementNodes(element);
 
         for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
         for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
@@ -170,16 +161,16 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
         for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
             // get element nodes
-            nodes = this->mesh->elementNodes(element);
+            auto nodes = this->mesh->elementNodes(element);
 
             for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
             for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
                 (*connectivityMatrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                    connectivityMatrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])];
+                    connectivityMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j]));
                 (*elementalSMatrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                    elementalSMatrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])];
+                    elementalSMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j]));
                 (*elementalRMatrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                    elementalRMatrices[level][std::get<0>(nodes[i])][std::get<0>(nodes[j])];
+                    elementalRMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j]));
             }
         }
         connectivityMatrix->copyToDevice(stream);

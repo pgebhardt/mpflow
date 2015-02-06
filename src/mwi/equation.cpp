@@ -45,8 +45,8 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
     // create intermediate matrices
     Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(edges.size(), edges.size());
-    std::array<Eigen::ArrayXXf, 2> connectivityMatrices = {{
-        Eigen::ArrayXXf::Zero(edges.size(), edges.size()), Eigen::ArrayXXf::Zero(edges.size(), edges.size()) }};
+    std::array<Eigen::ArrayXXi, 2> connectivityMatrices = {{
+        Eigen::ArrayXXi::Zero(edges.size(), edges.size()), Eigen::ArrayXXi::Zero(edges.size(), edges.size()) }};
     auto sMatrix = std::make_shared<numeric::Matrix<dtype::real>>(edges.size(), edges.size(), stream);
     std::array<Eigen::ArrayXXf, 2> elementalRMatrices = {{
         Eigen::ArrayXXf::Zero(edges.size(), edges.size()), Eigen::ArrayXXf::Zero(edges.size(), edges.size()) }};
