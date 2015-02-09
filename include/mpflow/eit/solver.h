@@ -30,7 +30,7 @@ namespace EIT {
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<EIT::Equation<basisFunctionType>> equation,
+        Solver(std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType>> equation,
             std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
             dtype::index parallelImages, dtype::real regularizationFactor,
             cublasHandle_t handle, cudaStream_t stream);

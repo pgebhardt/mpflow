@@ -23,25 +23,66 @@
 
 namespace mpFlow {
 namespace FEM {
-namespace equation {
-    // reduce matrix
+    // model class describing an elliptical differential equation
     template <
         class dataType,
-        class shapeDataType
+        class basisFunctionType_
     >
-    void reduceMatrix(const std::shared_ptr<numeric::Matrix<dataType>> intermediateMatrix,
-        const std::shared_ptr<numeric::SparseMatrix<shapeDataType>> shape, dtype::index offset,
-        cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> matrix);
+    class Equation {
+    public:
+        typedef basisFunctionType_ basisFunctionType;
 
-    // update matrix
-    template <
-        class dataType
-    >
-    void updateMatrix(const std::shared_ptr<numeric::Matrix<dataType>> elements,
-        const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-        const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, dataType referenceValue,
-        cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dataType>> matrix);
-}
+        // constructor
+        Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
+            std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor,
+            dataType referenceValue, cudaStream_t stream);
+
+        // init methods
+        void initElementalMatrices(cudaStream_t stream);
+        void initExcitationMatrix(cudaStream_t stream);
+        void initJacobianCalculationMatrix(cudaStream_t stream);
+
+        void calcJacobian(const std::shared_ptr<numeric::Matrix<dataType>> phi,
+            const std::shared_ptr<numeric::Matrix<dataType>> gamma,
+            dtype::size driveCount, dtype::size measurmentCount, bool additiv,
+            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> result);
+
+        void update(const std::shared_ptr<numeric::Matrix<dataType>> gamma,
+            dataType k, cudaStream_t stream);
+
+        // member
+        std::shared_ptr<numeric::IrregularMesh> mesh;
+        std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> sMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> rMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> elementalSMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> elementalRMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
+        dataType referenceValue;
+    };
+
+    namespace equation {
+        // reduce matrix
+        template <
+            class dataType,
+            class shapeDataType
+        >
+        void reduceMatrix(const std::shared_ptr<numeric::Matrix<dataType>> intermediateMatrix,
+            const std::shared_ptr<numeric::SparseMatrix<shapeDataType>> shape, dtype::index offset,
+            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> matrix);
+
+        // update matrix
+        template <
+            class dataType
+        >
+        void updateMatrix(const std::shared_ptr<numeric::Matrix<dataType>> elements,
+            const std::shared_ptr<numeric::Matrix<dataType>> gamma,
+            const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, dataType referenceValue,
+            cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dataType>> matrix);
+    }
 }
 }
 

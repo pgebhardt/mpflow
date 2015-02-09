@@ -24,8 +24,9 @@
 template <
     class basisFunctionType
 >
-mpFlow::EIT::Solver<basisFunctionType>::Solver(std::shared_ptr<mpFlow::EIT::Equation<basisFunctionType>> equation,
-    std::shared_ptr<mpFlow::FEM::SourceDescriptor> source, dtype::index components,
+mpFlow::EIT::Solver<basisFunctionType>::Solver(
+    std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType>> equation,
+    std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
     dtype::index parallelImages, dtype::real regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input

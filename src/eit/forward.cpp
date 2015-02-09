@@ -27,8 +27,9 @@ template <
     template <class, template <class> class> class numericalSolverType
 >
 mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolver(
-    std::shared_ptr<Equation<basisFunctionType>> equation, std::shared_ptr<FEM::SourceDescriptor> source,
-    dtype::index components, cublasHandle_t handle, cudaStream_t stream)
+    std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType>> equation,
+    std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
+    cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
     // check input
     if (equation == nullptr) {
