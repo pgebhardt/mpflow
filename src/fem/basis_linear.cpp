@@ -25,32 +25,32 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::Linear::Linear(
-    std::array<std::tuple<dtype::real, dtype::real>, nodesPerElement> nodes,
+    std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
     dtype::index one)
-    : mpFlow::FEM::basis::Basis<nodesPerEdge, nodesPerElement>(nodes, one) {
+    : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes) {
     // check one
-    if (one >= nodesPerElement) {
+    if (one >= pointsPerElement) {
         throw std::invalid_argument(
-            "mpFlow::FEM::basis::Linear::Linear: one >= nodesPerElement");
+            "mpFlow::FEM::basis::Linear::Linear: one >= pointsPerElement");
     }
 
     // calc coefficients with gauss
-    std::array<std::array<dtype::real, nodesPerElement>, nodesPerElement> A;
-    std::array<dtype::real, nodesPerElement> b;
-    for (dtype::index node = 0; node < nodesPerElement; ++node) {
+    std::array<std::array<dtype::real, pointsPerElement>, pointsPerElement> A;
+    std::array<dtype::real, pointsPerElement> b;
+    for (dtype::index node = 0; node < pointsPerElement; ++node) {
         b[node] = 0.0;
     }
     b[one] = 1.0;
 
     // fill coefficients
-    for (dtype::index node = 0; node < nodesPerElement; ++node) {
+    for (dtype::index node = 0; node < pointsPerElement; ++node) {
         A[node][0] = (1.0);
         A[node][1] = ((1.0)*(std::get<0>(this->nodes[node])));
         A[node][2] = ((1.0)*(std::get<1>(this->nodes[node])));
     }
 
     // calc coefficients
-    this->coefficients = math::gaussElemination<dtype::real, nodesPerElement>(A, b);
+    this->coefficients = math::gaussElemination<dtype::real, pointsPerElement>(A, b);
 }
 
 // evaluate basis function
@@ -91,10 +91,10 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
 
 // integrate edge
 mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
-    std::array<dtype::real, nodesPerEdge> nodes, dtype::index one,
+    std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
     // calc coefficients for basis function
-    std::array<dtype::real, nodesPerEdge> coefficients;
+    std::array<dtype::real, pointsPerEdge> coefficients;
     if (one == 0) {
         coefficients[0] = ({
 ((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));

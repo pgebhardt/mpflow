@@ -40,7 +40,7 @@ mpFlow::FEM::Equation<dataType, basisFunctionType>::Equation(
 
     // init matrices
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
-        this->mesh->elements->rows, math::square(basisFunctionType::nodesPerElement),
+        this->mesh->elements->rows, math::square(basisFunctionType::pointsPerElement),
         stream, 0.0, false);
     this->excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->nodes->rows, this->boundaryDescriptor->count, stream,
@@ -76,14 +76,14 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
 
         // extract coordinats of node points of element
         std::array<std::tuple<dtype::real, dtype::real>,
-            basisFunctionType::nodesPerElement> points;
+            basisFunctionType::pointsPerElement> points;
         for (dtype::index i = 0; i < points.size(); ++i) {
             points[i] = std::get<1>(nodes[i]);
         }
 
         // set connectivity and elemental residual matrix elements
-        for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; i++)
-        for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; j++) {
+        for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; i++)
+        for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
             size_t level = elementCount(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
@@ -124,8 +124,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
         auto nodes = this->mesh->elementNodes(element);
 
-        for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
-        for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
+        for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
+        for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
             (*commonElementMatrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) = 1.0f;
         }
     }
@@ -162,8 +162,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
             // get element nodes
             auto nodes = this->mesh->elementNodes(element);
 
-            for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
-            for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
+            for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
+            for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
                 (*connectivityMatrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
                     connectivityMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j]));
                 (*elementalSMatrix)(std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
@@ -192,7 +192,7 @@ template <
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType>::initExcitationMatrix(cudaStream_t stream) {
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
-    std::array<dtype::real, basisFunctionType::nodesPerEdge> nodeParameter;
+    std::array<dtype::real, basisFunctionType::pointsPerEdge> nodeParameter;
     dtype::real integrationStart, integrationEnd;
 
     // calc excitation matrix
@@ -239,7 +239,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initExcitationMatrix(cu
             // intgrate if integrationStart is left of integrationEnd
             if (integrationStart < integrationEnd) {
                 // calc element
-                for (dtype::index node = 0; node < basisFunctionType::nodesPerEdge; ++node) {
+                for (dtype::index node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
                     (*excitationMatrix)(std::get<0>(nodes[node]), piece) +=
                         basisFunctionType::integrateBoundaryEdge(
                             nodeParameter, node, integrationStart, integrationEnd) /
@@ -261,9 +261,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>
     ::initJacobianCalculationMatrix(cudaStream_t stream) {
     // variables
     std::array<std::tuple<dtype::real, dtype::real>,
-       basisFunctionType::nodesPerElement> nodeCoordinates;
+       basisFunctionType::pointsPerElement> nodeCoordinates;
     std::array<std::shared_ptr<basisFunctionType>,
-        basisFunctionType::nodesPerElement> basisFunction;
+        basisFunctionType::pointsPerElement> basisFunction;
 
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
@@ -273,22 +273,22 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>
         auto nodes = this->mesh->elementNodes(element);
 
         // extract nodes coordinates
-        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
+        for (dtype::index node = 0; node < basisFunctionType::pointsPerElement; ++node) {
             nodeCoordinates[node] = std::get<1>(nodes[node]);
         }
 
         // calc corresponding basis functions
-        for (dtype::index node = 0; node < basisFunctionType::nodesPerElement; ++node) {
+        for (dtype::index node = 0; node < basisFunctionType::pointsPerElement; ++node) {
             basisFunction[node] = std::make_shared<basisFunctionType>(
                 nodeCoordinates, node);
         }
 
         // fill matrix
-        for (dtype::index i = 0; i < basisFunctionType::nodesPerElement; ++i)
-        for (dtype::index j = 0; j < basisFunctionType::nodesPerElement; ++j) {
+        for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
+        for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i +
-                j * basisFunctionType::nodesPerElement) =
+                j * basisFunctionType::pointsPerElement) =
                 basisFunction[i]->integrateGradientWithBasis(basisFunction[j]);
         }
     }
@@ -343,7 +343,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::calcJacobian(
     dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
 
     // calc jacobian
-    FEM::equationKernel::calcJacobian<basisFunctionType::nodesPerElement>(blocks, threads, stream,
+    FEM::equationKernel::calcJacobian<basisFunctionType::pointsPerElement>(blocks, threads, stream,
         phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
         this->mesh->elements->deviceData, this->elementalJacobianMatrix->deviceData,
         gamma->deviceData, this->referenceValue, jacobian->dataRows, jacobian->dataCols,

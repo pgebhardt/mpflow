@@ -47,7 +47,7 @@ def main():
             boundary_function=lambda p, c: c[0] + p * c[1] + c[2] * p ** 2,
             ), template),
         ]
-    basises = []
+    basises = nodeBasises
     basises.append((EdgeBasis(nodeBasises[0][0]), edgeTemplate))
 
     # render basis functions
