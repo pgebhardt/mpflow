@@ -118,7 +118,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
                 (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0])));
 
         // update system matrix for different 2.5D components
-        this->equation->update(gamma, alpha, stream);
+        this->equation->update(gamma, alpha, gamma, stream);
 
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
             forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
@@ -141,7 +141,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
         // calculate electrode voltage or current, depends on the type of source
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
-            this->equation->update(gamma, alpha, stream);
+            this->equation->update(gamma, alpha, gamma, stream);
 
             this->excitation->multiply(this->equation->systemMatrix,
                 this->phi[component], handle, stream);

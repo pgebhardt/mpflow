@@ -50,10 +50,10 @@ mpFlow::FEM::Equation<dataType, basisFunctionType>::Equation(
     this->initExcitationMatrix(stream);
     this->initJacobianCalculationMatrix(stream);
 
-    // update ellipticalEquation
-    auto gamma = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements->rows, 1,
-        stream, 0.0, false);
-    this->update(gamma, 0.0, stream);
+    // update equation
+    auto alpha = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements->rows,
+        1, stream, 0.0, false);
+    this->update(alpha, 0.0, alpha, stream);
 }
 
 // init elemental matrices
@@ -303,11 +303,12 @@ template <
     class basisFunctionType
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType>::update(
-    const std::shared_ptr<numeric::Matrix<dataType>> gamma, dataType k, cudaStream_t stream) {
+    const std::shared_ptr<numeric::Matrix<dataType>> alpha, const dataType k,
+    const std::shared_ptr<numeric::Matrix<dataType>> beta, cudaStream_t stream) {
     // update matrices
-    FEM::equation::updateMatrix(this->elementalSMatrix, gamma, this->connectivityMatrix,
+    FEM::equation::updateMatrix(this->elementalSMatrix, alpha, this->connectivityMatrix,
         this->referenceValue, stream, this->sMatrix);
-    FEM::equation::updateMatrix(this->elementalRMatrix, gamma, this->connectivityMatrix,
+    FEM::equation::updateMatrix(this->elementalRMatrix, beta, this->connectivityMatrix,
         this->referenceValue, stream, this->rMatrix);
 
     // update system matrix
