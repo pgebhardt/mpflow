@@ -159,7 +159,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initExcitationMatrix(cu
 
         // sort nodes by parameter
         std::vector<std::tuple<dtype::real, dtype::real>> nodes(points.rows());
-        for (dtype::index i = 0; i < points.rows(); ++i) {
+        for (typename decltype(points)::Index i = 0; i < points.rows(); ++i) {
             nodes[i] = std::make_tuple(points(i, 0), points(i, 1));
         }
         std::sort(nodes.begin(), nodes.end(),
