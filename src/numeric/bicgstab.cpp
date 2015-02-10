@@ -140,8 +140,8 @@ void mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
             this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
-            for (dtype::index i = 0; i < this->roh->cols; ++i) {
-                if (abs(sqrt((*this->roh)(0, i))) >= tolerance) {
+            for (dtype::index i = 0; i < this->error->cols; ++i) {
+                if (abs(sqrt((*this->error)(0, i))) >= tolerance) {
                     break;
                 }
                 return;
