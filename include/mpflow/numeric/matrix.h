@@ -29,10 +29,12 @@ namespace numeric {
 
     // matrix class definition
     template <
-        class type = dtype::real
+        class type_ = dtype::real
     >
     class Matrix {
     public:
+        typedef type_ type;
+
         // constructor and destructor
         Matrix(dtype::size rows, dtype::size cols, cudaStream_t stream=nullptr,
             type value=0, bool allocateHostMemory=true);

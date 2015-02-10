@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::${name}::${name}(
-    std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
+    Eigen::ArrayXXf nodes,
     dtype::index one)
     : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes) {
     // check one
@@ -35,22 +35,19 @@ mpFlow::FEM::basis::${name}::${name}(
     }
 
     // calc coefficients with gauss
-    std::array<std::array<dtype::real, pointsPerElement>, pointsPerElement> A;
-    std::array<dtype::real, pointsPerElement> b;
-    for (dtype::index node = 0; node < pointsPerElement; ++node) {
-        b[node] = 0.0;
-    }
-    b[one] = 1.0;
+    Eigen::ArrayXXf A = Eigen::ArrayXXf::Zero(pointsPerElement, pointsPerElement);
+    Eigen::ArrayXf b = Eigen::ArrayXf::Zero(pointsPerElement);
+    b(one) = 1.0;
 
     // fill coefficients
     for (dtype::index node = 0; node < pointsPerElement; ++node) {
 % for i in range(len(coefficients)):
-        A[node][${i}] = ${coefficients[i]};
+        A(node, ${i}) = ${coefficients[i]};
 % endfor
     }
 
     // calc coefficients
-    this->coefficients = math::gaussElemination<dtype::real, pointsPerElement>(A, b);
+    this->coefficients = math::gaussElemination(A, b);
 }
 
 // evaluate basis function
@@ -64,14 +61,14 @@ ${integrateGradientWithBasis}
 
 // integrate edge
 mpFlow::dtype::real mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
-    std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
+    Eigen::ArrayXf nodes, dtype::index one,
     dtype::real start, dtype::real end) {
     // calc coefficients for basis function
-    std::array<dtype::real, pointsPerEdge> coefficients;
+    Eigen::ArrayXf coefficients = Eigen::ArrayXf::Zero(pointsPerEdge);
 % for i in range(len(boundaryCoefficiens)):
     if (one == ${i}) {
     % for j in range(len(boundaryCoefficiens[i])):
-        coefficients[${j}] = ${boundaryCoefficiens[i][j].expand()};
+        coefficients(${j}) = ${boundaryCoefficiens[i][j].expand()};
     % endfor
     }
 % endfor

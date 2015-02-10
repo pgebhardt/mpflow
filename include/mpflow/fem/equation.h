@@ -60,7 +60,7 @@ namespace FEM {
         std::shared_ptr<numeric::SparseMatrix<dataType>> rMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalSMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalRMatrix;
-        std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
         dataType referenceValue;
     };
@@ -68,12 +68,13 @@ namespace FEM {
     namespace equation {
         // reduce matrix
         template <
-            class dataType,
-            class shapeDataType
+            class inputType,
+            class shapeType,
+            class outputType
         >
-        void reduceMatrix(const std::shared_ptr<numeric::Matrix<dataType>> intermediateMatrix,
-            const std::shared_ptr<numeric::SparseMatrix<shapeDataType>> shape, dtype::index offset,
-            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> matrix);
+        void reduceMatrix(const std::shared_ptr<numeric::Matrix<inputType>> intermediateMatrix,
+            const std::shared_ptr<numeric::SparseMatrix<shapeType>> shape, dtype::index offset,
+            cudaStream_t stream, std::shared_ptr<numeric::Matrix<outputType>> matrix);
 
         // update matrix
         template <

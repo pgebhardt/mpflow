@@ -47,56 +47,42 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(std::shared_ptr<numeric::Matrix<dt
     }
 }
 
-std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
-    mpFlow::dtype::real>>>
+std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf>
     mpFlow::numeric::IrregularMesh::elementNodes(dtype::index element) {
-    // result array
-    std::vector<std::tuple<dtype::index,
-        std::tuple<dtype::real, dtype::real>>> result(
-        this->elements->cols);
+    // initialize output arrays
+    Eigen::ArrayXi indices = Eigen::ArrayXi::Zero(this->elements->cols);
+    Eigen::ArrayXXf coordinates = Eigen::ArrayXXf::Zero(this->elements->cols, 2);
 
     // get node index and coordinate
-    dtype::index index = dtype::invalid_index;
-    std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
     for (dtype::index node = 0; node < this->elements->cols; ++node) {
         // get index
-        index = (*this->elements)(element, node);
+        indices(node) = (*this->elements)(element, node);
 
         // get coordinates
-        coordinates = std::make_tuple((*this->nodes)(index, 0),
-            (*this->nodes)(index, 1));
-
-        // add to array
-        result[node] = std::make_tuple(index, coordinates);
+        coordinates(node, 0) = (*this->nodes)(indices(node), 0);
+        coordinates(node, 1) = (*this->nodes)(indices(node), 1);
     }
 
-    return result;
+    return std::make_tuple(indices, coordinates);
 }
 
-std::vector<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::real,
-    mpFlow::dtype::real>>>
+std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf>
     mpFlow::numeric::IrregularMesh::boundaryNodes(dtype::index element) {
-    // result vector
-    std::vector<std::tuple<dtype::index,
-        std::tuple<dtype::real, dtype::real>>> result(
-        this->boundary->cols);
+    // initialize output arrays
+    Eigen::ArrayXi indices = Eigen::ArrayXi::Zero(this->boundary->cols);
+    Eigen::ArrayXXf coordinates = Eigen::ArrayXXf::Zero(this->boundary->cols, 2);
 
     // get node index and coordinate
-    dtype::index index = -1;
-    std::tuple<dtype::real, dtype::real> coordinates = std::make_tuple(0.0f, 0.0f);
     for (dtype::index node = 0; node < this->boundary->cols; ++node) {
         // get index
-        index = (*this->boundary)(element, node);
+        indices(node) = (*this->boundary)(element, node);
 
         // get coordinates
-        coordinates = std::make_tuple((*this->nodes)(index, 0),
-            (*this->nodes)(index, 1));
-
-        // add to array
-        result[node] = std::make_tuple(index, coordinates);
+        coordinates(node, 0) = (*this->nodes)(indices(node), 0);
+        coordinates(node, 1) = (*this->nodes)(indices(node), 1);
     }
 
-    return result;
+    return std::make_tuple(indices, coordinates);
 }
 
 // create mesh for quadratic basis function

@@ -25,13 +25,13 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::${name}::${name} (
-    std::array<std::tuple<dtype::real, dtype::real>, Linear::pointsPerElement> nodes,
+    Eigen::ArrayXXf nodes,
     std::tuple<dtype::index, dtype::index> edge) :
     mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes),
     nodeBasis({{ Linear(nodes, std::get<0>(edge)), Linear(nodes, std::get<1>(edge)) }}) {
     // calculate length of edge
-    this->length = sqrt(math::square(std::get<0>(nodes[std::get<1>(edge)]) - std::get<0>(nodes[std::get<0>(edge)])) +
-                        math::square(std::get<1>(nodes[std::get<1>(edge)]) - std::get<1>(nodes[std::get<0>(edge)])));
+    this->length = sqrt(math::square(nodes(std::get<1>(edge), 0) - nodes(std::get<0>(edge), 0)) +
+                        math::square(nodes(std::get<1>(edge), 1) - nodes(std::get<0>(edge), 1)));
 }
 
 // evaluate basis function

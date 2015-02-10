@@ -54,14 +54,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
-
-        // extract coordinats of node points of element
-        std::array<std::tuple<dtype::real, dtype::real>, 3> points;
-        dtype::index i = 0;
-        for (const auto& point : mesh->elementNodes(element)) {
-            points[i] = std::get<1>(point);
-            i++;
-        }
+        auto points = std::get<1>(mesh->elementNodes(element));
 
         // set connectivity and elemental residual matrix elements
         for (dtype::index i = 0; i < 3; i++)
@@ -105,53 +98,29 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
-    auto connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        connectivityMatrices[0].rows(), connectivityMatrices[0].cols(), stream,
-        dtype::invalid_index);
-    auto elementalRMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(
-        elementalRMatrices[0].rows(), elementalRMatrices[0].cols(), stream);
-
     for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
-        for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-            auto localEdges = std::get<1>(globalEdgeIndex)[element];
-
-            for (dtype::index i = 0; i < 3; ++i)
-            for (dtype::index j = 0; j < 3; ++j) {
-                (*connectivityMatrix)(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
-                    connectivityMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
-                (*elementalRMatrix)(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
-                    elementalRMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
-            }
-        }
-        connectivityMatrix->copyToDevice(stream);
-        elementalRMatrix->copyToDevice(stream);
-        cudaStreamSynchronize(stream);
+        // convert eigen array to mpFlow matrix and reduce to sparse format
+        auto connectivityMatrix = numeric::matrix::fromEigen<dtype::index, Eigen::ArrayXXi::Scalar>(connectivityMatrices[level], stream);
+        auto elementalRMatrix = numeric::matrix::fromEigen<dtype::real, dtype::real>(elementalRMatrices[level], stream);
 
         FEM::equation::reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
             this->connectivityMatrix);
         FEM::equation::reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
             this->elementalRMatrix);
+        cudaStreamSynchronize(stream);
     }
 }
 
 void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
     // calculate indices of unique mesh edges
-    auto globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-    auto edges = std::get<0>(globalEdgeIndex);
+    auto localEdgeIndices = std::get<1>(numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements));
 
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        auto localEdges = std::get<1>(globalEdgeIndex)[element];
-
-        // extract coordinats of node points of element
-        std::array<std::tuple<dtype::real, dtype::real>, 3> points;
-        dtype::index i = 0;
-        for (const auto& point : mesh->elementNodes(element)) {
-            points[i] = std::get<1>(point);
-            i++;
-        }
+        auto localEdges = localEdgeIndices[element];
+        auto points = std::get<1>(mesh->elementNodes(element));
 
         // fill matrix
         for (dtype::index i = 0; i < 3; ++i)

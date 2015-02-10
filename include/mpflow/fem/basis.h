@@ -33,12 +33,9 @@ namespace basis {
     class Basis {
     // constructor and destructor
     protected:
-        Basis(std::array<std::tuple<dtype::real, dtype::real>, _pointsPerElement> points)
-            : nodes(points) {
-            for (auto& coefficient : this->coefficients) {
-                coefficient = 0.0f;
-            }
-        }
+        Basis(Eigen::ArrayXXf points)
+            : nodes(points), coefficients(Eigen::ArrayXf::Zero(points.rows()))
+            { }
 
         virtual ~Basis() { }
 
@@ -48,57 +45,56 @@ namespace basis {
         static const dtype::size pointsPerElement = _pointsPerElement;
 
         // member
-        std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes;
-        std::array<dtype::real, pointsPerElement> coefficients;
+        Eigen::ArrayXXf nodes;
+        Eigen::ArrayXf coefficients;
     };
 
     // linear basis class definition
     class Linear : public Basis<2, 3> {
     public:
         // constructor
-        Linear(std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
-            dtype::index one);
+        Linear(Eigen::ArrayXXf nodes, dtype::index one);
 
         // mathematical evaluation of basis
         dtype::real integrateWithBasis(const std::shared_ptr<Linear> other);
         dtype::real integrateGradientWithBasis(const std::shared_ptr<Linear> other);
-        static dtype::real integrateBoundaryEdge(
-            std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
-            dtype::real start, dtype::real end);
+        static dtype::real integrateBoundaryEdge(Eigen::ArrayXf nodes,
+            dtype::index one, dtype::real start, dtype::real end);
 
         // evaluation
-        dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
+        dtype::real evaluate(Eigen::ArrayXf point);
     };
 
     // quadratic basis class definition
     class Quadratic : public Basis<3, 6> {
     public:
         // constructor
-        Quadratic(std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
-            dtype::index one);
+        Quadratic(Eigen::ArrayXXf nodes, dtype::index one);
 
         // mathematical evaluation of basis
         dtype::real integrateWithBasis(const std::shared_ptr<Quadratic> other);
         dtype::real integrateGradientWithBasis(const std::shared_ptr<Quadratic> other);
-        static dtype::real integrateBoundaryEdge(
-            std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
-            dtype::real start, dtype::real end);
+        static dtype::real integrateBoundaryEdge(Eigen::ArrayXf nodes,
+            dtype::index one, dtype::real start, dtype::real end);
 
         // evaluation
-        dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
+        dtype::real evaluate(Eigen::ArrayXf point);
     };
 
     // edge bases basis function definition
     class Edge : public Basis<1, 3> {
     public:
         // constructor
-        Edge(std::array<std::tuple<dtype::real, dtype::real>, Linear::pointsPerElement> nodes,
-            std::tuple<dtype::index, dtype::index> edge);
+        Edge(Eigen::ArrayXXf nodes, std::tuple<dtype::index, dtype::index> edge);
 
         // mathematical evaluation of basis
         dtype::real integrateWithBasis(const std::shared_ptr<Edge> other);
         dtype::real integrateGradientWithBasis(const std::shared_ptr<Edge> other);
-        std::tuple<dtype::real, dtype::real> evaluate(std::tuple<dtype::real, dtype::real> point);
+        static dtype::real integrateBoundaryEdge(Eigen::ArrayXf nodes, dtype::index one,
+            dtype::real start, dtype::real end);
+
+        // evaluation
+        std::tuple<dtype::real, dtype::real> evaluate(Eigen::ArrayXf point);
 
         // member
         std::array<Linear, 2> nodeBasis;

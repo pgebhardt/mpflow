@@ -34,10 +34,8 @@ namespace numeric {
             dtype::real height);
 
         // helper methods
-        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
-            elementNodes(dtype::index element);
-        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
-            boundaryNodes(dtype::index element);
+        std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf> elementNodes(dtype::index element);
+        std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf> boundaryNodes(dtype::index element);
 
         // member
         std::shared_ptr<Matrix<dtype::real>> nodes;
