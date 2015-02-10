@@ -48,5 +48,6 @@ fasteit = sconshelper.Library(name='mpflow', env=env, arguments=ARGUMENTS,
         ],
     CPPDEFINES={
         'GIT_VERSION': version,
+        'MPFLOW_REAL_TYPE_DOUBLE': None,
         },
     )

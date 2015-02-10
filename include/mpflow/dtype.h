@@ -25,8 +25,12 @@
 namespace mpFlow {
 namespace dtype {
     // basic scalar types
-    typedef unsigned int size;
+#ifndef MPFLOW_REAL_TYPE_DOUBLE
+    typedef float real;
+#else
     typedef double real;
+#endif
+    typedef unsigned int size;
     typedef thrust::complex<real> complex;
     typedef unsigned int index;
 
