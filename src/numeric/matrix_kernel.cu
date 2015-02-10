@@ -62,6 +62,9 @@ template void mpFlow::numeric::matrixKernel::fill<mpFlow::dtype::complex>(
 template void mpFlow::numeric::matrixKernel::fill<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index,
     mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::fill<int>(
+    dim3, dim3, cudaStream_t, const int,
+    mpFlow::dtype::size, int*);
 
 // add kernel
 template <
@@ -98,6 +101,9 @@ template void mpFlow::numeric::matrixKernel::add<mpFlow::dtype::complex>(
 template void mpFlow::numeric::matrixKernel::add<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::add<int>(
+    dim3, dim3, cudaStream_t, const int*,
+    mpFlow::dtype::size, int*);
 
 // scale kernel
 template <
@@ -134,6 +140,9 @@ template void mpFlow::numeric::matrixKernel::scale<mpFlow::dtype::complex>(
 template void mpFlow::numeric::matrixKernel::scale<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, mpFlow::dtype::index, mpFlow::dtype::size,
     mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::scale<int>(
+    dim3, dim3, cudaStream_t, int, mpFlow::dtype::size,
+    int*);
 
 // elementwise multiply kernel
 template <
@@ -173,6 +182,9 @@ template void mpFlow::numeric::matrixKernel::elementwiseMultiply<mpFlow::dtype::
 template void mpFlow::numeric::matrixKernel::elementwiseMultiply<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::elementwiseMultiply<int>(
+    dim3, dim3, cudaStream_t, const int*,
+    const int*, mpFlow::dtype::size, int*);
 
 // elementwise division kernel
 template <
@@ -212,6 +224,9 @@ template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::
 template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::index>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::elementwiseDivision<int>(
+    dim3, dim3, cudaStream_t, const int*,
+    const int*, mpFlow::dtype::size, int*);
 
 // sum kernel
 template <
@@ -314,6 +329,9 @@ template void mpFlow::numeric::matrixKernel::sum<mpFlow::dtype::complex>(dim3, d
 template void mpFlow::numeric::matrixKernel::sum<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::sum<int>(dim3, dim3,
+    cudaStream_t, const int*, mpFlow::dtype::size,
+    mpFlow::dtype::size, int*);
 
 // min kernel
 template <
@@ -362,6 +380,9 @@ template void mpFlow::numeric::matrixKernel::min<mpFlow::dtype::real>(dim3, dim3
 template void mpFlow::numeric::matrixKernel::min<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::min<int>(dim3, dim3,
+    cudaStream_t, const int*, mpFlow::dtype::size,
+    mpFlow::dtype::size, int*);
 
 // max kernel
 template <
@@ -410,3 +431,6 @@ template void mpFlow::numeric::matrixKernel::max<mpFlow::dtype::real>(dim3, dim3
 template void mpFlow::numeric::matrixKernel::max<mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::max<int>(dim3, dim3,
+    cudaStream_t, const int*, mpFlow::dtype::size,
+    mpFlow::dtype::size, int*);

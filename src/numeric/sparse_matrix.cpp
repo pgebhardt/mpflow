@@ -174,3 +174,4 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<
 template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::real>;
 template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::complex>;
 template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::index>;
+template class mpFlow::numeric::SparseMatrix<Eigen::ArrayXXi::Scalar>;

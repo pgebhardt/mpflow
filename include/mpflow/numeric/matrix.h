@@ -144,7 +144,7 @@ namespace numeric {
             class eigen_type
         >
         std::shared_ptr<Matrix<mpflow_type>> fromEigen(
-            const Eigen::Ref<Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic>>& array,
+            Eigen::Ref<const Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic>> array,
             cudaStream_t stream=nullptr);
     }
 }

@@ -134,30 +134,14 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
         commonElementMatrix, stream);
 
     // create elemental matrices
-    this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        this->mesh->nodes->rows, numeric::sparseMatrix::block_size * connectivityMatrices.size(),
-        stream, dtype::invalid_index, false);
-    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes->rows,
-        numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream, false);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes->rows,
-        numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream, false);
+    this->connectivityMatrix = equation::reduceMatrix<dtype::index>(
+        connectivityMatrices, this->sMatrix, stream);
+    this->elementalSMatrix = equation::reduceMatrix<dataType>(
+        elementalSMatrices, this->sMatrix, stream);
+    this->elementalRMatrix = equation::reduceMatrix<dataType>(
+        elementalRMatrices, this->sMatrix, stream);
 
-    // store all elemental matrices in one matrix for each type in a sparse
-    // matrix like format
-    for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
-        // convert eigen array to mpFlow matrix and reduce to sparse format
-        auto connectivityMatrix = numeric::matrix::fromEigen<dtype::index, Eigen::ArrayXXi::Scalar>(connectivityMatrices[level], stream);
-        auto elementalSMatrix = numeric::matrix::fromEigen<dtype::real, dtype::real>(elementalSMatrices[level], stream);
-        auto elementalRMatrix = numeric::matrix::fromEigen<dtype::real, dtype::real>(elementalRMatrices[level], stream);
-
-        FEM::equation::reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
-            this->connectivityMatrix);
-        FEM::equation::reduceMatrix(elementalSMatrix, this->sMatrix, level, stream,
-            this->elementalSMatrix);
-        FEM::equation::reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
-            this->elementalRMatrix);
-        cudaStreamSynchronize(stream);
-    }
+    cudaStreamSynchronize(stream);
 }
 
 template <
@@ -315,33 +299,40 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::calcJacobian(
 
 // reduce matrix
 template <
+    class outputType,
     class inputType,
-    class shapeType,
-    class outputType
+    class shapeType
 >
-void mpFlow::FEM::equation::reduceMatrix(
-    const std::shared_ptr<numeric::Matrix<inputType>> intermediateMatrix,
-    const std::shared_ptr<numeric::SparseMatrix<shapeType>> shape, dtype::index offset,
-    cudaStream_t stream, std::shared_ptr<numeric::Matrix<outputType>> matrix) {
+std::shared_ptr<mpFlow::numeric::Matrix<outputType>> mpFlow::FEM::equation::reduceMatrix(
+    const std::vector<Eigen::Array<inputType, Eigen::Dynamic, Eigen::Dynamic>>& intermediateMatrices,
+    const std::shared_ptr<numeric::SparseMatrix<shapeType>> shapeMatrix, cudaStream_t stream) {
     // check input
-    if (intermediateMatrix == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::equation::reduceMatrix: intermediateMatrix == nullptr");
-    }
-    if (shape == nullptr) {
+    if (shapeMatrix == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::equation::reduceMatrix: shape == nullptr");
     }
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::equation::reduceMatrix: matrix == nullptr");
+
+    // create output matrix
+    auto outputMatrix = std::make_shared<numeric::Matrix<outputType>>(
+        shapeMatrix->rows, numeric::sparseMatrix::block_size * intermediateMatrices.size(),
+        stream, outputType(), false);
+
+    // store all elemental matrices in one matrix for each type in a sparse
+    // matrix like format
+    for (dtype::index level = 0; level < intermediateMatrices.size(); ++level) {
+        // convert eigen array to mpFlow matrix and reduce to sparse format
+        auto levelMatrix = numeric::matrix::fromEigen<inputType, inputType>(intermediateMatrices[level], stream);
+
+        // block size
+        dim3 blocks(outputMatrix->dataRows / numeric::matrix::block_size, 1);
+        dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
+
+        // reduce matrix
+        FEM::equationKernel::reduceMatrix(blocks, threads, stream,
+            levelMatrix->deviceData, shapeMatrix->columnIds, outputMatrix->dataRows,
+            level, outputMatrix->deviceData);
     }
 
-    // block size
-    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
-    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-
-    // reduce matrix
-    FEM::equationKernel::reduceMatrix(blocks, threads, stream,
-        intermediateMatrix->deviceData, shape->columnIds, matrix->dataRows,
-        offset, matrix->deviceData);
+    return outputMatrix;
 }
 
 // update matrix
@@ -378,22 +369,22 @@ void mpFlow::FEM::equation::updateMatrix(
 }
 
 // specialisation
-template void mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, mpFlow::dtype::real, mpFlow::dtype::index>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
-template void mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, mpFlow::dtype::complex, mpFlow::dtype::index>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::complex>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::index>>);
-template void mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::real, mpFlow::dtype::real, mpFlow::dtype::real>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::real>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>);
-template void mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::real, mpFlow::dtype::complex, mpFlow::dtype::complex>(
-    const std::shared_ptr<numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<numeric::SparseMatrix<dtype::complex>>, mpFlow::dtype::index, cudaStream_t,
-    std::shared_ptr<numeric::Matrix<mpFlow::dtype::complex>>);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
+    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::real, mpFlow::dtype::real, mpFlow::dtype::real>(
+    const std::vector<Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>>&,
+    const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::real>>, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
+    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, Eigen::ArrayXXi::Scalar, mpFlow::dtype::real>(
+    const std::vector<Eigen::Array<Eigen::ArrayXXi::Scalar, Eigen::Dynamic, Eigen::Dynamic>>&,
+    const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::real>>, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>
+    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::complex, mpFlow::dtype::real, mpFlow::dtype::complex>(
+    const std::vector<Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>>&,
+    const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::complex>>, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
+    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, Eigen::ArrayXXi::Scalar, mpFlow::dtype::complex>(
+    const std::vector<Eigen::Array<Eigen::ArrayXXi::Scalar, Eigen::Dynamic, Eigen::Dynamic>>&,
+    const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::complex>>, cudaStream_t);
 
 template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::real>(
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,

@@ -45,11 +45,11 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
     // create intermediate matrices
     Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(edges.size(), edges.size());
-    std::array<Eigen::ArrayXXi, 2> connectivityMatrices = {{
-        Eigen::ArrayXXi::Zero(edges.size(), edges.size()), Eigen::ArrayXXi::Zero(edges.size(), edges.size()) }};
+    std::vector<Eigen::ArrayXXi> connectivityMatrices = {
+        Eigen::ArrayXXi::Zero(edges.size(), edges.size()), Eigen::ArrayXXi::Zero(edges.size(), edges.size()) };
     auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(), edges.size(), stream);
-    std::array<Eigen::ArrayXXf, 2> elementalRMatrices = {{
-        Eigen::ArrayXXf::Zero(edges.size(), edges.size()), Eigen::ArrayXXf::Zero(edges.size(), edges.size()) }};
+    std::vector<Eigen::ArrayXXf> elementalRMatrices = {
+        Eigen::ArrayXXf::Zero(edges.size(), edges.size()), Eigen::ArrayXXf::Zero(edges.size(), edges.size()) };
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
@@ -90,25 +90,12 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
         sMatrix, stream);
 
     // create elemental matrices
-    this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        edges.size(),numeric::sparseMatrix::block_size * connectivityMatrices.size(),
-        stream, dtype::invalid_index);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(),
-        numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
+    this->connectivityMatrix = FEM::equation::reduceMatrix<dtype::index>(
+        connectivityMatrices, this->sMatrix, stream);
+    this->elementalRMatrix = FEM::equation::reduceMatrix<dtype::complex>(
+        elementalRMatrices, this->sMatrix, stream);
 
-    // store all elemental matrices in one matrix for each type in a sparse
-    // matrix like format
-    for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
-        // convert eigen array to mpFlow matrix and reduce to sparse format
-        auto connectivityMatrix = numeric::matrix::fromEigen<dtype::index, Eigen::ArrayXXi::Scalar>(connectivityMatrices[level], stream);
-        auto elementalRMatrix = numeric::matrix::fromEigen<dtype::real, dtype::real>(elementalRMatrices[level], stream);
-
-        FEM::equation::reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
-            this->connectivityMatrix);
-        FEM::equation::reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
-            this->elementalRMatrix);
-        cudaStreamSynchronize(stream);
-    }
+    cudaStreamSynchronize(stream);
 }
 
 void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {

@@ -68,13 +68,13 @@ namespace FEM {
     namespace equation {
         // reduce matrix
         template <
+            class outputType,
             class inputType,
-            class shapeType,
-            class outputType
+            class shapeType
         >
-        void reduceMatrix(const std::shared_ptr<numeric::Matrix<inputType>> intermediateMatrix,
-            const std::shared_ptr<numeric::SparseMatrix<shapeType>> shape, dtype::index offset,
-            cudaStream_t stream, std::shared_ptr<numeric::Matrix<outputType>> matrix);
+        std::shared_ptr<numeric::Matrix<outputType>> reduceMatrix(
+            const std::vector<Eigen::Array<inputType, Eigen::Dynamic, Eigen::Dynamic>>& intermediateMatrices,
+            const std::shared_ptr<numeric::SparseMatrix<shapeType>> shapeMatrix, cudaStream_t stream);
 
         // update matrix
         template <

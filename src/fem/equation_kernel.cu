@@ -80,6 +80,9 @@ template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::real, mpF
 template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::index, mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
+template void mpFlow::FEM::equationKernel::reduceMatrix<int, mpFlow::dtype::index>(dim3, dim3,
+    cudaStream_t, const int*, const mpFlow::dtype::index*,
+    mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
 
 // update matrix kernel
 template <
