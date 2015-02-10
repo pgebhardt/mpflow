@@ -154,7 +154,7 @@ class Basis(object):
                 ['point({})'.format(i) for i in range(2)],
                 this_coefficients,
                 dtype='mpFlow::dtype::real',
-                custom_args=['Eigen::ArrayXf point'],
+                custom_args=['Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point'],
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
                 ),
 
@@ -251,7 +251,7 @@ class EdgeBasis(object):
                 ['point({})'.format(i) for i in range(2)],
                 'this->length', ci1, ci2,
                 dtype='std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>',
-                custom_args=['Eigen::ArrayXf point'],
+                custom_args=['Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point'],
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
                 ),
 

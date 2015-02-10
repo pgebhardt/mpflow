@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::${name}::${name}(
-    Eigen::ArrayXXf nodes,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> nodes,
     dtype::index one)
     : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes) {
     // check one
@@ -35,8 +35,9 @@ mpFlow::FEM::basis::${name}::${name}(
     }
 
     // calc coefficients with gauss
-    Eigen::ArrayXXf A = Eigen::ArrayXXf::Zero(pointsPerElement, pointsPerElement);
-    Eigen::ArrayXf b = Eigen::ArrayXf::Zero(pointsPerElement);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> A = Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>
+        ::Zero(pointsPerElement, pointsPerElement);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> b = Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1>::Zero(pointsPerElement);
     b(one) = 1.0;
 
     // fill coefficients
@@ -61,10 +62,10 @@ ${integrateGradientWithBasis}
 
 // integrate edge
 mpFlow::dtype::real mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
-    Eigen::ArrayXf nodes, dtype::index one,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
     // calc coefficients for basis function
-    Eigen::ArrayXf coefficients = Eigen::ArrayXf::Zero(pointsPerEdge);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> coefficients = Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1>::Zero(pointsPerEdge);
 % for i in range(len(boundaryCoefficiens)):
     if (one == ${i}) {
     % for j in range(len(boundaryCoefficiens[i])):

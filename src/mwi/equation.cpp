@@ -44,12 +44,12 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     auto edges = std::get<0>(globalEdgeIndex);
 
     // create intermediate matrices
-    Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(edges.size(), edges.size());
-    std::vector<Eigen::ArrayXXi> connectivityMatrices = {
-        Eigen::ArrayXXi::Zero(edges.size(), edges.size()), Eigen::ArrayXXi::Zero(edges.size(), edges.size()) };
+    Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> elementCount =
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(this->mesh->nodes->rows,
+        this->mesh->nodes->rows);
+    std::vector<Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> connectivityMatrices;
+    std::vector<Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>> elementalRMatrices;
     auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(), edges.size(), stream);
-    std::vector<Eigen::ArrayXXf> elementalRMatrices = {
-        Eigen::ArrayXXf::Zero(edges.size(), edges.size()), Eigen::ArrayXXf::Zero(edges.size(), edges.size()) };
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
@@ -59,8 +59,16 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
         // set connectivity and elemental residual matrix elements
         for (dtype::index i = 0; i < 3; i++)
         for (dtype::index j = 0; j < 3; j++) {
-            // get current element count
-            auto level = elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+            // get current element count and add new intermediate matrices if 
+            // neccessary
+            size_t level = elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+            if (connectivityMatrices.size() <= level) {
+                connectivityMatrices.push_back(Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>
+                    ::Ones(this->mesh->nodes->rows, this->mesh->nodes->rows)
+                    * dtype::invalid_index);
+                elementalRMatrices.push_back(Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>
+                    ::Zero(this->mesh->nodes->rows, this->mesh->nodes->rows));
+            }
 
             // set connectivity element
             connectivityMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =

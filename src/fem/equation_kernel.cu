@@ -80,9 +80,6 @@ template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::real, mpF
 template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::index, mpFlow::dtype::index>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
     mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
-template void mpFlow::FEM::equationKernel::reduceMatrix<int, mpFlow::dtype::index>(dim3, dim3,
-    cudaStream_t, const int*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
 
 // update matrix kernel
 template <
@@ -105,7 +102,8 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 
         value += elementId != mpFlow::dtype::invalid_index ?
             elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
-            referenceValue * exp(log(10.0f) * gamma[elementId] / 10.0f) : 0.0f;
+            referenceValue * exp(log((mpFlow::dtype::real)10.0) * gamma[elementId] / (mpFlow::dtype::real)10.0) :
+            (mpFlow::dtype::real)0.0;
     }
 
     // set residual matrix element
@@ -238,7 +236,7 @@ static __global__ void calcJacobianKernel(const dataType* drivePhi,
     }
 
     // diff sigma to gamma
-    element *= referenceValue * exp(log(10.0f) * factor[column] / 10.0f) / 10.0f;
+    element *= referenceValue * exp(log((mpFlow::dtype::real)10.0) * factor[column] / (mpFlow::dtype::real)10.0) / (mpFlow::dtype::real)10.0;
 
     if (additiv) {
         jacobian[row + column * rows] += element;

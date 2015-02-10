@@ -78,7 +78,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
 
     cublasSetStream(handle, stream);
     dtype::real alpha = 1.0, beta = 0.0;
-    if (cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
+    if (numeric::cublasWrapper<dtype::real>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
         this->source->measurementPattern->dataCols,
         this->equation->excitationMatrix->dataRows,
         this->source->measurementPattern->dataRows, &alpha,
@@ -188,7 +188,7 @@ void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMe
 
     // add result
     dtype::real alpha = 1.0f, beta = additiv ? 1.0 : 0.0;
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
+    numeric::cublasWrapper<dtype::real>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
         this->source->drivePattern->cols, this->electrodesAttachmentMatrix->dataCols, &alpha,
         this->electrodesAttachmentMatrix->deviceData, this->electrodesAttachmentMatrix->dataRows,
         source->deviceData, source->dataRows, &beta,

@@ -54,7 +54,7 @@ static __global__ void convertKernel(const type* matrix,
         element = matrix[i + j * rows];
 
         // check for non-zero
-        if (element != 0.0f) {
+        if (element != (mpFlow::dtype::real)0.0) {
             values[i * mpFlow::numeric::sparseMatrix::block_size + count] = element;
             columnIds[i * mpFlow::numeric::sparseMatrix::block_size + count] = j;
 

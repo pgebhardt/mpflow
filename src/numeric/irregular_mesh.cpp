@@ -47,11 +47,14 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(std::shared_ptr<numeric::Matrix<dt
     }
 }
 
-std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf>
+std::tuple<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>>
     mpFlow::numeric::IrregularMesh::elementNodes(dtype::index element) {
     // initialize output arrays
-    Eigen::ArrayXi indices = Eigen::ArrayXi::Zero(this->elements->cols);
-    Eigen::ArrayXXf coordinates = Eigen::ArrayXXf::Zero(this->elements->cols, 2);
+    Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1> indices =
+        Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>::Zero(this->elements->cols);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> coordinates =
+        Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>::Zero(this->elements->cols, 2);
 
     // get node index and coordinate
     for (dtype::index node = 0; node < this->elements->cols; ++node) {
@@ -66,11 +69,14 @@ std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf>
     return std::make_tuple(indices, coordinates);
 }
 
-std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf>
+std::tuple<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>>
     mpFlow::numeric::IrregularMesh::boundaryNodes(dtype::index element) {
     // initialize output arrays
-    Eigen::ArrayXi indices = Eigen::ArrayXi::Zero(this->boundary->cols);
-    Eigen::ArrayXXf coordinates = Eigen::ArrayXXf::Zero(this->boundary->cols, 2);
+    Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1> indices =
+        Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>::Zero(this->boundary->cols);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> coordinates =
+        Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>::Zero(this->boundary->cols, 2);
 
     // get node index and coordinate
     for (dtype::index node = 0; node < this->boundary->cols; ++node) {

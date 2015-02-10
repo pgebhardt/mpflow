@@ -34,8 +34,10 @@ namespace numeric {
             dtype::real height);
 
         // helper methods
-        std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf> elementNodes(dtype::index element);
-        std::tuple<Eigen::ArrayXi, Eigen::ArrayXXf> boundaryNodes(dtype::index element);
+        std::tuple<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>,
+            Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>> elementNodes(dtype::index element);
+        std::tuple<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>,
+            Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>> boundaryNodes(dtype::index element);
 
         // member
         std::shared_ptr<Matrix<dtype::real>> nodes;

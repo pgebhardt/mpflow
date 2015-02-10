@@ -64,10 +64,12 @@ template <
 void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
-    Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(this->mesh->nodes->rows,
+    Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> elementCount =
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(this->mesh->nodes->rows,
         this->mesh->nodes->rows);
-    std::vector<Eigen::ArrayXXi> connectivityMatrices;
-    std::vector<Eigen::ArrayXXf> elementalSMatrices, elementalRMatrices;
+    std::vector<Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> connectivityMatrices;
+    std::vector<Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>>
+        elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
@@ -82,13 +84,13 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
             // neccessary
             size_t level = elementCount(indices(i), indices(j));
             if (connectivityMatrices.size() <= level) {
-                connectivityMatrices.push_back(Eigen::ArrayXXi::Ones(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows)
+                connectivityMatrices.push_back(Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>
+                    ::Ones(this->mesh->nodes->rows, this->mesh->nodes->rows)
                     * dtype::invalid_index);
-                elementalSMatrices.push_back(Eigen::ArrayXXf::Zero(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows));
-                elementalRMatrices.push_back(Eigen::ArrayXXf::Zero(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows));
+                elementalSMatrices.push_back(Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>
+                    ::Zero(this->mesh->nodes->rows, this->mesh->nodes->rows));
+                elementalRMatrices.push_back(Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>
+                    ::Zero(this->mesh->nodes->rows, this->mesh->nodes->rows));
             }
 
             // set connectivity element
@@ -173,7 +175,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initExcitationMatrix(cu
         dtype::real parameterOffset = math::circleParameter(nodes[0], 0.0);
 
         // calc node parameter centered to node 0
-        Eigen::ArrayXf nodeParameter = Eigen::ArrayXf::Zero(points.rows());
+        Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> nodeParameter =
+            Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1>::Zero(points.rows());
         for (dtype::size i = 0; i < nodes.size(); ++i) {
             nodeParameter(i) = math::circleParameter(nodes[i], parameterOffset);
         }
@@ -374,16 +377,16 @@ template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     const std::vector<Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>>&,
     const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::real>>, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
-    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, Eigen::ArrayXXi::Scalar, mpFlow::dtype::real>(
-    const std::vector<Eigen::Array<Eigen::ArrayXXi::Scalar, Eigen::Dynamic, Eigen::Dynamic>>&,
+    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, mpFlow::dtype::index, mpFlow::dtype::real>(
+    const std::vector<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>>&,
     const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::real>>, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>
     mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::complex, mpFlow::dtype::real, mpFlow::dtype::complex>(
     const std::vector<Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>>&,
     const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::complex>>, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
-    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, Eigen::ArrayXXi::Scalar, mpFlow::dtype::complex>(
-    const std::vector<Eigen::Array<Eigen::ArrayXXi::Scalar, Eigen::Dynamic, Eigen::Dynamic>>&,
+    mpFlow::FEM::equation::reduceMatrix<mpFlow::dtype::index, mpFlow::dtype::index, mpFlow::dtype::complex>(
+    const std::vector<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>>&,
     const std::shared_ptr<numeric::SparseMatrix<mpFlow::dtype::complex>>, cudaStream_t);
 
 template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::real>(

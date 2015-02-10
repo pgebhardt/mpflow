@@ -75,8 +75,9 @@ mpFlow::dtype::real mpFlow::math::circleParameter(
     return angle * std::get<0>(polar_point);
 }
 
-Eigen::ArrayXf mpFlow::math::gaussElemination(Eigen::ArrayXXf matrix,
-    Eigen::ArrayXf excitation) {
+Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> mpFlow::math::gaussElemination(
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> matrix,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> excitation) {
     dtype::real x, sum;
     dtype::index n = matrix.rows();
 

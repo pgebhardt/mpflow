@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::${name}::${name} (
-    Eigen::ArrayXXf nodes,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> nodes,
     std::tuple<dtype::index, dtype::index> edge) :
     mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes),
     nodeBasis({{ Linear(nodes, std::get<0>(edge)), Linear(nodes, std::get<1>(edge)) }}) {

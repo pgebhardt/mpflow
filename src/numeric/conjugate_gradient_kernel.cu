@@ -77,9 +77,9 @@ static __global__ void updateVectorKernel(const dataType* x1,
     mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
-    result[row + column * rows] = r2[column * rows] != 0.0f ? x1[row + column * rows] +
+    result[row + column * rows] = r2[column * rows] != (mpFlow::dtype::real)0.0 ? x1[row + column * rows] +
         sign * x2[row + column * rows] *
-        r1[column * rows] / r2[column * rows] : 0.0f;
+        r1[column * rows] / r2[column * rows] : (mpFlow::dtype::real)0.0;
 }
 
 // update vector kernel wrapper

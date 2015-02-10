@@ -49,9 +49,9 @@ namespace numeric {
         }
     };
 
-    // dtype::real
+    // float
     template <>
-    class cublasWrapper<mpFlow::dtype::real> {
+    class cublasWrapper<float> {
     public:
         template <typename... Args>
         static cublasStatus_t copy(Args&&... args) {
@@ -74,33 +74,88 @@ namespace numeric {
         }
     };
 
-    // dtype::complex
+    // double
     template <>
-    class cublasWrapper<mpFlow::dtype::complex> {
+    class cublasWrapper<double> {
     public:
-        static cublasStatus_t copy(cublasHandle_t handle, int n, const dtype::complex* x,
-            int incx, dtype::complex* y, int incy) {
+        template <typename... Args>
+        static cublasStatus_t copy(Args&&... args) {
+            return cublasDcopy(std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+        static cublasStatus_t axpy(Args&&... args) {
+            return cublasDaxpy(std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+        static cublasStatus_t gemm(Args&&... args) {
+            return cublasDgemm(std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+        static cublasStatus_t gemv(Args&&... args) {
+            return cublasDgemv(std::forward<Args>(args)...);
+        }
+    };
+
+    // thrust::complex<float>
+    template <>
+    class cublasWrapper<thrust::complex<float>> {
+    public:
+        static cublasStatus_t copy(cublasHandle_t handle, int n, const thrust::complex<float>* x,
+            int incx, thrust::complex<float>* y, int incy) {
             return cublasCcopy(handle, n, (const cuComplex*)x, incx, (cuComplex*)y, incy);
         }
 
-        static cublasStatus_t axpy(cublasHandle_t handle, int n, const dtype::complex* alpha,
-        const dtype::complex* x, int incx, dtype::complex* y, int incy) {
+        static cublasStatus_t axpy(cublasHandle_t handle, int n, const thrust::complex<float>* alpha,
+        const thrust::complex<float>* x, int incx, thrust::complex<float>* y, int incy) {
             return cublasCaxpy(handle, n, (const cuComplex*)alpha, (const cuComplex*)x,
                 incx, (cuComplex*)y, incy);
         }
 
         static cublasStatus_t gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
-            int m, int n, int k, const dtype::complex* alpha, const dtype::complex* A, int lda,
-            const dtype::complex* B, int ldb, const dtype::complex* beta, dtype::complex* C, int ldc) {
+            int m, int n, int k, const thrust::complex<float>* alpha, const thrust::complex<float>* A, int lda,
+            const thrust::complex<float>* B, int ldb, const thrust::complex<float>* beta, thrust::complex<float>* C, int ldc) {
             return cublasCgemm(handle, transa, transb, m, n, k, (const cuComplex*)alpha, (const cuComplex*)A,
                 lda, (const cuComplex*)B, ldb, (const cuComplex*)beta, (cuComplex*)C, ldc);
         }
 
         static cublasStatus_t gemv(cublasHandle_t handle, cublasOperation_t trans, int m, int n,
-            const dtype::complex* alpha, const dtype::complex* A, int lda, const dtype::complex* x,
-            int incx, const dtype::complex* beta, dtype::complex* y, int incy) {
+            const thrust::complex<float>* alpha, const thrust::complex<float>* A, int lda, const thrust::complex<float>* x,
+            int incx, const thrust::complex<float>* beta, thrust::complex<float>* y, int incy) {
             return cublasCgemv(handle, trans, m, n, (const cuComplex*)alpha, (const cuComplex*)A,
                 lda, (const cuComplex*)x, incx, (const cuComplex*)beta, (cuComplex*)y, incy);
+        }
+    };
+
+    // thrust::complex<double>
+    template <>
+    class cublasWrapper<thrust::complex<double>> {
+    public:
+        static cublasStatus_t copy(cublasHandle_t handle, int n, const thrust::complex<double>* x,
+            int incx, thrust::complex<double>* y, int incy) {
+            return cublasZcopy(handle, n, (const cuDoubleComplex*)x, incx, (cuDoubleComplex*)y, incy);
+        }
+
+        static cublasStatus_t axpy(cublasHandle_t handle, int n, const thrust::complex<double>* alpha,
+        const thrust::complex<double>* x, int incx, thrust::complex<double>* y, int incy) {
+            return cublasZaxpy(handle, n, (const cuDoubleComplex*)alpha, (const cuDoubleComplex*)x,
+                incx, (cuDoubleComplex*)y, incy);
+        }
+
+        static cublasStatus_t gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+            int m, int n, int k, const thrust::complex<double>* alpha, const thrust::complex<double>* A, int lda,
+            const thrust::complex<double>* B, int ldb, const thrust::complex<double>* beta, thrust::complex<double>* C, int ldc) {
+            return cublasZgemm(handle, transa, transb, m, n, k, (const cuDoubleComplex*)alpha, (const cuDoubleComplex*)A,
+                lda, (const cuDoubleComplex*)B, ldb, (const cuDoubleComplex*)beta, (cuDoubleComplex*)C, ldc);
+        }
+
+        static cublasStatus_t gemv(cublasHandle_t handle, cublasOperation_t trans, int m, int n,
+            const thrust::complex<double>* alpha, const thrust::complex<double>* A, int lda, const thrust::complex<double>* x,
+            int incx, const thrust::complex<double>* beta, thrust::complex<double>* y, int incy) {
+            return cublasZgemv(handle, trans, m, n, (const cuDoubleComplex*)alpha, (const cuDoubleComplex*)A,
+                lda, (const cuDoubleComplex*)x, incx, (const cuDoubleComplex*)beta, (cuDoubleComplex*)y, incy);
         }
     };
 }

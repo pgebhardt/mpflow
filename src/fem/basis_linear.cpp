@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::Linear::Linear(
-    Eigen::ArrayXXf nodes,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> nodes,
     dtype::index one)
     : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes) {
     // check one
@@ -35,8 +35,9 @@ mpFlow::FEM::basis::Linear::Linear(
     }
 
     // calc coefficients with gauss
-    Eigen::ArrayXXf A = Eigen::ArrayXXf::Zero(pointsPerElement, pointsPerElement);
-    Eigen::ArrayXf b = Eigen::ArrayXf::Zero(pointsPerElement);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> A = Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>
+        ::Zero(pointsPerElement, pointsPerElement);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> b = Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1>::Zero(pointsPerElement);
     b(one) = 1.0;
 
     // fill coefficients
@@ -53,7 +54,7 @@ mpFlow::FEM::basis::Linear::Linear(
 // evaluate basis function
 
 mpFlow::dtype::real mpFlow::FEM::basis::Linear::evaluate(
-    Eigen::ArrayXf point
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point
     ) {
     return ({
 ((((point(0))*(this->coefficients(1)))+((point(1))*(this->coefficients(2))))+(this->coefficients(0)));
@@ -88,10 +89,10 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
 
 // integrate edge
 mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
-    Eigen::ArrayXf nodes, dtype::index one,
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> nodes, dtype::index one,
     dtype::real start, dtype::real end) {
     // calc coefficients for basis function
-    Eigen::ArrayXf coefficients = Eigen::ArrayXf::Zero(pointsPerEdge);
+    Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> coefficients = Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1>::Zero(pointsPerEdge);
     if (one == 0) {
         coefficients(0) = ({
 ((((1.0)*(nodes(0)))/(((-1.0)*(nodes(0)))+((1.0)*(nodes(1)))))+(1.0));
@@ -113,7 +114,7 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
 ;
     }
     return ({
-(((((-(coefficients(0)))*(min(max((start),(float)(nodes(0))),(float)(nodes(1)))))+((coefficients(0))*(min(max((end),(float)(nodes(0))),(float)(nodes(1))))))-(((coefficients(1))*((min(max((start),(float)(nodes(0))),(float)(nodes(1))))*(min(max((start),(float)(nodes(0))),(float)(nodes(1))))))/(2)))+(((coefficients(1))*((min(max((end),(float)(nodes(0))),(float)(nodes(1))))*(min(max((end),(float)(nodes(0))),(float)(nodes(1))))))/(2)));
+(((((-(coefficients(0)))*(min(max((start),(nodes(0))),(nodes(1)))))+((coefficients(0))*(min(max((end),(nodes(0))),(nodes(1))))))-(((coefficients(1))*((min(max((start),(nodes(0))),(nodes(1))))*(min(max((start),(nodes(0))),(nodes(1))))))/(2)))+(((coefficients(1))*((min(max((end),(nodes(0))),(nodes(1))))*(min(max((end),(nodes(0))),(nodes(1))))))/(2)));
 })
 ;
 }
