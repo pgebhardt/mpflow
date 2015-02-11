@@ -18,6 +18,7 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
+#include <iostream>
 #include "mpflow/mpflow.h"
 #include "mpflow/fem/equation_kernel.h"
 
@@ -40,20 +41,22 @@ mpFlow::MWI::Equation::Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
 // init elemental matrices
 void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     // calculate indices of unique mesh edges
-    auto globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-    auto edges = std::get<0>(globalEdgeIndex);
+    auto edgeIndices = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
+    auto edges = std::get<0>(edgeIndices);
+    auto globalEdgeIndex = std::get<1>(edgeIndices);
+    auto localEdges = std::get<2>(edgeIndices);
 
     // create intermediate matrices
     Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> elementCount =
-        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(this->mesh->nodes->rows,
-        this->mesh->nodes->rows);
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(edges.rows(), edges.rows());
     std::vector<Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> connectivityMatrices;
     std::vector<Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>> elementalRMatrices;
-    auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(), edges.size(), stream);
+    auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.rows(), edges.rows(), stream);
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        auto localEdges = std::get<1>(globalEdgeIndex)[element];
+        std::cout << "edges: " << edges.rows() << ", elements: " << this->mesh->elements->rows << ", element: " << element << std::endl;
+        auto indices = globalEdgeIndex.row(element);
         auto points = std::get<1>(mesh->elementNodes(element));
 
         // set connectivity and elemental residual matrix elements
@@ -61,30 +64,29 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
         for (dtype::index j = 0; j < 3; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t level = elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+            size_t level = elementCount(indices(i), indices(j));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>
-                    ::Ones(this->mesh->nodes->rows, this->mesh->nodes->rows)
-                    * dtype::invalid_index);
+                    ::Ones(edges.rows(), edges.rows()) * dtype::invalid_index);
                 elementalRMatrices.push_back(Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>
-                    ::Zero(this->mesh->nodes->rows, this->mesh->nodes->rows));
+                    ::Zero(edges.rows(), edges.rows()));
             }
 
             // set connectivity element
-            connectivityMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
+            connectivityMatrices[level](indices(i), indices(j)) =
                 element;
 
             // evaluate integral equations
-            auto edgeI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
-            auto edgeJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
+            auto edgeI = std::make_shared<FEM::basis::Edge>(points,
+                std::make_tuple(localEdges(element, i * 2), localEdges(element, i * 2 + 1)));
+            auto edgeJ = std::make_shared<FEM::basis::Edge>(points,
+                std::make_tuple(localEdges(element, j * 2), localEdges(element, j * 2 + 1)));
 
-            (*sMatrix)(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) +=
-                edgeI->integrateGradientWithBasis(edgeJ);
-            elementalRMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
-                edgeI->integrateWithBasis(edgeJ);
+            (*sMatrix)(indices(i), indices(j)) += edgeI->integrateGradientWithBasis(edgeJ);
+            elementalRMatrices[level](indices(i), indices(j)) = edgeI->integrateWithBasis(edgeJ);
 
             // increment element count
-            elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]))++;
+            elementCount(indices(i), indices(j))++;
         }
     }
     sMatrix->copyToDevice(stream);
@@ -108,21 +110,24 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
 void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
     // calculate indices of unique mesh edges
-    auto localEdgeIndices = std::get<1>(numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements));
+    auto edgeIndices = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
+    auto globalEdgeIndex = std::get<1>(edgeIndices);
+    auto localEdges = std::get<2>(edgeIndices);
 
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        auto localEdges = localEdgeIndices[element];
         auto points = std::get<1>(mesh->elementNodes(element));
 
         // fill matrix
         for (dtype::index i = 0; i < 3; ++i)
         for (dtype::index j = 0; j < 3; ++j) {
             // evaluate integral equations
-            auto edgeI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
-            auto edgeJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
+            auto edgeI = std::make_shared<FEM::basis::Edge>(points,
+                std::make_tuple(localEdges(element, i * 2), localEdges(element, i * 2 + 1)));
+            auto edgeJ = std::make_shared<FEM::basis::Edge>(points,
+                std::make_tuple(localEdges(element, j * 2), localEdges(element, j * 2 + 1)));
 
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i + j * 3) =

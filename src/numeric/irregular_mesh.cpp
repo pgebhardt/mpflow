@@ -260,12 +260,16 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
 }
 
 std::tuple<
-    std::vector<std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>,
-    std::vector<std::array<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>, 3>>>
+    Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>,
+    Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>,
+    Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>>
     mpFlow::numeric::irregularMesh::calculateGlobalEdgeIndices(
         std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements) {
     std::vector<std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>> edges;
-    std::vector<std::array<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>, 3>> localEdgeConnections(elements->rows);
+    Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> globalEdgeIndex =
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(elements->rows, 3);
+    Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> localEdges =
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(elements->rows, 2 * 3);
 
     // find all unique edges
     for (dtype::index element = 0; element < elements->rows; ++element)
@@ -278,17 +282,32 @@ std::tuple<
         // add edge to edges vector, if it was not already inserted
         auto edgePosition = std::find(edges.begin(), edges.end(), edge);
         if (edgePosition != edges.end()) {
-            localEdgeConnections[element][i] = std::make_tuple(std::distance(edges.begin(), edgePosition),
-                (*elements)(element, i) < (*elements)(element, (i + 1) % 3) ?
-                std::make_tuple(i, (i + 1) % 3) : std::make_tuple((i + 1) % 3, i));
+            globalEdgeIndex(element, i) = std::distance(edges.begin(), edgePosition);
         }
         else {
+            globalEdgeIndex(element, i) = edges.size();
+
+            // add edge to vector
             edges.push_back(edge);
-            localEdgeConnections[element][i] = std::make_tuple(edges.size() - 1,
-                (*elements)(element, i) < (*elements)(element, (i + 1) % 3) ?
-                std::make_tuple(i, (i + 1) % 3) : std::make_tuple((i + 1) % 3, i));
+        }
+
+        if ((*elements)(element, i) < (*elements)(element, (i + 1) % 3)) {
+            localEdges(element, i * 2) = i;
+            localEdges(element, i * 2 + 1) = (i + 1) % 3;
+        }
+        else {
+            localEdges(element, i * 2) = (i + 1) % 3;
+            localEdges(element, i * 2 + 1) = i;
         }
     }
 
-    return std::make_tuple(edges, localEdgeConnections);
+    // convert edges vector to Eigen array
+    Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> edgesArray =
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(edges.size(), 2);
+    for (dtype::index i = 0; i < edges.size(); ++i) {
+        edgesArray(i, 0) = std::get<0>(edges[i]);
+        edgesArray(i, 1) = std::get<1>(edges[i]);
+    }
+
+    return std::make_tuple(edgesArray, globalEdgeIndex, localEdges);
 }
