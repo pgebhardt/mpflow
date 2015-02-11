@@ -18,7 +18,6 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#include <iostream>
 #include "mpflow/mpflow.h"
 #include "mpflow/fem/equation_kernel.h"
 
@@ -55,7 +54,6 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        std::cout << "edges: " << edges.rows() << ", elements: " << this->mesh->elements->rows << ", element: " << element << std::endl;
         auto indices = globalEdgeIndex.row(element);
         auto points = std::get<1>(mesh->elementNodes(element));
 
