@@ -38,7 +38,9 @@ namespace FEM {
             dataType referenceValue, cudaStream_t stream);
 
         // init methods
-        void initElementalMatrices(cudaStream_t stream);
+        void initElementalMatrices(Eigen::Ref<
+            const Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> indices,
+            dtype::size size, cudaStream_t stream);
         void initExcitationMatrix(cudaStream_t stream);
         void initJacobianCalculationMatrix(cudaStream_t stream);
 

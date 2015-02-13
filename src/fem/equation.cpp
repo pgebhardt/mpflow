@@ -46,7 +46,8 @@ mpFlow::FEM::Equation<dataType, basisFunctionType>::Equation(
         this->mesh->nodes->rows, this->boundaryDescriptor->count, stream,
         0.0, false);
 
-    this->initElementalMatrices(stream);
+    this->initElementalMatrices(numeric::matrix::toEigen(this->mesh->elements),
+        this->mesh->nodes->rows, stream);
     this->initExcitationMatrix(stream);
     this->initJacobianCalculationMatrix(stream);
 
@@ -61,12 +62,12 @@ template <
     class dataType,
     class basisFunctionType
 >
-void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
-    cudaStream_t stream) {
+void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(Eigen::Ref<
+    const Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> indices,
+    dtype::size size, cudaStream_t stream) {
     // create intermediate matrices
     Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> elementCount =
-        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(this->mesh->nodes->rows,
-        this->mesh->nodes->rows);
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(size, size);
     std::vector<Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> connectivityMatrices;
     std::vector<Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>>
         elementalSMatrices, elementalRMatrices;
@@ -74,7 +75,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
         // get nodes points of element
-        auto indices = std::get<0>(mesh->elementNodes(element));
+        auto elementIndices = indices.row(element);
         auto points = std::get<1>(mesh->elementNodes(element));
 
         // set connectivity and elemental residual matrix elements
@@ -82,35 +83,32 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
         for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t level = elementCount(indices(i), indices(j));
+            size_t level = elementCount(elementIndices(i), elementIndices(j));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>
-                    ::Ones(this->mesh->nodes->rows, this->mesh->nodes->rows)
-                    * dtype::invalid_index);
+                    ::Ones(size, size) * dtype::invalid_index);
                 elementalSMatrices.push_back(Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>
-                    ::Zero(this->mesh->nodes->rows, this->mesh->nodes->rows));
+                    ::Zero(size, size));
                 elementalRMatrices.push_back(Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>
-                    ::Zero(this->mesh->nodes->rows, this->mesh->nodes->rows));
+                    ::Zero(size, size));
             }
 
             // set connectivity element
-            connectivityMatrices[level](indices(i), indices(j)) =
+            connectivityMatrices[level](elementIndices(i), elementIndices(j)) =
                 element;
 
             // create basis functions
             auto basisI = std::make_shared<basisFunctionType>(points, i);
             auto basisJ = std::make_shared<basisFunctionType>(points, j);
 
-            // set elemental system element
-            elementalSMatrices[level](indices(i), indices(j)) =
+            // evaluate integrals
+            elementalSMatrices[level](elementIndices(i), elementIndices(j)) =
                 basisI->integrateGradientWithBasis(basisJ);
-
-            // set elemental residual element
-            elementalRMatrices[level](indices(i), indices(j)) =
+            elementalRMatrices[level](elementIndices(i), elementIndices(j)) =
                 basisI->integrateWithBasis(basisJ);
 
             // increment element count
-            elementCount(indices(i), indices(j))++;
+            elementCount(elementIndices(i), elementIndices(j))++;
         }
     }
 
@@ -118,11 +116,11 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
     auto commonElementMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        auto indices = std::get<0>(this->mesh->elementNodes(element));
+        auto elementIndices = std::get<0>(this->mesh->elementNodes(element));
 
         for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
         for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
-            (*commonElementMatrix)(indices(i), indices(j)) = 1.0f;
+            (*commonElementMatrix)(elementIndices(i), elementIndices(j)) = 1.0f;
         }
     }
     commonElementMatrix->copyToDevice(stream);

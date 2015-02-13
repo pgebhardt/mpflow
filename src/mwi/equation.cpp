@@ -33,28 +33,28 @@ mpFlow::MWI::Equation::Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh->elements->rows, math::square(3), stream, 0.0, false);
 
-    this->initElementalMatrices(stream);
+    auto edgeIndices = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
+    this->initElementalMatrices(std::get<1>(edgeIndices), std::get<0>(edgeIndices).rows(), stream);
     this->initJacobianCalculationMatrix(stream);
 }
 
 // init elemental matrices
-void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
+void mpFlow::MWI::Equation::initElementalMatrices(Eigen::Ref<
+    const Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> indices,
+    dtype::size size, cudaStream_t stream) {
     // calculate indices of unique mesh edges
-    auto edgeIndices = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-    auto edges = std::get<0>(edgeIndices);
-    auto globalEdgeIndex = std::get<1>(edgeIndices);
-    auto localEdges = std::get<2>(edgeIndices);
+    auto localEdges = std::get<2>(numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements));
 
     // create intermediate matrices
     Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic> elementCount =
-        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(edges.rows(), edges.rows());
+        Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>::Zero(size, size);
     std::vector<Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> connectivityMatrices;
     std::vector<Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>> elementalRMatrices;
-    auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.rows(), edges.rows(), stream);
+    auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(size, size, stream);
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        auto indices = globalEdgeIndex.row(element);
+        auto elementIndices = indices.row(element);
         auto points = std::get<1>(mesh->elementNodes(element));
 
         // set connectivity and elemental residual matrix elements
@@ -62,16 +62,16 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
         for (dtype::index j = 0; j < 3; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t level = elementCount(indices(i), indices(j));
+            size_t level = elementCount(elementIndices(i), elementIndices(j));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>
-                    ::Ones(edges.rows(), edges.rows()) * dtype::invalid_index);
+                    ::Ones(size, size) * dtype::invalid_index);
                 elementalRMatrices.push_back(Eigen::Array<dtype::real, Eigen::Dynamic, Eigen::Dynamic>
-                    ::Zero(edges.rows(), edges.rows()));
+                    ::Zero(size, size));
             }
 
             // set connectivity element
-            connectivityMatrices[level](indices(i), indices(j)) =
+            connectivityMatrices[level](elementIndices(i), elementIndices(j)) =
                 element;
 
             // evaluate integral equations
@@ -80,11 +80,11 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
             auto edgeJ = std::make_shared<FEM::basis::Edge>(points,
                 std::make_tuple(localEdges(element, j * 2), localEdges(element, j * 2 + 1)));
 
-            (*sMatrix)(indices(i), indices(j)) += edgeI->integrateGradientWithBasis(edgeJ);
-            elementalRMatrices[level](indices(i), indices(j)) = edgeI->integrateWithBasis(edgeJ);
+            (*sMatrix)(elementIndices(i), elementIndices(j)) += edgeI->integrateGradientWithBasis(edgeJ);
+            elementalRMatrices[level](elementIndices(i), elementIndices(j)) = edgeI->integrateWithBasis(edgeJ);
 
             // increment element count
-            elementCount(indices(i), indices(j))++;
+            elementCount(elementIndices(i), elementIndices(j))++;
         }
     }
     sMatrix->copyToDevice(stream);
