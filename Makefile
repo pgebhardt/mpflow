@@ -8,18 +8,24 @@ PREFIX ?= /usr/local
 # Target build architecture
 ARM ?= 0
 ifeq ($(ARM), 1)
-	TARGET_ARCH := arm-linux-gnueabihf
+	TARGET_ARCH := armv7-linux-gnueabihf
 else
 	TARGET_ARCH := x86_64-linux
 endif
 BUILD_DIR := $(BUILD_DIR)/$(TARGET_ARCH)
 
+# The target shared library and static library names
+LIB_BUILD_DIR := $(BUILD_DIR)/lib
+NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).so
+STATIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT)_static.a
+
 # Cuda locations
-CUDA_DIR := /usr/local/cuda-6.5
-CUDA_LIB_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/lib
+CUDA_DIR ?= /usr/local/cuda
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/include
+CUDA_LIB_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/lib
 
 # Compiler
+AR := ar rcs
 ifeq ($(ARM), 1)
 	CXX := arm-linux-gnueabihf-g++
 	NVCC := $(CUDA_DIR)/bin/nvcc -ccbin $(CXX)
@@ -32,22 +38,19 @@ endif
 GIT_VERSION := $(shell git describe --tags --long)
 
 # Includes and libraries
-LD_PATH := /usr/local/lib $(CUDA_LIB_DIR)
 INCLUDE_PATH := /usr/local/include ./include $(CUDA_INCLUDE_DIR)
 
 # Compiler Flags
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_PATH)) -DGIT_VERSION=\"$(GIT_VERSION)\" -O3
 CFLAGS := -std=c++11 -fPIC
-LINKER_FLAGS := $(addprefix -L, $(LD_PATH))
-NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v
+NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v \
+	-gencode=arch=compute_30,code=sm_30 \
+	-gencode=arch=compute_32,code=sm_32 \
+	-gencode=arch=compute_35,code=sm_35
 
 # Target architecture specifiy compiler flags
 ifeq ($(ARM), 1)
-	NVCCFLAGS += -target-cpu-arch=ARM -m32 -Xptxas '-dlcm=ca' -target-os-variant=Linux \
-		-gencode=arch=compute_32,code=sm_32
-else
-	NVCCFLAGS += 	-gencode=arch=compute_30,code=sm_30 \
-					-gencode=arch=compute_35,code=sm_35
+	NVCCFLAGS += -m32
 endif
 
 # Source Files
@@ -60,10 +63,17 @@ CXX_OBJS := $(addprefix $(BUILD_DIR)/, ${CXX_SRCS:.cpp=.o})
 CU_OBJS := $(addprefix $(BUILD_DIR)/, ${CU_SRCS:.cu=.o})
 
 # Build targets
-.PHONY: install clean
+.PHONY: all install clean
 
-lib$(PROJECT).so: $(CXX_OBJS) $(CU_OBJS)
-	$(CXX) -shared -o $(BUILD_DIR)/$@ $(CXX_OBJS) $(CU_OBJS) $(LINKER_FLAGS)
+all: $(NAME) $(STATIC_NAME)
+
+$(NAME): $(CXX_OBJS) $(CU_OBJS)
+	@mkdir -p $(LIB_BUILD_DIR)
+	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS)
+
+$(STATIC_NAME): $(CXX_OBJS) $(CU_OBJS)
+	@mkdir -p $(LIB_BUILD_DIR)
+	$(AR) $@ $(CXX_OBJS) $(CU_OBJS)
 
 $(BUILD_DIR)/%.o: %.cu $(HXX_SRCS)
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
@@ -77,5 +87,6 @@ clean:
 	@rm -rf $(BUILD_DIR)
 
 install:
-	install -m 0644 $(BUILD_DIR)/lib$(PROJECT).so $(PREFIX)/lib
+	install -m 0644 $(NAME) $(PREFIX)/lib
+	install -m 0644 $(STATIC_NAME) $(PREFIX)/lib
 	$(foreach f, $(HXX_SRCS), install -D -m 0644 $f $(PREFIX)/$f && ):
