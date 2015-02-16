@@ -5,13 +5,14 @@ PROJECT := mpflow
 BUILD_DIR := build
 PREFIX ?= /usr/local
 
-# Target build architecture
+# Cross compile for arm architecture
 ARM ?= 0
 ifeq ($(ARM), 1)
 	TARGET_ARCH := armv7-linux-gnueabihf
-else
-	TARGET_ARCH := x86_64-linux
 endif
+
+# Target build architecture
+TARGET_ARCH ?= $(shell uname -m)-$(shell uname)
 BUILD_DIR := $(BUILD_DIR)/$(TARGET_ARCH)
 
 # The target shared library and static library names
@@ -26,12 +27,11 @@ CUDA_LIB_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/lib
 
 # Compiler
 AR := ar rcs
+CXX := clang++
+NVCC := $(CUDA_DIR)/bin/nvcc
+
 ifeq ($(ARM), 1)
 	CXX := arm-linux-gnueabihf-g++
-	NVCC := $(CUDA_DIR)/bin/nvcc -ccbin $(CXX)
-else
-	CXX := clang++
-	NVCC := $(CUDA_DIR)/bin/nvcc
 endif
 
 # Version Define
@@ -53,7 +53,7 @@ LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
 
 # Target architecture specifiy compiler flags
 ifeq ($(ARM), 1)
-	NVCCFLAGS += -m32
+	NVCCFLAGS += -m32 -ccbin=$(CXX)
 endif
 
 # Source Files
@@ -96,9 +96,9 @@ $(BUILD_DIR)/%.o: %.cpp $(HXX_SRCS)
 	$(CXX) $(CFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
 install: $(NAME) $(STATIC_NAME) $(HXX_SRCS)
-	install -m 0644 $(NAME) $(PREFIX)/lib
-	install -m 0644 $(STATIC_NAME) $(PREFIX)/lib
-	$(foreach f, $(HXX_SRCS), install -D -m 0644 $f $(PREFIX)/$f && ):
+	@install -m 0644 $(NAME) $(PREFIX)/lib
+	@install -m 0644 $(STATIC_NAME) $(PREFIX)/lib
+	@$(foreach f, $(HXX_SRCS), install -D -m 0644 $f $(PREFIX)/$f && ):
 
 clean:
 	@rm -rf $(BUILD_DIR)
