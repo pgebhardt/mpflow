@@ -5,10 +5,21 @@ PROJECT := mpflow
 BUILD_DIR := build
 PREFIX ?= /usr/local
 
+# Cuda locations
+CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
+CUDA_DIR := $(CUDA_TOOLKIT_ROOT)
+
+# Compiler
+AR := ar rcs
+NVCC := $(CUDA_TOOLKIT_ROOT)/bin/nvcc
+CXX := clang++
+
 # Cross compile for arm architecture
 ARM ?= 0
 ifeq ($(ARM), 1)
+	CXX := arm-linux-gnueabihf-g++
 	TARGET_ARCH := armv7-linux-gnueabihf
+	CUDA_DIR := $(CUDA_TOOLKIT_ROOT)/targets/$(TARGET_ARCH)
 endif
 
 # Target build architecture
@@ -20,27 +31,13 @@ LIB_BUILD_DIR := $(BUILD_DIR)/lib
 NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).so
 STATIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT)_static.a
 
-# Cuda locations
-CUDA_DIR ?= /usr/local/cuda
-CUDA_INCLUDE_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/include
-CUDA_LIB_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/lib
-
-# Compiler
-AR := ar rcs
-CXX := clang++
-NVCC := $(CUDA_DIR)/bin/nvcc
-
-ifeq ($(ARM), 1)
-	CXX := arm-linux-gnueabihf-g++
-endif
-
 # Version Define
 GIT_VERSION := $(shell git describe --tags --long)
 
 # Includes and libraries
 LIBRARIES := cudart_static cublas_static distmesh_static qhull culibos pthread dl rt
-LIBRARY_DIRS := $(CUDA_LIB_DIR) /usr/local/lib
-INCLUDE_DIRS := $(CUDA_INCLUDE_DIR) /usr/local/include ./include
+LIBRARY_DIRS := $(CUDA_DIR)/lib
+INCLUDE_DIRS := $(CUDA_DIR)/include /usr/local/include ./include
 
 # Compiler Flags
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\" -O3
@@ -49,9 +46,10 @@ NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v \
 	-gencode=arch=compute_30,code=sm_30 \
 	-gencode=arch=compute_32,code=sm_32 \
 	-gencode=arch=compute_35,code=sm_35
+LINKFLAGS := -O3 -fPIC
 LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
 
-# Target architecture specifiy compiler flags
+# Tell nvcc how to build for arm architecture
 ifeq ($(ARM), 1)
 	NVCCFLAGS += -m32 -ccbin=$(CXX)
 endif
@@ -77,11 +75,11 @@ tools: $(TOOL_BINS)
 
 $(TOOL_BINS): % : %.o $(STATIC_NAME)
 	@mkdir -p $(BUILD_DIR)/tools
-	$(CXX) $< $(STATIC_NAME) -o $@ $(LDFLAGS)
+	$(CXX) $< $(STATIC_NAME) -o $@ $(LDFLAGS) $(LINKFLAGS)
 
 $(NAME): $(CXX_OBJS) $(CU_OBJS)
 	@mkdir -p $(LIB_BUILD_DIR)
-	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS)
+	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS) $(LINKFLAGS)
 
 $(STATIC_NAME): $(CXX_OBJS) $(CU_OBJS)
 	@mkdir -p $(LIB_BUILD_DIR)
