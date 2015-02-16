@@ -3,17 +3,19 @@ PROJECT := mpflow
 
 # Directories
 BUILD_DIR := build
+PREFIX ?= /usr/local
 
-# Cross compile for arm architecture
+# Target build architecture
 ARM ?= 0
 ifeq ($(ARM), 1)
 	TARGET_ARCH := arm-linux-gnueabihf
 else
 	TARGET_ARCH := x86_64-linux
 endif
+BUILD_DIR := $(BUILD_DIR)/$(TARGET_ARCH)
 
 # Cuda locations
-CUDA_DIR := /usr/local/cuda
+CUDA_DIR := /usr/local/cuda-6.5
 CUDA_LIB_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/lib
 CUDA_INCLUDE_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/include
 
@@ -21,31 +23,31 @@ CUDA_INCLUDE_DIR := $(CUDA_DIR)/targets/$(TARGET_ARCH)/include
 ifeq ($(ARM), 1)
 	CXX := arm-linux-gnueabihf-g++
 	NVCC := $(CUDA_DIR)/bin/nvcc -ccbin $(CXX)
-	LD := $(NVCC)
 else
-	CXX := g++
-	NVCC := $(CUDA_DIR)/bin/nvcc -ccbin $(CXX)
-	LD := $(CXX)
+	CXX := clang++
+	NVCC := $(CUDA_DIR)/bin/nvcc
 endif
 
 # Version Define
 GIT_VERSION := $(shell git describe --tags --long)
 
 # Includes and libraries
-LIBS := cublas cudart
 LD_PATH := /usr/local/lib $(CUDA_LIB_DIR)
 INCLUDE_PATH := /usr/local/include ./include $(CUDA_INCLUDE_DIR)
 
 # Compiler Flags
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_PATH)) -DGIT_VERSION=\"$(GIT_VERSION)\" -O3
 CFLAGS := -std=c++11 -fPIC
-LINKER_FLAGS := $(addprefix -L, $(LD_PATH)) $(addprefix, -l, $(LIBS))
-NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v \
-	-gencode=arch=compute_30,code=sm_30 \
-	-gencode=arch=compute_32,code=sm_32 \
-	-gencode=arch=compute_35,code=sm_35
+LINKER_FLAGS := $(addprefix -L, $(LD_PATH))
+NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v
+
+# Target architecture specifiy compiler flags
 ifeq ($(ARM), 1)
-	NVCCFLAGS += -target-cpu-arch=ARM -m32 -Xptxas '-dlcm=ca' -target-os-variant=Linux
+	NVCCFLAGS += -target-cpu-arch=ARM -m32 -Xptxas '-dlcm=ca' -target-os-variant=Linux \
+		-gencode=arch=compute_32,code=sm_32
+else
+	NVCCFLAGS += 	-gencode=arch=compute_30,code=sm_30 \
+					-gencode=arch=compute_35,code=sm_35
 endif
 
 # Source Files
@@ -61,7 +63,7 @@ CU_OBJS := $(addprefix $(BUILD_DIR)/, ${CU_SRCS:.cu=.o})
 .PHONY: install clean
 
 lib$(PROJECT).so: $(CXX_OBJS) $(CU_OBJS)
-	$(LD) -shared -o $(BUILD_DIR)/$@ $(CXX_OBJS) $(CU_OBJS) $(LINKER_FLAGS)
+	$(CXX) -shared -o $(BUILD_DIR)/$@ $(CXX_OBJS) $(CU_OBJS) $(LINKER_FLAGS)
 
 $(BUILD_DIR)/%.o: %.cu $(HXX_SRCS)
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
@@ -75,5 +77,5 @@ clean:
 	@rm -rf $(BUILD_DIR)
 
 install:
-	install -m 0644 $(BUILD_DIR)/lib$(PROJECT).so /usr/local/lib
-	install -d -m 0644 include /usr/local/include
+	install -m 0644 $(BUILD_DIR)/lib$(PROJECT).so $(PREFIX)/lib
+	$(foreach f, $(HXX_SRCS), install -D -m 0644 $f $(PREFIX)/$f && ):

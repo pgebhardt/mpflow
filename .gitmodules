@@ -1,6 +1,0 @@
-[submodule "sconshelper"]
-	path = sconshelper
-	url = https://github.com/schansge/sconshelper.git
-[submodule "bindings/python/sconshelper"]
-	path = bindings/python/sconshelper
-	url = https://github.com/schansge/sconshelper.git
