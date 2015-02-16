@@ -78,7 +78,8 @@ void mpFlow::EIT::Solver<basisFunctionType>::preSolve(
 
     // calc system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        this->inverseSolver->RegularizationType::square, handle, stream);
+        solver::Inverse<dtype::real, numeric::ConjugateGradient>::RegularizationType::square,
+        handle, stream);
 
     // set measurement and calculation to initial value of forward EIT
     for (auto level : this->measurement) {
@@ -136,7 +137,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // calc inverse system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        this->inverseSolver->RegularizationType::square, handle, stream);
+        solver::Inverse<dtype::real, numeric::ConjugateGradient>::RegularizationType::square,
+        handle, stream);
 
     // solve inverse
     std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> calculation(
