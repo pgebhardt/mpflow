@@ -2,6 +2,7 @@
 #include <fstream>
 #include <distmesh/distmesh.h>
 #include <mpflow/mpflow.h>
+#include "utils/stringtools/format.hpp"
 #include "utils/high_precision_time.h"
 #include "utils/json.c"
 
@@ -18,6 +19,18 @@ std::shared_ptr<numeric::Matrix<type>> matrixFromJsonArray(const json_value& arr
     for (dtype::index row = 0; row < matrix->rows; ++row)
     for (dtype::index col = 0; col < matrix->cols; ++col) {
         (*matrix)(row, col) = array[row][col].u.dbl;
+    }
+    matrix->copyToDevice(cudaStream);
+
+    return matrix;
+}
+
+// helper function to create unit matrix
+template <class type>
+std::shared_ptr<numeric::Matrix<type>> eye(dtype::index size, cudaStream_t cudaStream) {
+    auto matrix = std::make_shared<numeric::Matrix<type>>(size, size, cudaStream);
+    for (dtype::index i = 0; i < size; ++i) {
+        (*matrix)(i, i) = 1;
     }
     matrix->copyToDevice(cudaStream);
 
@@ -58,7 +71,7 @@ int main(int argc, char* argv[]) {
 
     // extract model config
     auto modelConfig = (*config)["model"];
-    if (modelConfig.type == json_null) {
+    if (modelConfig.type == json_none) {
         std::cout << "Error: Invalid model config" << std::endl;
         return EXIT_FAILURE;
     }
@@ -66,31 +79,51 @@ int main(int argc, char* argv[]) {
     // Create Mesh using libdistmesh
     time.restart();
     std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Create mesh using libdistmesh" << std::endl;
 
     // get mesh config
     auto meshConfig = modelConfig["mesh"];
-    if (meshConfig.type == json_null) {
+    if (meshConfig.type == json_none) {
         std::cout << "Error: Invalid model config" << std::endl;
         return EXIT_FAILURE;
     }
 
-    // create mesh
+    // create mesh from config or load from files, if mesh dir is given
+    std::shared_ptr<numeric::IrregularMesh> mesh = nullptr;
     double radius = meshConfig["radius"];
-    auto distanceFuntion = distmesh::distance_function::circular(radius);
-    auto dist_mesh = distmesh::distmesh(distanceFuntion, meshConfig["outer_edge_length"],
-        1.0 + (1.0 - (double)meshConfig["inner_edge_length"] / (double)meshConfig["outer_edge_length"]) *
-        distanceFuntion / radius, 1.1 * radius * distmesh::bounding_box(2));
 
-    std::cout << "Mesh created with " << std::get<0>(dist_mesh).rows() << " nodes and " <<
-        std::get<1>(dist_mesh).rows() << " elements." << std::endl;
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    if (meshConfig["mesh_dir"].type != json_none) {
+        // load mesh from file
+        std::string meshDir(meshConfig["mesh_dir"]);
+        std::cout << "Load mesh from files: " << meshDir << std::endl;
 
-    // create mpflow matrix objects from distmesh arrays
-    auto nodes = numeric::matrix::fromEigen<dtype::real, distmesh::dtype::real>(std::get<0>(dist_mesh));
-    auto elements = numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(std::get<1>(dist_mesh));
-    auto boundary = numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(distmesh::boundedges(std::get<1>(dist_mesh)));
-    auto mesh = std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, (double)meshConfig["height"]);
+        auto nodes = numeric::matrix::loadtxt<dtype::real>(str::format("%s/nodes.txt")(meshDir), cudaStream);
+        auto elements = numeric::matrix::loadtxt<dtype::index>(str::format("%s/elements.txt")(meshDir), cudaStream);
+        auto boundary = numeric::matrix::loadtxt<dtype::index>(str::format("%s/boundary.txt")(meshDir), cudaStream);
+        mesh = std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, (double)meshConfig["height"]);
+
+        std::cout << "Mesh loaded with " << nodes->rows << " nodes and " <<
+            elements->rows << " elements." << std::endl;
+        std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    }
+    else {
+        std::cout << "Create mesh using libdistmesh" << std::endl;
+
+        // create mesh with libdistmesh
+        auto distanceFuntion = distmesh::distance_function::circular(radius);
+        auto dist_mesh = distmesh::distmesh(distanceFuntion, meshConfig["outer_edge_length"],
+            1.0 + (1.0 - (double)meshConfig["inner_edge_length"] / (double)meshConfig["outer_edge_length"]) *
+            distanceFuntion / radius, 1.1 * radius * distmesh::bounding_box(2));
+
+        std::cout << "Mesh created with " << std::get<0>(dist_mesh).rows() << " nodes and " <<
+            std::get<1>(dist_mesh).rows() << " elements." << std::endl;
+        std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+
+        // create mpflow matrix objects from distmesh arrays
+        auto nodes = numeric::matrix::fromEigen<dtype::real, distmesh::dtype::real>(std::get<0>(dist_mesh));
+        auto elements = numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(std::get<1>(dist_mesh));
+        auto boundary = numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(distmesh::boundedges(std::get<1>(dist_mesh)));
+        mesh = std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, (double)meshConfig["height"]);
+    }
 
     // Create model helper classes
     time.restart();
@@ -102,9 +135,22 @@ int main(int argc, char* argv[]) {
         std::make_tuple(modelConfig["electrodes"]["width"].u.dbl, modelConfig["electrodes"]["height"].u.dbl),
         mesh->radius, 0.0);
 
-    // load excitation and measurement pattern from config
-    auto drivePattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["drive_pattern"], cudaStream);
-    auto measurementPattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["measurement_pattern"], cudaStream);
+    // load excitation and measurement pattern from config or assume standard pattern, if not given
+    std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern = nullptr;
+    if (modelConfig["source"]["drive_pattern"].type != json_none) {
+        drivePattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["drive_pattern"], cudaStream);
+    }
+    else {
+        drivePattern = eye<dtype::real>(electrodes->count, cudaStream);;
+    }
+
+    std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern = nullptr;
+    if (modelConfig["source"]["measurement_pattern"].type != json_none) {
+        measurementPattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["measurement_pattern"], cudaStream);
+    }
+    else {
+        measurementPattern = eye<dtype::real>(electrodes->count, cudaStream);;
+    }
 
     // read out currents
     std::vector<dtype::real> current(drivePattern->cols);
@@ -118,8 +164,10 @@ int main(int argc, char* argv[]) {
     }
 
     // create source descriptor
-    auto source = std::make_shared<FEM::SourceDescriptor>(FEM::sourceDescriptor::OpenSourceType,
-        current, electrodes, drivePattern, measurementPattern, cudaStream);
+    auto sourceType = modelConfig["source"]["mixed"].u.boolean == true ? FEM::sourceDescriptor::MixedSourceType :
+        FEM::sourceDescriptor::OpenSourceType;
+    auto source = std::make_shared<FEM::SourceDescriptor>(sourceType, current, electrodes,
+        drivePattern, measurementPattern, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
     std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
@@ -140,12 +188,24 @@ int main(int argc, char* argv[]) {
     std::cout << "----------------------------------------------------" << std::endl;
     std::cout << "Solve electrical potential for all excitations"  << std::endl;
 
-    auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
-        equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
     auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
+    std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
 
-    time.restart();
-    auto result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream);
+    // use different numeric solver for different source types
+    if (sourceType == FEM::sourceDescriptor::MixedSourceType) {
+        auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::BiCGSTAB>>(
+            equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
+
+        time.restart();
+        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream);
+    }
+    else {
+        auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
+            equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
+
+        time.restart();
+        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream);
+    }
 
     cudaStreamSynchronize(cudaStream);
     std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
