@@ -3,7 +3,7 @@ PROJECT := mpflow
 
 # Directories
 BUILD_DIR := build
-PREFIX ?= /usr/local
+prefix ?= /usr/local
 
 # Cuda locations
 CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
@@ -69,7 +69,7 @@ TOOL_BINS := ${TOOL_OBJS:.o=}
 # Build targets
 .PHONY: all install clean tools
 
-all: $(NAME) $(STATIC_NAME)
+all: $(NAME) $(STATIC_NAME) tools
 
 tools: $(TOOL_BINS)
 
@@ -79,7 +79,7 @@ $(TOOL_BINS): % : %.o $(STATIC_NAME)
 
 $(NAME): $(CXX_OBJS) $(CU_OBJS)
 	@mkdir -p $(LIB_BUILD_DIR)
-	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS) $(LINKFLAGS)
+	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS)
 
 $(STATIC_NAME): $(CXX_OBJS) $(CU_OBJS)
 	@mkdir -p $(LIB_BUILD_DIR)
@@ -93,10 +93,11 @@ $(BUILD_DIR)/%.o: %.cpp $(HXX_SRCS)
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
 	$(CXX) $(CFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
-install: $(NAME) $(STATIC_NAME) $(HXX_SRCS)
-	@install -m 0644 $(NAME) $(PREFIX)/lib
-	@install -m 0644 $(STATIC_NAME) $(PREFIX)/lib
-	@$(foreach f, $(HXX_SRCS), install -D -m 0644 $f $(PREFIX)/$f && ):
+install: $(NAME) $(STATIC_NAME) $(HXX_SRCS) $(TOOL_BINS)
+	@install -m 0644 $(NAME) $(prefix)/lib
+	@install -m 0644 $(STATIC_NAME) $(prefix)/lib
+	@$(foreach f, $(HXX_SRCS), install -D -m 0644 $f $(prefix)/$f && ):
+	@$(foreach f, $(TOOL_BINS), install -m 0755 $f $(prefix)/bin && ):
 
 clean:
 	@rm -rf $(BUILD_DIR)
