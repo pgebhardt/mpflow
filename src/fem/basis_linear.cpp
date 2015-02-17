@@ -116,7 +116,7 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
 ;
     }
     return ({
-(((((-(coefficients[0]))*(min(max((start),(float)(nodes[0])),(float)(nodes[1]))))+((coefficients[0])*(min(max((end),(float)(nodes[0])),(float)(nodes[1])))))-(((coefficients[1])*((min(max((start),(float)(nodes[0])),(float)(nodes[1])))*(min(max((start),(float)(nodes[0])),(float)(nodes[1])))))/(2)))+(((coefficients[1])*((min(max((end),(float)(nodes[0])),(float)(nodes[1])))*(min(max((end),(float)(nodes[0])),(float)(nodes[1])))))/(2)));
+(((((-(coefficients[0]))*(min(max((start),(nodes[0])),(nodes[1]))))+((coefficients[0])*(min(max((end),(nodes[0])),(nodes[1])))))-(((coefficients[1])*((min(max((start),(nodes[0])),(nodes[1])))*(min(max((start),(nodes[0])),(nodes[1])))))/(2)))+(((coefficients[1])*((min(max((end),(nodes[0])),(nodes[1])))*(min(max((end),(nodes[0])),(nodes[1])))))/(2)));
 })
 ;
 }

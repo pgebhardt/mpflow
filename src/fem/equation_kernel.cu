@@ -100,7 +100,8 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 
         value += elementId != mpFlow::dtype::invalid_index ?
             elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
-            referenceValue * exp(log(10.0f) * gamma[elementId] / 10.0f) : 0.0f;
+            referenceValue * exp(log((mpFlow::dtype::real)10.0) * gamma[elementId] / (mpFlow::dtype::real)10.0) :
+            (mpFlow::dtype::real)0.0;
     }
 
     // set residual matrix element
