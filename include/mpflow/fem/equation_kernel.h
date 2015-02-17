@@ -26,12 +26,11 @@ namespace FEM {
 namespace equationKernel {
     // reduce connectivity and elemental matrices
     template <
-        class inputType,
-        class outputType
+        class dataType
     >
     void reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const inputType* intermediate_matrix, const dtype::index* column_ids,
-        dtype::size rows, dtype::index offset, outputType* matrix);
+        const dataType* intermediate_matrix, const dtype::index* column_ids,
+        dtype::size rows, dtype::index offset, dataType* matrix);
 
     // update matrix kernel
     template <
@@ -53,16 +52,15 @@ namespace equationKernel {
 
     // calc jacobian kernel
     template <
-        class dataType,
         int nodesPerElement
     >
     void calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const dataType* drive_phi, const dataType* measurment_phi,
+        const dtype::real* drive_phi, const dtype::real* measurment_phi,
         const dtype::index* connectivity_matrix,
-        const dtype::real* elemental_jacobian_matrix, const dataType* factor,
-        dataType referenceValue, dtype::size rows, dtype::size columns,
+        const dtype::real* elemental_jacobian_matrix, const dtype::real* gamma,
+        dtype::real sigma_ref, dtype::size rows, dtype::size columns,
         dtype::size phi_rows, dtype::size element_count, dtype::size drive_count,
-        dtype::size measurment_count, bool additiv, dataType* jacobian);
+        dtype::size measurment_count, bool additiv, dtype::real* jacobian);
 }
 }
 }

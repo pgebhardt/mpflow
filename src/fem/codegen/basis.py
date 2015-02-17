@@ -130,12 +130,12 @@ class Basis(object):
     def render(self, template):
         # arguments
         points_args = [[
-            'this->nodes({}, 0)'.format(i),
-            'this->nodes({}, 1)'.format(i)]
+            'std::get<0>(this->nodes[{}])'.format(i),
+            'std::get<1>(this->nodes[{}])'.format(i)]
             for i in range(self.nodes_per_element)]
 
-        this_coefficients = ['this->coefficients({})'.format(i) for i in range(self.nodes_per_element)]
-        other_coefficients = ['other->coefficients({})'.format(i) for i in range(self.nodes_per_element)]
+        this_coefficients = ['this->coefficients[{}]'.format(i) for i in range(self.nodes_per_element)]
+        other_coefficients = ['other->coefficients[{}]'.format(i) for i in range(self.nodes_per_element)]
 
         # render template
         return template.render(
@@ -145,16 +145,16 @@ class Basis(object):
             # coefficients in constructor
             coefficients=[
                 symbolic(self.basis_function)(
-                    ['this->nodes(node, 0)', 'this->nodes(node, 1)'],
+                    ['std::get<0>(this->nodes[node])', 'std::get<1>(this->nodes[node])'],
                     [0.0] * i + [1.0] + [0.0] * (self.nodes_per_element - i - 1))
                 for i in range(self.nodes_per_element)],
 
             # evaluate basis function
             evaluate=self.evaluate(
-                ['point({})'.format(i) for i in range(2)],
+                ['std::get<{}>(point)'.format(i) for i in range(2)],
                 this_coefficients,
                 dtype='mpFlow::dtype::real',
-                custom_args=['Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point'],
+                custom_args=['std::tuple<dtype::real, dtype::real> point'],
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
                 ),
 
@@ -174,11 +174,11 @@ class Basis(object):
 
             # integrate boundary
             boundaryCoefficiens=coefficients(
-                ['nodes({})'.format(i) for i in range(self.nodes_per_edge)],
+                ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 self.boundary_function),
             integrateBoundaryEdge=self.integrateBoundaryEdge(
-                ['nodes({})'.format(i) for i in range(self.nodes_per_edge)],
-                ['coefficients({})'.format(i) for i in range(self.nodes_per_edge)],
+                ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
+                ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 'start', 'end').expand(),
             )
 
@@ -231,15 +231,15 @@ class EdgeBasis(object):
     def render(self, template):
         # arguments
         points_args = [[
-            'this->nodes({}, 0)'.format(i),
-            'this->nodes({}, 1)'.format(i)]
+            'std::get<0>(this->nodes[{}])'.format(i),
+            'std::get<1>(this->nodes[{}])'.format(i)]
             for i in range(self.nodeBasis.nodes_per_element)]
 
         # coefficients
-        ci1 = ['this->nodeBasis[0].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        ci2 = ['this->nodeBasis[1].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        cj1 = ['other->nodeBasis[0].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        cj2 = ['other->nodeBasis[1].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        ci1 = ['this->nodeBasis[0].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        ci2 = ['this->nodeBasis[1].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj1 = ['other->nodeBasis[0].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj2 = ['other->nodeBasis[1].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
 
         # render template
         return template.render(
@@ -248,10 +248,10 @@ class EdgeBasis(object):
 
             # evaluate basis function
             evaluate=self.evaluate(
-                ['point({})'.format(i) for i in range(2)],
+                ['std::get<{}>(point)'.format(i) for i in range(2)],
                 'this->length', ci1, ci2,
                 dtype='std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>',
-                custom_args=['Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point'],
+                custom_args=['std::tuple<dtype::real, dtype::real> point'],
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
                 ),
 

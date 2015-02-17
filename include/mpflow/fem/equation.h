@@ -38,9 +38,7 @@ namespace FEM {
             dataType referenceValue, cudaStream_t stream);
 
         // init methods
-        void initElementalMatrices(Eigen::Ref<
-            const Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> indices,
-            dtype::size size, cudaStream_t stream);
+        void initElementalMatrices(cudaStream_t stream);
         void initExcitationMatrix(cudaStream_t stream);
         void initJacobianCalculationMatrix(cudaStream_t stream);
 
@@ -62,7 +60,7 @@ namespace FEM {
         std::shared_ptr<numeric::SparseMatrix<dataType>> rMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalSMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalRMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
         dataType referenceValue;
     };
@@ -70,13 +68,12 @@ namespace FEM {
     namespace equation {
         // reduce matrix
         template <
-            class outputType,
-            class inputType,
-            class shapeType
+            class dataType,
+            class shapeDataType
         >
-        std::shared_ptr<numeric::Matrix<outputType>> reduceMatrix(
-            const std::vector<Eigen::Array<inputType, Eigen::Dynamic, Eigen::Dynamic>>& intermediateMatrices,
-            const std::shared_ptr<numeric::SparseMatrix<shapeType>> shapeMatrix, cudaStream_t stream);
+        void reduceMatrix(const std::shared_ptr<numeric::Matrix<dataType>> intermediateMatrix,
+            const std::shared_ptr<numeric::SparseMatrix<shapeDataType>> shape, dtype::index offset,
+            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> matrix);
 
         // update matrix
         template <

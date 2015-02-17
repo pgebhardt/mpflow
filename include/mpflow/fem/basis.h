@@ -33,9 +33,12 @@ namespace basis {
     class Basis {
     // constructor and destructor
     protected:
-        Basis(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> points)
-            : nodes(points), coefficients(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1>::Zero(points.rows()))
-            { }
+        Basis(std::array<std::tuple<dtype::real, dtype::real>, _pointsPerElement> points)
+            : nodes(points) {
+            for (auto& coefficient : this->coefficients) {
+                coefficient = 0.0f;
+            }
+        }
 
         virtual ~Basis() { }
 
@@ -45,57 +48,57 @@ namespace basis {
         static const dtype::size pointsPerElement = _pointsPerElement;
 
         // member
-        Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> nodes;
-        Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> coefficients;
+        std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes;
+        std::array<dtype::real, pointsPerElement> coefficients;
     };
 
     // linear basis class definition
     class Linear : public Basis<2, 3> {
     public:
         // constructor
-        Linear(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> nodes, dtype::index one);
+        Linear(std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
+            dtype::index one);
 
         // mathematical evaluation of basis
         dtype::real integrateWithBasis(const std::shared_ptr<Linear> other);
         dtype::real integrateGradientWithBasis(const std::shared_ptr<Linear> other);
-        static dtype::real integrateBoundaryEdge(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> nodes,
-            dtype::index one, dtype::real start, dtype::real end);
+        static dtype::real integrateBoundaryEdge(
+            std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
+            dtype::real start, dtype::real end);
 
         // evaluation
-        dtype::real evaluate(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point);
+        dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
     };
 
     // quadratic basis class definition
     class Quadratic : public Basis<3, 6> {
     public:
         // constructor
-        Quadratic(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> nodes, dtype::index one);
+        Quadratic(std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
+            dtype::index one);
 
         // mathematical evaluation of basis
         dtype::real integrateWithBasis(const std::shared_ptr<Quadratic> other);
         dtype::real integrateGradientWithBasis(const std::shared_ptr<Quadratic> other);
-        static dtype::real integrateBoundaryEdge(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> nodes,
-            dtype::index one, dtype::real start, dtype::real end);
+        static dtype::real integrateBoundaryEdge(
+            std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
+            dtype::real start, dtype::real end);
 
         // evaluation
-        dtype::real evaluate(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point);
+        dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
     };
 
     // edge bases basis function definition
     class Edge : public Basis<1, 3> {
     public:
         // constructor
-        Edge(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> nodes,
+        Edge(std::array<std::tuple<dtype::real, dtype::real>, Linear::pointsPerElement> nodes,
             std::tuple<dtype::index, dtype::index> edge);
 
         // mathematical evaluation of basis
         dtype::real integrateWithBasis(const std::shared_ptr<Edge> other);
         dtype::real integrateGradientWithBasis(const std::shared_ptr<Edge> other);
-        static dtype::real integrateBoundaryEdge(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> nodes, dtype::index one,
-            dtype::real start, dtype::real end);
-
-        // evaluation
-        std::tuple<dtype::real, dtype::real> evaluate(Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, 1> point);
+        std::tuple<dtype::real, dtype::real> evaluate(std::tuple<dtype::real, dtype::real> point);
 
         // member
         std::array<Linear, 2> nodeBasis;

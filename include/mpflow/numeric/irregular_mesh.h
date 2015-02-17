@@ -34,10 +34,10 @@ namespace numeric {
             dtype::real height);
 
         // helper methods
-        std::tuple<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>,
-            Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>> elementNodes(dtype::index element);
-        std::tuple<Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, 1>,
-            Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic>> boundaryNodes(dtype::index element);
+        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
+            elementNodes(dtype::index element);
+        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
+            boundaryNodes(dtype::index element);
 
         // member
         std::shared_ptr<Matrix<dtype::real>> nodes;
@@ -67,9 +67,8 @@ namespace numeric {
             cudaStream_t stream);
 
         std::tuple<
-            Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>,
-            Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>,
-            Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>>
+            std::vector<std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>,
+            std::vector<std::array<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>, 3>>>
             calculateGlobalEdgeIndices(std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements);
     }
 }

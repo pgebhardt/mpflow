@@ -31,9 +31,7 @@ namespace MWI {
             cudaStream_t stream);
 
         // init methods
-        void initElementalMatrices(Eigen::Ref<
-            const Eigen::Array<dtype::index, Eigen::Dynamic, Eigen::Dynamic>> indices,
-            dtype::size size, cudaStream_t stream);
+        void initElementalMatrices(cudaStream_t stream);
         void initJacobianCalculationMatrix(cudaStream_t stream);
 
         void update(const std::shared_ptr<numeric::Matrix<dtype::complex>> beta,
