@@ -22,48 +22,53 @@
 PROJECT := mpflow
 
 ##############################
-# Directories
+# Load build configuration
 ##############################
-BUILD_DIR := build
-prefix ?= /usr/local
+CONFIG_FILE ?= Makefile.config
+include $(CONFIG_FILE)
 
-# Cuda locations
-CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
-CUDA_DIR := $(CUDA_TOOLKIT_ROOT)
+##############################
+# Main output directories
+##############################
+ROOT_BUILD_DIR := build
+prefix ?= /usr/local
 
 ##############################
 # Compiler
 ##############################
 AR := ar rcs
-NVCC := $(CUDA_TOOLKIT_ROOT)/bin/nvcc
 CXX := clang++
+NVCC := $(CUDA_TOOLKIT_ROOT)/bin/nvcc
 
-# Cross compile for arm architecture
-ARM ?= 0
-ifeq ($(ARM), 1)
-	CXX := arm-linux-gnueabihf-g++
-	TARGET_ARCH := armv7-linux-gnueabihf
-	CUDA_DIR := $(CUDA_TOOLKIT_ROOT)/targets/$(TARGET_ARCH)
+# use of custom compiler
+ifdef CUSTOM_CXX
+	CXX := $(CUSTOM_CXX)
+	NVCC += -ccbin=$(CXX)
 endif
 
 # Target build architecture
-TARGET_ARCH ?= $(shell uname -m)-$(shell uname)
-BUILD_DIR := $(BUILD_DIR)/$(TARGET_ARCH)
+TARGET_ARCH_NAME ?= $(shell $(CXX) -dumpmachine)
+BUILD_DIR := $(ROOT_BUILD_DIR)/$(TARGET_ARCH_NAME)
+
+# get cuda directory for target architecture
+CUDA_DIR := $(CUDA_TOOLKIT_ROOT)
+ifdef TARGET_CUDA_DIR
+	CUDA_DIR := $(CUDA_DIR)/targets/$(TARGET_CUDA_DIR)
+endif
 
 ##############################
-# The target shared library and static library names
+# The shared library and static library names
 ##############################
-LIB_BUILD_DIR := $(BUILD_DIR)/lib
-NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).so
-STATIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT)_static.a
+NAME := $(BUILD_DIR)/lib/lib$(PROJECT).so
+STATIC_NAME := $(BUILD_DIR)/lib/lib$(PROJECT)_static.a
 
 ##############################
 # Includes and libraries
 ##############################
 LIBRARIES := culibos pthread dl rt
 STATIC_LIBRARIES := cudart_static cublas_static distmesh_static qhull
-LIBRARY_DIRS := $(CUDA_DIR)/lib
-INCLUDE_DIRS := $(CUDA_DIR)/include /usr/local/include ./include
+LIBRARY_DIRS += $(CUDA_DIR)/lib
+INCLUDE_DIRS += $(CUDA_DIR)/include ./include
 
 # add <cuda>/lib64 only if it exists
 ifneq ("$(wildcard $(CUDA_DIR)/lib64)", "")
@@ -76,21 +81,18 @@ endif
 GIT_VERSION := $(shell git describe --tags --long)
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\" -O3
 CFLAGS := -std=c++11 -fPIC
-NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v \
-	-gencode=arch=compute_30,code=sm_30 \
-	-gencode=arch=compute_32,code=sm_32 \
-	-gencode=arch=compute_35,code=sm_35
+NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH)
 LINKFLAGS := -O3 -fPIC -static-libgcc -static-libstdc++
 LDFLAGS := $(patsubst %,-l:lib%.a, $(STATIC_LIBRARIES)) $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
-
-# Tell nvcc how to build for arm architecture
-ifeq ($(ARM), 1)
-	NVCCFLAGS += -m32 -ccbin=$(CXX)
-endif
 
 # Use double precision floating points
 ifdef DOUBLE_PRECISION
 	COMMON_FLAGS += -DUSE_DOUBLE
+endif
+
+# Target different cpu bit size
+ifdef TARGET_CPU_ARCH
+	NVCCFLAGS += $(TARGET_CPU_ARCH)
 endif
 
 ##############################
@@ -117,24 +119,29 @@ all: $(NAME) $(STATIC_NAME) tools
 tools: $(TOOL_BINS)
 
 $(TOOL_BINS): $(BUILD_DIR)/bin/% : $(BUILD_DIR)/objs/tools/%.o $(STATIC_NAME)
+	@echo [ Linking ] $@
 	@mkdir -p $(BUILD_DIR)/bin
-	$(CXX) $< $(STATIC_NAME) -o $@ $(LDFLAGS) $(LINKFLAGS)
+	@$(CXX) $< $(STATIC_NAME) -o $@ $(LDFLAGS) $(LINKFLAGS)
 
 $(NAME): $(CXX_OBJS) $(CU_OBJS)
-	@mkdir -p $(LIB_BUILD_DIR)
-	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS) $(LDFLAGS) $(LINKFLAGS)
+	@echo [ Linking ] $@
+	@mkdir -p $(BUILD_DIR)/lib
+	@$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS) $(LDFLAGS) $(LINKFLAGS)
 
 $(STATIC_NAME): $(CXX_OBJS) $(CU_OBJS)
-	@mkdir -p $(LIB_BUILD_DIR)
-	$(AR) $@ $(CXX_OBJS) $(CU_OBJS)
+	@echo [ Linking ] $@
+	@mkdir -p $(BUILD_DIR)/lib
+	@$(AR) $@ $(CXX_OBJS) $(CU_OBJS)
 
 $(BUILD_DIR)/objs/%.o: %.cu $(HXX_SRCS)
+	@echo [ NVCC ] $<
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
-	$(NVCC) $(NVCCFLAGS) $(COMMON_FLAGS) -c -o $@ $<
+	@$(NVCC) $(NVCCFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/objs/%.o: %.cpp $(HXX_SRCS)
+	@echo [ CXX ] $<
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
-	$(CXX) $(CFLAGS) $(COMMON_FLAGS) -c -o $@ $<
+	@$(CXX) $(CFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
 install: $(NAME) $(STATIC_NAME) $(HXX_SRCS) $(TOOL_BINS)
 	@install -m 0644 $(NAME) $(prefix)/lib
@@ -143,4 +150,4 @@ install: $(NAME) $(STATIC_NAME) $(HXX_SRCS) $(TOOL_BINS)
 	@$(foreach f, $(TOOL_BINS), install -m 0755 $f $(prefix)/bin && ):
 
 clean:
-	@rm -rf $(BUILD_DIR)
+	@rm -rf $(ROOT_BUILD_DIR)
