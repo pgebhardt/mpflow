@@ -1,3 +1,23 @@
+# --------------------------------------------------------------------
+# This file is part of mpFlow.
+#
+# mpFlow is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# mpFlow is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with mpFlow. If not, see <http:#www.gnu.org/licenses/>.
+#
+# Copyright (C) 2015 Patrik Gebhardt
+# Contact: patrik.gebhardt@rub.de
+# --------------------------------------------------------------------
+
 # The Makefile for libmpflow
 PROJECT := mpflow
 
@@ -39,6 +59,11 @@ LIBRARIES := cudart_static cublas_static distmesh_static qhull culibos pthread d
 LIBRARY_DIRS := $(CUDA_DIR)/lib
 INCLUDE_DIRS := $(CUDA_DIR)/include /usr/local/include ./include
 
+# add <cuda>/lib64 only if it exists
+ifneq ("$(wildcard $(CUDA_DIR)/lib64)", "")
+	LIBRARY_DIRS += $(CUDA_DIR)/lib64
+endif
+
 # Compiler Flags
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\" -O3
 CFLAGS := -std=c++11 -fPIC
@@ -46,7 +71,7 @@ NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v \
 	-gencode=arch=compute_30,code=sm_30 \
 	-gencode=arch=compute_32,code=sm_32 \
 	-gencode=arch=compute_35,code=sm_35
-LINKFLAGS := -O3 -fPIC
+LINKFLAGS := -O3 -fPIC -static-libgcc -static-libstdc++
 LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
 
 # Tell nvcc how to build for arm architecture
@@ -61,10 +86,10 @@ CU_SRCS := $(shell find src -name "*.cu")
 TOOL_SRCS := $(shell find tools -name "*.cpp")
 
 # Object files
-CXX_OBJS := $(addprefix $(BUILD_DIR)/, ${CXX_SRCS:.cpp=.o})
-CU_OBJS := $(addprefix $(BUILD_DIR)/, ${CU_SRCS:.cu=.o})
-TOOL_OBJS := $(addprefix $(BUILD_DIR)/, ${TOOL_SRCS:.cpp=.o})
-TOOL_BINS := ${TOOL_OBJS:.o=}
+CXX_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CXX_SRCS:.cpp=.o))
+CU_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CU_SRCS:.cu=.o))
+TOOL_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(TOOL_SRCS:.cpp=.o))
+TOOL_BINS := $(patsubst tools%.cpp, $(BUILD_DIR)/bin%, $(TOOL_SRCS))
 
 # Build targets
 .PHONY: all install clean tools
@@ -73,23 +98,23 @@ all: $(NAME) $(STATIC_NAME) tools
 
 tools: $(TOOL_BINS)
 
-$(TOOL_BINS): % : %.o $(STATIC_NAME)
-	@mkdir -p $(BUILD_DIR)/tools
+$(TOOL_BINS): $(BUILD_DIR)/bin/% : $(BUILD_DIR)/objs/tools/%.o $(STATIC_NAME)
+	@mkdir -p $(BUILD_DIR)/bin
 	$(CXX) $< $(STATIC_NAME) -o $@ $(LDFLAGS) $(LINKFLAGS)
 
 $(NAME): $(CXX_OBJS) $(CU_OBJS)
 	@mkdir -p $(LIB_BUILD_DIR)
-	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS)
+	$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS) $(LDFLAGS) $(LINKFLAGS)
 
 $(STATIC_NAME): $(CXX_OBJS) $(CU_OBJS)
 	@mkdir -p $(LIB_BUILD_DIR)
 	$(AR) $@ $(CXX_OBJS) $(CU_OBJS)
 
-$(BUILD_DIR)/%.o: %.cu $(HXX_SRCS)
+$(BUILD_DIR)/objs/%.o: %.cu $(HXX_SRCS)
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
 	$(NVCC) $(NVCCFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/%.o: %.cpp $(HXX_SRCS)
+$(BUILD_DIR)/objs/%.o: %.cpp $(HXX_SRCS)
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
 	$(CXX) $(CFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
