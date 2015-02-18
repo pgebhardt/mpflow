@@ -21,7 +21,9 @@
 # The Makefile for libmpflow
 PROJECT := mpflow
 
+##############################
 # Directories
+##############################
 BUILD_DIR := build
 prefix ?= /usr/local
 
@@ -29,7 +31,9 @@ prefix ?= /usr/local
 CUDA_TOOLKIT_ROOT ?= /usr/local/cuda
 CUDA_DIR := $(CUDA_TOOLKIT_ROOT)
 
+##############################
 # Compiler
+##############################
 AR := ar rcs
 NVCC := $(CUDA_TOOLKIT_ROOT)/bin/nvcc
 CXX := clang++
@@ -46,16 +50,18 @@ endif
 TARGET_ARCH ?= $(shell uname -m)-$(shell uname)
 BUILD_DIR := $(BUILD_DIR)/$(TARGET_ARCH)
 
+##############################
 # The target shared library and static library names
+##############################
 LIB_BUILD_DIR := $(BUILD_DIR)/lib
 NAME := $(LIB_BUILD_DIR)/lib$(PROJECT).so
 STATIC_NAME := $(LIB_BUILD_DIR)/lib$(PROJECT)_static.a
 
-# Version Define
-GIT_VERSION := $(shell git describe --tags --long)
-
+##############################
 # Includes and libraries
-LIBRARIES := cudart_static cublas_static distmesh_static qhull culibos pthread dl rt
+##############################
+LIBRARIES := culibos pthread dl rt
+STATIC_LIBRARIES := cudart_static cublas_static distmesh_static qhull
 LIBRARY_DIRS := $(CUDA_DIR)/lib
 INCLUDE_DIRS := $(CUDA_DIR)/include /usr/local/include ./include
 
@@ -64,7 +70,10 @@ ifneq ("$(wildcard $(CUDA_DIR)/lib64)", "")
 	LIBRARY_DIRS += $(CUDA_DIR)/lib64
 endif
 
+##############################
 # Compiler Flags
+##############################
+GIT_VERSION := $(shell git describe --tags --long)
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\" -O3
 CFLAGS := -std=c++11 -fPIC
 NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v \
@@ -72,14 +81,21 @@ NVCCFLAGS := -Xcompiler -fpic -use_fast_math --ptxas-options=-v \
 	-gencode=arch=compute_32,code=sm_32 \
 	-gencode=arch=compute_35,code=sm_35
 LINKFLAGS := -O3 -fPIC -static-libgcc -static-libstdc++
-LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
+LDFLAGS := $(patsubst %,-l:lib%.a, $(STATIC_LIBRARIES)) $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
 
 # Tell nvcc how to build for arm architecture
 ifeq ($(ARM), 1)
 	NVCCFLAGS += -m32 -ccbin=$(CXX)
 endif
 
+# Use double precision floating points
+ifdef DOUBLE_PRECISION
+	COMMON_FLAGS += -DUSE_DOUBLE
+endif
+
+##############################
 # Source Files
+##############################
 CXX_SRCS := $(shell find src -name "*.cpp")
 HXX_SRCS := $(shell find include -name "*.h")
 CU_SRCS := $(shell find src -name "*.cu")
@@ -91,7 +107,9 @@ CU_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CU_SRCS:.cu=.o))
 TOOL_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(TOOL_SRCS:.cpp=.o))
 TOOL_BINS := $(patsubst tools%.cpp, $(BUILD_DIR)/bin%, $(TOOL_SRCS))
 
+##############################
 # Build targets
+##############################
 .PHONY: all install clean tools
 
 all: $(NAME) $(STATIC_NAME) tools
