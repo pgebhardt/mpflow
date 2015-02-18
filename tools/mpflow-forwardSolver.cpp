@@ -9,16 +9,26 @@
 using namespace mpFlow;
 
 // helper function to create an mpflow matrix from an json array
-// json arrays are assumed to be 2 dimensional
 template <class type>
 std::shared_ptr<numeric::Matrix<type>> matrixFromJsonArray(const json_value& array, cudaStream_t cudaStream) {
+    // exctract sizes
+    dtype::size rows = array.u.array.length;
+    dtype::size cols = array[0].type == json_array ? array[0].u.array.length : 1;
+
     // create matrix
-    auto matrix = std::make_shared<numeric::Matrix<type>>(array.u.array.length, array[0].u.array.length, cudaStream);
+    auto matrix = std::make_shared<numeric::Matrix<type>>(rows, cols, cudaStream);
 
     // exctract values
-    for (dtype::index row = 0; row < matrix->rows; ++row)
-    for (dtype::index col = 0; col < matrix->cols; ++col) {
-        (*matrix)(row, col) = array[row][col].u.dbl;
+    if (array[0].type != json_array) {
+        for (dtype::index row = 0; row < matrix->rows; ++row) {
+            (*matrix)(row, 0) = array[row].u.dbl;
+        }
+    }
+    else {
+        for (dtype::index row = 0; row < matrix->rows; ++row)
+        for (dtype::index col = 0; col < matrix->cols; ++col) {
+            (*matrix)(row, col) = array[row][col].u.dbl;
+        }
     }
     matrix->copyToDevice(cudaStream);
 
