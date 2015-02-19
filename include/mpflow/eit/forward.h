@@ -38,7 +38,7 @@ namespace EIT {
         // forward solving
         std::shared_ptr<numeric::Matrix<dtype::real>> solve(
             const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
-            cublasHandle_t handle, cudaStream_t stream);
+            cublasHandle_t handle, cudaStream_t stream, dtype::real tolerance=1e-6);
 
         // helper methods
         void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dtype::real>> source,
