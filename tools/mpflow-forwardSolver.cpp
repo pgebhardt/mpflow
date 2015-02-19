@@ -101,6 +101,11 @@ int main(int argc, char* argv[]) {
     std::shared_ptr<numeric::IrregularMesh> mesh = nullptr;
     double radius = meshConfig["radius"];
 
+    // create electrodes descriptor
+    auto electrodes = FEM::boundaryDescriptor::circularBoundary(modelConfig["electrodes"]["count"].u.integer,
+        std::make_tuple(modelConfig["electrodes"]["width"].u.dbl, modelConfig["electrodes"]["height"].u.dbl),
+        radius, 0.0);
+
     if (meshConfig["mesh_dir"].type != json_none) {
         // load mesh from file
         std::string meshDir(meshConfig["mesh_dir"]);
@@ -118,11 +123,20 @@ int main(int argc, char* argv[]) {
     else {
         std::cout << "Create mesh using libdistmesh" << std::endl;
 
+        // fix mesh at electrodes boundaries
+        distmesh::dtype::array<distmesh::dtype::real> fixedPoints(electrodes->count * 2, 2);
+        for (dtype::index electrode = 0; electrode < electrodes->count; ++electrode) {
+            fixedPoints(electrode * 2, 0) = std::get<0>(std::get<0>(electrodes->coordinates[electrode]));
+            fixedPoints(electrode * 2, 1) = std::get<1>(std::get<0>(electrodes->coordinates[electrode]));
+            fixedPoints(electrode * 2 + 1, 0) = std::get<0>(std::get<1>(electrodes->coordinates[electrode]));
+            fixedPoints(electrode * 2 + 1, 1) = std::get<1>(std::get<1>(electrodes->coordinates[electrode]));
+        }
+
         // create mesh with libdistmesh
         auto distanceFuntion = distmesh::distance_function::circular(radius);
         auto dist_mesh = distmesh::distmesh(distanceFuntion, meshConfig["outer_edge_length"],
             1.0 + (1.0 - (double)meshConfig["inner_edge_length"] / (double)meshConfig["outer_edge_length"]) *
-            distanceFuntion / radius, 1.1 * radius * distmesh::bounding_box(2));
+            distanceFuntion / radius, 1.1 * radius * distmesh::bounding_box(2), fixedPoints);
 
         std::cout << "Mesh created with " << std::get<0>(dist_mesh).rows() << " nodes and " <<
             std::get<1>(dist_mesh).rows() << " elements." << std::endl;
@@ -139,11 +153,6 @@ int main(int argc, char* argv[]) {
     time.restart();
     std::cout << "----------------------------------------------------" << std::endl;
     std::cout << "Create model helper classes" << std::endl;
-
-    // create electrodes descriptor
-    auto electrodes = FEM::boundaryDescriptor::circularBoundary(modelConfig["electrodes"]["count"].u.integer,
-        std::make_tuple(modelConfig["electrodes"]["width"].u.dbl, modelConfig["electrodes"]["height"].u.dbl),
-        mesh->radius, 0.0);
 
     // load excitation and measurement pattern from config or assume standard pattern, if not given
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern = nullptr;
@@ -207,14 +216,14 @@ int main(int argc, char* argv[]) {
             equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream);
+        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-12);
     }
     else {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
             equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream);
+        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-12);
     }
 
     cudaStreamSynchronize(cudaStream);
