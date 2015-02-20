@@ -143,8 +143,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
             this->equation->update(gamma, alpha, gamma, stream);
 
+            this->phi[component]->scalarMultiply(1.0 / (dtype::real)this->phi.size(), stream);
             this->excitation->multiply(this->equation->systemMatrix,
                 this->phi[component], handle, stream);
+            this->excitation->scalarMultiply(std::get<1>(this->equation->boundaryDescriptor->shapes[0]) /
+                (dtype::real)this->phi.size(), stream);
 
             this->applyMeasurementPattern(this->excitation, this->result,
                 component == 0 ? false : true, handle, stream);
