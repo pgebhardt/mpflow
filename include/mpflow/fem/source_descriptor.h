@@ -25,13 +25,18 @@ namespace mpFlow {
 namespace FEM {
     class SourceDescriptor {
     public:
+        enum Type {
+            Open,
+            Fixed
+        };
+
         // constructor
-        SourceDescriptor(std::string type, const std::vector<dtype::real>& values,
+        SourceDescriptor(Type type, const std::vector<dtype::real>& values,
             std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
             std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
             cudaStream_t stream);
-        SourceDescriptor(std::string type, dtype::real value,
+        SourceDescriptor(Type type, dtype::real value,
             std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
             std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
             std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
@@ -39,19 +44,13 @@ namespace FEM {
         virtual ~SourceDescriptor() { }
 
         // member
-        std::string type;
+        Type type;
         std::shared_ptr<FEM::BoundaryDescriptor> electrodes;
         std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern;
         std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern;
         std::shared_ptr<numeric::Matrix<dtype::real>> pattern;
         std::vector<dtype::real> values;
     };
-
-    // source types
-    namespace sourceDescriptor {
-        static std::string const OpenSourceType = "open";
-        static std::string const MixedSourceType = "mixed";
-    }
 }
 }
 

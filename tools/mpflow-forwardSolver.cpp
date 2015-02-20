@@ -183,8 +183,8 @@ int main(int argc, char* argv[]) {
     }
 
     // create source descriptor
-    auto sourceType = modelConfig["source"]["mixed"].u.boolean == true ? FEM::sourceDescriptor::MixedSourceType :
-        FEM::sourceDescriptor::OpenSourceType;
+    auto sourceType = modelConfig["source"]["mixed"].u.boolean == true ? FEM::SourceDescriptor::Type::Fixed :
+        FEM::SourceDescriptor::Type::Open;
     auto source = std::make_shared<FEM::SourceDescriptor>(sourceType, current, electrodes,
         drivePattern, measurementPattern, cudaStream);
 
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
     std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
 
     // use different numeric solver for different source types
-    if (sourceType == FEM::sourceDescriptor::MixedSourceType) {
+    if (sourceType == FEM::SourceDescriptor::Type::Fixed) {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::BiCGSTAB>>(
             equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
 

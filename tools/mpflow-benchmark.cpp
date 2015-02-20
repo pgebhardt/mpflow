@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
     // create source
     auto source = std::make_shared<FEM::SourceDescriptor>(
-        FEM::sourceDescriptor::OpenSourceType, 1.0, electrodes,
+        FEM::SourceDescriptor::Type::Open, 1.0, electrodes,
         drivePattern, measurementPattern, cudaStream);
 
     time.restart();

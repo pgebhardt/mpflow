@@ -46,7 +46,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
     }
 
     // disable 2.5D mode for fixed boundary conditions
-    if (source->type == FEM::sourceDescriptor::MixedSourceType) {
+    if (source->type == FEM::SourceDescriptor::Type::Fixed) {
         components = 1;
     }
 
@@ -76,7 +76,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
         this->equation->mesh->nodes->rows, stream, 0.0, false);
 
     // apply mixed boundary conditions, if applicably
-    if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+    if (this->source->type == FEM::SourceDescriptor::Type::Fixed) {
         forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
             this->equation->systemMatrix, stream);
     }
@@ -125,7 +125,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         // update system matrix for different 2.5D components
         this->equation->update(gamma, alpha, gamma, stream);
 
-        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+        if (this->source->type == FEM::SourceDescriptor::Type::Fixed) {
             forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
                 this->equation->systemMatrix, stream);
         }
@@ -133,7 +133,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         this->excitation->multiply(this->equation->excitationMatrix,
             this->source->pattern, handle, stream);
 
-        if (this->source->type == FEM::sourceDescriptor::OpenSourceType) {
+        if (this->source->type == FEM::SourceDescriptor::Type::Open) {
             this->excitation->scalarMultiply(beta, stream);
         }
 
@@ -148,7 +148,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
             stream, this->jacobian);
 
         // calculate electrode voltage or current, depends on the type of source
-        if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
+        if (this->source->type == FEM::SourceDescriptor::Type::Fixed) {
             this->equation->update(gamma, alpha, gamma, stream);
 
             this->excitation->multiply(this->equation->systemMatrix,
@@ -166,7 +166,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     }
 
     // current source specific correction for jacobian matrix
-    if (this->source->type == FEM::sourceDescriptor::OpenSourceType) {
+    if (this->source->type == FEM::SourceDescriptor::Type::Open) {
         this->jacobian->scalarMultiply(-1.0, stream);
     }
 

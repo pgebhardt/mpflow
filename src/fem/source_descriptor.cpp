@@ -20,7 +20,7 @@
 
 #include "mpflow/mpflow.h"
 
-mpFlow::FEM::SourceDescriptor::SourceDescriptor(std::string type, const std::vector<dtype::real>& values,
+mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, const std::vector<dtype::real>& values,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
     std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
@@ -63,7 +63,7 @@ mpFlow::FEM::SourceDescriptor::SourceDescriptor(std::string type, const std::vec
     this->pattern->copyToDevice(stream);
 }
 
-mpFlow::FEM::SourceDescriptor::SourceDescriptor(std::string type, dtype::real value,
+mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, dtype::real value,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
     std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
