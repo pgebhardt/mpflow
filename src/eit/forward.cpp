@@ -45,6 +45,11 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
             "mpFlow::EIT::ForwardSolver::ForwardSolver: handle == nullptr");
     }
 
+    // disable 2.5D mode for fixed boundary conditions
+    if (source->type == FEM::sourceDescriptor::MixedSourceType) {
+        components = 1;
+    }
+
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<
         dtype::real, numeric::SparseMatrix>>(
@@ -127,7 +132,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
         this->excitation->multiply(this->equation->excitationMatrix,
             this->source->pattern, handle, stream);
-        this->excitation->scalarMultiply(beta, stream);
+
+        if (this->source->type == FEM::sourceDescriptor::OpenSourceType) {
+            this->excitation->scalarMultiply(beta, stream);
+        }
 
         // solve linear system
         this->numericalSolver->solve(this->equation->systemMatrix,
@@ -143,7 +151,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         if (this->source->type == FEM::sourceDescriptor::MixedSourceType) {
             this->equation->update(gamma, alpha, gamma, stream);
 
-            this->phi[component]->scalarMultiply(1.0 / (dtype::real)this->phi.size(), stream);
             this->excitation->multiply(this->equation->systemMatrix,
                 this->phi[component], handle, stream);
             this->excitation->scalarMultiply(std::get<1>(this->equation->boundaryDescriptor->shapes[0]),
