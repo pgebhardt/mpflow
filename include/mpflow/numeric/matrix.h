@@ -138,6 +138,12 @@ namespace numeric {
         Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> toEigen(
             std::shared_ptr<Matrix<type>> matrix);
 
+        template <
+            class type
+        >
+        Eigen::Array<std::complex<type>, Eigen::Dynamic, Eigen::Dynamic> toEigen(
+            std::shared_ptr<Matrix<thrust::complex<type>>> matrix);
+
         // converts eigen array to matrix
         template <
             class mpflow_type,
