@@ -30,25 +30,36 @@ include $(CONFIG_FILE)
 ##############################
 # Main output directories
 ##############################
-ROOT_BUILD_DIR := build
 prefix ?= /usr/local
+ROOT_BUILD_DIR := build
+
+# adjust build dir for debug configuration
+DEBUG ?= 0
+ifeq ($(DEBUG), 1)
+	BUILD_DIR := $(ROOT_BUILD_DIR)/debug
+else
+	BUILD_DIR := $(ROOT_BUILD_DIR)/release
+endif
 
 ##############################
 # Compiler
 ##############################
 AR := ar rcs
-CXX := clang++
+CXX ?= /usr/bin/g++
 NVCC := $(CUDA_TOOLKIT_ROOT)/bin/nvcc
 
 # use of custom compiler
 ifdef CUSTOM_CXX
 	CXX := $(CUSTOM_CXX)
-	NVCC += -ccbin=$(CXX)
+endif
+
+ifdef CUSTOM_NVCC_HOST_CXX
+	NVCC += -ccbin=$(CUSTOM_NVCC_HOST_CXX)
 endif
 
 # Target build architecture
 TARGET_ARCH_NAME ?= $(shell $(CXX) -dumpmachine)
-BUILD_DIR := $(ROOT_BUILD_DIR)/$(TARGET_ARCH_NAME)
+BUILD_DIR := $(BUILD_DIR)/$(TARGET_ARCH_NAME)
 
 # get cuda directory for target architecture
 CUDA_DIR := $(CUDA_TOOLKIT_ROOT)
@@ -79,10 +90,10 @@ endif
 # Compiler Flags
 ##############################
 GIT_VERSION := $(shell git describe --tags --long)
-COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\" -O3
-CFLAGS := -std=c++11 -fPIC
+COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\"
+CXXFLAGS := -std=c++11 -fPIC
 NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH)
-LINKFLAGS := -O3 -fPIC -static-libgcc -static-libstdc++
+LINKFLAGS := -fPIC -static-libgcc -static-libstdc++
 LDFLAGS := $(patsubst %,-l:lib%.a, $(STATIC_LIBRARIES)) $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
 
 # Use double precision floating points
@@ -93,6 +104,14 @@ endif
 # Target different cpu bit size
 ifdef TARGET_CPU_ARCH
 	NVCCFLAGS += $(TARGET_CPU_ARCH)
+endif
+
+# Set compiler flags for debug configuration
+ifeq ($(DEBUG), 1)
+	COMMON_FLAGS += -g -O0 -DDEBUG
+	NVCCFLAGS += -G
+else
+	COMMON_FLAGS += -O3 -DNDEBUG
 endif
 
 ##############################
@@ -124,12 +143,12 @@ tools: $(TOOLS_BINS)
 $(TOOLS_BINS): $(BUILD_DIR)/bin/% : $(BUILD_DIR)/objs/tools/%.o $(UTILS_OBJS) $(STATIC_NAME)
 	@echo [ Linking ] $@
 	@mkdir -p $(BUILD_DIR)/bin
-	@$(CXX) -o $@ $< $(UTILS_OBJS) $(STATIC_NAME) $(LDFLAGS) $(LINKFLAGS)
+	@$(CXX) -o $@ $< $(UTILS_OBJS) $(STATIC_NAME) $(COMMON_FLAGS) $(LDFLAGS) $(LINKFLAGS)
 
 $(NAME): $(CXX_OBJS) $(CU_OBJS)
 	@echo [ Linking ] $@
 	@mkdir -p $(BUILD_DIR)/lib
-	@$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS) $(LDFLAGS) $(LINKFLAGS)
+	@$(CXX) -shared -o $@ $(CXX_OBJS) $(CU_OBJS) $(COMMON_FLAGS) $(LDFLAGS) $(LINKFLAGS)
 
 $(STATIC_NAME): $(CXX_OBJS) $(CU_OBJS)
 	@echo [ Linking ] $@
@@ -144,7 +163,7 @@ $(BUILD_DIR)/objs/%.o: %.cu $(HXX_SRCS)
 $(BUILD_DIR)/objs/%.o: %.cpp $(HXX_SRCS)
 	@echo [ CXX ] $<
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
-	@$(CXX) $(CFLAGS) $(COMMON_FLAGS) -c -o $@ $<
+	@$(CXX) $(CXXFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
 install: $(NAME) $(STATIC_NAME) $(HXX_SRCS) $(TOOL_BINS)
 	@install -m 0644 $(NAME) $(prefix)/lib

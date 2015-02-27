@@ -24,6 +24,11 @@
 #ifndef MPFLOW_INCLUDE_CUDA_ERROR_H
 #define MPFLOW_INCLUDE_CUDA_ERROR_H
 
+// enable cuda error checking in debug configuration
+#ifdef DEBUG
+    #define CUDA_ERROR_CHECK
+#endif
+
 #define CudaSafeCall(err)   __cudaSafeCall(err, __FILE__, __LINE__)
 #define CudaCheckError()    __cudaCheckError(__FILE__, __LINE__)
 
