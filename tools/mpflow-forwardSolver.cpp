@@ -225,12 +225,6 @@ int main(int argc, char* argv[]) {
     std::cout << "Solve electrical potential for all excitations"  << std::endl;
 
     auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
-
-    setCircularRegion(0.0, 0.015, 0.005, -3.0, mesh, gamma);
-    setCircularRegion(0.0, -0.015, 0.005, 3.0, mesh, gamma);
-
-    gamma->copyToDevice(cudaStream);
-
     std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
 
     // use different numeric solver for different source types
