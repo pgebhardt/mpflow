@@ -68,7 +68,7 @@ STATIC_NAME := $(BUILD_DIR)/lib/lib$(PROJECT)_static.a
 LIBRARIES := culibos pthread dl rt
 STATIC_LIBRARIES := cudart_static cublas_static distmesh_static qhull
 LIBRARY_DIRS += $(CUDA_DIR)/lib
-INCLUDE_DIRS += $(CUDA_DIR)/include ./include
+INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./tools/utils/include
 
 # add <cuda>/lib64 only if it exists
 ifneq ("$(wildcard $(CUDA_DIR)/lib64)", "")
@@ -101,13 +101,16 @@ endif
 CXX_SRCS := $(shell find src -name "*.cpp")
 HXX_SRCS := $(shell find include -name "*.h")
 CU_SRCS := $(shell find src -name "*.cu")
-TOOL_SRCS := $(shell find tools -name "*.cpp")
+UTILS_SRCS := $(shell find tools/utils/src -name "*.cpp")
+TOOLS_SRCS := $(shell find tools -name "*.cpp")
+TOOLS_SRCS := $(filter-out $(UTILS_SRCS), $(TOOLS_SRCS))
 
 # Object files
 CXX_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CXX_SRCS:.cpp=.o))
 CU_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CU_SRCS:.cu=.o))
-TOOL_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(TOOL_SRCS:.cpp=.o))
-TOOL_BINS := $(patsubst tools%.cpp, $(BUILD_DIR)/bin%, $(TOOL_SRCS))
+UTILS_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(UTILS_SRCS:.cpp=.o))
+TOOLS_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(TOOLS_SRCS:.cpp=.o))
+TOOLS_BINS := $(patsubst tools%.cpp, $(BUILD_DIR)/bin%, $(TOOLS_SRCS))
 
 ##############################
 # Build targets
@@ -116,12 +119,12 @@ TOOL_BINS := $(patsubst tools%.cpp, $(BUILD_DIR)/bin%, $(TOOL_SRCS))
 
 all: $(NAME) $(STATIC_NAME) tools
 
-tools: $(TOOL_BINS)
+tools: $(TOOLS_BINS)
 
-$(TOOL_BINS): $(BUILD_DIR)/bin/% : $(BUILD_DIR)/objs/tools/%.o $(STATIC_NAME)
+$(TOOLS_BINS): $(BUILD_DIR)/bin/% : $(BUILD_DIR)/objs/tools/%.o $(UTILS_OBJS) $(STATIC_NAME)
 	@echo [ Linking ] $@
 	@mkdir -p $(BUILD_DIR)/bin
-	@$(CXX) $< $(STATIC_NAME) -o $@ $(LDFLAGS) $(LINKFLAGS)
+	@$(CXX) -o $@ $< $(UTILS_OBJS) $(STATIC_NAME) $(LDFLAGS) $(LINKFLAGS)
 
 $(NAME): $(CXX_OBJS) $(CU_OBJS)
 	@echo [ Linking ] $@

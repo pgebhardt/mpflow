@@ -2,9 +2,9 @@
 #include <fstream>
 #include <distmesh/distmesh.h>
 #include <mpflow/mpflow.h>
-#include "utils/stringtools/format.hpp"
-#include "utils/high_precision_time.h"
-#include "utils/json.c"
+#include "stringtools/all.hpp"
+#include "high_precision_time.h"
+#include "json.h"
 
 using namespace mpFlow;
 
@@ -226,7 +226,9 @@ int main(int argc, char* argv[]) {
 
     auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
 
-    setCircularRegion(0.0, 0.015, 0.005, 3.0, mesh, gamma);
+    setCircularRegion(0.0, 0.015, 0.005, -3.0, mesh, gamma);
+    setCircularRegion(0.0, -0.015, 0.005, 3.0, mesh, gamma);
+
     gamma->copyToDevice(cudaStream);
 
     std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
@@ -237,14 +239,14 @@ int main(int argc, char* argv[]) {
             equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-12);
+        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-6);
     }
     else {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
             equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-12);
+        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-6);
     }
 
     cudaStreamSynchronize(cudaStream);

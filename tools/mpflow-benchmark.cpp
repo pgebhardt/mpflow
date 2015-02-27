@@ -1,7 +1,7 @@
 #include <iostream>
 #include <distmesh/distmesh.h>
 #include <mpflow/mpflow.h>
-#include "utils/high_precision_time.h"
+#include "high_precision_time.h"
 
 using namespace mpFlow;
 #define RADIUS (0.085)
