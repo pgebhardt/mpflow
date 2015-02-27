@@ -76,7 +76,7 @@ void mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::preSolve(
     // forward solving a few steps
     auto initialValue = this->forwardSolver->solve(this->gamma,
         this->forwardSolver->equation->mesh->nodes->rows,
-        handle, stream, 1e-12);
+        handle, stream, 1e-6);
 
     // calc system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
