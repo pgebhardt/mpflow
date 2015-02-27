@@ -66,8 +66,7 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
     this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes->rows,
         this->source->pattern->cols, stream);
     this->jacobian = std::make_shared<numeric::Matrix<dtype::real>>(
-        math::roundTo(this->source->measurementPattern->cols, numeric::matrix::block_size) *
-        math::roundTo(this->source->drivePattern->cols, numeric::matrix::block_size),
+        this->source->measurementPattern->dataCols * this->source->drivePattern->dataCols,
         this->equation->mesh->elements->rows, stream, 0.0, false);
 
     // TODO: To be moved to new BoundaryValues class
