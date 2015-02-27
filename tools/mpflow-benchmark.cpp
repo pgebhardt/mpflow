@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     std::cout << "----------------------------------------------------" << std::endl;
     std::cout << "Create main solver class" << std::endl;
 
-    auto solver = std::make_shared<EIT::Solver<FEM::basis::Linear>>(
+    auto solver = std::make_shared<EIT::Solver<FEM::basis::Linear, numeric::ConjugateGradient>>(
         equation, source, 7, 1, 0.0, cublasHandle, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
 
     for (size_t i = 0; i < pipelineLengths.size(); ++i) {
         // create inverse solver
-        solver = std::make_shared<EIT::Solver<FEM::basis::Linear>>(
+        solver = std::make_shared<EIT::Solver<FEM::basis::Linear, numeric::ConjugateGradient>>(
             equation, source, 7, pipelineLengths[i], 0.0, cublasHandle, cudaStream);
 
         cudaStreamSynchronize(cudaStream);

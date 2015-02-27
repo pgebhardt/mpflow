@@ -47,6 +47,23 @@ std::shared_ptr<numeric::Matrix<type>> eye(dtype::index size, cudaStream_t cudaS
     return matrix;
 }
 
+void setCircularRegion(float x, float y, float radius,
+    float value, std::shared_ptr<numeric::IrregularMesh> mesh,
+    std::shared_ptr<numeric::Matrix<dtype::real>> gamma) {
+    for (dtype::index element = 0; element < mesh->elements->rows; ++element) {
+        auto nodes = mesh->elementNodes(element);
+
+        dtype::real midX = 0.0, midY = 0.0;
+        for (dtype::index node = 0; node < nodes.size(); ++node) {
+            midX += std::get<0>(std::get<1>(nodes[node])) / nodes.size();
+            midY += std::get<1>(std::get<1>(nodes[node])) / nodes.size();
+        }
+        if (math::square(midX - x) + math::square(midY - y) <= math::square(radius)) {
+            (*gamma)(element, 0) = value;
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     HighPrecisionTime time;
 
@@ -108,7 +125,7 @@ int main(int argc, char* argv[]) {
 
     if (meshConfig["mesh_dir"].type != json_none) {
         // load mesh from file
-        std::string meshDir(meshConfig["mesh_dir"]);
+        std::string meshDir(meshConfig["meshPath"]);
         std::cout << "Load mesh from files: " << meshDir << std::endl;
 
         auto nodes = numeric::matrix::loadtxt<dtype::real>(str::format("%s/nodes.txt")(meshDir), cudaStream);
@@ -134,8 +151,8 @@ int main(int argc, char* argv[]) {
 
         // create mesh with libdistmesh
         auto distanceFuntion = distmesh::distance_function::circular(radius);
-        auto dist_mesh = distmesh::distmesh(distanceFuntion, meshConfig["outer_edge_length"],
-            1.0 + (1.0 - (double)meshConfig["inner_edge_length"] / (double)meshConfig["outer_edge_length"]) *
+        auto dist_mesh = distmesh::distmesh(distanceFuntion, meshConfig["outerEdgeLength"],
+            1.0 + (1.0 - (double)meshConfig["innerEdgeLength"] / (double)meshConfig["outerEdgeLength"]) *
             distanceFuntion / radius, 1.1 * radius * distmesh::bounding_box(2), fixedPoints);
 
         std::cout << "Mesh created with " << std::get<0>(dist_mesh).rows() << " nodes and " <<
@@ -156,36 +173,36 @@ int main(int argc, char* argv[]) {
 
     // load excitation and measurement pattern from config or assume standard pattern, if not given
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern = nullptr;
-    if (modelConfig["source"]["drive_pattern"].type != json_none) {
-        drivePattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["drive_pattern"], cudaStream);
+    if (modelConfig["source"]["drivePattern"].type != json_none) {
+        drivePattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["drivePattern"], cudaStream);
     }
     else {
         drivePattern = eye<dtype::real>(electrodes->count, cudaStream);;
     }
 
     std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern = nullptr;
-    if (modelConfig["source"]["measurement_pattern"].type != json_none) {
-        measurementPattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["measurement_pattern"], cudaStream);
+    if (modelConfig["source"]["measurementPattern"].type != json_none) {
+        measurementPattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["measurementPattern"], cudaStream);
     }
     else {
         measurementPattern = eye<dtype::real>(electrodes->count, cudaStream);;
     }
 
     // read out currents
-    std::vector<dtype::real> current(drivePattern->cols);
-    if (modelConfig["source"]["current"].type == json_array) {
+    std::vector<dtype::real> excitation(drivePattern->cols);
+    if (modelConfig["source"]["value"].type == json_array) {
         for (dtype::index i = 0; i < drivePattern->cols; ++i) {
-            current[i] = modelConfig["source"]["current"][i].u.dbl;
+            excitation[i] = modelConfig["source"]["value"][i].u.dbl;
         }
     }
     else {
-        current = std::vector<dtype::real>(drivePattern->cols, (dtype::real)modelConfig["source"]["current"].u.dbl);
+        excitation = std::vector<dtype::real>(drivePattern->cols, (dtype::real)modelConfig["source"]["value"].u.dbl);
     }
 
     // create source descriptor
-    auto sourceType = modelConfig["source"]["mixed"].u.boolean == true ? FEM::SourceDescriptor::Type::Fixed :
-        FEM::SourceDescriptor::Type::Open;
-    auto source = std::make_shared<FEM::SourceDescriptor>(sourceType, current, electrodes,
+    auto sourceType = std::string(modelConfig["source"]["type"]) == "voltage" ?
+        FEM::SourceDescriptor::Type::Fixed : FEM::SourceDescriptor::Type::Open;
+    auto source = std::make_shared<FEM::SourceDescriptor>(sourceType, excitation, electrodes,
         drivePattern, measurementPattern, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
@@ -197,7 +214,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Create main model class" << std::endl;
 
     auto equation = std::make_shared<FEM::Equation<dtype::real, FEM::basis::Linear>>(
-        mesh, electrodes, modelConfig["sigma_ref"].u.dbl, cudaStream);
+        mesh, electrodes, modelConfig["referenceValue"].u.dbl, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
     std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
@@ -208,19 +225,23 @@ int main(int argc, char* argv[]) {
     std::cout << "Solve electrical potential for all excitations"  << std::endl;
 
     auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
+
+    setCircularRegion(0.0, 0.015, 0.005, 3.0, mesh, gamma);
+    gamma->copyToDevice(cudaStream);
+
     std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
 
     // use different numeric solver for different source types
     if (sourceType == FEM::SourceDescriptor::Type::Fixed) {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::BiCGSTAB>>(
-            equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
+            equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
         result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-12);
     }
     else {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
-            equation, source, modelConfig["components_count"].u.integer, cublasHandle, cudaStream);
+            equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
         result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-12);
@@ -236,6 +257,7 @@ int main(int argc, char* argv[]) {
     std::cout << "----------------------------------------------------" << std::endl;
     std::cout << "Result:" << std::endl;
     numeric::matrix::savetxt(result, &std::cout);
+    numeric::matrix::savetxt("result.txt", result);
 
     // cleanup
     json_value_free(config);
