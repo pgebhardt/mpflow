@@ -165,11 +165,11 @@ $(BUILD_DIR)/objs/%.o: %.cpp $(HXX_SRCS)
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
 	@$(CXX) $(CXXFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
-install: $(NAME) $(STATIC_NAME) $(HXX_SRCS) $(TOOL_BINS)
+install: $(NAME) $(STATIC_NAME) $(HXX_SRCS) $(TOOLS_BINS)
 	@install -m 0644 $(NAME) $(prefix)/lib
 	@install -m 0644 $(STATIC_NAME) $(prefix)/lib
 	@$(foreach f, $(HXX_SRCS), install -D -m 0644 $f $(prefix)/$f && ):
-	@$(foreach f, $(TOOL_BINS), install -m 0755 $f $(prefix)/bin && ):
+	@$(foreach f, $(TOOLS_BINS), install -m 0755 $f $(prefix)/bin && ):
 
 clean:
 	@rm -rf $(ROOT_BUILD_DIR)
