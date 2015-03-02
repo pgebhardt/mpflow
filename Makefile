@@ -77,11 +77,13 @@ STATIC_NAME := $(BUILD_DIR)/lib/lib$(PROJECT)_static.a
 # Includes and libraries
 ##############################
 LIBRARIES := cudart cublas distmesh_static qhullstatic
-LIBRARY_DIRS += $(CUDA_DIR)/lib
+LIBRARY_DIRS +=
 INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./tools/utils/include
 
-# add <cuda>/lib64 only if it exists
-ifneq ("$(wildcard $(CUDA_DIR)/lib64)", "")
+# add (CUDA_DIR)/lib64 only if it exists
+ifeq ("$(wildcard $(CUDA_DIR)/lib64)", "")
+	LIBRARY_DIRS += $(CUDA_DIR)/lib
+else
 	LIBRARY_DIRS += $(CUDA_DIR)/lib64
 endif
 
@@ -93,7 +95,7 @@ COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\
 CXXFLAGS := -std=c++11 -fPIC
 NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH)
 LINKFLAGS := -fPIC -static-libstdc++
-LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
+LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS)) $(addprefix -Xlinker -rpath , $(LIBRARY_DIRS))
 
 # Use double precision floating points
 ifdef DOUBLE_PRECISION
