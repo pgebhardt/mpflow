@@ -53,8 +53,8 @@ ifdef CUSTOM_CXX
 	CXX := $(CUSTOM_CXX)
 endif
 
-ifdef CUSTOM_NVCC_HOST_CXX
-	NVCC += -ccbin=$(CUSTOM_NVCC_HOST_CXX)
+ifdef CUDA_HOST_CXX
+	NVCC += -ccbin=$(CUDA_HOST_CXX)
 endif
 
 # Target build architecture
@@ -63,8 +63,8 @@ BUILD_DIR := $(BUILD_DIR)/$(TARGET_ARCH_NAME)
 
 # get cuda directory for target architecture
 CUDA_DIR := $(CUDA_TOOLKIT_ROOT)
-ifdef TARGET_CUDA_DIR
-	CUDA_DIR := $(CUDA_DIR)/targets/$(TARGET_CUDA_DIR)
+ifdef CUDA_TARGET_DIR
+	CUDA_DIR := $(CUDA_DIR)/targets/$(CUDA_TARGET_DIR)
 endif
 
 ##############################
@@ -105,11 +105,6 @@ LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS)) $(addp
 # Use double precision floating points
 ifdef DOUBLE_PRECISION
 	COMMON_FLAGS += -DUSE_DOUBLE
-endif
-
-# Target different cpu bit size
-ifdef TARGET_CPU_ARCH
-	NVCCFLAGS += $(TARGET_CPU_ARCH)
 endif
 
 # Set compiler flags for debug configuration
