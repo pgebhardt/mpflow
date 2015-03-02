@@ -76,9 +76,14 @@ STATIC_NAME := $(BUILD_DIR)/lib/lib$(PROJECT)_static.a
 ##############################
 # Includes and libraries
 ##############################
-LIBRARIES := cudart cublas distmesh_static qhullstatic
+LIBRARIES := distmesh_static qhullstatic cudart_static cublas_static culibos pthread dl
 LIBRARY_DIRS +=
 INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./tools/utils/include
+
+# link aganinst librt, only if it exists
+ifeq ($(shell echo "int main() {}" | $(CXX) -x c - -lrt 2>&1),)
+	LIBRARIES += rt
+endif
 
 # add (CUDA_DIR)/lib64 only if it exists
 ifeq ("$(wildcard $(CUDA_DIR)/lib64)", "")
