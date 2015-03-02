@@ -76,8 +76,7 @@ STATIC_NAME := $(BUILD_DIR)/lib/lib$(PROJECT)_static.a
 ##############################
 # Includes and libraries
 ##############################
-LIBRARIES := culibos pthread dl rt
-STATIC_LIBRARIES := cudart_static cublas_static distmesh_static qhull
+LIBRARIES := cudart cublas distmesh_static qhullstatic
 LIBRARY_DIRS += $(CUDA_DIR)/lib
 INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./tools/utils/include
 
@@ -93,8 +92,8 @@ GIT_VERSION := $(shell git describe --tags --long)
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\"
 CXXFLAGS := -std=c++11 -fPIC
 NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH)
-LINKFLAGS := -fPIC -static-libgcc -static-libstdc++
-LDFLAGS := $(patsubst %,-l:lib%.a, $(STATIC_LIBRARIES)) $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
+LINKFLAGS := -fPIC -static-libstdc++
+LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS))
 
 # Use double precision floating points
 ifdef DOUBLE_PRECISION
