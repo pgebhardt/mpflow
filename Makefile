@@ -81,7 +81,7 @@ LIBRARY_DIRS +=
 INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./tools/utils/include
 
 # link aganinst librt, only if it exists
-ifeq ($(shell echo "int main() {}" | $(CXX) -x c - -lrt 2>&1),)
+ifeq ($(shell echo "int main() {}" | $(CXX) -o /dev/null -x c - -lrt 2>&1),)
 	LIBRARIES += rt
 endif
 
