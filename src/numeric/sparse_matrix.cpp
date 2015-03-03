@@ -277,7 +277,7 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<
 template <
     class type
 >
-const type& mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::index col) const {
+const mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtype::index row, dtype::index col) const {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
         throw std::logic_error("mpFlow::numeric::SparseMatrix::operator(): index out of range");
@@ -292,6 +292,16 @@ const type& mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtyp
         }
     }
 
+    return columnId;
+}
+
+template <
+    class type
+>
+const type& mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::index col) const {
+    // get column id
+    dtype::index columnId = this->getColumnId(row, col);
+
     // check column id
     if (columnId == dtype::invalid_index) {
         throw std::logic_error("mpFlow::numeric::SparseMatrix::operator(): index not used");
@@ -299,7 +309,6 @@ const type& mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtyp
 
     return this->hostValues[row * sparseMatrix::block_size + columnId];
 }
-
 
 template <
     class type
