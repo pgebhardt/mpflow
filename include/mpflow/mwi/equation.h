@@ -43,6 +43,7 @@ namespace MWI {
         std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
         std::shared_ptr<numeric::SparseMatrix<dtype::complex>> sMatrix;
         std::shared_ptr<numeric::SparseMatrix<dtype::complex>> rMatrix;
+        std::shared_ptr<numeric::Matrix<dtype::complex>> elementalSMatrix;
         std::shared_ptr<numeric::Matrix<dtype::complex>> elementalRMatrix;
         std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
     };

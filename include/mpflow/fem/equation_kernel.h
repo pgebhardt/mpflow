@@ -24,14 +24,6 @@
 namespace mpFlow {
 namespace FEM {
 namespace equationKernel {
-    // reduce connectivity and elemental matrices
-    template <
-        class dataType
-    >
-    void reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const dataType* intermediate_matrix, const dtype::index* column_ids,
-        dtype::size rows, dtype::index offset, dataType* matrix);
-
     // update matrix kernel
     template <
         class dataType

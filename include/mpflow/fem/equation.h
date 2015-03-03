@@ -66,15 +66,6 @@ namespace FEM {
     };
 
     namespace equation {
-        // reduce matrix
-        template <
-            class dataType,
-            class shapeDataType
-        >
-        void reduceMatrix(const std::shared_ptr<numeric::Matrix<dataType>> intermediateMatrix,
-            const std::shared_ptr<numeric::SparseMatrix<shapeDataType>> shape, dtype::index offset,
-            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> matrix);
-
         // update matrix
         template <
             class dataType

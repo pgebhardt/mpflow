@@ -30,55 +30,6 @@
 #include "mpflow/numeric/constants.h"
 #include "mpflow/fem/equation_kernel.h"
 
-// reduce connectivity and elementalResidual matrix
-template <
-    class type
->
-static __global__ void reduceMatrixKernel(const type* intermediate_matrix,
-    const mpFlow::dtype::index* column_ids, mpFlow::dtype::size rows,
-    mpFlow::dtype::index offset, type* matrix) {
-    // get ids
-    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
-
-    // get column id
-    mpFlow::dtype::index columnId = column_ids[row * mpFlow::numeric::sparseMatrix::block_size + column];
-
-    // check column id
-    if (columnId == mpFlow::dtype::invalid_index) {
-        return;
-    }
-
-    // reduce matrices
-    matrix[row + (column + offset * mpFlow::numeric::sparseMatrix::block_size) * rows] =
-        intermediate_matrix[row + columnId * rows];
-}
-
-// reduce matrix wrapper
-template <
-    class type
->
-void mpFlow::FEM::equationKernel::reduceMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const type* intermediate_matrix, const dtype::index* column_ids, dtype::size rows,
-    dtype::index offset, type* matrix) {
-    // call cuda kernel
-    reduceMatrixKernel<type><<<blocks, threads, 0, stream>>>(intermediate_matrix,
-        column_ids, rows, offset, matrix);
-
-    CudaCheckError();
-}
-
-// reduce matrix specialisation
-template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::real>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::real*);
-template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::complex>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::complex*);
-template void mpFlow::FEM::equationKernel::reduceMatrix<mpFlow::dtype::index>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::index, mpFlow::dtype::index*);
-
 // update matrix kernel
 template <
     class dataType

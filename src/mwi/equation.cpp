@@ -30,6 +30,15 @@ mpFlow::MWI::Equation::Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
     }
 
     // init matrices
+    auto globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
+    auto edges = std::get<0>(globalEdgeIndex);
+
+    this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
+        edges.size(), edges.size(), stream);
+    this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
+        edges.size(), edges.size(), stream);
+    this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
+        edges.size(), edges.size(), stream);
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->mesh->elements->rows, math::square(3), stream, 0.0, false);
 
@@ -45,11 +54,8 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
     // create intermediate matrices
     Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(edges.size(), edges.size());
-    std::array<Eigen::ArrayXXi, 2> connectivityMatrices = {{
-        Eigen::ArrayXXi::Zero(edges.size(), edges.size()), Eigen::ArrayXXi::Zero(edges.size(), edges.size()) }};
-    auto sMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(), edges.size(), stream);
-    std::array<Eigen::ArrayXXf, 2> elementalRMatrices = {{
-        Eigen::ArrayXXf::Zero(edges.size(), edges.size()), Eigen::ArrayXXf::Zero(edges.size(), edges.size()) }};
+    std::vector<Eigen::ArrayXXi> connectivityMatrices;
+    std::vector<Eigen::ArrayXXf> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
@@ -66,8 +72,17 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
         // set connectivity and elemental residual matrix elements
         for (dtype::index i = 0; i < 3; i++)
         for (dtype::index j = 0; j < 3; j++) {
-            // get current element count
-            auto level = elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+            // get current element count and add new intermediate matrices if 
+            // neccessary
+            size_t level = elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+            if (connectivityMatrices.size() <= level) {
+                connectivityMatrices.push_back(Eigen::ArrayXXi::Ones(
+                    edges.size(), edges.size()) * dtype::invalid_index);
+                elementalSMatrices.push_back(Eigen::ArrayXXf::Zero(
+                    edges.size(), edges.size()));
+                elementalRMatrices.push_back(Eigen::ArrayXXf::Zero(
+                    edges.size(), edges.size()));
+            }
 
             // set connectivity element
             connectivityMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
@@ -77,7 +92,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
             auto edgeI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
             auto edgeJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
 
-            (*sMatrix)(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) +=
+            elementalSMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
                 edgeI->integrateGradientWithBasis(edgeJ);
             elementalRMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
                 edgeI->integrateWithBasis(edgeJ);
@@ -86,52 +101,57 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
             elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]))++;
         }
     }
-    sMatrix->copyToDevice(stream);
 
-    // create sparse matrices
-    this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
-        sMatrix, stream);
-    this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
-        sMatrix, stream);
-    this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
-        sMatrix, stream);
+    // determine nodes with common element
+    auto commonElementMatrix = std::make_shared<numeric::SparseMatrix<dtype::complex>>(
+        edges.size(), edges.size(), stream);
+    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
+        auto localEdges = std::get<1>(globalEdgeIndex)[element];
+
+        for (dtype::index i = 0; i < 3; ++i)
+        for (dtype::index j = 0; j < 3; ++j) {
+            commonElementMatrix->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]), 1.0f);
+        }
+    }
+    commonElementMatrix->copyToDevice(stream);
+
+    // fill sparse matrices initially with commonElementMatrix
+    this->sMatrix->copy(commonElementMatrix, stream);
+    this->rMatrix->copy(commonElementMatrix, stream);
+    this->systemMatrix->copy(commonElementMatrix, stream);
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        edges.size(),numeric::sparseMatrix::block_size * connectivityMatrices.size(),
+        edges.size(), numeric::sparseMatrix::block_size * connectivityMatrices.size(),
         stream, dtype::invalid_index);
+    this->elementalSMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(),
+        numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream);
     this->elementalRMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(edges.size(),
         numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
-    auto connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        connectivityMatrices[0].rows(), connectivityMatrices[0].cols(), stream,
-        dtype::invalid_index);
-    auto elementalRMatrix = std::make_shared<numeric::Matrix<dtype::complex>>(
-        elementalRMatrices[0].rows(), elementalRMatrices[0].cols(), stream);
-
     for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
         for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
             auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
             for (dtype::index i = 0; i < 3; ++i)
             for (dtype::index j = 0; j < 3; ++j) {
-                (*connectivityMatrix)(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
+                dtype::index columId = commonElementMatrix->getColumnId(std::get<0>(localEdges[i]),
+                    std::get<0>(localEdges[j]));
+
+                (*this->connectivityMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
                     connectivityMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
-                (*elementalRMatrix)(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
+                (*this->elementalSMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
+                    elementalSMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+                (*this->elementalRMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
                     elementalRMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
             }
         }
-        connectivityMatrix->copyToDevice(stream);
-        elementalRMatrix->copyToDevice(stream);
-        cudaStreamSynchronize(stream);
-
-        FEM::equation::reduceMatrix(connectivityMatrix, this->sMatrix, level, stream,
-            this->connectivityMatrix);
-        FEM::equation::reduceMatrix(elementalRMatrix, this->rMatrix, level, stream,
-            this->elementalRMatrix);
     }
+    this->connectivityMatrix->copyToDevice(stream);
+    this->elementalSMatrix->copyToDevice(stream);
+    this->elementalRMatrix->copyToDevice(stream);
 }
 
 void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
