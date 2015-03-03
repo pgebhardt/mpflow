@@ -222,7 +222,7 @@ void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
 
     forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
         excitationMatrix->deviceData, excitationMatrix->dataRows,
-        systemMatrix->columnIds, systemMatrix->values);
+        systemMatrix->deviceColumnIds, systemMatrix->deviceValues);
 }
 
 // specialisation

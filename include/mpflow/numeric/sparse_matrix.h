@@ -31,12 +31,17 @@ namespace numeric {
     class SparseMatrix {
     public:
         // constructor and destructor
-        SparseMatrix(dtype::size rows, dtype::size cols, cudaStream_t) {
-            this->init(rows, cols);
+        SparseMatrix(dtype::size rows, dtype::size cols, cudaStream_t stream) {
+            this->init(rows, cols, stream);
         }
 
         SparseMatrix(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);
         virtual ~SparseMatrix();
+
+        // copy methods
+        void copy(const std::shared_ptr<SparseMatrix<type>> other, cudaStream_t stream=nullptr);
+        void copyToDevice(cudaStream_t stream=nullptr);
+        void copyToHost(cudaStream_t stream=nullptr);
 
         // convert to matrix
         std::shared_ptr<Matrix<type>> toMatrix(cudaStream_t stream);
@@ -45,18 +50,24 @@ namespace numeric {
         void multiply(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream,
             std::shared_ptr<Matrix<type>> result) const;
 
+        // accessors
+        const type& getValue(dtype::index row, dtype::index col) const;
+        void setValue(dtype::index row, dtype::index col, const type& value);
+
         // member
         dtype::size rows;
         dtype::size cols;
         dtype::size dataRows;
         dtype::size dataCols;
         dtype::size density;
-        type* values;
-        dtype::index* columnIds;
+        type* deviceValues;
+        type* hostValues;
+        dtype::index* deviceColumnIds;
+        dtype::index* hostColumnIds;
 
     private:
         // init empty sparse matrix
-        void init(dtype::size rows, dtype::size cols);
+        void init(dtype::size rows, dtype::size cols, cudaStream_t stream);
 
         // convert to sparse matrix
         void convert(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);

@@ -184,6 +184,6 @@ void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<dtype::
 
     // update system matrix
     FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
-        numeric::matrix::block_size, stream, this->sMatrix->values, this->rMatrix->values,
-        this->sMatrix->columnIds, this->sMatrix->density, k, this->systemMatrix->values);
+        numeric::matrix::block_size, stream, this->sMatrix->deviceValues, this->rMatrix->deviceValues,
+        this->sMatrix->deviceColumnIds, this->sMatrix->density, k, this->systemMatrix->deviceValues);
 }
