@@ -70,10 +70,10 @@ template <
 void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
-    Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(this->mesh->nodes->rows,
-        this->mesh->nodes->rows);
-    std::vector<Eigen::ArrayXXi> connectivityMatrices;
-    std::vector<Eigen::ArrayXXf> elementalSMatrices, elementalRMatrices;
+    auto elementCount = std::make_shared<numeric::SparseMatrix<dtype::index>>(
+        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
+    std::vector<std::shared_ptr<numeric::SparseMatrix<dtype::index>>> connectivityMatrices;
+    std::vector<std::shared_ptr<numeric::SparseMatrix<dataType>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
@@ -92,35 +92,35 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
         for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t level = elementCount(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+            size_t level = elementCount->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
             if (connectivityMatrices.size() <= level) {
-                connectivityMatrices.push_back(Eigen::ArrayXXi::Ones(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows)
-                    * dtype::invalid_index);
-                elementalSMatrices.push_back(Eigen::ArrayXXf::Zero(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows));
-                elementalRMatrices.push_back(Eigen::ArrayXXf::Zero(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows));
+                connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<dtype::index>>(
+                    this->mesh->nodes->rows, this->mesh->nodes->rows, stream));
+                elementalSMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
+                    this->mesh->nodes->rows, this->mesh->nodes->rows, stream));
+                elementalRMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
+                    this->mesh->nodes->rows, this->mesh->nodes->rows, stream));
             }
 
             // set connectivity element
-            connectivityMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                element;
+            connectivityMatrices[level]->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
+                element);
 
             // create basis functions
             auto basisI = std::make_shared<basisFunctionType>(points, i);
             auto basisJ = std::make_shared<basisFunctionType>(points, j);
 
             // set elemental system element
-            elementalSMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                basisI->integrateGradientWithBasis(basisJ);
+            elementalSMatrices[level]->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
+                basisI->integrateGradientWithBasis(basisJ));
 
             // set elemental residual element
-            elementalRMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j])) =
-                basisI->integrateWithBasis(basisJ);
+            elementalRMatrices[level]->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
+                basisI->integrateWithBasis(basisJ));
 
             // increment element count
-            elementCount(std::get<0>(nodes[i]), std::get<0>(nodes[j]))++;
+            elementCount->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
+                elementCount->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j])) + 1);
         }
     }
 
@@ -164,11 +164,11 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
                     std::get<0>(nodes[j]));
 
                 (*this->connectivityMatrix)(std::get<0>(nodes[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    connectivityMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+                    connectivityMatrices[level]->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
                 (*this->elementalSMatrix)(std::get<0>(nodes[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    elementalSMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+                    elementalSMatrices[level]->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
                 (*this->elementalRMatrix)(std::get<0>(nodes[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    elementalRMatrices[level](std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+                    elementalRMatrices[level]->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
             }
         }
     }

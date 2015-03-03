@@ -280,7 +280,7 @@ template <
 const mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtype::index row, dtype::index col) const {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
-        throw std::logic_error("mpFlow::numeric::SparseMatrix::operator(): index out of range");
+        throw std::logic_error("mpFlow::numeric::SparseMatrix::getColumnId(): index out of range");
     }
 
     // find index in column ids
@@ -298,16 +298,16 @@ const mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtyp
 template <
     class type
 >
-const type& mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::index col) const {
+const type mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::index col) const {
     // get column id
     dtype::index columnId = this->getColumnId(row, col);
 
-    // check column id
     if (columnId == dtype::invalid_index) {
-        throw std::logic_error("mpFlow::numeric::SparseMatrix::operator(): index not used");
+        return 0.0f;
     }
-
-    return this->hostValues[row * sparseMatrix::block_size + columnId];
+    else {
+        return this->hostValues[row * sparseMatrix::block_size + columnId];
+    }
 }
 
 template <
@@ -316,7 +316,7 @@ template <
 void mpFlow::numeric::SparseMatrix<type>::setValue(dtype::index row, dtype::index col, const type& value) {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
-        throw std::logic_error("mpFlow::numeric::SparseMatrix::operator(): index out of range");
+        throw std::logic_error("mpFlow::numeric::SparseMatrix::setValue(): index out of range");
     }
 
     // find index in column ids
