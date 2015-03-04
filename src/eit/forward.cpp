@@ -103,8 +103,8 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::solve(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, dtype::size steps,
-    cublasHandle_t handle, cudaStream_t stream, dtype::real tolerance) {
+    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cublasHandle_t handle,
+    cudaStream_t stream, dtype::real tolerance, dtype::index* steps) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
@@ -114,6 +114,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     }
 
     // calculate common excitation for all 2.5D model components
+    dtype::index totalSteps = 0;
     for (dtype::index component = 0; component < this->phi.size(); ++component) {
         // 2.5D model constants
         dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
@@ -137,9 +138,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
         }
 
         // solve linear system
-        this->numericalSolver->solve(this->equation->systemMatrix,
-            this->excitation, steps, nullptr, stream, this->phi[component],
-            tolerance, component == 0 ? true : false);
+        totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
+            this->excitation, this->equation->mesh->nodes->rows, nullptr, stream,
+            this->phi[component], tolerance, component == 0 ? true : false);
 
         // calc jacobian
         this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,
@@ -167,6 +168,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     // current source specific correction for jacobian matrix
     if (this->source->type == FEM::SourceDescriptor::Type::Open) {
         this->jacobian->scalarMultiply(-1.0, stream);
+    }
+
+    // return mean step count
+    if (steps != nullptr) {
+        *steps = totalSteps / this->phi.size();
     }
 
     return this->result;

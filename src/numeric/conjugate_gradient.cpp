@@ -50,7 +50,7 @@ template <
     class dataType,
     template <class type> class matrixType
 >
-void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
+mpFlow::dtype::index mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
     const std::shared_ptr<matrixType<dataType>> A,
     const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
@@ -123,7 +123,7 @@ void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
                 if (abs(sqrt((*this->roh)(0, i))) >= tolerance) {
                     break;
                 }
-                return;
+                return step + 1;
             }
         }
 
@@ -134,6 +134,8 @@ void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
         // copy rsnew to rsold
         this->rohOld->copy(this->roh, stream);
     }
+
+    return iterations;
 }
 
 // add scalar

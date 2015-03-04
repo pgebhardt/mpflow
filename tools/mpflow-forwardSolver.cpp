@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
         std::make_tuple(modelConfig["electrodes"]["width"].u.dbl, modelConfig["electrodes"]["height"].u.dbl),
         radius, 0.0);
 
-    if (meshConfig["mesh_dir"].type != json_none) {
+    if (meshConfig["meshDir"].type != json_none) {
         // load mesh from file
         std::string meshDir(meshConfig["meshPath"]);
         str::print("Load mesh from files:", meshDir);
@@ -217,32 +217,40 @@ int main(int argc, char* argv[]) {
     cudaStreamSynchronize(cudaStream);
     str::print("Time:", time.elapsed() * 1e3, "ms");
 
+    // load predefined gamma distribution from file, if path is given
+    std::shared_ptr<numeric::Matrix<dtype::real>> gamma = nullptr;
+    if (modelConfig["gammaFile"].type != json_none) {
+        gamma = numeric::matrix::loadtxt<dtype::real>(std::string(modelConfig["gammaFile"]), cudaStream);
+    }
+    else {
+        gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
+    }
+
     // Create forward solver and solve potential
     time.restart();
     str::print("----------------------------------------------------");
     str::print("Solve electrical potential for all excitations");
 
-    auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
-    std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
-
     // use different numeric solver for different source types
+    std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
+    dtype::index steps = 0;
     if (sourceType == FEM::SourceDescriptor::Type::Fixed) {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::BiCGSTAB>>(
             equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-6);
+        result = forwardSolver->solve(gamma, cublasHandle, cudaStream, 1e-9, &steps);
     }
     else {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
             equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream, 1e-6);
+        result = forwardSolver->solve(gamma, cublasHandle, cudaStream, 1e-9, &steps);
     }
 
     cudaStreamSynchronize(cudaStream);
-    str::print("Time:", time.elapsed() * 1e3, "ms");
+    str::print("Time:", time.elapsed() * 1e3, "ms, Steps:", steps);
 
     // Print result
     result->copyToHost(cudaStream);

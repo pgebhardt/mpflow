@@ -89,10 +89,11 @@ int main(int argc, char* argv[]) {
             cudaStream);
 
         time.restart();
-        forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream);
+        dtype::index steps = 0;
+        forwardSolver->solve(gamma, cublasHandle, cudaStream, 1e-9, &steps);
 
         cudaStreamSynchronize(cudaStream);
-        str::print("Time:", time.elapsed() * 1e3, "ms");
+        str::print("Time:", time.elapsed() * 1e3, "ms, Steps:", steps);
     }
 
     return EXIT_SUCCESS;

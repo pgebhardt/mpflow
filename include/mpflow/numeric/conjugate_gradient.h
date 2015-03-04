@@ -35,7 +35,7 @@ namespace numeric {
         ConjugateGradient(dtype::size rows, dtype::size columns, cudaStream_t stream);
 
         // solve system
-        void solve(const std::shared_ptr<matrixType<dataType>> A,
+        dtype::index solve(const std::shared_ptr<matrixType<dataType>> A,
             const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
             cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
             dtype::real tolerance=0.0, bool dcFree=false);

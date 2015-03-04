@@ -58,7 +58,7 @@ template <
     class dataType,
     template <class type> class matrixType
 >
-void mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
+mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     const std::shared_ptr<matrixType<dataType>> A,
     const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
@@ -144,10 +144,12 @@ void mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
                 if (abs(sqrt((*this->error)(0, i))) >= tolerance) {
                     break;
                 }
-                return;
+                return step + 1;
             }
         }
     }
+
+    return iterations;
 }
 
 // update vector
