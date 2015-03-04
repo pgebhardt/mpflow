@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     HighPrecisionTime time;
 
     // print out mpFlow version for refernce
-    str::print(str::format("mpFlow version: %s")(version::getVersionString()));
+    str::print("mpFlow version:", version::getVersionString());
 
     // init cuda
     cudaStream_t cudaStream = nullptr;
@@ -44,9 +44,9 @@ int main(int argc, char* argv[]) {
         0.006, 1.0, RADIUS * 1.1 * distmesh::bounding_box(2));
     auto boundary = distmesh::boundedges(std::get<1>(dist_mesh));
 
-    str::print(str::format("Mesh created with %d nodes and %d elements")(
-        std::get<0>(dist_mesh).rows(), std::get<1>(dist_mesh).rows()));
-    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+    str::print("Mesh created with", std::get<0>(dist_mesh).rows(), "nodes and",
+        std::get<1>(dist_mesh).rows(), "elements");
+    str::print("Time:", time.elapsed() * 1e3, "ms");
 
     // create mpflow mesh object
     auto mesh = std::make_shared<numeric::IrregularMesh>(
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
         mesh, electrodes, 1.0, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+    str::print("Time:", time.elapsed() * 1e3, "ms");
 
     // benchmark different pipeline lengths
     std::array<dtype::index, 512> pipelineLengths;
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
         equation, source, 7, 1, 0.0, cublasHandle, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+    str::print("Time:", time.elapsed() * 1e3, "ms");
 
     // initialize solver
     time.restart();
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
     solver->preSolve(cublasHandle, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+    str::print("Time:", time.elapsed() * 1e3, "ms");
 
     str::print("----------------------------------------------------");
     str::print("Reconstruct images for different pipeline lengths:\n");
@@ -117,9 +117,9 @@ int main(int argc, char* argv[]) {
         }
 
         cudaStreamSynchronize(cudaStream);
-        str::print(str::format("pipeline length: %d, time: %f ms, fps: %f")(
-            pipelineLengths[i], time.elapsed() / 10.0 * 1e3,
-            (dtype::real)pipelineLengths[i] / (time.elapsed() / 10.0)));
+        str::print("pipeline length:", pipelineLengths[i], "; time:",
+            time.elapsed() / 10.0 * 1e3, "ms ; fps:",
+            (dtype::real)pipelineLengths[i] / (time.elapsed() / 10.0));
     }
 
     return EXIT_SUCCESS;

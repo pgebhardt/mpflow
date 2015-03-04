@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
     HighPrecisionTime time;
 
     // print out mpFlow version for refernce
-    str::print(str::format("mpFlow version: %s")(version::getVersionString()));
+    str::print("mpFlow version:", version::getVersionString());
 
     // init cuda
     cudaStream_t cudaStream = nullptr;
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
     }
 
     str::print("----------------------------------------------------");
-    str::print(str::format("Load model from config file: %s")(argv[1]));
+    str::print("Load model from config file:", argv[1]);
 
     std::ifstream file(argv[1]);
     std::string fileContent((std::istreambuf_iterator<char>(file)),
@@ -125,16 +125,15 @@ int main(int argc, char* argv[]) {
     if (meshConfig["mesh_dir"].type != json_none) {
         // load mesh from file
         std::string meshDir(meshConfig["meshPath"]);
-        str::print(str::format("Load mesh from files: %s")(meshDir));
+        str::print("Load mesh from files:", meshDir);
 
         auto nodes = numeric::matrix::loadtxt<dtype::real>(str::format("%s/nodes.txt")(meshDir), cudaStream);
         auto elements = numeric::matrix::loadtxt<dtype::index>(str::format("%s/elements.txt")(meshDir), cudaStream);
         auto boundary = numeric::matrix::loadtxt<dtype::index>(str::format("%s/boundary.txt")(meshDir), cudaStream);
         mesh = std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, (double)meshConfig["height"]);
 
-        str::print(str::format("Mesh loaded with %d nodes and %d elements")(
-            nodes->rows, elements->rows));
-        str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+        str::print("Mesh loaded with", nodes->rows, "nodes and", elements->rows, "elements");
+        str::print("Time:", time.elapsed() * 1e3, "ms");
     }
     else {
         str::print("Create mesh using libdistmesh");
@@ -154,9 +153,9 @@ int main(int argc, char* argv[]) {
             1.0 + (1.0 - (double)meshConfig["innerEdgeLength"] / (double)meshConfig["outerEdgeLength"]) *
             distanceFuntion / radius, 1.1 * radius * distmesh::bounding_box(2), fixedPoints);
 
-        str::print(str::format("Mesh created with %d nodes and %d elements")(
-            std::get<0>(dist_mesh).rows(), std::get<1>(dist_mesh).rows()));
-        str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+        str::print("Mesh created with", std::get<0>(dist_mesh).rows(), "nodes and",
+            std::get<1>(dist_mesh).rows(), "elements");
+        str::print("Time:", time.elapsed() * 1e3, "ms");
 
         // create mpflow matrix objects from distmesh arrays
         auto nodes = numeric::matrix::fromEigen<dtype::real, distmesh::dtype::real>(std::get<0>(dist_mesh));
@@ -205,7 +204,7 @@ int main(int argc, char* argv[]) {
         drivePattern, measurementPattern, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+    str::print("Time:", time.elapsed() * 1e3, "ms");
 
     // Create main model class
     time.restart();
@@ -216,7 +215,7 @@ int main(int argc, char* argv[]) {
         mesh, electrodes, modelConfig["referenceValue"].u.dbl, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+    str::print("Time:", time.elapsed() * 1e3, "ms");
 
     // Create forward solver and solve potential
     time.restart();
@@ -243,7 +242,7 @@ int main(int argc, char* argv[]) {
     }
 
     cudaStreamSynchronize(cudaStream);
-    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+    str::print("Time:", time.elapsed() * 1e3, "ms");
 
     // Print result
     result->copyToHost(cudaStream);

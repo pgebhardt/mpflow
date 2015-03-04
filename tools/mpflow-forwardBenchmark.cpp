@@ -21,12 +21,11 @@ int main(int argc, char* argv[]) {
     HighPrecisionTime time;
 
     // print out mpFlow version for refernce
-    str::print(str::format("mpFlow version: %s")(version::getVersionString()));
+    str::print("mpFlow version:", version::getVersionString());
 
     // init cuda
     cudaStream_t cudaStream = nullptr;
     cublasHandle_t cublasHandle = nullptr;
-    cudaSetDevice(1);
     cublasCreate(&cublasHandle);
     cudaStreamCreate(&cudaStream);
 
@@ -37,15 +36,15 @@ int main(int argc, char* argv[]) {
         // Create Mesh using libdistmesh
         time.restart();
         str::print("----------------------------------------------------");
-        str::print(str::format("Create mesh with density: %f")(density));
+        str::print("Create mesh with density:", density);
 
         auto dist_mesh = distmesh::distmesh(distmesh::distance_function::circular(1.0),
             density, 1.0, 1.1 * distmesh::bounding_box(2));
         auto boundary = distmesh::boundedges(std::get<1>(dist_mesh));
 
-        str::print(str::format("Mesh created with %d nodes and %d elements")(
-            std::get<0>(dist_mesh).rows(), std::get<1>(dist_mesh).rows()));
-        str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+        str::print("Mesh created with", std::get<0>(dist_mesh).rows(), "nodes and",
+            std::get<1>(dist_mesh).rows(), "element(s)");
+        str::print("Time:", time.elapsed() * 1e3, "ms");
 
         // update density
         density /= std::sqrt(2.0);
@@ -78,7 +77,7 @@ int main(int argc, char* argv[]) {
             mesh, electrodes, 1.0, cudaStream);
 
         cudaStreamSynchronize(cudaStream);
-        str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+        str::print("Time:", time.elapsed() * 1e3, "ms");
 
         // Create forward solver and solve potential
         str::print("--------------------------");
@@ -93,7 +92,7 @@ int main(int argc, char* argv[]) {
         forwardSolver->solve(gamma, mesh->nodes->rows, cublasHandle, cudaStream);
 
         cudaStreamSynchronize(cudaStream);
-        str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
+        str::print("Time:", time.elapsed() * 1e3, "ms");
     }
 
     return EXIT_SUCCESS;
