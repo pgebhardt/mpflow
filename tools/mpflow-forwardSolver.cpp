@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fstream>
 #include <distmesh/distmesh.h>
 #include <mpflow/mpflow.h>
@@ -68,7 +67,7 @@ int main(int argc, char* argv[]) {
     HighPrecisionTime time;
 
     // print out mpFlow version for refernce
-    std::cout << "mpFlow version: " << version::getVersionString() << std::endl;
+    str::print(str::format("mpFlow version: %s")(version::getVersionString()));
 
     // init cuda
     cudaStream_t cudaStream = nullptr;
@@ -78,12 +77,12 @@ int main(int argc, char* argv[]) {
 
     // load config document
     if (argc <= 1) {
-        std::cout << "You need to give modelLoader a path to the model config" << std::endl;
+        str::print("You need to give a path to the model config");
         return EXIT_FAILURE;
     }
 
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Load model from config file: " << argv[1] << std::endl;
+    str::print("----------------------------------------------------");
+    str::print(str::format("Load model from config file: %s")(argv[1]));
 
     std::ifstream file(argv[1]);
     std::string fileContent((std::istreambuf_iterator<char>(file)),
@@ -92,25 +91,25 @@ int main(int argc, char* argv[]) {
 
     // check for success
     if (config == nullptr) {
-        std::cout << "Error: Cannot parse config file" << std::endl;
+        str::print("Error: Cannot parse config file");
         return EXIT_FAILURE;
     }
 
     // extract model config
     auto modelConfig = (*config)["model"];
     if (modelConfig.type == json_none) {
-        std::cout << "Error: Invalid model config" << std::endl;
+        str::print("Error: Invalid model config");
         return EXIT_FAILURE;
     }
 
     // Create Mesh using libdistmesh
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
+    str::print("----------------------------------------------------");
 
     // get mesh config
     auto meshConfig = modelConfig["mesh"];
     if (meshConfig.type == json_none) {
-        std::cout << "Error: Invalid model config" << std::endl;
+        str::print("Error: Invalid model config");
         return EXIT_FAILURE;
     }
 
@@ -126,19 +125,19 @@ int main(int argc, char* argv[]) {
     if (meshConfig["mesh_dir"].type != json_none) {
         // load mesh from file
         std::string meshDir(meshConfig["meshPath"]);
-        std::cout << "Load mesh from files: " << meshDir << std::endl;
+        str::print(str::format("Load mesh from files: %s")(meshDir));
 
         auto nodes = numeric::matrix::loadtxt<dtype::real>(str::format("%s/nodes.txt")(meshDir), cudaStream);
         auto elements = numeric::matrix::loadtxt<dtype::index>(str::format("%s/elements.txt")(meshDir), cudaStream);
         auto boundary = numeric::matrix::loadtxt<dtype::index>(str::format("%s/boundary.txt")(meshDir), cudaStream);
         mesh = std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, (double)meshConfig["height"]);
 
-        std::cout << "Mesh loaded with " << nodes->rows << " nodes and " <<
-            elements->rows << " elements." << std::endl;
-        std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+        str::print(str::format("Mesh loaded with %d nodes and %d elements")(
+            nodes->rows, elements->rows));
+        str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
     }
     else {
-        std::cout << "Create mesh using libdistmesh" << std::endl;
+        str::print("Create mesh using libdistmesh");
 
         // fix mesh at electrodes boundaries
         distmesh::dtype::array<distmesh::dtype::real> fixedPoints(electrodes->count * 2, 2);
@@ -155,9 +154,9 @@ int main(int argc, char* argv[]) {
             1.0 + (1.0 - (double)meshConfig["innerEdgeLength"] / (double)meshConfig["outerEdgeLength"]) *
             distanceFuntion / radius, 1.1 * radius * distmesh::bounding_box(2), fixedPoints);
 
-        std::cout << "Mesh created with " << std::get<0>(dist_mesh).rows() << " nodes and " <<
-            std::get<1>(dist_mesh).rows() << " elements." << std::endl;
-        std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+        str::print(str::format("Mesh created with %d nodes and %d elements")(
+            std::get<0>(dist_mesh).rows(), std::get<1>(dist_mesh).rows()));
+        str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
         // create mpflow matrix objects from distmesh arrays
         auto nodes = numeric::matrix::fromEigen<dtype::real, distmesh::dtype::real>(std::get<0>(dist_mesh));
@@ -168,8 +167,8 @@ int main(int argc, char* argv[]) {
 
     // Create model helper classes
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Create model helper classes" << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Create model helper classes");
 
     // load excitation and measurement pattern from config or assume standard pattern, if not given
     std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern = nullptr;
@@ -206,23 +205,23 @@ int main(int argc, char* argv[]) {
         drivePattern, measurementPattern, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
     // Create main model class
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Create main model class" << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Create main model class");
 
     auto equation = std::make_shared<FEM::Equation<dtype::real, FEM::basis::Linear>>(
         mesh, electrodes, modelConfig["referenceValue"].u.dbl, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
     // Create forward solver and solve potential
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Solve electrical potential for all excitations"  << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Solve electrical potential for all excitations");
 
     auto gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
     std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
@@ -244,14 +243,14 @@ int main(int argc, char* argv[]) {
     }
 
     cudaStreamSynchronize(cudaStream);
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
     // Print result
     result->copyToHost(cudaStream);
     cudaStreamSynchronize(cudaStream);
 
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Result:" << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Result:");
     numeric::matrix::savetxt(result, &std::cout);
     numeric::matrix::savetxt("result.txt", result);
 

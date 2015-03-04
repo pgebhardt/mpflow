@@ -1,6 +1,6 @@
-#include <iostream>
 #include <distmesh/distmesh.h>
 #include <mpflow/mpflow.h>
+#include "stringtools/all.hpp"
 #include "high_precision_time.h"
 
 using namespace mpFlow;
@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     HighPrecisionTime time;
 
     // print out mpFlow version for refernce
-    std::cout << "mpFlow version: " << version::getVersionString() << std::endl;
+    str::print(str::format("mpFlow version: %s")(version::getVersionString()));
 
     // init cuda
     cudaStream_t cudaStream = nullptr;
@@ -37,16 +37,16 @@ int main(int argc, char* argv[]) {
 
     // Create Mesh using libdistmesh
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Create mesh using libdistmesh with uniform grid size" << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Create mesh using libdistmesh with uniform grid size");
 
     auto dist_mesh = distmesh::distmesh(distmesh::distance_function::circular(RADIUS),
         0.006, 1.0, RADIUS * 1.1 * distmesh::bounding_box(2));
     auto boundary = distmesh::boundedges(std::get<1>(dist_mesh));
 
-    std::cout << "Mesh created with " << std::get<0>(dist_mesh).rows() << " nodes and " <<
-        std::get<1>(dist_mesh).rows() << " elements." << std::endl;
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    str::print(str::format("Mesh created with %d nodes and %d elements")(
+        std::get<0>(dist_mesh).rows(), std::get<1>(dist_mesh).rows()));
+    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
     // create mpflow mesh object
     auto mesh = std::make_shared<numeric::IrregularMesh>(
@@ -64,15 +64,15 @@ int main(int argc, char* argv[]) {
         drivePattern, measurementPattern, cudaStream);
 
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Create equation model class" << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Create equation model class");
 
     // create equation
     auto equation = std::make_shared<FEM::Equation<dtype::real, FEM::basis::Linear>>(
         mesh, electrodes, 1.0, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
     // benchmark different pipeline lengths
     std::array<dtype::index, 512> pipelineLengths;
@@ -82,27 +82,27 @@ int main(int argc, char* argv[]) {
 
     // Create solver class
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Create main solver class" << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Create main solver class");
 
     auto solver = std::make_shared<EIT::Solver<FEM::basis::Linear, numeric::ConjugateGradient>>(
         equation, source, 7, 1, 0.0, cublasHandle, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
     // initialize solver
     time.restart();
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Solve forward model and initialize inverse solver matrices" << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Solve forward model and initialize inverse solver matrices");
 
     solver->preSolve(cublasHandle, cudaStream);
 
     cudaStreamSynchronize(cudaStream);
-    std::cout << "Time: " << time.elapsed() * 1e3 << " ms" << std::endl;
+    str::print(str::format("Time: %f ms")(time.elapsed() * 1e3));
 
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Reconstruct images for different pipeline lengths:" << std::endl << std::endl;
+    str::print("----------------------------------------------------");
+    str::print("Reconstruct images for different pipeline lengths:\n");
 
     for (size_t i = 0; i < pipelineLengths.size(); ++i) {
         // create inverse solver
@@ -117,8 +117,9 @@ int main(int argc, char* argv[]) {
         }
 
         cudaStreamSynchronize(cudaStream);
-        std::cout << "pipeline length: " << pipelineLengths[i] << ", time: " << time.elapsed() / 10.0 * 1e3 <<
-            " ms, fps: " << (dtype::real)pipelineLengths[i] / (time.elapsed() / 10.0) << std::endl;
+        str::print(str::format("pipeline length: %d, time: %f ms, fps: %f")(
+            pipelineLengths[i], time.elapsed() / 10.0 * 1e3,
+            (dtype::real)pipelineLengths[i] / (time.elapsed() / 10.0)));
     }
 
     return EXIT_SUCCESS;

@@ -52,7 +52,7 @@ struct Dump<std::string>
 {
     static void to_string(std::string& output,std::string const& s)
     {
-        output += "\"" + s + "\"";
+        output += s;
     }
 };
 
