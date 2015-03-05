@@ -228,7 +228,7 @@ int main(int argc, char* argv[]) {
     str::print("Solve electrical potential for all excitations");
 
     // use different numeric solver for different source types
-    std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr;
+    std::shared_ptr<numeric::Matrix<dtype::real>> result = nullptr, potential = nullptr;
     dtype::index steps = 0;
     if (sourceType == FEM::SourceDescriptor::Type::Fixed) {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::BiCGSTAB>>(
@@ -236,6 +236,7 @@ int main(int argc, char* argv[]) {
 
         time.restart();
         result = forwardSolver->solve(gamma, cublasHandle, cudaStream, tolerance, &steps);
+        potential = forwardSolver->phi[0];
     }
     else {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
@@ -243,6 +244,7 @@ int main(int argc, char* argv[]) {
 
         time.restart();
         result = forwardSolver->solve(gamma, cublasHandle, cudaStream, tolerance, &steps);
+        potential = forwardSolver->phi[0];
     }
 
     cudaStreamSynchronize(cudaStream);
@@ -256,6 +258,11 @@ int main(int argc, char* argv[]) {
     str::print("Result:");
     result->savetxt(&std::cout);
     result->savetxt("result.txt");
+
+    // save potential to file
+    potential->copyToHost(cudaStream);
+    cudaStreamSynchronize(cudaStream);
+    potential->savetxt("phi.txt");
 
     // cleanup
     json_value_free(config);
