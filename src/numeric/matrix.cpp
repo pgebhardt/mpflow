@@ -511,15 +511,88 @@ namespace numeric {
 }
 }
 
+// save matrix to stream
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::savetxt(std::ostream* ostream, char delimiter) const {
+    // check input
+    if (this->hostData == nullptr) {
+        throw std::logic_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
+    }
+    if (ostream == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::savetxt: ostream == nullptr");
+    }
+
+    // write data
+    for (dtype::index row = 0; row < this->rows; ++row) {
+        for (dtype::index column = 0; column < this->cols - 1; ++column) {
+            *ostream << (*this)(row, column) << delimiter;
+        }
+        *ostream << (*this)(row, this->cols - 1) << std::endl;
+    }
+}
+
+// complex specialisation
+namespace mpFlow {
+namespace numeric {
+    template <>
+    void Matrix<dtype::complex>::savetxt(std::ostream* ostream, char delimiter) const {
+        // check input
+        if (this->hostData == nullptr) {
+            throw std::logic_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
+        }
+        if (ostream == nullptr) {
+            throw std::invalid_argument("mpFlow::numeric::Matrix::savetxt: ostream == nullptr");
+        }
+
+        // write data
+        for (dtype::index row = 0; row < this->rows; ++row) {
+            for (dtype::index column = 0; column < this->cols - 1; ++column) {
+                *ostream << (*this)(row, column).real() << delimiter;
+                *ostream << (*this)(row, column).imag() << delimiter;
+            }
+            *ostream << (*this)(row, this->cols - 1).real() << delimiter;
+            *ostream << (*this)(row, this->cols - 1).imag() << std::endl;
+        }
+    }
+}
+}
+
+// save matrix to file
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::savetxt(const std::string filename, char delimiter) const {
+    // check input
+    if (this->hostData == nullptr) {
+        throw std::logic_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
+    }
+
+    // open file stream
+    std::ofstream file(filename.c_str());
+
+    // check open
+    if (file.fail()) {
+        throw std::logic_error("mpFlow::numeric::Matrix::savetxt: cannot open file!");
+    }
+
+    // save matrix
+    this->savetxt(&file, delimiter);
+
+    // close file
+    file.close();
+}
+
 // load matrix from stream
 template <
     class type
 >
-std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(std::istream* istream,
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::loadtxt(std::istream* istream,
     cudaStream_t stream, char delimiter) {
     // check input
     if (istream == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::matrix::loadtxt: istream == nullptr");
+        throw std::invalid_argument("mpFlow::numeric::Matrix::loadtxt: istream == nullptr");
     }
 
     // read matrix
@@ -582,16 +655,15 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(
 // complex specialisation
 namespace mpFlow {
 namespace numeric {
-namespace matrix {
     template <>
-    std::shared_ptr<Matrix<dtype::complex>> loadtxt(std::istream* istream,
+    std::shared_ptr<Matrix<dtype::complex>> Matrix<dtype::complex>::loadtxt(std::istream* istream,
         cudaStream_t stream, char delimiter) {
         // load float view
-        auto floatView = loadtxt<dtype::real>(istream, stream, delimiter);
+        auto floatView = Matrix<dtype::real>::loadtxt(istream, stream, delimiter);
 
         // check shape
         if (floatView->cols % 2 != 0) {
-            throw std::logic_error("mpFlow::numeric::matrix::loadtxt: floatView->cols must be multiple of 2");
+            throw std::logic_error("mpFlow::numeric::Matrix::loadtxt: floatView->cols must be multiple of 2");
         }
 
         // convert to complex matrix
@@ -609,118 +681,28 @@ namespace matrix {
     }
 }
 }
-}
 
 // load matrix from file
 template <
     class type
 >
-std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::matrix::loadtxt(
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::loadtxt(
     const std::string filename, cudaStream_t stream, char delimiter) {
     // open file stream
-    std::ifstream file;
-    file.open(filename.c_str());
+    std::ifstream file(filename.c_str());
 
     // check open
     if (file.fail()) {
-        throw std::logic_error("mpFlow::numeric::matrix::loadtxt: cannot open file!");
+        throw std::logic_error("mpFlow::numeric::Matrix::loadtxt: cannot open file!");
     }
 
     // load matrix
-    auto matrix = loadtxt<type>(&file, stream, delimiter);
+    auto matrix = Matrix<type>::loadtxt(&file, stream, delimiter);
 
     // close file
     file.close();
 
     return matrix;
-}
-
-// save matrix to stream
-template <
-    class type
->
-void mpFlow::numeric::matrix::savetxt(const std::shared_ptr<Matrix<type>> matrix,
-    std::ostream* ostream, char delimiter) {
-    // check input
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: matrix == nullptr");
-    }
-    if (matrix->hostData == nullptr) {
-        throw std::logic_error("mpFlow::numeric::matrix::savetxt: host memory was not allocated");
-    }
-    if (ostream == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: ostream == nullptr");
-    }
-
-    // write data
-    for (dtype::index row = 0; row < matrix->rows; ++row) {
-        for (dtype::index column = 0; column < matrix->cols - 1; ++column) {
-            *ostream << (*matrix)(row, column) << delimiter;
-        }
-        *ostream << (*matrix)(row, matrix->cols - 1) << std::endl;
-    }
-}
-
-// complex specialisation
-namespace mpFlow {
-namespace numeric {
-namespace matrix {
-    template <>
-    void savetxt(const std::shared_ptr<Matrix<dtype::complex>> matrix, std::ostream* ostream,
-        char delimiter) {
-        // check input
-        if (matrix == nullptr) {
-            throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: matrix == nullptr");
-        }
-        if (matrix->hostData == nullptr) {
-            throw std::logic_error("mpFlow::numeric::matrix::savetxt: host memory was not allocated");
-        }
-        if (ostream == nullptr) {
-            throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: ostream == nullptr");
-        }
-
-        // write data
-        for (dtype::index row = 0; row < matrix->rows; ++row) {
-            for (dtype::index column = 0; column < matrix->cols - 1; ++column) {
-                *ostream << (*matrix)(row, column).real() << delimiter;
-                *ostream << (*matrix)(row, column).imag() << delimiter;
-            }
-            *ostream << (*matrix)(row, matrix->cols - 1).real() << delimiter;
-            *ostream << (*matrix)(row, matrix->cols - 1).imag() << std::endl;
-        }
-    }
-}
-}
-}
-
-// save matrix to file
-template <
-    class type
->
-void mpFlow::numeric::matrix::savetxt(const std::string filename,
-    const std::shared_ptr<Matrix<type>> matrix, char delimiter) {
-    // check input
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::matrix::savetxt: matrix == nullptr");
-    }
-    if (matrix->hostData == nullptr) {
-        throw std::logic_error("mpFlow::numeric::matrix::savetxt: host memory was not allocated");
-    }
-
-    // open file stream
-    std::ofstream file;
-    file.open(filename.c_str());
-
-    // check open
-    if (file.fail()) {
-        throw std::logic_error("mpFlow::numeric::matrix::savetxt: cannot open file!");
-    }
-
-    // save matrix
-    savetxt<type>(matrix, &file, delimiter);
-
-    // close file
-    file.close();
 }
 
 // converts matrix to eigen array
@@ -800,30 +782,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
 }
 
 // specialisation
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(std::istream*, cudaStream_t, char);
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(std::istream*, cudaStream_t, char);
-
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::real>(const std::string, cudaStream_t, char);
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::complex>(const std::string, cudaStream_t, char);
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>
-    mpFlow::numeric::matrix::loadtxt<mpFlow::dtype::index>(const std::string, cudaStream_t, char);
-
-template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::real>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>, std::ostream*, char);
-template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::index>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>, std::ostream*, char);
-
-template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::real>(const std::string,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>, char);
-template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::complex>(const std::string,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>, char);
-template void mpFlow::numeric::matrix::savetxt<mpFlow::dtype::index>(const std::string,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>, char);
-
 template Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
     std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>);
 template Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(

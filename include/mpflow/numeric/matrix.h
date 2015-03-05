@@ -67,6 +67,16 @@ namespace numeric {
         void min(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
         void max(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
 
+        // save matrix as txt
+        void savetxt(std::ostream* ostream, char delimiter=' ') const;
+        void savetxt(const std::string filename, char delimiter=' ') const;
+
+        // load txt formatted matrix from file
+        static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream* istream,
+            cudaStream_t stream=nullptr, char delimiter=' ');
+        static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
+            cudaStream_t stream=nullptr, char delimiter=' ');
+
         // accessors
         const type& operator() (dtype::index i, dtype::index j) const {
             // check index
@@ -103,34 +113,6 @@ namespace numeric {
 
     // namespace matrix
     namespace matrix {
-        // load matrix from stream
-        template <
-            class type
-        >
-        std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream* istream,
-            cudaStream_t stream=nullptr, char delimiter=' ');
-
-        // load matrix from file
-        template <
-            class type
-        >
-        std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
-            cudaStream_t stream=nullptr, char delimiter=' ');
-
-        // save matrix to stream
-        template <
-            class type
-        >
-        void savetxt(const std::shared_ptr<Matrix<type>> matrix, std::ostream* ostream,
-            char delimiter=' ');
-
-        // save matrix to file
-        template <
-            class type
-        >
-        void savetxt(const std::string filename, const std::shared_ptr<Matrix<type>> matrix,
-            char delimiter=' ');
-
         // converts matrix to eigen array
         template <
             class type

@@ -7,6 +7,13 @@
 
 using namespace mpFlow;
 
+// define tolerance for single or double precision
+#ifdef USE_DOUBLE
+    #define tolerance (1e-15)
+#else
+    #define tolerance (1e-9)
+#endif
+
 // helper function to create an mpflow matrix from an json array
 template <class type>
 std::shared_ptr<numeric::Matrix<type>> matrixFromJsonArray(const json_value& array, cudaStream_t cudaStream) {
@@ -118,18 +125,19 @@ int main(int argc, char* argv[]) {
     double radius = meshConfig["radius"];
 
     // create electrodes descriptor
+    double offset = modelConfig["electrodes"]["offset"];
     auto electrodes = FEM::boundaryDescriptor::circularBoundary(modelConfig["electrodes"]["count"].u.integer,
         std::make_tuple(modelConfig["electrodes"]["width"].u.dbl, modelConfig["electrodes"]["height"].u.dbl),
-        radius, 0.0);
+        radius, offset);
 
-    if (meshConfig["meshDir"].type != json_none) {
+    if (meshConfig["meshPath"].type != json_none) {
         // load mesh from file
         std::string meshDir(meshConfig["meshPath"]);
         str::print("Load mesh from files:", meshDir);
 
-        auto nodes = numeric::matrix::loadtxt<dtype::real>(str::format("%s/nodes.txt")(meshDir), cudaStream);
-        auto elements = numeric::matrix::loadtxt<dtype::index>(str::format("%s/elements.txt")(meshDir), cudaStream);
-        auto boundary = numeric::matrix::loadtxt<dtype::index>(str::format("%s/boundary.txt")(meshDir), cudaStream);
+        auto nodes = numeric::Matrix<dtype::real>::loadtxt(str::format("%s/nodes.txt")(meshDir), cudaStream);
+        auto elements = numeric::Matrix<dtype::index>::loadtxt(str::format("%s/elements.txt")(meshDir), cudaStream);
+        auto boundary = numeric::Matrix<dtype::index>::loadtxt(str::format("%s/boundary.txt")(meshDir), cudaStream);
         mesh = std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, (double)meshConfig["height"]);
 
         str::print("Mesh loaded with", nodes->rows, "nodes and", elements->rows, "elements");
@@ -220,7 +228,7 @@ int main(int argc, char* argv[]) {
     // load predefined gamma distribution from file, if path is given
     std::shared_ptr<numeric::Matrix<dtype::real>> gamma = nullptr;
     if (modelConfig["gammaFile"].type != json_none) {
-        gamma = numeric::matrix::loadtxt<dtype::real>(std::string(modelConfig["gammaFile"]), cudaStream);
+        gamma = numeric::Matrix<dtype::real>::loadtxt(std::string(modelConfig["gammaFile"]), cudaStream);
     }
     else {
         gamma = std::make_shared<numeric::Matrix<dtype::real>>(mesh->elements->rows, 1, cudaStream);
@@ -239,18 +247,18 @@ int main(int argc, char* argv[]) {
             equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, cublasHandle, cudaStream, 1e-9, &steps);
+        result = forwardSolver->solve(gamma, cublasHandle, cudaStream, tolerance, &steps);
     }
     else {
         auto forwardSolver = std::make_shared<EIT::ForwardSolver<FEM::basis::Linear, numeric::ConjugateGradient>>(
             equation, source, modelConfig["componentsCount"].u.integer, cublasHandle, cudaStream);
 
         time.restart();
-        result = forwardSolver->solve(gamma, cublasHandle, cudaStream, 1e-9, &steps);
+        result = forwardSolver->solve(gamma, cublasHandle, cudaStream, tolerance, &steps);
     }
 
     cudaStreamSynchronize(cudaStream);
-    str::print("Time:", time.elapsed() * 1e3, "ms, Steps:", steps);
+    str::print("Time:", time.elapsed() * 1e3, "ms, Steps:", steps, "Tolerance:", tolerance);
 
     // Print result
     result->copyToHost(cudaStream);
@@ -258,8 +266,8 @@ int main(int argc, char* argv[]) {
 
     str::print("----------------------------------------------------");
     str::print("Result:");
-    numeric::matrix::savetxt(result, &std::cout);
-    numeric::matrix::savetxt("result.txt", result);
+    result->savetxt(&std::cout);
+    result->savetxt("result.txt");
 
     // cleanup
     json_value_free(config);
