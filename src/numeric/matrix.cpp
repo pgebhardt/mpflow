@@ -103,19 +103,19 @@ mpFlow::numeric::Matrix<type>::~Matrix() {
     CudaCheckError();
 }
 
+// helper function to create unit matrix
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::fill(type value, cudaStream_t stream) {
-    // dimension
-    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
-        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
-    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
-        this->dataCols == 1 ? 1 : matrix::block_size);
+std::shared_ptr<mpFlow::numeric::Matrix<type>>
+    mpFlow::numeric::Matrix<type>::eye(dtype::size size, cudaStream_t stream) {
+    auto matrix = std::make_shared<Matrix<type>>(size, size, stream);
+    for (dtype::index i = 0; i < size; ++i) {
+        (*matrix)(i, i) = 1;
+    }
+    matrix->copyToDevice(stream);
 
-    // call kernel
-    matrixKernel::fill(blocks, threads, stream, value,
-        this->dataRows, this->deviceData);
+    return matrix;
 }
 
 // copy matrix
@@ -178,6 +178,21 @@ void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t stream) {
             cudaMemcpyDeviceToHost, stream));
 
     CudaCheckError();
+}
+
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::fill(type value, cudaStream_t stream) {
+    // dimension
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
+        this->dataCols == 1 ? 1 : matrix::block_size);
+
+    // call kernel
+    matrixKernel::fill(blocks, threads, stream, value,
+        this->dataRows, this->deviceData);
 }
 
 // add matrix

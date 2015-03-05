@@ -60,8 +60,8 @@ int main(int argc, char* argv[]) {
             16, std::make_tuple(0.03, 0.1), 1.0, 0.0);
 
         // create pattern
-        auto drivePattern = eye<dtype::real>(electrodes->count, cudaStream);
-        auto measurementPattern = eye<dtype::real>(electrodes->count, cudaStream);
+        auto drivePattern = numeric::Matrix<dtype::real>::eye(electrodes->count, cudaStream);
+        auto measurementPattern = numeric::Matrix<dtype::real>::eye(electrodes->count, cudaStream);
 
         // create source
         auto source = std::make_shared<FEM::SourceDescriptor>(

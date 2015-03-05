@@ -41,18 +41,6 @@ std::shared_ptr<numeric::Matrix<type>> matrixFromJsonArray(const json_value& arr
     return matrix;
 }
 
-// helper function to create unit matrix
-template <class type>
-std::shared_ptr<numeric::Matrix<type>> eye(dtype::index size, cudaStream_t cudaStream) {
-    auto matrix = std::make_shared<numeric::Matrix<type>>(size, size, cudaStream);
-    for (dtype::index i = 0; i < size; ++i) {
-        (*matrix)(i, i) = 1;
-    }
-    matrix->copyToDevice(cudaStream);
-
-    return matrix;
-}
-
 void setCircularRegion(float x, float y, float radius,
     float value, std::shared_ptr<numeric::IrregularMesh> mesh,
     std::shared_ptr<numeric::Matrix<dtype::real>> gamma) {
@@ -183,7 +171,7 @@ int main(int argc, char* argv[]) {
         drivePattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["drivePattern"], cudaStream);
     }
     else {
-        drivePattern = eye<dtype::real>(electrodes->count, cudaStream);;
+        drivePattern = numeric::Matrix<dtype::real>::eye(electrodes->count, cudaStream);;
     }
 
     std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern = nullptr;
@@ -191,7 +179,7 @@ int main(int argc, char* argv[]) {
         measurementPattern = matrixFromJsonArray<dtype::real>(modelConfig["source"]["measurementPattern"], cudaStream);
     }
     else {
-        measurementPattern = eye<dtype::real>(electrodes->count, cudaStream);;
+        measurementPattern = numeric::Matrix<dtype::real>::eye(electrodes->count, cudaStream);;
     }
 
     // read out currents

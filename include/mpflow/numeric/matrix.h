@@ -39,7 +39,10 @@ namespace numeric {
         Matrix(dtype::size rows, dtype::size cols, cudaStream_t stream=nullptr,
             type value=0, bool allocateHostMemory=true);
         virtual ~Matrix();
-        void fill(type value, cudaStream_t stream=nullptr);
+
+        // create special matrices
+        static std::shared_ptr<Matrix<type>> eye(dtype::size size,
+            cudaStream_t stream=nullptr);
 
         // copy methods
         void copy(const std::shared_ptr<Matrix<type>> other, cudaStream_t stream=nullptr);
@@ -47,6 +50,7 @@ namespace numeric {
         void copyToHost(cudaStream_t stream=nullptr);
 
         // mathematical methods
+        void fill(type value, cudaStream_t stream=nullptr);
         void add(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
         void multiply(const std::shared_ptr<Matrix<type>> A,
             const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle,
