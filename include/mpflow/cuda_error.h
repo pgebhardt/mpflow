@@ -29,36 +29,38 @@
     #define CUDA_ERROR_CHECK
 #endif
 
-#define CudaSafeCall(err)   __cudaSafeCall(err, __FILE__, __LINE__)
+#define CudaSafeCall(error)   __cudaSafeCall(error, #error, __FILE__, __LINE__)
 #define CudaCheckError()    __cudaCheckError(__FILE__, __LINE__)
 
 #ifndef CUDA_ERROR_CHECK
 
-inline void __cudaSafeCall(cudaError, const char*, const int) { }
+inline void __cudaSafeCall(cudaError, const char*, const char*, const int) { }
 inline void __cudaCheckError(const char*, const int) { }
 
 #else
 
-#include <cstdio>
+#include <thrust/system_error.h>
+#include <thrust/system/cuda/error.h>
 
-inline void __cudaSafeCall(cudaError err, const char *file, const int line) {
-    if (cudaSuccess != err) {
-        fprintf(stderr, "cudaSafeCall() failed at %s:%i : %s\n",
-                 file, line, cudaGetErrorString(err));
-        exit(-1);
+inline void __cudaSafeCall(cudaError error, const char* function, const char* file, const int line) {
+    if (error != cudaSuccess) {
+        std::stringstream ss;
+        ss << file << ":" << line << " " << function;
+
+        throw thrust::system_error(error, thrust::cuda_category(), ss.str());
     }
 }
 
-inline void __cudaCheckError( const char *file, const int line ) {
+inline void __cudaCheckError(const char* file, const int line) {
     // More careful checking. However, this will affect performance.
-    // Comment away if needed.
-    cudaThreadSynchronize();
-    cudaError err = cudaGetLastError();
+    cudaDeviceSynchronize();
+    cudaError error = cudaGetLastError();
 
-    if(cudaSuccess != err) {
-        fprintf(stderr, "cudaCheckError() with sync failed at %s:%i : %s\n",
-                 file, line, cudaGetErrorString(err));
-        exit(-1);
+    if (error != cudaSuccess) {
+        std::stringstream ss;
+        ss << file << ":" << line;
+
+        throw thrust::system_error(error, thrust::cuda_category(), ss.str());
     }
 }
 

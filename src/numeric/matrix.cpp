@@ -61,7 +61,7 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
 
     CudaCheckError();
     if (error != cudaSuccess) {
-        throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create device data memory");
+        throw std::runtime_error("mpFlow::numeric::Matrix::Matrix: create device data memory");
     }
 
     if (allocateHostMemory) {
@@ -71,7 +71,7 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
 
         CudaCheckError();
         if (error != cudaSuccess) {
-            throw std::logic_error("mpFlow::numeric::Matrix::Matrix: create host data memory");
+            throw std::runtime_error("mpFlow::numeric::Matrix::Matrix: create host data memory");
         }
 
         // init data with default value
@@ -94,12 +94,12 @@ template <
 mpFlow::numeric::Matrix<type>::~Matrix() {
     if (this->hostData != nullptr) {
         // free matrix host data
-        cudaFreeHost(this->hostData);
+        CudaSafeCall(cudaFreeHost(this->hostData));
         CudaCheckError();
     }
 
     // free matrix device data
-    cudaFree(this->deviceData);
+    CudaSafeCall(cudaFree(this->deviceData));
     CudaCheckError();
 }
 
@@ -130,8 +130,7 @@ void mpFlow::numeric::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> oth
     }
 
     // check size
-    if ((other->rows != this->rows) ||
-        (other->cols != this->cols)) {
+    if ((other->rows != this->rows) || (other->cols != this->cols)) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::copy: shape does not match");
     }
 
@@ -150,7 +149,7 @@ template <
 >
 void mpFlow::numeric::Matrix<type>::copyToDevice(cudaStream_t stream) {
     if (this->hostData == nullptr) {
-        throw std::logic_error("mpFlow::numeric::Matrix::copyToDevice: host memory was not allocated");
+        throw std::runtime_error("mpFlow::numeric::Matrix::copyToDevice: host memory was not allocated");
     }
 
     // copy host buffer to device
@@ -168,7 +167,7 @@ template <
 >
 void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t stream) {
     if (this->hostData == nullptr) {
-        throw std::logic_error("mpFlow::numeric::Matrix::copyToHost: host memory was not allocated");
+        throw std::runtime_error("mpFlow::numeric::Matrix::copyToHost: host memory was not allocated");
     }
 
     // copy host buffer to device
@@ -259,14 +258,14 @@ void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>
         if (cublasWrapper<type>::gemv(handle, CUBLAS_OP_N, A->dataRows, A->dataCols, &alpha, A->deviceData,
             A->dataRows, B->deviceData, 1, &beta, this->deviceData, 1)
             != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
+            throw std::runtime_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
         }
     }
     else {
         if (cublasWrapper<type>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
             &alpha, A->deviceData, A->dataRows, B->deviceData, B->dataRows, &beta,
             this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
+            throw std::runtime_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");
         }
     }
 }
@@ -474,7 +473,7 @@ namespace numeric {
     template <>
     void Matrix<dtype::complex>::min(const std::shared_ptr<Matrix<dtype::complex>>,
     cudaStream_t) {
-        throw std::logic_error("mpFlow::numeric::Matrix::min: not possible for complex values");
+        throw std::runtime_error("mpFlow::numeric::Matrix::min: not possible for complex values");
     }
 }
 }
@@ -521,7 +520,7 @@ namespace numeric {
     template <>
     void Matrix<dtype::complex>::max(const std::shared_ptr<Matrix<dtype::complex>>,
     cudaStream_t) {
-        throw std::logic_error("mpFlow::numeric::Matrix::max: not possible for complex values");
+        throw std::runtime_error("mpFlow::numeric::Matrix::max: not possible for complex values");
     }
 }
 }
@@ -533,7 +532,7 @@ template <
 void mpFlow::numeric::Matrix<type>::savetxt(std::ostream* ostream, char delimiter) const {
     // check input
     if (this->hostData == nullptr) {
-        throw std::logic_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
+        throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
     }
     if (ostream == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::savetxt: ostream == nullptr");
@@ -555,7 +554,7 @@ namespace numeric {
     void Matrix<dtype::complex>::savetxt(std::ostream* ostream, char delimiter) const {
         // check input
         if (this->hostData == nullptr) {
-            throw std::logic_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
+            throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
         }
         if (ostream == nullptr) {
             throw std::invalid_argument("mpFlow::numeric::Matrix::savetxt: ostream == nullptr");
@@ -581,7 +580,7 @@ template <
 void mpFlow::numeric::Matrix<type>::savetxt(const std::string filename, char delimiter) const {
     // check input
     if (this->hostData == nullptr) {
-        throw std::logic_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
+        throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
     }
 
     // open file stream
@@ -589,7 +588,7 @@ void mpFlow::numeric::Matrix<type>::savetxt(const std::string filename, char del
 
     // check open
     if (file.fail()) {
-        throw std::logic_error("mpFlow::numeric::Matrix::savetxt: cannot open file!");
+        throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: cannot open file!");
     }
 
     // save matrix
@@ -639,7 +638,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
 
             // check read error
             if (line_stream.bad()) {
-                throw std::logic_error("mpFlow::numeric::matrix::loadtxt: invalid value");
+                throw std::runtime_error("mpFlow::numeric::matrix::loadtxt: invalid value");
             }
 
             row.push_back(value);
@@ -678,7 +677,7 @@ namespace numeric {
 
         // check shape
         if (floatView->cols % 2 != 0) {
-            throw std::logic_error("mpFlow::numeric::Matrix::loadtxt: floatView->cols must be multiple of 2");
+            throw std::runtime_error("mpFlow::numeric::Matrix::loadtxt: floatView->cols must be multiple of 2");
         }
 
         // convert to complex matrix
@@ -708,7 +707,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
 
     // check open
     if (file.fail()) {
-        throw std::logic_error("mpFlow::numeric::Matrix::loadtxt: cannot open file!");
+        throw std::runtime_error("mpFlow::numeric::Matrix::loadtxt: cannot open file!");
     }
 
     // load matrix
