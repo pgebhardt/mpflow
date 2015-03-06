@@ -53,9 +53,10 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     auto edges = std::get<0>(globalEdgeIndex);
 
     // create intermediate matrices
-    Eigen::ArrayXXi elementCount = Eigen::ArrayXXi::Zero(edges.size(), edges.size());
-    std::vector<Eigen::ArrayXXi> connectivityMatrices;
-    std::vector<Eigen::ArrayXXf> elementalSMatrices, elementalRMatrices;
+    auto elementCount = std::make_shared<numeric::SparseMatrix<dtype::index>>(
+        edges.size(), edges.size(), stream);
+    std::vector<std::shared_ptr<numeric::SparseMatrix<dtype::index>>> connectivityMatrices;
+    std::vector<std::shared_ptr<numeric::SparseMatrix<dtype::complex>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
     for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
@@ -74,31 +75,35 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
         for (dtype::index j = 0; j < 3; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t level = elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+            size_t level = elementCount->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
             if (connectivityMatrices.size() <= level) {
-                connectivityMatrices.push_back(Eigen::ArrayXXi::Ones(
-                    edges.size(), edges.size()) * dtype::invalid_index);
-                elementalSMatrices.push_back(Eigen::ArrayXXf::Zero(
-                    edges.size(), edges.size()));
-                elementalRMatrices.push_back(Eigen::ArrayXXf::Zero(
-                    edges.size(), edges.size()));
+                connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<dtype::index>>(
+                    edges.size(), edges.size(), stream));
+                elementalSMatrices.push_back(std::make_shared<numeric::SparseMatrix<dtype::complex>>(
+                    edges.size(), edges.size(), stream));
+                elementalRMatrices.push_back(std::make_shared<numeric::SparseMatrix<dtype::complex>>(
+                    edges.size(), edges.size(), stream));
             }
 
             // set connectivity element
-            connectivityMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
-                element;
+            connectivityMatrices[level]->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
+                element);
 
             // evaluate integral equations
-            auto edgeI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
-            auto edgeJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
+            auto basisI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
+            auto basisJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
 
-            elementalSMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
-                edgeI->integrateGradientWithBasis(edgeJ);
-            elementalRMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) =
-                edgeI->integrateWithBasis(edgeJ);
+            // set elemental system element
+            elementalSMatrices[level]->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
+                basisI->integrateGradientWithBasis(basisJ));
+
+            // set elemental residual element
+            elementalRMatrices[level]->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
+                basisI->integrateWithBasis(basisJ));
 
             // increment element count
-            elementCount(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]))++;
+            elementCount->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
+                elementCount->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) + 1);
         }
     }
 
@@ -141,17 +146,22 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
                     std::get<0>(localEdges[j]));
 
                 (*this->connectivityMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    connectivityMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+                    connectivityMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
                 (*this->elementalSMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    elementalSMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+                    elementalSMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
                 (*this->elementalRMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    elementalRMatrices[level](std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+                    elementalRMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
             }
         }
     }
     this->connectivityMatrix->copyToDevice(stream);
     this->elementalSMatrix->copyToDevice(stream);
     this->elementalRMatrix->copyToDevice(stream);
+
+    // update sMatrix only once
+    auto alpha = std::make_shared<numeric::Matrix<dtype::complex>>(this->mesh->elements->rows, 1, stream);
+    FEM::equation::updateMatrix(this->elementalSMatrix, alpha, this->connectivityMatrix,
+        dtype::complex(1.0, 0.0), stream, this->sMatrix);
 }
 
 void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
