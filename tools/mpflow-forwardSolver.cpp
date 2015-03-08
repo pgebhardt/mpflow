@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
         str::print("Create mesh using libdistmesh");
 
         // fix mesh at electrodes boundaries
-        distmesh::dtype::array<distmesh::dtype::real> fixedPoints(electrodes->count * 2, 2);
+        Eigen::ArrayXXd fixedPoints(electrodes->count * 2, 2);
         for (dtype::index electrode = 0; electrode < electrodes->count; ++electrode) {
             fixedPoints(electrode * 2, 0) = std::get<0>(std::get<0>(electrodes->coordinates[electrode]));
             fixedPoints(electrode * 2, 1) = std::get<1>(std::get<0>(electrodes->coordinates[electrode]));
@@ -154,9 +154,9 @@ int main(int argc, char* argv[]) {
         str::print("Time:", time.elapsed() * 1e3, "ms");
 
         // create mpflow matrix objects from distmesh arrays
-        auto nodes = numeric::matrix::fromEigen<dtype::real, distmesh::dtype::real>(std::get<0>(dist_mesh));
-        auto elements = numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(std::get<1>(dist_mesh));
-        auto boundary = numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(distmesh::boundedges(std::get<1>(dist_mesh)));
+        auto nodes = numeric::matrix::fromEigen<dtype::real, double>(std::get<0>(dist_mesh));
+        auto elements = numeric::matrix::fromEigen<dtype::index, int>(std::get<1>(dist_mesh));
+        auto boundary = numeric::matrix::fromEigen<dtype::index, int>(distmesh::boundedges(std::get<1>(dist_mesh)));
         mesh = std::make_shared<numeric::IrregularMesh>(nodes, elements, boundary, radius, (double)meshConfig["height"]);
     }
 

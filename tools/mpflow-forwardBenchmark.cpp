@@ -51,9 +51,9 @@ int main(int argc, char* argv[]) {
 
         // create mpflow mesh object
         auto mesh = std::make_shared<numeric::IrregularMesh>(
-            numeric::matrix::fromEigen<dtype::real, distmesh::dtype::real>(std::get<0>(dist_mesh), cudaStream),
-            numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(std::get<1>(dist_mesh), cudaStream),
-            numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(boundary, cudaStream), 1.0, 1.0);
+            numeric::matrix::fromEigen<dtype::real, double>(std::get<0>(dist_mesh), cudaStream),
+            numeric::matrix::fromEigen<dtype::index, int>(std::get<1>(dist_mesh), cudaStream),
+            numeric::matrix::fromEigen<dtype::index, int>(boundary, cudaStream), 1.0, 1.0);
 
         // create electrodes
         auto electrodes = FEM::boundaryDescriptor::circularBoundary(

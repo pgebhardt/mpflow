@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     str::print("Create mesh using libdistmesh with uniform grid size");
 
     auto dist_mesh = distmesh::distmesh(distmesh::distance_function::circular(RADIUS),
-        0.006, 1.0, RADIUS * 1.1 * distmesh::bounding_box(2));
+        0.002, 1.0, RADIUS * 1.1 * distmesh::bounding_box(2));
     auto boundary = distmesh::boundedges(std::get<1>(dist_mesh));
 
     str::print("Mesh created with", std::get<0>(dist_mesh).rows(), "nodes and",
@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
 
     // create mpflow mesh object
     auto mesh = std::make_shared<numeric::IrregularMesh>(
-        numeric::matrix::fromEigen<dtype::real, distmesh::dtype::real>(std::get<0>(dist_mesh), cudaStream),
-        numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(std::get<1>(dist_mesh), cudaStream),
-        numeric::matrix::fromEigen<dtype::index, distmesh::dtype::index>(boundary, cudaStream), RADIUS, 0.4);
+        numeric::matrix::fromEigen<dtype::real, double>(std::get<0>(dist_mesh), cudaStream),
+        numeric::matrix::fromEigen<dtype::index, int>(std::get<1>(dist_mesh), cudaStream),
+        numeric::matrix::fromEigen<dtype::index, int>(boundary, cudaStream), RADIUS, 0.4);
 
     // create electrodes
     auto electrodes = FEM::boundaryDescriptor::circularBoundary(
