@@ -121,30 +121,17 @@ endif
 CXX_SRCS := $(shell find src -name "*.cpp")
 HXX_SRCS := $(shell find include -name "*.h")
 CU_SRCS := $(shell find src -name "*.cu")
-UTILS_SRCS := $(shell find tools/utils/src -name "*.cpp")
-TOOLS_SRCS := $(shell find tools -name "*.cpp")
-TOOLS_SRCS := $(filter-out $(UTILS_SRCS), $(TOOLS_SRCS))
 
 # Object files
 CXX_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CXX_SRCS:.cpp=.o))
 CU_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CU_SRCS:.cu=.o))
-UTILS_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(UTILS_SRCS:.cpp=.o))
-TOOLS_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(TOOLS_SRCS:.cpp=.o))
-TOOLS_BINS := $(patsubst tools%.cpp, $(BUILD_DIR)/bin%, $(TOOLS_SRCS))
 
 ##############################
 # Build targets
 ##############################
-.PHONY: all install clean tools
+.PHONY: all install clean
 
-all: $(NAME) $(STATIC_NAME) tools
-
-tools: $(TOOLS_BINS)
-
-$(TOOLS_BINS): $(BUILD_DIR)/bin/% : $(BUILD_DIR)/objs/tools/%.o $(UTILS_OBJS) $(STATIC_NAME)
-	@echo [ Linking ] $@
-	@mkdir -p $(BUILD_DIR)/bin
-	@$(CXX) -o $@ $< $(UTILS_OBJS) $(STATIC_NAME) $(COMMON_FLAGS) $(LDFLAGS) $(LINKFLAGS)
+all: $(NAME) $(STATIC_NAME)
 
 $(NAME): $(CXX_OBJS) $(CU_OBJS)
 	@echo [ Linking ] $@
