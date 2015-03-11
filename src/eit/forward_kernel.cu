@@ -35,7 +35,7 @@ static __global__ void applyMixedBoundaryConditionKernel(
     mpFlow::dtype::index col = blockIdx.y * blockDim.y + threadIdx.y;
 
     // clip excitation value
-    excitation[row + col * rows] = excitation[row + col * rows] != 0.0f ? 1.0f : 0.0f;
+    excitation[row + col * rows] = abs(excitation[row + col * rows]) >= 1e-9 ? 1.0f : 0.0f;
 
     // clear matrix row and set diagonal element to 1, if excitation element != 0
     mpFlow::dtype::index columnId = mpFlow::dtype::invalid_index;
