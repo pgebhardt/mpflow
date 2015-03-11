@@ -32,7 +32,8 @@
 
 // update matrix kernel
 template <
-    class dataType
+    class dataType,
+    bool logarithmic
 >
 static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivityMatrix,
     const dataType* elementalMatrix, const dataType* gamma,
@@ -49,10 +50,17 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
         // get element id
         elementId = connectivityMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows];
 
-        value += elementId != mpFlow::dtype::invalid_index ?
-            elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
-            referenceValue * exp(log((mpFlow::dtype::real)10.0) * gamma[elementId] / (mpFlow::dtype::real)10.0) :
-            (mpFlow::dtype::real)0.0;
+        if (logarithmic == true) {
+            value += elementId != mpFlow::dtype::invalid_index ?
+                elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
+                referenceValue * exp(log((mpFlow::dtype::real)10.0) * gamma[elementId] / (mpFlow::dtype::real)10.0) :
+                (mpFlow::dtype::real)0.0;
+        }
+        else {
+            value += elementId != mpFlow::dtype::invalid_index ?
+                elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
+                referenceValue * gamma[elementId] : (mpFlow::dtype::real)0.0;
+        }
     }
 
     // set residual matrix element
@@ -61,24 +69,33 @@ static __global__ void updateMatrixKernel(const mpFlow::dtype::index* connectivi
 
 // update matrix kernel wrapper
 template <
-    class dataType
+    class dataType,
+    bool logarithmic
 >
 void mpFlow::FEM::equationKernel::updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::index* connectivityMatrix, const dataType* elementalMatrix,
     const dataType* gamma, dataType referenceValue, dtype::size rows, dtype::size columns,
     dataType* matrix_values) {
     // call cuda kernel
-    updateMatrixKernel<<<blocks, threads, 0, stream>>>(connectivityMatrix, elementalMatrix,
+    updateMatrixKernel<dataType, logarithmic><<<blocks, threads, 0, stream>>>(connectivityMatrix, elementalMatrix,
         gamma, referenceValue, rows, columns, matrix_values);
 
     CudaCheckError();
 }
 
-template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::real>(dim3, dim3,
+template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::real, true>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::real*,
     const mpFlow::dtype::real*, mpFlow::dtype::real, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::complex>(dim3, dim3,
+template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::complex, true>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::complex*,
+    const mpFlow::dtype::complex*, mpFlow::dtype::complex, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::complex*);
+template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::real, false>(dim3, dim3,
+    cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::real*,
+    const mpFlow::dtype::real*, mpFlow::dtype::real, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::real*);
+template void mpFlow::FEM::equationKernel::updateMatrix<mpFlow::dtype::complex, false>(dim3, dim3,
     cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::complex*,
     const mpFlow::dtype::complex*, mpFlow::dtype::complex, mpFlow::dtype::size,
     mpFlow::dtype::size, mpFlow::dtype::complex*);
@@ -137,7 +154,8 @@ template void mpFlow::FEM::equationKernel::updateSystemMatrix<mpFlow::dtype::com
 
 // calc jacobian kernel
 template <
-    int nodes_per_element
+    int nodes_per_element,
+    bool logarithmic
 >
 static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
     const mpFlow::dtype::real* measurmentPhi, const mpFlow::dtype::index* connectivityMatrix,
@@ -183,8 +201,10 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
             (i + j * nodes_per_element) * columns];
     }
 
-    // diff sigma to gamma
-    element *= sigmaRef * exp10f(gamma[column] / 10.0f) / 10.0f;
+    if (logarithmic == true) {
+        // diff sigma to gamma
+        element *= sigmaRef * exp10f(gamma[column] / 10.0f) / 10.0f;
+    }
 
     if (additiv) {
         jacobian[row + column * rows] += element;
@@ -196,7 +216,8 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
 
 // calc jacobian kernel wrapper
 template <
-    int nodes_per_element
+    int nodes_per_element,
+    bool logarithmic
 >
 void mpFlow::FEM::equationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
     const dtype::real* drive_phi, const dtype::real* measurment_phi,
@@ -205,7 +226,7 @@ void mpFlow::FEM::equationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaSt
     dtype::size phi_rows, dtype::size element_count, dtype::size drive_count,
     dtype::size measurment_count, bool additiv, dtype::real* jacobian) {
     // call cuda kernel
-    calcJacobianKernel<nodes_per_element><<<blocks, threads, 0, stream>>>(
+    calcJacobianKernel<nodes_per_element, logarithmic><<<blocks, threads, 0, stream>>>(
         drive_phi, measurment_phi, connectivity_matrix, elemental_jacobian_matrix, gamma,
         sigma_ref, rows, columns, phi_rows, element_count, drive_count,
         measurment_count, additiv, jacobian);
@@ -214,11 +235,19 @@ void mpFlow::FEM::equationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaSt
 }
 
 // template specialisation
-template void mpFlow::FEM::equationKernel::calcJacobian<3>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<3, true>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);
-template void mpFlow::FEM::equationKernel::calcJacobian<6>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<6, true>(dim3, dim3, cudaStream_t,
+    const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
+    const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
+    dtype::size, dtype::size, bool, dtype::real*);
+template void mpFlow::FEM::equationKernel::calcJacobian<3, false>(dim3, dim3, cudaStream_t,
+    const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
+    const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
+    dtype::size, dtype::size, bool, dtype::real*);
+template void mpFlow::FEM::equationKernel::calcJacobian<6, false>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);

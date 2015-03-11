@@ -23,9 +23,10 @@
 
 template <
     class dataType,
-    class basisFunctionType
+    class basisFunctionType,
+    bool logarithmic
 >
-mpFlow::FEM::Equation<dataType, basisFunctionType>::Equation(
+mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
     std::shared_ptr<numeric::IrregularMesh> mesh,
     std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor,
     dataType referenceValue, cudaStream_t stream)
@@ -65,9 +66,10 @@ mpFlow::FEM::Equation<dataType, basisFunctionType>::Equation(
 // init elemental matrices
 template <
     class dataType,
-    class basisFunctionType
+    class basisFunctionType,
+    bool logarithmic
 >
-void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
+void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
     auto elementCount = std::make_shared<numeric::SparseMatrix<dtype::index>>(
@@ -179,9 +181,10 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initElementalMatrices(
 
 template <
     class dataType,
-    class basisFunctionType
+    class basisFunctionType,
+    bool logarithmic
 >
-void mpFlow::FEM::Equation<dataType, basisFunctionType>::initExcitationMatrix(cudaStream_t stream) {
+void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t stream) {
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
     std::array<dtype::real, basisFunctionType::pointsPerEdge> nodeParameter;
     dtype::real integrationStart, integrationEnd;
@@ -246,9 +249,10 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::initExcitationMatrix(cu
 
 template <
     class dataType,
-    class basisFunctionType
+    class basisFunctionType,
+    bool logarithmic
 >
-void mpFlow::FEM::Equation<dataType, basisFunctionType>
+void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
     ::initJacobianCalculationMatrix(cudaStream_t stream) {
     // variables
     std::array<std::tuple<dtype::real, dtype::real>,
@@ -291,16 +295,17 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>
 // update ellipticalEquation
 template <
     class dataType,
-    class basisFunctionType
+    class basisFunctionType,
+    bool logarithmic
 >
-void mpFlow::FEM::Equation<dataType, basisFunctionType>::update(
+void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::update(
     const std::shared_ptr<numeric::Matrix<dataType>> alpha, const dataType k,
     const std::shared_ptr<numeric::Matrix<dataType>> beta, cudaStream_t stream) {
     // update matrices
-    FEM::equation::updateMatrix(this->elementalSMatrix, alpha, this->connectivityMatrix,
-        this->referenceValue, stream, this->sMatrix);
-    FEM::equation::updateMatrix(this->elementalRMatrix, beta, this->connectivityMatrix,
-        this->referenceValue, stream, this->rMatrix);
+    FEM::equation::updateMatrix<dataType, logarithmic>(this->elementalSMatrix, alpha,
+        this->connectivityMatrix, this->referenceValue, stream, this->sMatrix);
+    FEM::equation::updateMatrix<dataType, logarithmic>(this->elementalRMatrix, beta,
+        this->connectivityMatrix, this->referenceValue, stream, this->rMatrix);
 
     // update system matrix
     FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
@@ -311,9 +316,10 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::update(
 // calc jacobian
 template <
     class dataType,
-    class basisFunctionType
+    class basisFunctionType,
+    bool logarithmic
 >
-void mpFlow::FEM::Equation<dataType, basisFunctionType>::calcJacobian(
+void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobian(
     const std::shared_ptr<numeric::Matrix<dataType>> phi,
     const std::shared_ptr<numeric::Matrix<dataType>> gamma,
     dtype::size driveCount, dtype::size measurmentCount, bool additiv,
@@ -335,7 +341,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::calcJacobian(
     dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
 
     // calc jacobian
-    FEM::equationKernel::calcJacobian<basisFunctionType::pointsPerElement>(blocks, threads, stream,
+    FEM::equationKernel::calcJacobian<basisFunctionType::pointsPerElement, logarithmic>(blocks, threads, stream,
         phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
         this->mesh->elements->deviceData, this->elementalJacobianMatrix->deviceData,
         gamma->deviceData, this->referenceValue, jacobian->dataRows, jacobian->dataCols,
@@ -345,7 +351,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType>::calcJacobian(
 
 // update matrix
 template <
-    class dataType
+    class dataType,
+    bool logarithmic
 >
 void mpFlow::FEM::equation::updateMatrix(
     const std::shared_ptr<numeric::Matrix<dataType>> elements,
@@ -371,22 +378,34 @@ void mpFlow::FEM::equation::updateMatrix(
     dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
 
     // execute kernel
-    FEM::equationKernel::updateMatrix(blocks, threads, stream,
+    FEM::equationKernel::updateMatrix<dataType, logarithmic>(blocks, threads, stream,
         connectivityMatrix->deviceData, elements->deviceData, gamma->deviceData,
         referenceValue, connectivityMatrix->dataRows, connectivityMatrix->dataCols, matrix->deviceValues);
 }
 
 // specialisation
-template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::real>(
+template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::real, true>(
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
     mpFlow::dtype::real, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::real>>);
-template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::complex>(
+template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::complex, true>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
+    mpFlow::dtype::complex, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::complex>>);
+template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::real, false>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
+    mpFlow::dtype::real, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::real>>);
+template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::complex, false>(
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
     const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
     mpFlow::dtype::complex, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::complex>>);
 
-template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Quadratic>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, true>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Quadratic, false>;

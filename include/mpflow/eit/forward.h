@@ -26,12 +26,13 @@ namespace EIT {
     // forward solver class definition
     template <
         class basisFunctionType,
-        template <class, template <class> class> class numericalSolverType
+        template <class, template <class> class> class numericalSolverType,
+        bool logarithmic = true
     >
     class ForwardSolver {
     public:
         // initialization
-        ForwardSolver(std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType>> equation,
+        ForwardSolver(std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType, logarithmic>> equation,
             std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
             cublasHandle_t handle, cudaStream_t stream);
 
@@ -48,7 +49,7 @@ namespace EIT {
         // member
         std::shared_ptr<numericalSolverType<dtype::real,
             mpFlow::numeric::SparseMatrix>> numericalSolver;
-        std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType>> equation;
+        std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType, logarithmic>> equation;
         std::shared_ptr<FEM::SourceDescriptor> source;
         std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> phi;
         std::shared_ptr<numeric::Matrix<dtype::real>> excitation;

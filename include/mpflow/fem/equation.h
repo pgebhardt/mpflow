@@ -26,7 +26,8 @@ namespace FEM {
     // model class describing an elliptical differential equation
     template <
         class dataType,
-        class basisFunctionType_
+        class basisFunctionType_,
+        bool logarithmic=true
     >
     class Equation {
     public:
@@ -68,7 +69,8 @@ namespace FEM {
     namespace equation {
         // update matrix
         template <
-            class dataType
+            class dataType,
+            bool logarithmic
         >
         void updateMatrix(const std::shared_ptr<numeric::Matrix<dataType>> elements,
             const std::shared_ptr<numeric::Matrix<dataType>> gamma,

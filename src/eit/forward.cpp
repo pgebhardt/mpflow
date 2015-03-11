@@ -24,10 +24,11 @@
 // create forward_solver
 template <
     class basisFunctionType,
-    template <class, template <class> class> class numericalSolverType
+    template <class, template <class> class> class numericalSolverType,
+    bool logarithmic
 >
-mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolver(
-    std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType>> equation,
+mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>::ForwardSolver(
+    std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType, logarithmic>> equation,
     std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
     cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
@@ -99,10 +100,11 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::ForwardSolve
 // forward solving
 template <
     class basisFunctionType,
-    template <class, template <class> class> class numericalSolverType
+    template <class, template <class> class> class numericalSolverType,
+    bool logarithmic
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::solve(
+    mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>::solve(
     const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cublasHandle_t handle,
     cudaStream_t stream, dtype::real tolerance, dtype::index* steps) {
     // check input
@@ -181,9 +183,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 // helper methods
 template <
     class basisFunctionType,
-    template <class, template <class> class> class numericalSolverType
+    template <class, template <class> class> class numericalSolverType,
+    bool logarithmic
 >
-void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType>::applyMeasurementPattern(
+void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>::applyMeasurementPattern(
     const std::shared_ptr<numeric::Matrix<dtype::real>> source,
     std::shared_ptr<numeric::Matrix<dtype::real>> result, bool additiv,
     cublasHandle_t handle, cudaStream_t stream) {
@@ -232,7 +235,11 @@ void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
 }
 
 // specialisation
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient, true>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient, true>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB, true>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB, true>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient, false>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient, false>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB, false>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB, false>;

@@ -26,7 +26,8 @@ namespace FEM {
 namespace equationKernel {
     // update matrix kernel
     template <
-        class dataType
+        class dataType,
+        bool logarithmic
     >
     void updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
         const dtype::index* connectivity_matrix, const dataType* elemental_matrix,
@@ -44,7 +45,8 @@ namespace equationKernel {
 
     // calc jacobian kernel
     template <
-        int nodesPerElement
+        int nodesPerElement,
+        bool logarithmic
     >
     void calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
         const dtype::real* drive_phi, const dtype::real* measurment_phi,

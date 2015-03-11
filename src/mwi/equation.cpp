@@ -160,7 +160,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
     // update sMatrix only once
     auto alpha = std::make_shared<numeric::Matrix<dtype::complex>>(this->mesh->elements->rows, 1, stream);
-    FEM::equation::updateMatrix(this->elementalSMatrix, alpha, this->connectivityMatrix,
+    FEM::equation::updateMatrix<dtype::complex, false>(this->elementalSMatrix, alpha, this->connectivityMatrix,
         dtype::complex(1.0, 0.0), stream, this->sMatrix);
 }
 
@@ -209,8 +209,8 @@ void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<dtype::
     }
 
     // update matrices
-    FEM::equation::updateMatrix(this->elementalRMatrix, beta, this->connectivityMatrix,
-        dtype::complex(1.0, 0.0), stream, this->rMatrix);
+    FEM::equation::updateMatrix<dtype::complex, false>(this->elementalRMatrix, beta,
+        this->connectivityMatrix, dtype::complex(1.0, 0.0), stream, this->rMatrix);
 
     // update system matrix
     FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
