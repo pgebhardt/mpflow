@@ -22,11 +22,10 @@
 
 mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, const std::vector<dtype::real>& values,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
-    std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
-    std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
+    std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
+    std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
     cudaStream_t stream)
-    : type(type), electrodes(electrodes), drivePattern(drivePattern),
-        measurementPattern(measurementPattern), values(values) {
+    : type(type), electrodes(electrodes), values(values) {
     // check input
     if (electrodes == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: electrodes == nullptr");
@@ -38,35 +37,43 @@ mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, const std::vector<dty
         throw std::invalid_argument(
             "mpFlow::FEM::SourceDescriptor::SourceDescriptor: measurementPattern == nullptr");
     }
-    if (values.size() != this->drivePattern->cols) {
+    if (values.size() != drivePattern->cols) {
         throw std::invalid_argument(
             "mpFlow::FEM::SourceDescriptor::SourceDescriptor: invalid size of values vector");
     }
 
     // create matrices
+    this->drivePattern = std::make_shared<numeric::Matrix<dtype::real>>(drivePattern->rows,
+        drivePattern->cols, stream);
+    this->measurementPattern = std::make_shared<numeric::Matrix<dtype::real>>(measurementPattern->rows,
+        measurementPattern->cols, stream);
     this->pattern = std::make_shared<numeric::Matrix<dtype::real>>(this->electrodes->count,
         this->drivePattern->cols + this->measurementPattern->cols, stream);
 
     // fill pattern matrix with drive pattern
-    for (dtype::index column = 0; column < this->drivePattern->cols; ++column)
-    for (dtype::index row = 0; row < this->electrodes->count; ++row) {
-        (*this->pattern)(row, column) = this->values[column] * (*this->drivePattern)(row, column);
+    for (dtype::index row = 0; row < this->electrodes->count; ++row)
+    for (dtype::index col = 0; col < this->drivePattern->cols; ++col) {
+        (*this->drivePattern)(row, col) = (*drivePattern)(row, col);
+        (*this->pattern)(row, col) = this->values[col] * (*this->drivePattern)(row, col);
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index column = 0; column < this->measurementPattern->cols; ++column)
-    for (dtype::index row = 0; row < this->electrodes->count; ++row) {
-        (*this->pattern)(row, column + this->drivePattern->cols) =
-            (*this->measurementPattern)(row, column);
+    for (dtype::index row = 0; row < this->electrodes->count; ++row)
+    for (dtype::index col = 0; col < this->measurementPattern->cols; ++col) {
+        (*this->measurementPattern)(row, col) = (*measurementPattern)(row, col);
+        (*this->pattern)(row, col + this->drivePattern->cols) =
+            (*this->measurementPattern)(row, col);
     }
+    this->drivePattern->copyToDevice(stream);
+    this->measurementPattern->copyToDevice(stream);
     this->pattern->copyToDevice(stream);
 }
 
 mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, dtype::real value,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
-    std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern,
-    std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern,
+    std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
+    std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
     cudaStream_t stream)
     : SourceDescriptor(type, std::vector<dtype::real>(drivePattern->cols, value),
         electrodes, drivePattern, measurementPattern, stream) {
