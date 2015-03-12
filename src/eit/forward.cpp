@@ -28,7 +28,7 @@ template <
 >
 mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     std::shared_ptr<equationType> equation,
-    std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
+    std::shared_ptr<FEM::SourceDescriptor<dataType>> source, dtype::index components,
     cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
     // check input
@@ -46,7 +46,7 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     }
 
     // disable 2.5D mode for fixed boundary conditions
-    if (source->type == FEM::SourceDescriptor::Type::Fixed) {
+    if (source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
         components = 1;
     }
 
@@ -74,7 +74,7 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
         this->equation->mesh->nodes->rows, stream, 0.0, false);
 
     // apply mixed boundary conditions, if applicably
-    if (this->source->type == FEM::SourceDescriptor::Type::Fixed) {
+    if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
         forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
             this->equation->systemMatrix, stream);
     }
@@ -124,7 +124,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
         // update system matrix for different 2.5D components
         this->equation->update(gamma, alpha, gamma, stream);
 
-        if (this->source->type == FEM::SourceDescriptor::Type::Fixed) {
+        if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
             forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
                 this->equation->systemMatrix, stream);
         }
@@ -132,7 +132,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
         this->excitation->multiply(this->equation->excitationMatrix,
             this->source->pattern, handle, stream);
 
-        if (this->source->type == FEM::SourceDescriptor::Type::Open) {
+        if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) {
             this->excitation->scalarMultiply(beta, stream);
         }
 
@@ -147,7 +147,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
             stream, this->jacobian);
 
         // calculate electrode voltage or current, depends on the type of source
-        if (this->source->type == FEM::SourceDescriptor::Type::Fixed) {
+        if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
             this->equation->update(gamma, alpha, gamma, stream);
 
             this->excitation->multiply(this->equation->systemMatrix,
@@ -165,7 +165,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
     }
 
     // current source specific correction for jacobian matrix
-    if (this->source->type == FEM::SourceDescriptor::Type::Open) {
+    if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) {
         this->jacobian->scalarMultiply(-1.0, stream);
     }
 
@@ -242,3 +242,11 @@ template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, true>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, false>>;

@@ -26,7 +26,7 @@ template <
 >
 mpFlow::EIT::Solver<numericalSolverType>::Solver(
     std::shared_ptr<EIT::ForwardSolver<>::equationType> equation,
-    std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
+    std::shared_ptr<FEM::SourceDescriptor<dtype::real>> source, dtype::index components,
     dtype::index parallelImages, dtype::real regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input

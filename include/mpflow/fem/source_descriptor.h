@@ -23,6 +23,9 @@
 
 namespace mpFlow {
 namespace FEM {
+    template <
+        class dataType
+    >
     class SourceDescriptor {
     public:
         enum Type {
@@ -31,12 +34,12 @@ namespace FEM {
         };
 
         // constructor
-        SourceDescriptor(Type type, const std::vector<dtype::real>& values,
+        SourceDescriptor(Type type, const std::vector<dataType>& values,
             std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
             std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
             std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
             cudaStream_t stream);
-        SourceDescriptor(Type type, dtype::real value,
+        SourceDescriptor(Type type, dataType value,
             std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
             std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
             std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
@@ -46,10 +49,10 @@ namespace FEM {
         // member
         Type type;
         std::shared_ptr<FEM::BoundaryDescriptor> electrodes;
-        std::shared_ptr<numeric::Matrix<dtype::real>> drivePattern;
-        std::shared_ptr<numeric::Matrix<dtype::real>> measurementPattern;
-        std::shared_ptr<numeric::Matrix<dtype::real>> pattern;
-        std::vector<dtype::real> values;
+        std::shared_ptr<numeric::Matrix<dataType>> drivePattern;
+        std::shared_ptr<numeric::Matrix<dataType>> measurementPattern;
+        std::shared_ptr<numeric::Matrix<dataType>> pattern;
+        std::vector<dataType> values;
     };
 }
 }

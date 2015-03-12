@@ -20,8 +20,11 @@
 
 #include "mpflow/mpflow.h"
 
-mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, const std::vector<dtype::real>& values,
-    std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
+template <
+    class dataType
+>
+mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type,
+    const std::vector<dataType>& values, std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
     std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
     std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
     cudaStream_t stream)
@@ -43,11 +46,11 @@ mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, const std::vector<dty
     }
 
     // create matrices
-    this->drivePattern = std::make_shared<numeric::Matrix<dtype::real>>(drivePattern->rows,
+    this->drivePattern = std::make_shared<numeric::Matrix<dataType>>(drivePattern->rows,
         drivePattern->cols, stream);
-    this->measurementPattern = std::make_shared<numeric::Matrix<dtype::real>>(measurementPattern->rows,
+    this->measurementPattern = std::make_shared<numeric::Matrix<dataType>>(measurementPattern->rows,
         measurementPattern->cols, stream);
-    this->pattern = std::make_shared<numeric::Matrix<dtype::real>>(this->electrodes->count,
+    this->pattern = std::make_shared<numeric::Matrix<dataType>>(this->electrodes->count,
         this->drivePattern->cols + this->measurementPattern->cols, stream);
 
     // fill pattern matrix with drive pattern
@@ -70,11 +73,18 @@ mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, const std::vector<dty
     this->pattern->copyToDevice(stream);
 }
 
-mpFlow::FEM::SourceDescriptor::SourceDescriptor(Type type, dtype::real value,
+template <
+    class dataType
+>
+mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type, dataType value,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
     std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
     std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
     cudaStream_t stream)
-    : SourceDescriptor(type, std::vector<dtype::real>(drivePattern->cols, value),
+    : SourceDescriptor<dataType>(type, std::vector<dataType>(drivePattern->cols, value),
         electrodes, drivePattern, measurementPattern, stream) {
 }
+
+// specialisation
+template class mpFlow::FEM::SourceDescriptor<mpFlow::dtype::real>;
+template class mpFlow::FEM::SourceDescriptor<mpFlow::dtype::complex>;

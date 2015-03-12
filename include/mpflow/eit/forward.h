@@ -35,8 +35,8 @@ namespace EIT {
 
         // initialization
         ForwardSolver(std::shared_ptr<equationType> equation,
-            std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
-            cublasHandle_t handle, cudaStream_t stream);
+            std::shared_ptr<FEM::SourceDescriptor<dataType>> source,
+            dtype::index components, cublasHandle_t handle, cudaStream_t stream);
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dataType>> solve(
@@ -53,7 +53,7 @@ namespace EIT {
         std::shared_ptr<numericalSolverType<dataType,
             mpFlow::numeric::SparseMatrix>> numericalSolver;
         std::shared_ptr<equationType> equation;
-        std::shared_ptr<FEM::SourceDescriptor> source;
+        std::shared_ptr<FEM::SourceDescriptor<dataType>> source;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> result;
