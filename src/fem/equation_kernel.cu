@@ -154,16 +154,17 @@ template void mpFlow::FEM::equationKernel::updateSystemMatrix<mpFlow::dtype::com
 
 // calc jacobian kernel
 template <
+    class dataType,
     int nodes_per_element,
     bool logarithmic
 >
-static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
-    const mpFlow::dtype::real* measurmentPhi, const mpFlow::dtype::index* connectivityMatrix,
-    const mpFlow::dtype::real* elementalJacobianMatrix, const mpFlow::dtype::real* gamma,
-    mpFlow::dtype::real sigmaRef, mpFlow::dtype::size rows, mpFlow::dtype::size columns,
+static __global__ void calcJacobianKernel(const dataType* drivePhi,
+    const dataType* measurmentPhi, const mpFlow::dtype::index* connectivityMatrix,
+    const dataType* elementalJacobianMatrix, const dataType* gamma,
+    dataType referenceValue, mpFlow::dtype::size rows, mpFlow::dtype::size columns,
     mpFlow::dtype::size phiRows, mpFlow::dtype::size elementCount,
     mpFlow::dtype::size driveCount, mpFlow::dtype::size measurmentCount, bool additiv,
-    mpFlow::dtype::real* jacobian) {
+    dataType* jacobian) {
     // get id
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
@@ -182,7 +183,7 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
     mpFlow::dtype::size driveId = row / roundMeasurmentCount;
 
     // variables
-    mpFlow::dtype::real dPhi[nodes_per_element], mPhi[nodes_per_element];
+    dataType dPhi[nodes_per_element], mPhi[nodes_per_element];
     mpFlow::dtype::index index;
 
     // get data
@@ -194,7 +195,7 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
     }
 
     // calc matrix element
-    mpFlow::dtype::real element = 0.0f;
+    dataType element = 0.0f;
     for (mpFlow::dtype::index i = 0; i < nodes_per_element; i++)
     for (mpFlow::dtype::index j = 0; j < nodes_per_element; j++) {
         element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column +
@@ -203,7 +204,7 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
 
     if (logarithmic == true) {
         // diff sigma to gamma
-        element *= sigmaRef * exp10f(gamma[column] / 10.0f) / 10.0f;
+        element *= referenceValue * exp(log(10.0f) * gamma[column] / 10.0f) / 10.0f;
     }
 
     if (additiv) {
@@ -216,38 +217,55 @@ static __global__ void calcJacobianKernel(const mpFlow::dtype::real* drivePhi,
 
 // calc jacobian kernel wrapper
 template <
+    class dataType,
     int nodes_per_element,
     bool logarithmic
 >
 void mpFlow::FEM::equationKernel::calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const dtype::real* drive_phi, const dtype::real* measurment_phi,
-    const dtype::index* connectivity_matrix, const dtype::real* elemental_jacobian_matrix,
-    const dtype::real* gamma, dtype::real sigma_ref, dtype::size rows, dtype::size columns,
-    dtype::size phi_rows, dtype::size element_count, dtype::size drive_count,
-    dtype::size measurment_count, bool additiv, dtype::real* jacobian) {
+    const dataType* drivePhi, const dataType* measurmentPhi,
+    const dtype::index* connectivityMatrix, const dataType* elementalJacobianMatrix,
+    const dataType* gamma, dataType referenceValue, dtype::size rows, dtype::size columns,
+    dtype::size phiRows, dtype::size elementCount, dtype::size driveCount,
+    dtype::size measurmentCount, bool additiv, dataType* jacobian) {
     // call cuda kernel
-    calcJacobianKernel<nodes_per_element, logarithmic><<<blocks, threads, 0, stream>>>(
-        drive_phi, measurment_phi, connectivity_matrix, elemental_jacobian_matrix, gamma,
-        sigma_ref, rows, columns, phi_rows, element_count, drive_count,
-        measurment_count, additiv, jacobian);
+    calcJacobianKernel<dataType, nodes_per_element, logarithmic><<<blocks, threads, 0, stream>>>(
+        drivePhi, measurmentPhi, connectivityMatrix, elementalJacobianMatrix, gamma,
+        referenceValue, rows, columns, phiRows, elementCount, driveCount,
+        measurmentCount, additiv, jacobian);
 
     CudaCheckError();
 }
 
 // template specialisation
-template void mpFlow::FEM::equationKernel::calcJacobian<3, true>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::real, 3, true>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);
-template void mpFlow::FEM::equationKernel::calcJacobian<6, true>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::real, 3, false>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);
-template void mpFlow::FEM::equationKernel::calcJacobian<3, false>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::real, 6, true>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);
-template void mpFlow::FEM::equationKernel::calcJacobian<6, false>(dim3, dim3, cudaStream_t,
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::real, 6, false>(dim3, dim3, cudaStream_t,
     const dtype::real*, const dtype::real*, const dtype::index*, const dtype::real*,
     const dtype::real*, dtype::real, dtype::size, dtype::size, dtype::size, dtype::size,
     dtype::size, dtype::size, bool, dtype::real*);
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::complex, 3, true>(dim3, dim3, cudaStream_t,
+    const dtype::complex*, const dtype::complex*, const dtype::index*, const dtype::complex*,
+    const dtype::complex*, dtype::complex, dtype::size, dtype::size, dtype::size, dtype::size,
+    dtype::size, dtype::size, bool, dtype::complex*);
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::complex, 3, false>(dim3, dim3, cudaStream_t,
+    const dtype::complex*, const dtype::complex*, const dtype::index*, const dtype::complex*,
+    const dtype::complex*, dtype::complex, dtype::size, dtype::size, dtype::size, dtype::size,
+    dtype::size, dtype::size, bool, dtype::complex*);
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::complex, 6, true>(dim3, dim3, cudaStream_t,
+    const dtype::complex*, const dtype::complex*, const dtype::index*, const dtype::complex*,
+    const dtype::complex*, dtype::complex, dtype::size, dtype::size, dtype::size, dtype::size,
+    dtype::size, dtype::size, bool, dtype::complex*);
+template void mpFlow::FEM::equationKernel::calcJacobian<mpFlow::dtype::complex, 6, false>(dim3, dim3, cudaStream_t,
+    const dtype::complex*, const dtype::complex*, const dtype::index*, const dtype::complex*,
+    const dtype::complex*, dtype::complex, dtype::size, dtype::size, dtype::size, dtype::size,
+    dtype::size, dtype::size, bool, dtype::complex*);

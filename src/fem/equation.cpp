@@ -341,8 +341,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobi
     dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
 
     // calc jacobian
-    FEM::equationKernel::calcJacobian<basisFunctionType::pointsPerElement, logarithmic>(blocks, threads, stream,
-        phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
+    FEM::equationKernel::calcJacobian<dataType, basisFunctionType::pointsPerElement, logarithmic>(
+        blocks, threads, stream, phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
         this->mesh->elements->deviceData, this->elementalJacobianMatrix->deviceData,
         gamma->deviceData, this->referenceValue, jacobian->dataRows, jacobian->dataCols,
         phi->dataRows, this->mesh->elements->rows, driveCount, measurmentCount, additiv,
@@ -409,3 +409,7 @@ template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Li
 template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Quadratic, true>;
 template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, true>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, false>;
+template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Quadratic, false>;
