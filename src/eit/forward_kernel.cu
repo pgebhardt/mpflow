@@ -48,7 +48,7 @@ static __global__ void applyMixedBoundaryConditionKernel(
         // get column id
         columnId = columnIds[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
-        if (excitation[row + col * rows] != 0.0) {
+        if (excitation[row + col * rows] != (mpFlow::dtype::real)0.0) {
             values[row * mpFlow::numeric::sparseMatrix::block_size + column] =
                 columnId == row ? 1.0f : 0.0f;
         }
