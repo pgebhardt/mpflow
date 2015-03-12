@@ -817,4 +817,4 @@ template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::
 template class mpFlow::numeric::Matrix<mpFlow::dtype::real>;
 template class mpFlow::numeric::Matrix<mpFlow::dtype::complex>;
 template class mpFlow::numeric::Matrix<mpFlow::dtype::index>;
-template class mpFlow::numeric::Matrix<Eigen::ArrayXXi::Scalar>;
+template class mpFlow::numeric::Matrix<mpFlow::dtype::integral>;

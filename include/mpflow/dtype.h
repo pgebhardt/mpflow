@@ -30,9 +30,10 @@ namespace dtype {
 #else
     typedef float real;
 #endif
-    typedef unsigned int size;
     typedef thrust::complex<real> complex;
+    typedef unsigned int size;
     typedef unsigned int index;
+    typedef int integral;
 
     // invalid index
     static const index invalid_index = (index)(-1);
