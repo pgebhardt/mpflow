@@ -25,5 +25,5 @@ It has been tested on the following platforms:
 
 To build and install fastEIT a Scons script is included. It is designed to work on both Linux and OS X.
 
-    scons
-    scons install
+    cp Makefile.example.config Makefile.config
+    make
