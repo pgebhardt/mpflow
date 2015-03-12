@@ -25,42 +25,48 @@ namespace mpFlow {
 namespace EIT {
     // forward solver class definition
     template <
-        class basisFunctionType,
-        template <class, template <class> class> class numericalSolverType,
-        bool logarithmic = true
+        template <class, template <class> class> class numericalSolverType = numeric::ConjugateGradient,
+        class equationType_ = FEM::Equation<dtype::real, FEM::basis::Linear, true>
     >
     class ForwardSolver {
     public:
+        typedef equationType_ equationType;
+        typedef typename equationType::dataType dataType;
+
         // initialization
-        ForwardSolver(std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType, logarithmic>> equation,
+        ForwardSolver(std::shared_ptr<equationType> equation,
             std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
             cublasHandle_t handle, cudaStream_t stream);
 
         // forward solving
-        std::shared_ptr<numeric::Matrix<dtype::real>> solve(
-            const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cublasHandle_t handle, cudaStream_t stream,
-            dtype::real tolerance=1e-6, dtype::index* steps=nullptr);
+        std::shared_ptr<numeric::Matrix<dataType>> solve(
+            const std::shared_ptr<numeric::Matrix<dataType>> gamma,
+            cublasHandle_t handle, cudaStream_t stream, dtype::real tolerance=1e-6,
+            dtype::index* steps=nullptr);
 
         // helper methods
-        void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dtype::real>> source,
-            std::shared_ptr<numeric::Matrix<dtype::real>> result, bool additiv,
+        void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dataType>> source,
+            std::shared_ptr<numeric::Matrix<dataType>> result, bool additiv,
             cublasHandle_t handle, cudaStream_t stream);
 
         // member
-        std::shared_ptr<numericalSolverType<dtype::real,
+        std::shared_ptr<numericalSolverType<dataType,
             mpFlow::numeric::SparseMatrix>> numericalSolver;
-        std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType, logarithmic>> equation;
+        std::shared_ptr<equationType> equation;
         std::shared_ptr<FEM::SourceDescriptor> source;
-        std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> phi;
-        std::shared_ptr<numeric::Matrix<dtype::real>> excitation;
-        std::shared_ptr<numeric::Matrix<dtype::real>> result;
-        std::shared_ptr<numeric::Matrix<dtype::real>> jacobian;
-        std::shared_ptr<numeric::Matrix<dtype::real>> electrodesAttachmentMatrix;
+        std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
+        std::shared_ptr<numeric::Matrix<dataType>> excitation;
+        std::shared_ptr<numeric::Matrix<dataType>> result;
+        std::shared_ptr<numeric::Matrix<dataType>> jacobian;
+        std::shared_ptr<numeric::Matrix<dataType>> electrodesAttachmentMatrix;
     };
 
     namespace forwardSolver {
-        void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dtype::real>> excitationMatrix,
-            std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix, cudaStream_t stream);
+        template <
+            class dataType
+        >
+        void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix,
+            std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t stream);
     }
 }
 }

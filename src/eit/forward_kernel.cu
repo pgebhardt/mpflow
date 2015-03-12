@@ -28,9 +28,12 @@
 #include "mpflow/eit/forward_kernel.h"
 
 // calc voltage kernel
+template <
+    class dataType
+>
 static __global__ void applyMixedBoundaryConditionKernel(
-    mpFlow::dtype::real* excitation, mpFlow::dtype::index rows,
-    const mpFlow::dtype::index* columnIds, mpFlow::dtype::real* values) {
+    dataType* excitation, mpFlow::dtype::index rows,
+    const mpFlow::dtype::index* columnIds, dataType* values) {
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
     mpFlow::dtype::index col = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -53,13 +56,23 @@ static __global__ void applyMixedBoundaryConditionKernel(
 }
 
 // calc voltage kernel wrapper
+template <
+    class dataType
+>
 void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition(
     dim3 blocks, dim3 threads, cudaStream_t stream,
-    dtype::real* excitation, dtype::index rows,
-    const dtype::index* columnIds, dtype::real* values) {
+    dataType* excitation, dtype::index rows,
+    const dtype::index* columnIds, dataType* values) {
     // call cuda kernel
-    applyMixedBoundaryConditionKernel<<<blocks, threads, 0, stream>>>(
+    applyMixedBoundaryConditionKernel<dataType><<<blocks, threads, 0, stream>>>(
         excitation, rows, columnIds, values);
 
     CudaCheckError();
 }
+
+template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<mpFlow::dtype::real>(
+    dim3, dim3, cudaStream_t, mpFlow::dtype::real*, mpFlow::dtype::index,
+    const mpFlow::dtype::index*, mpFlow::dtype::real*);
+template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<mpFlow::dtype::complex>(
+    dim3, dim3, cudaStream_t, mpFlow::dtype::complex*, mpFlow::dtype::index,
+    const mpFlow::dtype::index*, mpFlow::dtype::complex*);

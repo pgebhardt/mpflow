@@ -23,12 +23,11 @@
 
 // create forward_solver
 template <
-    class basisFunctionType,
     template <class, template <class> class> class numericalSolverType,
-    bool logarithmic
+    class equationType
 >
-mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>::ForwardSolver(
-    std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType, logarithmic>> equation,
+mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
+    std::shared_ptr<equationType> equation,
     std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
     cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
@@ -53,25 +52,24 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>:
 
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<
-        dtype::real, numeric::SparseMatrix>>(
-        this->equation->mesh->nodes->rows,
+        dataType, numeric::SparseMatrix>>(this->equation->mesh->nodes->rows,
         this->source->drivePattern->cols + this->source->measurementPattern->cols, stream);
 
     // create matrices
-    this->result = std::make_shared<numeric::Matrix<dtype::real>>(
+    this->result = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
     for (dtype::index component = 0; component < components; ++component) {
-        this->phi.push_back(std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes->rows,
+        this->phi.push_back(std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes->rows,
             this->source->pattern->cols, stream));
     }
-    this->excitation = std::make_shared<numeric::Matrix<dtype::real>>(this->equation->mesh->nodes->rows,
+    this->excitation = std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes->rows,
         this->source->pattern->cols, stream);
-    this->jacobian = std::make_shared<numeric::Matrix<dtype::real>>(
+    this->jacobian = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->dataCols * this->source->drivePattern->dataCols,
         this->equation->mesh->elements->rows, stream, 0.0, false);
 
     // TODO: To be moved to new BoundaryValues class
-    this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
+    this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols,
         this->equation->mesh->nodes->rows, stream, 0.0, false);
 
@@ -82,8 +80,8 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>:
     }
 
     cublasSetStream(handle, stream);
-    dtype::real alpha = 1.0, beta = 0.0;
-    if (numeric::cublasWrapper<dtype::real>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
+    dataType alpha = 1.0, beta = 0.0;
+    if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
         this->source->measurementPattern->dataCols,
         this->equation->excitationMatrix->dataRows,
         this->source->measurementPattern->dataRows, &alpha,
@@ -99,13 +97,12 @@ mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>:
 
 // forward solving
 template <
-    class basisFunctionType,
     template <class, template <class> class> class numericalSolverType,
-    bool logarithmic
+    class equationType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>::solve(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> gamma, cublasHandle_t handle,
+std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
+    mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::solve(
+    const std::shared_ptr<numeric::Matrix<dataType>> gamma, cublasHandle_t handle,
     cudaStream_t stream, dtype::real tolerance, dtype::index* steps) {
     // check input
     if (gamma == nullptr) {
@@ -119,8 +116,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     dtype::index totalSteps = 0;
     for (dtype::index component = 0; component < this->phi.size(); ++component) {
         // 2.5D model constants
-        dtype::real alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
-        dtype::real beta = component == 0 ? (1.0 / this->equation->mesh->height) :
+        dataType alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
+        dataType beta = component == 0 ? (1.0 / this->equation->mesh->height) :
             (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0]) / this->equation->mesh->height) /
                 (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0])));
 
@@ -182,13 +179,12 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
 // helper methods
 template <
-    class basisFunctionType,
     template <class, template <class> class> class numericalSolverType,
-    bool logarithmic
+    class equationType
 >
-void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarithmic>::applyMeasurementPattern(
-    const std::shared_ptr<numeric::Matrix<dtype::real>> source,
-    std::shared_ptr<numeric::Matrix<dtype::real>> result, bool additiv,
+void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasurementPattern(
+    const std::shared_ptr<numeric::Matrix<dataType>> source,
+    std::shared_ptr<numeric::Matrix<dataType>> result, bool additiv,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (source == nullptr) {
@@ -205,17 +201,20 @@ void mpFlow::EIT::ForwardSolver<basisFunctionType, numericalSolverType, logarith
     cublasSetStream(handle, stream);
 
     // add result
-    dtype::real alpha = 1.0f, beta = additiv ? 1.0 : 0.0;
-    numeric::cublasWrapper<dtype::real>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
+    dataType alpha = 1.0f, beta = additiv ? 1.0 : 0.0;
+    numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
         this->source->drivePattern->cols, this->electrodesAttachmentMatrix->dataCols, &alpha,
         this->electrodesAttachmentMatrix->deviceData, this->electrodesAttachmentMatrix->dataRows,
         source->deviceData, source->dataRows, &beta,
         result->deviceData, result->dataRows);
 }
 
+template <
+    class dataType
+>
 void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
-    std::shared_ptr<numeric::Matrix<dtype::real>> excitationMatrix,
-    std::shared_ptr<numeric::SparseMatrix<dtype::real>> systemMatrix, cudaStream_t stream) {
+    std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix,
+    std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t stream) {
     // check input
     if (excitationMatrix == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::applyMixedBoundaryCondition: excitationMatrix == nullptr");
@@ -229,17 +228,17 @@ void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
     dim3 threads(numeric::matrix::block_size,
         excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::block_size);
 
-    forwardKernel::applyMixedBoundaryCondition(blocks, threads, stream,
+    forwardKernel::applyMixedBoundaryCondition<dataType>(blocks, threads, stream,
         excitationMatrix->deviceData, excitationMatrix->dataRows,
         systemMatrix->deviceColumnIds, systemMatrix->deviceValues);
 }
 
 // specialisation
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient, true>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient, true>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB, true>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB, true>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient, false>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient, false>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB, false>;
-template class mpFlow::EIT::ForwardSolver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB, false>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>>;

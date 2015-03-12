@@ -24,9 +24,12 @@
 namespace mpFlow {
 namespace EIT {
 namespace forwardKernel {
+    template <
+        class dataType
+    >
     void applyMixedBoundaryCondition(dim3 blocks, dim3 threads, cudaStream_t stream,
-        dtype::real* excitation, dtype::index rows, const dtype::index* columnIds,
-        dtype::real* values);
+        dataType* excitation, dtype::index rows, const dtype::index* columnIds,
+        dataType* values);
 }
 }
 }

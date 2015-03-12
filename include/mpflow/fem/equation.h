@@ -25,13 +25,14 @@ namespace mpFlow {
 namespace FEM {
     // model class describing an elliptical differential equation
     template <
-        class dataType,
+        class dataType_,
         class basisFunctionType_,
         bool logarithmic=true
     >
     class Equation {
     public:
         typedef basisFunctionType_ basisFunctionType;
+        typedef dataType_ dataType;
 
         // constructor
         Equation(std::shared_ptr<numeric::IrregularMesh> mesh,

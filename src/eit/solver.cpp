@@ -22,11 +22,10 @@
 
 // create EIT
 template <
-    class basisFunctionType,
     template <class, template <class> class> class numericalSolverType
 >
-mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::Solver(
-    std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType>> equation,
+mpFlow::EIT::Solver<numericalSolverType>::Solver(
+    std::shared_ptr<EIT::ForwardSolver<>::equationType> equation,
     std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
     dtype::index parallelImages, dtype::real regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream) {
@@ -39,7 +38,7 @@ mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::Solver(
     }
 
     // create
-    this->forwardSolver = std::make_shared<EIT::ForwardSolver<basisFunctionType, numericalSolverType>>(
+    this->forwardSolver = std::make_shared<EIT::ForwardSolver<numericalSolverType>>(
         equation, source, components, handle, stream);
 
     // create inverse EIT
@@ -63,10 +62,9 @@ mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::Solver(
 
 // pre solve for accurate initial jacobian
 template <
-    class basisFunctionType,
     template <class, template <class> class> class numericalSolverType
 >
-void mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::preSolve(
+void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
@@ -93,11 +91,10 @@ void mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::preSolve(
 
 // solve differential
 template <
-    class basisFunctionType,
     template <class, template <class> class> class numericalSolverType
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::solveDifferential(
+    mpFlow::EIT::Solver<numericalSolverType>::solveDifferential(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (handle == nullptr) {
@@ -116,11 +113,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
 // solve absolute
 template <
-    class basisFunctionType,
     template <class, template <class> class> class numericalSolverType
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
-    mpFlow::EIT::Solver<basisFunctionType, numericalSolverType>::solveAbsolute(
+    mpFlow::EIT::Solver<numericalSolverType>::solveAbsolute(
     cublasHandle_t handle, cudaStream_t stream) {
     // only execute method, when parallel_images == 1
     if (this->measurement.size() != 1) {
@@ -156,7 +152,5 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 }
 
 // specialisation
-template class mpFlow::EIT::Solver<mpFlow::FEM::basis::Linear, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::Solver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::Solver<mpFlow::FEM::basis::Linear, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::EIT::Solver<mpFlow::FEM::basis::Quadratic, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB>;

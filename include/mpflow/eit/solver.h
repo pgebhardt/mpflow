@@ -25,13 +25,12 @@ namespace mpFlow {
 namespace EIT {
     // class for solving differential EIT
     template <
-        class basisFunctionType,
         template <class, template <class> class> class numericalSolverType
     >
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<FEM::Equation<dtype::real, basisFunctionType, true>> equation,
+        Solver(std::shared_ptr<EIT::ForwardSolver<>::equationType> equation,
             std::shared_ptr<FEM::SourceDescriptor> source, dtype::index components,
             dtype::index parallelImages, dtype::real regularizationFactor,
             cublasHandle_t handle, cudaStream_t stream);
@@ -46,7 +45,7 @@ namespace EIT {
             cudaStream_t stream);
 
         // member
-        std::shared_ptr<ForwardSolver<basisFunctionType, numericalSolverType, true>> forwardSolver;
+        std::shared_ptr<ForwardSolver<numericalSolverType>> forwardSolver;
         std::shared_ptr<solver::Inverse<dtype::real, numeric::ConjugateGradient>> inverseSolver;
         std::shared_ptr<numeric::Matrix<dtype::real>> gamma;
         std::shared_ptr<numeric::Matrix<dtype::real>> dGamma;
