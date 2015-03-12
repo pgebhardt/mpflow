@@ -204,7 +204,8 @@ static __global__ void calcJacobianKernel(const dataType* drivePhi,
 
     if (logarithmic == true) {
         // diff sigma to gamma
-        element *= referenceValue * exp(log(10.0f) * gamma[column] / 10.0f) / 10.0f;
+        element *= referenceValue * exp(log((mpFlow::dtype::real)10.0) * gamma[column] / (mpFlow::dtype::real)10.0) /
+            (mpFlow::dtype::real)10.0;
     }
 
     if (additiv) {
