@@ -471,7 +471,13 @@ void mpFlow::numeric::Matrix<type>::min(const std::shared_ptr<Matrix<type>> valu
 namespace mpFlow {
 namespace numeric {
     template <>
-    void Matrix<dtype::complex>::min(const std::shared_ptr<Matrix<dtype::complex>>,
+    void Matrix<thrust::complex<float>>::min(const std::shared_ptr<Matrix<thrust::complex<float>>>,
+    cudaStream_t) {
+        throw std::runtime_error("mpFlow::numeric::Matrix::min: not possible for complex values");
+    }
+
+    template <>
+    void Matrix<thrust::complex<double>>::min(const std::shared_ptr<Matrix<thrust::complex<double>>>,
     cudaStream_t) {
         throw std::runtime_error("mpFlow::numeric::Matrix::min: not possible for complex values");
     }
@@ -518,7 +524,13 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
 namespace mpFlow {
 namespace numeric {
     template <>
-    void Matrix<dtype::complex>::max(const std::shared_ptr<Matrix<dtype::complex>>,
+    void Matrix<thrust::complex<float>>::max(const std::shared_ptr<Matrix<thrust::complex<float>>>,
+    cudaStream_t) {
+        throw std::runtime_error("mpFlow::numeric::Matrix::max: not possible for complex values");
+    }
+
+    template <>
+    void Matrix<thrust::complex<double>>::max(const std::shared_ptr<Matrix<thrust::complex<double>>>,
     cudaStream_t) {
         throw std::runtime_error("mpFlow::numeric::Matrix::max: not possible for complex values");
     }
@@ -551,7 +563,28 @@ void mpFlow::numeric::Matrix<type>::savetxt(std::ostream* ostream, char delimite
 namespace mpFlow {
 namespace numeric {
     template <>
-    void Matrix<dtype::complex>::savetxt(std::ostream* ostream, char delimiter) const {
+    void Matrix<thrust::complex<float>>::savetxt(std::ostream* ostream, char delimiter) const {
+        // check input
+        if (this->hostData == nullptr) {
+            throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
+        }
+        if (ostream == nullptr) {
+            throw std::invalid_argument("mpFlow::numeric::Matrix::savetxt: ostream == nullptr");
+        }
+
+        // write data
+        for (dtype::index row = 0; row < this->rows; ++row) {
+            for (dtype::index column = 0; column < this->cols - 1; ++column) {
+                *ostream << (*this)(row, column).real() << delimiter;
+                *ostream << (*this)(row, column).imag() << delimiter;
+            }
+            *ostream << (*this)(row, this->cols - 1).real() << delimiter;
+            *ostream << (*this)(row, this->cols - 1).imag() << std::endl;
+        }
+    }
+
+    template <>
+    void Matrix<thrust::complex<double>>::savetxt(std::ostream* ostream, char delimiter) const {
         // check input
         if (this->hostData == nullptr) {
             throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
@@ -670,10 +703,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
 namespace mpFlow {
 namespace numeric {
     template <>
-    std::shared_ptr<Matrix<dtype::complex>> Matrix<dtype::complex>::loadtxt(std::istream* istream,
+    std::shared_ptr<Matrix<thrust::complex<float>>> Matrix<thrust::complex<float>>::loadtxt(std::istream* istream,
         cudaStream_t stream, char delimiter) {
         // load float view
-        auto floatView = Matrix<dtype::real>::loadtxt(istream, stream, delimiter);
+        auto floatView = Matrix<float>::loadtxt(istream, stream, delimiter);
 
         // check shape
         if (floatView->cols % 2 != 0) {
@@ -681,12 +714,37 @@ namespace numeric {
         }
 
         // convert to complex matrix
-        auto complexMatrix = std::make_shared<Matrix<dtype::complex>>(
+        auto complexMatrix = std::make_shared<Matrix<thrust::complex<float>>>(
             floatView->rows, floatView->cols / 2, stream);
 
         for (dtype::index row = 0; row < complexMatrix->rows; ++row)
         for (dtype::index col = 0; col < complexMatrix->cols; ++col) {
-            (*complexMatrix)(row, col) = dtype::complex((*floatView)(row, col * 2),
+            (*complexMatrix)(row, col) = thrust::complex<float>((*floatView)(row, col * 2),
+                (*floatView)(row, col * 2 + 1));
+        }
+        complexMatrix->copyToDevice(stream);
+
+        return complexMatrix;
+    }
+
+    template <>
+    std::shared_ptr<Matrix<thrust::complex<double>>> Matrix<thrust::complex<double>>::loadtxt(std::istream* istream,
+        cudaStream_t stream, char delimiter) {
+        // load float view
+        auto floatView = Matrix<double>::loadtxt(istream, stream, delimiter);
+
+        // check shape
+        if (floatView->cols % 2 != 0) {
+            throw std::runtime_error("mpFlow::numeric::Matrix::loadtxt: floatView->cols must be multiple of 2");
+        }
+
+        // convert to complex matrix
+        auto complexMatrix = std::make_shared<Matrix<thrust::complex<double>>>(
+            floatView->rows, floatView->cols / 2, stream);
+
+        for (dtype::index row = 0; row < complexMatrix->rows; ++row)
+        for (dtype::index col = 0; col < complexMatrix->cols; ++col) {
+            (*complexMatrix)(row, col) = thrust::complex<double>((*floatView)(row, col * 2),
                 (*floatView)(row, col * 2 + 1));
         }
         complexMatrix->copyToDevice(stream);
@@ -796,16 +854,22 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
 }
 
 // specialisation
-template Eigen::Array<mpFlow::dtype::real, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>);
+template Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<mpFlow::numeric::Matrix<float>>);
+template Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<mpFlow::numeric::Matrix<double>>);
+template Eigen::Array<std::complex<float>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>);
+template Eigen::Array<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>);
 template Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
     std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>);
-template Eigen::Array<std::complex<mpFlow::dtype::real>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<mpFlow::dtype::real>>>);
+template Eigen::Array<mpFlow::dtype::integral, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::integral>>);
 
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::numeric::matrix::fromEigen(
+template std::shared_ptr<mpFlow::numeric::Matrix<float>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::ArrayXXf>, cudaStream_t);
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> mpFlow::numeric::matrix::fromEigen(
+template std::shared_ptr<mpFlow::numeric::Matrix<double>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::ArrayXXd>, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::ArrayXXi>, cudaStream_t);
@@ -814,7 +878,9 @@ template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::
 template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::Array<long, Eigen::Dynamic, Eigen::Dynamic>>, cudaStream_t);
 
-template class mpFlow::numeric::Matrix<mpFlow::dtype::real>;
-template class mpFlow::numeric::Matrix<mpFlow::dtype::complex>;
+template class mpFlow::numeric::Matrix<float>;
+template class mpFlow::numeric::Matrix<double>;
+template class mpFlow::numeric::Matrix<thrust::complex<float>>;
+template class mpFlow::numeric::Matrix<thrust::complex<double>>;
 template class mpFlow::numeric::Matrix<mpFlow::dtype::index>;
 template class mpFlow::numeric::Matrix<mpFlow::dtype::integral>;
