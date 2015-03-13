@@ -171,6 +171,106 @@ static __global__ void multiplyKernel(const type* values,
     result[row + column * result_rows] = res;
 }
 
+template <>
+__global__ void multiplyKernel(const thrust::complex<float>* values,
+    const mpFlow::dtype::index* columnIds, const thrust::complex<float>* matrix,
+    mpFlow::dtype::size result_rows, mpFlow::dtype::size matrix_rows,
+    mpFlow::dtype::size columns, mpFlow::dtype::size density, thrust::complex<float>* result) {
+    // get ids
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // calc result
+    cuFloatComplex res = make_cuFloatComplex(0.0f, 0.0f);
+    mpFlow::dtype::index id = mpFlow::dtype::invalid_index;
+
+    // read column ids to local memory
+    __shared__ mpFlow::dtype::index columnId[
+        mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
+    __shared__ cuFloatComplex value[
+        mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
+
+    columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
+        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::dtype::invalid_index;
+    value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].x = row < result_rows ?
+        values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].real() : 0.0f;
+    value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].y = row < result_rows ?
+        values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].imag() : 0.0f;
+
+    __syncthreads();
+
+    // check ids
+    if ((row >= result_rows) || (column >= columns)) {
+        return;
+    }
+
+    // read matrix to local memory
+    for (mpFlow::dtype::index j = 0; j < density; j++) {
+        // get column id
+        id = columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j];
+        cuFloatComplex element = *(cuFloatComplex*)&matrix[id + column * matrix_rows];
+        cuFloatComplex temp = id != mpFlow::dtype::invalid_index ? cuCmulf(element,
+            value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j]) : make_cuFloatComplex(0.0f, 0.0f);
+
+        res.x += temp.x;
+        res.y += temp.y;
+    }
+
+    // set result
+    result[row + column * result_rows].real(res.x);
+    result[row + column * result_rows].imag(res.y);
+}
+
+template <>
+__global__ void multiplyKernel(const thrust::complex<double>* values,
+    const mpFlow::dtype::index* columnIds, const thrust::complex<double>* matrix,
+    mpFlow::dtype::size result_rows, mpFlow::dtype::size matrix_rows,
+    mpFlow::dtype::size columns, mpFlow::dtype::size density, thrust::complex<double>* result) {
+    // get ids
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // calc result
+    cuDoubleComplex res = make_cuDoubleComplex(0.0f, 0.0f);
+    mpFlow::dtype::index id = mpFlow::dtype::invalid_index;
+
+    // read column ids to local memory
+    __shared__ mpFlow::dtype::index columnId[
+        mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
+    __shared__ cuDoubleComplex value[
+        mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
+
+    columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
+        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::dtype::invalid_index;
+    value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].x = row < result_rows ?
+        values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].real() : 0.0f;
+    value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].y = row < result_rows ?
+        values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].imag() : 0.0f;
+
+    __syncthreads();
+
+    // check ids
+    if ((row >= result_rows) || (column >= columns)) {
+        return;
+    }
+
+    // read matrix to local memory
+    for (mpFlow::dtype::index j = 0; j < density; j++) {
+        // get column id
+        id = columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j];
+        cuDoubleComplex element = *(cuDoubleComplex*)&matrix[id + column * matrix_rows];
+        cuDoubleComplex temp = id != mpFlow::dtype::invalid_index ? cuCmul(element,
+            value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j]) : make_cuDoubleComplex(0.0f, 0.0f);
+
+        res.x += temp.x;
+        res.y += temp.y;
+    }
+
+    // set result
+    result[row + column * result_rows].real(res.x);
+    result[row + column * result_rows].imag(res.y);
+}
+
 // sparse matrix multiply kernel wrapper
 template <
     class type
