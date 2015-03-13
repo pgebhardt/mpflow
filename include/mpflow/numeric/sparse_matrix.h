@@ -51,8 +51,8 @@ namespace numeric {
             std::shared_ptr<Matrix<type>> result) const;
 
         // accessors
-        const dtype::index getColumnId(dtype::index row, dtype::index col) const;
-        const type getValue(dtype::index row, dtype::index col) const;
+        dtype::index getColumnId(dtype::index row, dtype::index col) const;
+        type getValue(dtype::index row, dtype::index col) const;
         void setValue(dtype::index row, dtype::index col, const type& value);
 
         // member

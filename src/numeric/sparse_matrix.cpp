@@ -277,7 +277,7 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<
 template <
     class type
 >
-const mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtype::index row, dtype::index col) const {
+mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtype::index row, dtype::index col) const {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
         throw std::logic_error("mpFlow::numeric::SparseMatrix::getColumnId(): index out of range");
@@ -298,7 +298,7 @@ const mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtyp
 template <
     class type
 >
-const type mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::index col) const {
+type mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::index col) const {
     // get column id
     dtype::index columnId = this->getColumnId(row, col);
 
@@ -341,7 +341,9 @@ void mpFlow::numeric::SparseMatrix<type>::setValue(dtype::index row, dtype::inde
 }
 
 // specialisations
-template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::real>;
-template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::complex>;
+template class mpFlow::numeric::SparseMatrix<float>;
+template class mpFlow::numeric::SparseMatrix<double>;
+template class mpFlow::numeric::SparseMatrix<thrust::complex<float>>;
+template class mpFlow::numeric::SparseMatrix<thrust::complex<double>>;
 template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::index>;
 template class mpFlow::numeric::SparseMatrix<Eigen::ArrayXXi::Scalar>;
