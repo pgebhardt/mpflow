@@ -119,3 +119,53 @@ template void mpFlow::numeric::conjugateGradientKernel::updateVector<thrust::com
     dim3, dim3, cudaStream_t, const thrust::complex<double>*, const double,
     const thrust::complex<double>*, const thrust::complex<double>*, const thrust::complex<double>*,
     mpFlow::dtype::size, thrust::complex<double>*);
+
+// calc error kernel
+template <
+    class dataType
+>
+__global__ void calcErrorKernel(const dataType* input, const mpFlow::dtype::size rows,
+    dataType* result) {
+    // get ids
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // elementwise multiply
+    result[row + column * rows] = input[row + column * rows] * input[row + column * rows];
+}
+
+template <
+    class dataType
+>
+__global__ void calcErrorKernel(const thrust::complex<dataType>* input, const mpFlow::dtype::size rows,
+    thrust::complex<dataType>* result) {
+    // get ids
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // elementwise multiply
+    result[row + column * rows] = input[row + column * rows] * conj(input[row + column * rows]);
+}
+
+// calc error kernel wrapper
+template <
+    class dataType
+>
+void mpFlow::numeric::conjugateGradientKernel::calcError(dim3 blocks, dim3 threads,
+    cudaStream_t stream, const dataType* input, const dtype::size rows, dataType* result) {
+    // call cuda kernel
+    calcErrorKernel<<<blocks, threads, 0, stream>>>(input, rows, result);
+
+    CudaCheckError();
+}
+
+template void mpFlow::numeric::conjugateGradientKernel::calcError<float>(dim3, dim3, cudaStream_t,
+    const float*, const mpFlow::dtype::size, float*);
+template void mpFlow::numeric::conjugateGradientKernel::calcError<double>(dim3, dim3, cudaStream_t,
+    const double*, const mpFlow::dtype::size, double*);
+template void mpFlow::numeric::conjugateGradientKernel::calcError<thrust::complex<float> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<float>*, const mpFlow::dtype::size,
+    thrust::complex<float>*);
+template void mpFlow::numeric::conjugateGradientKernel::calcError<thrust::complex<double> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<double>*, const mpFlow::dtype::size,
+    thrust::complex<double>*);

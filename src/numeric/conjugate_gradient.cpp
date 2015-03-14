@@ -40,10 +40,11 @@ mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(cons
     // create matrices
     this->r = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->p = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
-    this->roh = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
+    this->roh = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->rohOld = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->temp1 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->temp2 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->error = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
 }
 
 // solve conjugateGradient sparse
@@ -86,6 +87,11 @@ mpFlow::dtype::index mpFlow::numeric::ConjugateGradient<dataType, matrixType>::s
     // calc rsold
     this->rohOld->vectorDotProduct(this->r, this->r, stream);
 
+    // initialize current error vector
+    conjugateGradient::calcError(this->r, stream, this->error);
+    this->error->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+
     // iterate
     for (dtype::index step = 0; step < iterations; ++step) {
         // calc A * p
@@ -117,11 +123,12 @@ mpFlow::dtype::index mpFlow::numeric::ConjugateGradient<dataType, matrixType>::s
             using namespace std;
             using namespace thrust;
 
-            this->roh->copyToHost(stream);
+            conjugateGradient::calcError(this->r, stream, this->error);
+            this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
-            for (dtype::index i = 0; i < this->roh->cols; ++i) {
-                if (abs(sqrt((*this->roh)(0, i))) >= tolerance) {
+            for (dtype::index i = 0; i < this->error->cols; ++i) {
+                if (abs(sqrt((*this->error)(0, i))) >= tolerance) {
                     break;
                 }
                 return step + 1;
@@ -202,6 +209,31 @@ void mpFlow::numeric::conjugateGradient::updateVector(
     conjugateGradientKernel::updateVector<dataType>(blocks, threads, stream, x1->deviceData, sign,
         x2->deviceData, r1->deviceData, r2->deviceData, result->dataRows,
         result->deviceData);
+}
+
+template <
+    class dataType
+>
+void mpFlow::numeric::conjugateGradient::calcError(const std::shared_ptr<Matrix<dataType>> input,
+    cudaStream_t stream, std::shared_ptr<Matrix<dataType>> result) {
+    // check input
+    if (input == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::conjugateGradient::calcError: input == nullptr");
+    }
+    if (result == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::conjugateGradient::calcError: result == nullptr");
+    }
+
+    // kernel dimension
+    dim3 blocks(result->dataRows / matrix::block_size,
+        result->dataCols == 1 ? 1 : result->dataCols / matrix::block_size);
+    dim3 threads(matrix::block_size, result->dataCols == 1 ? 1 : matrix::block_size);
+
+    // execute kernel
+    conjugateGradientKernel::calcError(blocks, threads, stream, input->deviceData, input->dataRows,
+        result->deviceData);
+
+    result->sum(result, stream);
 }
 
 // specialisations
