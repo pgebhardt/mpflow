@@ -26,7 +26,8 @@ template <
     class dataType,
     template <class type> class matrixType
 >
-mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(dtype::size rows, dtype::size cols, cudaStream_t stream)
+mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(const dtype::size rows,
+    const dtype::size cols, cudaStream_t stream)
     : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
@@ -52,9 +53,9 @@ template <
 >
 mpFlow::dtype::index mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
     const std::shared_ptr<matrixType<dataType>> A,
-    const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+    const std::shared_ptr<Matrix<dataType>> f, const dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
-    dtype::real tolerance, bool dcFree) {
+    const double tolerance, bool dcFree) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::ConjugateGradient::solve: A == nullptr");
@@ -170,7 +171,7 @@ template <
     class dataType
 >
 void mpFlow::numeric::conjugateGradient::updateVector(
-    const std::shared_ptr<Matrix<dataType>> x1, dtype::real sign,
+    const std::shared_ptr<Matrix<dataType>> x1, const double sign,
     const std::shared_ptr<Matrix<dataType>> x2,
     const std::shared_ptr<Matrix<dataType>> r1,
     const std::shared_ptr<Matrix<dataType>> r2, cudaStream_t stream,
@@ -204,7 +205,11 @@ void mpFlow::numeric::conjugateGradient::updateVector(
 }
 
 // specialisations
-template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::real, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::complex, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::real, mpFlow::numeric::SparseMatrix>;
-template class mpFlow::numeric::ConjugateGradient<mpFlow::dtype::complex, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::ConjugateGradient<float, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::ConjugateGradient<float, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::ConjugateGradient<double, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::ConjugateGradient<double, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::ConjugateGradient<thrust::complex<float>, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::ConjugateGradient<thrust::complex<float>, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::ConjugateGradient<thrust::complex<double>, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::ConjugateGradient<thrust::complex<double>, mpFlow::numeric::SparseMatrix>;

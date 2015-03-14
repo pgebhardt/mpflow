@@ -32,7 +32,7 @@ template <
     class dataType
 >
 static __global__ void updateVectorKernel(const dataType* x1,
-    const mpFlow::dtype::real sign, const dataType* x2, const dataType* scalar,
+    const double sign, const dataType* x2, const dataType* scalar,
     mpFlow::dtype::size rows, dataType* result) {
     // get ids
     mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
@@ -40,7 +40,7 @@ static __global__ void updateVectorKernel(const dataType* x1,
 
     // calc value
     result[row + column * rows] = x1[row + column * rows] +
-        sign * scalar[column * rows] * x2[row + column * rows];
+        dataType(sign) * scalar[column * rows] * x2[row + column * rows];
 }
 
 // update vector kernel wrapper
@@ -48,7 +48,7 @@ template <
     class dataType
 >
 void mpFlow::numeric::bicgstabKernel::updateVector(dim3 blocks, dim3 threads,
-    cudaStream_t stream, const dataType* x1, const dtype::real sign,
+    cudaStream_t stream, const dataType* x1, const double sign,
     const dataType* x2, const dataType* scalar, dtype::size rows,
     dataType* result) {
     // call cuda kernel
@@ -58,11 +58,17 @@ void mpFlow::numeric::bicgstabKernel::updateVector(dim3 blocks, dim3 threads,
     CudaCheckError();
 }
 
-template void mpFlow::numeric::bicgstabKernel::updateVector<mpFlow::dtype::real>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::real,
-    const mpFlow::dtype::real*, const mpFlow::dtype::real*, mpFlow::dtype::size,
-    mpFlow::dtype::real*);
-template void mpFlow::numeric::bicgstabKernel::updateVector<mpFlow::dtype::complex>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::real,
-    const mpFlow::dtype::complex*, const mpFlow::dtype::complex*, mpFlow::dtype::size,
-    mpFlow::dtype::complex*);
+template void mpFlow::numeric::bicgstabKernel::updateVector<float>(dim3, dim3,
+    cudaStream_t, const float*, const double,
+    const float*, const float*, mpFlow::dtype::size, float*);
+template void mpFlow::numeric::bicgstabKernel::updateVector<double>(dim3, dim3,
+    cudaStream_t, const double*, const double,
+    const double*, const double*, mpFlow::dtype::size, double*);
+template void mpFlow::numeric::bicgstabKernel::updateVector<thrust::complex<float> >(dim3, dim3,
+    cudaStream_t, const thrust::complex<float>*, const double,
+    const thrust::complex<float>*, const thrust::complex<float>*, mpFlow::dtype::size,
+    thrust::complex<float>*);
+template void mpFlow::numeric::bicgstabKernel::updateVector<thrust::complex<double> >(dim3, dim3,
+    cudaStream_t, const thrust::complex<double>*, const double,
+    const thrust::complex<double>*, const thrust::complex<double>*, mpFlow::dtype::size,
+    thrust::complex<double>*);

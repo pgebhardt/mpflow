@@ -36,9 +36,9 @@ namespace numeric {
 
         // solve system
         dtype::index solve(const std::shared_ptr<matrixType<dataType>> A,
-            const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+            const std::shared_ptr<Matrix<dataType>> f, const dtype::size iterations,
             cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
-            dtype::real tolerance=0.0, bool dcFree=false);
+            const double tolerance=0.0, bool dcFree=false);
 
         // member
         dtype::size rows;
@@ -64,7 +64,7 @@ namespace numeric {
             class dataType
         >
         void updateVector(const std::shared_ptr<Matrix<dataType>> x1,
-            dtype::real sign, const std::shared_ptr<Matrix<dataType>> x2,
+            const double sign, const std::shared_ptr<Matrix<dataType>> x2,
             const std::shared_ptr<Matrix<dataType>> r1,
             const std::shared_ptr<Matrix<dataType>> r2, cudaStream_t stream,
             std::shared_ptr<Matrix<dataType>> result);

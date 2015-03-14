@@ -57,19 +57,25 @@ void mpFlow::numeric::conjugateGradientKernel::addScalar(dim3 blocks, dim3 threa
     CudaCheckError();
 }
 
-template void mpFlow::numeric::conjugateGradientKernel::addScalar<mpFlow::dtype::real>(
-    dim3, dim3, cudaStream_t, const mpFlow::dtype::real*, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::numeric::conjugateGradientKernel::addScalar<mpFlow::dtype::complex>(
-    dim3, dim3, cudaStream_t, const mpFlow::dtype::complex*, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::complex*);
+template void mpFlow::numeric::conjugateGradientKernel::addScalar<float>(
+    dim3, dim3, cudaStream_t, const float*, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::size, float*);
+template void mpFlow::numeric::conjugateGradientKernel::addScalar<double>(
+    dim3, dim3, cudaStream_t, const double*, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::size, double*);
+template void mpFlow::numeric::conjugateGradientKernel::addScalar<thrust::complex<float> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<float>*, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::size, thrust::complex<float>*);
+template void mpFlow::numeric::conjugateGradientKernel::addScalar<thrust::complex<double> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<double>*, mpFlow::dtype::size,
+    mpFlow::dtype::size, mpFlow::dtype::size, thrust::complex<double>*);
 
 // update vector kernel
 template <
     class dataType
 >
 static __global__ void updateVectorKernel(const dataType* x1,
-    const mpFlow::dtype::real sign, const dataType* x2,
+    const double sign, const dataType* x2,
     const dataType* r1, const dataType* r2,
     mpFlow::dtype::size rows, dataType* result) {
     // get ids
@@ -77,9 +83,9 @@ static __global__ void updateVectorKernel(const dataType* x1,
     mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
-    result[row + column * rows] = r2[column * rows] != (mpFlow::dtype::real)0.0 ?
-        x1[row + column * rows] + sign * x2[row + column * rows] * r1[column * rows] / r2[column * rows] :
-        (mpFlow::dtype::real)0.0;
+    result[row + column * rows] = r2[column * rows] != dataType(0) ?
+        x1[row + column * rows] + dataType(sign) * x2[row + column * rows] * r1[column * rows] / r2[column * rows] :
+        dataType(0);
 }
 
 // update vector kernel wrapper
@@ -87,7 +93,7 @@ template <
     class dataType
 >
 void mpFlow::numeric::conjugateGradientKernel::updateVector(dim3 blocks, dim3 threads,
-    cudaStream_t stream, const dataType* x1, const dtype::real sign,
+    cudaStream_t stream, const dataType* x1, const double sign,
     const dataType* x2, const dataType* r1, const dataType* r2,
     dtype::size rows, dataType* result) {
     // call cuda kernel
@@ -97,11 +103,19 @@ void mpFlow::numeric::conjugateGradientKernel::updateVector(dim3 blocks, dim3 th
     CudaCheckError();
 }
 
-template void mpFlow::numeric::conjugateGradientKernel::updateVector<mpFlow::dtype::real>(
-    dim3, dim3, cudaStream_t, const mpFlow::dtype::real*, const mpFlow::dtype::real,
-    const mpFlow::dtype::real*, const mpFlow::dtype::real*, const mpFlow::dtype::real*,
-    mpFlow::dtype::size, mpFlow::dtype::real*);
-template void mpFlow::numeric::conjugateGradientKernel::updateVector<mpFlow::dtype::complex>(
-    dim3, dim3, cudaStream_t, const mpFlow::dtype::complex*, const mpFlow::dtype::real,
-    const mpFlow::dtype::complex*, const mpFlow::dtype::complex*, const mpFlow::dtype::complex*,
-    mpFlow::dtype::size, mpFlow::dtype::complex*);
+template void mpFlow::numeric::conjugateGradientKernel::updateVector<float>(
+    dim3, dim3, cudaStream_t, const float*, const double,
+    const float*, const float*, const float*,
+    mpFlow::dtype::size, float*);
+template void mpFlow::numeric::conjugateGradientKernel::updateVector<double>(
+    dim3, dim3, cudaStream_t, const double*, const double,
+    const double*, const double*, const double*,
+    mpFlow::dtype::size, double*);
+template void mpFlow::numeric::conjugateGradientKernel::updateVector<thrust::complex<float> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<float>*, const double,
+    const thrust::complex<float>*, const thrust::complex<float>*, const thrust::complex<float>*,
+    mpFlow::dtype::size, thrust::complex<float>*);
+template void mpFlow::numeric::conjugateGradientKernel::updateVector<thrust::complex<double> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<double>*, const double,
+    const thrust::complex<double>*, const thrust::complex<double>*, const thrust::complex<double>*,
+    mpFlow::dtype::size, thrust::complex<double>*);

@@ -62,7 +62,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     const std::shared_ptr<matrixType<dataType>> A,
     const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
-    dtype::real tolerance, bool) {
+    const double tolerance, bool) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: A == nullptr");
@@ -157,7 +157,7 @@ template <
     class dataType
 >
 void mpFlow::numeric::bicgstab::updateVector(
-    const std::shared_ptr<Matrix<dataType>> x1, dtype::real sign,
+    const std::shared_ptr<Matrix<dataType>> x1, const double sign,
     const std::shared_ptr<Matrix<dataType>> x2,
     const std::shared_ptr<Matrix<dataType>> scalar, cudaStream_t stream,
     std::shared_ptr<Matrix<dataType>> result) {
@@ -186,7 +186,11 @@ void mpFlow::numeric::bicgstab::updateVector(
 }
 
 // specialisations
-template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::real, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::real, mpFlow::numeric::SparseMatrix>;
-template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::complex, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::BiCGSTAB<mpFlow::dtype::complex, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::BiCGSTAB<float, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::BiCGSTAB<float, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::BiCGSTAB<double, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::BiCGSTAB<double, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::BiCGSTAB<thrust::complex<float>, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::BiCGSTAB<thrust::complex<float>, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::BiCGSTAB<thrust::complex<double>, mpFlow::numeric::Matrix>;
+template class mpFlow::numeric::BiCGSTAB<thrust::complex<double>, mpFlow::numeric::SparseMatrix>;
