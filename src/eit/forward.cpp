@@ -139,7 +139,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
         // solve linear system
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
             this->excitation, this->equation->mesh->nodes->rows, nullptr, stream,
-            this->phi[component], tolerance, component == 0 ? true : false);
+            this->phi[component], tolerance, (component == 0 &&
+            this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) ? true : false);
 
         // calc jacobian
         this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,

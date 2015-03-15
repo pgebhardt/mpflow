@@ -62,7 +62,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     const std::shared_ptr<matrixType<dataType>> A,
     const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
-    const double tolerance, bool) {
+    const double tolerance, bool dcFree) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: A == nullptr");
@@ -76,11 +76,21 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
 
     // r0 = f - A * x0
     this->r->multiply(A, x, handle, stream);
+
+    // regularize for dc free solution
+    if (dcFree == true) {
+        this->temp1->sum(x, stream);
+        conjugateGradient::addScalar(this->temp1, this->rows, this->cols,
+            stream, this->r);
+    }
+
     this->r->scalarMultiply(-1.0, stream);
     this->r->add(f, stream);
 
     // Choose an arbitrary vector rHat such that (r, rHat) != 0, e.g. rHat = r
-    // this->rHat->copy(r, stream);
+    if (dcFree) {
+        this->rHat->copy(r, stream);
+    }
 
     // initialize current error vector
     this->error->vectorDotProduct(this->r, this->r, stream);
@@ -107,6 +117,13 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         // nu = A * p
         this->nu->multiply(A, this->p, handle, stream);
 
+        // regularize for dc free solution
+        if (dcFree == true) {
+            this->temp2->sum(this->p, stream);
+            conjugateGradient::addScalar(this->temp2, this->rows, this->cols,
+                stream, this->nu);
+        }
+
         // alpha = roh / (rHat, nu)
         this->temp1->vectorDotProduct(this->nu, this->rHat, stream);
         this->alpha->elementwiseDivision(this->roh, this->temp1, stream);
@@ -117,6 +134,13 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
 
         // t = A * s
         this->t->multiply(A, this->s, handle, stream);
+
+        // regularize for dc free solution
+        if (dcFree == true) {
+            this->temp2->sum(this->s, stream);
+            conjugateGradient::addScalar(this->temp2, this->rows, this->cols,
+                stream, this->t);
+        }
 
         // omega = (t, s) / (t, t)
         this->temp1->vectorDotProduct(this->s, this->t, stream);
