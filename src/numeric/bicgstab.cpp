@@ -91,7 +91,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     for (dtype::index step = 0; step < iterations; ++step) {
         // roh = (rHat, r)
         this->rohOld->copy(this->roh, stream);
-        this->roh->vectorDotProduct(this->rHat, this->r, stream);
+        this->roh->vectorDotProduct(this->r, this->rHat, stream);
 
         // beta = (roh(i) / roh(i-1)) * (alpha / omega)
         this->temp1->elementwiseDivision(this->roh, this->rohOld, stream);
@@ -108,7 +108,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         this->nu->multiply(A, this->p, handle, stream);
 
         // alpha = roh / (rHat, nu)
-        this->temp1->vectorDotProduct(this->rHat, this->nu, stream);
+        this->temp1->vectorDotProduct(this->nu, this->rHat, stream);
         this->alpha->elementwiseDivision(this->roh, this->temp1, stream);
 
         // s = r - alpha * nu
@@ -119,7 +119,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         this->t->multiply(A, this->s, handle, stream);
 
         // omega = (t, s) / (t, t)
-        this->temp1->vectorDotProduct(this->t, this->s, stream);
+        this->temp1->vectorDotProduct(this->s, this->t, stream);
         this->temp2->vectorDotProduct(this->t, this->t, stream);
         this->omega->elementwiseDivision(this->temp1, this->temp2, stream);
 

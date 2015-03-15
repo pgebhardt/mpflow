@@ -282,7 +282,7 @@ __global__ void vectorDotProductKernel(const thrust::complex<type>* a, const thr
     mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // elementwise multiply
-    result[row + column * rows] = conj(a[row + column * rows]) * b[row + column * rows];
+    result[row + column * rows] = a[row + column * rows] * conj(b[row + column * rows]);
 }
 
 // vectorDotProduct kernel wrapper
