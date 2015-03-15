@@ -83,7 +83,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     // this->rHat->copy(r, stream);
 
     // initialize current error vector
-    conjugateGradient::calcError(this->r, stream, this->error);
+    this->error->vectorDotProduct(this->r, this->r, stream);
     this->error->copyToHost(stream);
     cudaStreamSynchronize(stream);
 
@@ -136,7 +136,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
             using namespace std;
             using namespace thrust;
 
-            conjugateGradient::calcError(this->r, stream, this->error);
+            this->error->vectorDotProduct(this->r, this->r, stream);
             this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 

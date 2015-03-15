@@ -61,6 +61,13 @@ namespace numeric {
         void elementwiseDivision(dim3 blocks, dim3 threads, cudaStream_t stream,
             const type* a, const type* b, dtype::size rows, type* result);
 
+        // vectorDotProduct kernel
+        template <
+            class type
+        >
+        void vectorDotProduct(dim3 blocks, dim3 threads, cudaStream_t stream,
+            const type* a, const type* b, dtype::size rows, type* result);
+
         // sum kernel
         template <
             class type

@@ -49,7 +49,6 @@ namespace numeric {
         std::shared_ptr<Matrix<dataType>> rohOld;
         std::shared_ptr<Matrix<dataType>> temp1;
         std::shared_ptr<Matrix<dataType>> temp2;
-        std::shared_ptr<Matrix<dataType>> error;
     };
 
     // helper functions
@@ -69,12 +68,6 @@ namespace numeric {
             const std::shared_ptr<Matrix<dataType>> r1,
             const std::shared_ptr<Matrix<dataType>> r2, cudaStream_t stream,
             std::shared_ptr<Matrix<dataType>> result);
-
-        template <
-            class dataType
-        >
-        void calcError(const std::shared_ptr<Matrix<dataType>> input,
-            cudaStream_t stream, std::shared_ptr<Matrix<dataType>> output);
     }
 }
 }

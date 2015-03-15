@@ -184,7 +184,7 @@ void mpFlow::numeric::matrixKernel::elementwiseMultiply(dim3 blocks, dim3 thread
     cudaStream_t stream, const type* a, const type* b, dtype::size rows,
     type* result) {
     // call cuda kernel
-    elementwiseMultiplyKernel<type><<<blocks, threads, 0, stream>>>(
+    elementwiseMultiplyKernel<<<blocks, threads, 0, stream>>>(
         a, b, rows, result);
 
     CudaCheckError();
@@ -255,6 +255,67 @@ template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::
     dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
     const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::index*);
 template void mpFlow::numeric::matrixKernel::elementwiseDivision<mpFlow::dtype::integral>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::integral*,
+    const mpFlow::dtype::integral*, mpFlow::dtype::size, mpFlow::dtype::integral*);
+
+// vectorDotProduct kernel
+template <
+    class type
+>
+__global__ void vectorDotProductKernel(const type* a, const type* b, mpFlow::dtype::size rows,
+    type* result) {
+    // get ids
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // elementwise multiply
+    result[row + column * rows] = a[row + column * rows] * b[row + column * rows];
+}
+
+template <
+    class type
+>
+__global__ void vectorDotProductKernel(const thrust::complex<type>* a, const thrust::complex<type>* b,
+    mpFlow::dtype::size rows, thrust::complex<type>* result) {
+    // get ids
+    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // elementwise multiply
+    result[row + column * rows] = conj(a[row + column * rows]) * b[row + column * rows];
+}
+
+// vectorDotProduct kernel wrapper
+template <
+    class type
+>
+void mpFlow::numeric::matrixKernel::vectorDotProduct(dim3 blocks, dim3 threads,
+    cudaStream_t stream, const type* a, const type* b, dtype::size rows,
+    type* result) {
+    // call cuda kernel
+    vectorDotProductKernel<<<blocks, threads, 0, stream>>>(
+        a, b, rows, result);
+
+    CudaCheckError();
+}
+
+// elementwise multiply specialisation
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<float>(
+    dim3, dim3, cudaStream_t, const float*,
+    const float*, mpFlow::dtype::size, float*);
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<double>(
+    dim3, dim3, cudaStream_t, const double*,
+    const double*, mpFlow::dtype::size, double*);
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<thrust::complex<float> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<float>*,
+    const thrust::complex<float>*, mpFlow::dtype::size, thrust::complex<float>*);
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<thrust::complex<double> >(
+    dim3, dim3, cudaStream_t, const thrust::complex<double>*,
+    const thrust::complex<double>*, mpFlow::dtype::size, thrust::complex<double>*);
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<mpFlow::dtype::index>(
+    dim3, dim3, cudaStream_t, const mpFlow::dtype::index*,
+    const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::index*);
+template void mpFlow::numeric::matrixKernel::vectorDotProduct<mpFlow::dtype::integral>(
     dim3, dim3, cudaStream_t, const mpFlow::dtype::integral*,
     const mpFlow::dtype::integral*, mpFlow::dtype::size, mpFlow::dtype::integral*);
 

@@ -379,8 +379,34 @@ template <
 >
 void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
     const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
-    // elementwise multiply
-    this->elementwiseMultiply(A, B, stream);
+    // check input
+    if (A == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: A == nullptr");
+    }
+    if (B == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: B == nullptr");
+    }
+
+    // check size
+    if ((this->rows != A->rows) ||
+        (this->rows != B->rows)) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: shape does not match");
+    }
+
+    // get minimum colums
+    dtype::size columns = std::min(std::min(this->dataCols,
+        A->dataCols), B->dataCols);
+
+    // kernel dimension
+    dim3 blocks(this->dataRows / matrix::block_size,
+        columns == 1 ? 1 : columns / matrix::block_size);
+    dim3 threads(matrix::block_size,
+        columns == 1 ? 1 : matrix::block_size);
+
+    // call kernel
+    matrixKernel::vectorDotProduct<type>(blocks, threads, stream,
+        A->deviceData, B->deviceData, this->dataRows,
+        this->deviceData);
 
     // sum
     struct noop_deleter { void operator()(void*) {} };
