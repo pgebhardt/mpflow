@@ -41,24 +41,25 @@ mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
 
     // init matrices
     this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
+        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
     this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
+        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
     this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
+        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
-        this->mesh->elements->rows, math::square(basisFunctionType::pointsPerElement),
+        this->mesh->elements.rows(), math::square(basisFunctionType::pointsPerElement),
         stream, 0.0, false);
     this->excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
-        this->mesh->nodes->rows, this->boundaryDescriptor->count, stream,
+        this->mesh->nodes.rows(), this->boundaryDescriptor->count, stream,
         0.0, false);
+    this->meshElements = numeric::matrix::fromEigen<unsigned, int>(this->mesh->elements, stream);
 
     this->initElementalMatrices(stream);
     this->initExcitationMatrix(stream);
     this->initJacobianCalculationMatrix(stream);
 
     // update equation
-    auto alpha = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements->rows,
+    auto alpha = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements.rows(),
         1, stream, 0.0, false);
     this->update(alpha, 0.0, alpha, stream);
 }
@@ -73,68 +74,59 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
     cudaStream_t stream) {
     // create intermediate matrices
     auto elementCount = std::make_shared<numeric::SparseMatrix<dtype::index>>(
-        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
+        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
     std::vector<std::shared_ptr<numeric::SparseMatrix<dtype::index>>> connectivityMatrices;
     std::vector<std::shared_ptr<numeric::SparseMatrix<dataType>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
-    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
+    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
         // get nodes points of element
-        auto nodes = mesh->elementNodes(element);
-
-        // extract coordinats of node points of element
-        std::array<std::tuple<dtype::real, dtype::real>,
-            basisFunctionType::pointsPerElement> points;
-        for (dtype::index i = 0; i < points.size(); ++i) {
-            points[i] = std::get<1>(nodes[i]);
-        }
+        Eigen::ArrayXXd points = mesh->elementNodes(element);
 
         // set connectivity and elemental residual matrix elements
         for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; i++)
         for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t level = elementCount->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+            size_t level = elementCount->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<dtype::index>>(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows, stream));
+                    this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
                 elementalSMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows, stream));
+                    this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
                 elementalRMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    this->mesh->nodes->rows, this->mesh->nodes->rows, stream));
+                    this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
             }
 
             // set connectivity element
-            connectivityMatrices[level]->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
-                element);
+            connectivityMatrices[level]->setValue(this->mesh->elements(element, i),
+                this->mesh->elements(element, j), element);
 
             // create basis functions
             auto basisI = std::make_shared<basisFunctionType>(points, i);
             auto basisJ = std::make_shared<basisFunctionType>(points, j);
 
             // set elemental system element
-            elementalSMatrices[level]->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
-                basisI->integrateGradientWithBasis(basisJ));
+            elementalSMatrices[level]->setValue(this->mesh->elements(element, i),
+                this->mesh->elements(element, j), basisI->integrateGradientWithBasis(basisJ));
 
             // set elemental residual element
-            elementalRMatrices[level]->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
-                basisI->integrateWithBasis(basisJ));
+            elementalRMatrices[level]->setValue(this->mesh->elements(element, i),
+                this->mesh->elements(element, j), basisI->integrateWithBasis(basisJ));
 
             // increment element count
-            elementCount->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]),
-                elementCount->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j])) + 1);
+            elementCount->setValue(this->mesh->elements(element, i), this->mesh->elements(element, j),
+                elementCount->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j)) + 1);
         }
     }
 
     // determine nodes with common element
     auto commonElementMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes->rows, this->mesh->nodes->rows, stream);
-    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        auto nodes = this->mesh->elementNodes(element);
-
+        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
+    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
         for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
         for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
-            commonElementMatrix->setValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]), 1.0f);
+            commonElementMatrix->setValue(this->mesh->elements(element, i), this->mesh->elements(element, j), 1.0f);
         }
     }
     commonElementMatrix->copyToDevice(stream);
@@ -146,31 +138,28 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
-        this->mesh->nodes->rows, numeric::sparseMatrix::block_size * connectivityMatrices.size(),
+        this->mesh->nodes.rows(), numeric::sparseMatrix::block_size * connectivityMatrices.size(),
         stream, dtype::invalid_index);
-    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes->rows,
+    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
         numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes->rows,
+    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
         numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
     for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
-        for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-            // get element nodes
-            auto nodes = this->mesh->elementNodes(element);
-
+        for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
             for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
             for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
-                dtype::index columId = commonElementMatrix->getColumnId(std::get<0>(nodes[i]),
-                    std::get<0>(nodes[j]));
+                dtype::index columId = commonElementMatrix->getColumnId(this->mesh->elements(element, i),
+                    this->mesh->elements(element, j));
 
-                (*this->connectivityMatrix)(std::get<0>(nodes[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    connectivityMatrices[level]->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
-                (*this->elementalSMatrix)(std::get<0>(nodes[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    elementalSMatrices[level]->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
-                (*this->elementalRMatrix)(std::get<0>(nodes[i]), level * numeric::sparseMatrix::block_size + columId) =
-                    elementalRMatrices[level]->getValue(std::get<0>(nodes[i]), std::get<0>(nodes[j]));
+                (*this->connectivityMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::block_size + columId) =
+                    connectivityMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
+                (*this->elementalSMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::block_size + columId) =
+                    elementalSMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
+                (*this->elementalRMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::block_size + columId) =
+                    elementalRMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
             }
         }
     }
@@ -186,13 +175,13 @@ template <
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t stream) {
     std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
-    std::array<dtype::real, basisFunctionType::pointsPerEdge> nodeParameter;
-    dtype::real integrationStart, integrationEnd;
+    Eigen::ArrayXd nodeParameter(basisFunctionType::pointsPerEdge);
+    double integrationStart, integrationEnd;
 
     // calc excitation matrix
     auto excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
-    for (dtype::index boundaryElement = 0; boundaryElement < this->mesh->boundary->rows; ++boundaryElement) {
+    for (unsigned boundaryElement = 0; boundaryElement < this->mesh->boundary.rows(); ++boundaryElement) {
         // get boundary nodes
         nodes = this->mesh->boundaryNodes(boundaryElement);
 
@@ -206,15 +195,15 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
         });
 
         // calc parameter offset
-        dtype::real parameterOffset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
+        double parameterOffset = math::circleParameter(std::get<1>(nodes[0]), 0.0);
 
         // calc node parameter centered to node 0
-        for (dtype::size i = 0; i < nodes.size(); ++i) {
-            nodeParameter[i] = math::circleParameter(std::get<1>(nodes[i]),
+        for (unsigned i = 0; i < nodes.size(); ++i) {
+            nodeParameter(i) = math::circleParameter(std::get<1>(nodes[i]),
                 parameterOffset);
         }
 
-        for (dtype::index piece = 0; piece < this->boundaryDescriptor->count; ++piece) {
+        for (unsigned piece = 0; piece < this->boundaryDescriptor->count; ++piece) {
             // skip boundary part, if radii dont match
             if (std::abs(
                 std::get<0>(math::polar(std::get<0>(this->boundaryDescriptor->coordinates[piece]))) -
@@ -255,27 +244,20 @@ template <
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
     ::initJacobianCalculationMatrix(cudaStream_t stream) {
     // variables
-    std::array<std::tuple<dtype::real, dtype::real>,
-       basisFunctionType::pointsPerElement> nodeCoordinates;
     std::array<std::shared_ptr<basisFunctionType>,
         basisFunctionType::pointsPerElement> basisFunction;
 
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
-    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
-        // get element nodes
-        auto nodes = this->mesh->elementNodes(element);
-
-        // extract nodes coordinates
-        for (dtype::index node = 0; node < basisFunctionType::pointsPerElement; ++node) {
-            nodeCoordinates[node] = std::get<1>(nodes[node]);
-        }
+    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
+        // get element points
+        Eigen::ArrayXXd points = this->mesh->elementNodes(element);
 
         // calc corresponding basis functions
         for (dtype::index node = 0; node < basisFunctionType::pointsPerElement; ++node) {
             basisFunction[node] = std::make_shared<basisFunctionType>(
-                nodeCoordinates, node);
+                points, node);
         }
 
         // fill matrix
@@ -343,9 +325,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobi
     // calc jacobian
     FEM::equationKernel::calcJacobian<dataType, basisFunctionType::pointsPerElement, logarithmic>(
         blocks, threads, stream, phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
-        this->mesh->elements->deviceData, this->elementalJacobianMatrix->deviceData,
+        this->meshElements->deviceData, this->elementalJacobianMatrix->deviceData,
         gamma->deviceData, this->referenceValue, jacobian->dataRows, jacobian->dataCols,
-        phi->dataRows, this->mesh->elements->rows, driveCount, measurmentCount, additiv,
+        phi->dataRows, this->meshElements->rows, driveCount, measurmentCount, additiv,
         jacobian->deviceData);
 }
 

@@ -25,9 +25,8 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::Linear::Linear(
-    std::array<std::tuple<double, double>, pointsPerElement> nodes,
-    dtype::index one)
-    : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes) {
+    Eigen::Ref<const Eigen::ArrayXXd> points, unsigned one)
+    : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(points) {
     // check one
     if (one >= pointsPerElement) {
         throw std::invalid_argument(
@@ -45,25 +44,16 @@ mpFlow::FEM::basis::Linear::Linear(
     // fill coefficients
     for (dtype::index node = 0; node < pointsPerElement; ++node) {
         A[node][0] = (1.0);
-        A[node][1] = ((1.0)*(std::get<0>(this->nodes[node])));
-        A[node][2] = ((1.0)*(std::get<1>(this->nodes[node])));
+        A[node][1] = ((1.0)*(this->points(node, 0)));
+        A[node][2] = ((1.0)*(this->points(node, 1)));
     }
 
     // calc coefficients
-    this->coefficients = math::gaussElemination<double, pointsPerElement>(A, b);
+    auto coefficients = math::gaussElemination<double, pointsPerElement>(A, b);
+    for (unsigned i = 0; i < this->coefficients.rows(); ++i) {
+        this->coefficients(i) = coefficients[i];
+    }
 }
-
-// evaluate basis function
-
-double mpFlow::FEM::basis::Linear::evaluate(
-    std::tuple<double, double> point
-    ) {
-    return ({
-((((std::get<0>(point))*(this->coefficients[1]))+((std::get<1>(point))*(this->coefficients[2])))+(this->coefficients[0]));
-})
-;
-}
-
 
 // integrate with basis
 
@@ -71,7 +61,7 @@ double mpFlow::FEM::basis::Linear::integrateWithBasis(
     const std::shared_ptr<Linear> other
     ) {
     return ({
-(((1.0)*((((((((((((((((((((((((((((((((((((((((((((((0.0833333333333)*((std::get<0>(this->nodes[0]))*(std::get<0>(this->nodes[0]))))*(this->coefficients[1]))*(other->coefficients[1]))+(((((0.0833333333333)*(std::get<0>(this->nodes[0])))*(std::get<1>(this->nodes[0])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0833333333333)*(std::get<0>(this->nodes[0])))*(std::get<1>(this->nodes[0])))*(this->coefficients[2]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes[0])))*(std::get<0>(this->nodes[1])))*(this->coefficients[1]))*(other->coefficients[1])))+(((((0.0416666666667)*(std::get<0>(this->nodes[0])))*(std::get<1>(this->nodes[1])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<0>(this->nodes[0])))*(std::get<1>(this->nodes[1])))*(this->coefficients[2]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes[0])))*(std::get<0>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[1])))+(((((0.0416666666667)*(std::get<0>(this->nodes[0])))*(std::get<1>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<0>(this->nodes[0])))*(std::get<1>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[1])))+((((0.166666666667)*(std::get<0>(this->nodes[0])))*(this->coefficients[0]))*(other->coefficients[1])))+((((0.166666666667)*(std::get<0>(this->nodes[0])))*(this->coefficients[1]))*(other->coefficients[0])))+((((0.0833333333333)*((std::get<1>(this->nodes[0]))*(std::get<1>(this->nodes[0]))))*(this->coefficients[2]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes[0])))*(std::get<0>(this->nodes[1])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes[0])))*(std::get<0>(this->nodes[1])))*(this->coefficients[2]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<1>(this->nodes[0])))*(std::get<1>(this->nodes[1])))*(this->coefficients[2]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes[0])))*(std::get<0>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes[0])))*(std::get<0>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<1>(this->nodes[0])))*(std::get<1>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[2])))+((((0.166666666667)*(std::get<1>(this->nodes[0])))*(this->coefficients[0]))*(other->coefficients[2])))+((((0.166666666667)*(std::get<1>(this->nodes[0])))*(this->coefficients[2]))*(other->coefficients[0])))+((((0.0833333333333)*((std::get<0>(this->nodes[1]))*(std::get<0>(this->nodes[1]))))*(this->coefficients[1]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes[1])))*(std::get<1>(this->nodes[1])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0833333333333)*(std::get<0>(this->nodes[1])))*(std::get<1>(this->nodes[1])))*(this->coefficients[2]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes[1])))*(std::get<0>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[1])))+(((((0.0416666666667)*(std::get<0>(this->nodes[1])))*(std::get<1>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<0>(this->nodes[1])))*(std::get<1>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[1])))+((((0.166666666667)*(std::get<0>(this->nodes[1])))*(this->coefficients[0]))*(other->coefficients[1])))+((((0.166666666667)*(std::get<0>(this->nodes[1])))*(this->coefficients[1]))*(other->coefficients[0])))+((((0.0833333333333)*((std::get<1>(this->nodes[1]))*(std::get<1>(this->nodes[1]))))*(this->coefficients[2]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes[1])))*(std::get<0>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0416666666667)*(std::get<1>(this->nodes[1])))*(std::get<0>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<1>(this->nodes[1])))*(std::get<1>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[2])))+((((0.166666666667)*(std::get<1>(this->nodes[1])))*(this->coefficients[0]))*(other->coefficients[2])))+((((0.166666666667)*(std::get<1>(this->nodes[1])))*(this->coefficients[2]))*(other->coefficients[0])))+((((0.0833333333333)*((std::get<0>(this->nodes[2]))*(std::get<0>(this->nodes[2]))))*(this->coefficients[1]))*(other->coefficients[1])))+(((((0.0833333333333)*(std::get<0>(this->nodes[2])))*(std::get<1>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[2])))+(((((0.0833333333333)*(std::get<0>(this->nodes[2])))*(std::get<1>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[1])))+((((0.166666666667)*(std::get<0>(this->nodes[2])))*(this->coefficients[0]))*(other->coefficients[1])))+((((0.166666666667)*(std::get<0>(this->nodes[2])))*(this->coefficients[1]))*(other->coefficients[0])))+((((0.0833333333333)*((std::get<1>(this->nodes[2]))*(std::get<1>(this->nodes[2]))))*(this->coefficients[2]))*(other->coefficients[2])))+((((0.166666666667)*(std::get<1>(this->nodes[2])))*(this->coefficients[0]))*(other->coefficients[2])))+((((0.166666666667)*(std::get<1>(this->nodes[2])))*(this->coefficients[2]))*(other->coefficients[0])))+(((0.5)*(this->coefficients[0]))*(other->coefficients[0]))))*(abs(((((-(std::get<0>(this->nodes[0])))+(std::get<0>(this->nodes[1])))*((-(std::get<1>(this->nodes[0])))+(std::get<1>(this->nodes[2]))))-(((-(std::get<0>(this->nodes[0])))+(std::get<0>(this->nodes[2])))*((-(std::get<1>(this->nodes[0])))+(std::get<1>(this->nodes[1]))))))));
+(((1.0)*((((((((((((((((((((((((((((((((((((((((((((((0.0833333333333)*((this->points(0, 0))*(this->points(0, 0))))*(this->coefficients(1)))*(other->coefficients(1)))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(0, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(0, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(1, 0)))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(1, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(2, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(0, 0)))*(this->coefficients(0)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(0, 0)))*(this->coefficients(1)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(0, 1))*(this->points(0, 1))))*(this->coefficients(2)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(1, 0)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(1, 0)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 1)))*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(2, 0)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 1)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(0, 1)))*(this->coefficients(0)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(0, 1)))*(this->coefficients(2)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(1, 0))*(this->points(1, 0))))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(1, 0)))*(this->points(1, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0833333333333)*(this->points(1, 0)))*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(1, 0)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0416666666667)*(this->points(1, 0)))*(this->points(2, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(1, 0)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(1, 0)))*(this->coefficients(0)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(1, 0)))*(this->coefficients(1)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(1, 1))*(this->points(1, 1))))*(this->coefficients(2)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(1, 1)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(1, 1)))*(this->points(2, 0)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(1, 1)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(1, 1)))*(this->coefficients(0)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(2, 0))*(this->points(2, 0))))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(2, 0)))*(this->points(2, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0833333333333)*(this->points(2, 0)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(2, 0)))*(this->coefficients(0)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(2, 1))*(this->points(2, 1))))*(this->coefficients(2)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(2, 1)))*(this->coefficients(0)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(0))))+(((0.5)*(this->coefficients(0)))*(other->coefficients(0)))))*(abs(((((-(this->points(0, 0)))+(this->points(1, 0)))*((-(this->points(0, 1)))+(this->points(2, 1))))-(((-(this->points(0, 0)))+(this->points(2, 0)))*((-(this->points(0, 1)))+(this->points(1, 1))))))));
 })
 ;
 }
@@ -83,7 +73,7 @@ double mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
     const std::shared_ptr<Linear> other
     ) {
     return ({
-(((1.0)*((((0.5)*(this->coefficients[1]))*(other->coefficients[1]))+(((0.5)*(this->coefficients[2]))*(other->coefficients[2]))))*(abs(((((-(std::get<0>(this->nodes[0])))+(std::get<0>(this->nodes[1])))*((-(std::get<1>(this->nodes[0])))+(std::get<1>(this->nodes[2]))))-(((-(std::get<0>(this->nodes[0])))+(std::get<0>(this->nodes[2])))*((-(std::get<1>(this->nodes[0])))+(std::get<1>(this->nodes[1]))))))));
+(((1.0)*((((0.5)*(this->coefficients(1)))*(other->coefficients(1)))+(((0.5)*(this->coefficients(2)))*(other->coefficients(2)))))*(abs(((((-(this->points(0, 0)))+(this->points(1, 0)))*((-(this->points(0, 1)))+(this->points(2, 1))))-(((-(this->points(0, 0)))+(this->points(2, 0)))*((-(this->points(0, 1)))+(this->points(1, 1))))))));
 })
 ;
 }
@@ -91,33 +81,33 @@ double mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
 
 // integrate edge
 double mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
-    std::array<double, pointsPerEdge> nodes, dtype::index one,
+    Eigen::Ref<const Eigen::ArrayXd> points, unsigned one,
     double start, double end) {
     // calc coefficients for basis function
     std::array<double, pointsPerEdge> coefficients;
     if (one == 0) {
         coefficients[0] = ({
-((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));
+((((1.0)*(points(0)))/(((-1.0)*(points(0)))+((1.0)*(points(1)))))+(1.0));
 })
 ;
         coefficients[1] = ({
-((-1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
+((-1.0)/(((-1.0)*(points(0)))+((1.0)*(points(1)))));
 })
 ;
     }
     else
     {
         coefficients[0] = ({
-((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));
+((((1.0)*(points(0)))/(((-1.0)*(points(0)))+((1.0)*(points(1)))))+(1.0));
 })
 ;
         coefficients[1] = ({
-((-1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
+((-1.0)/(((-1.0)*(points(0)))+((1.0)*(points(1)))));
 })
 ;
     }
     return ({
-(((((-(coefficients[0]))*(min(max((start),(nodes[0])),(nodes[1]))))+((coefficients[0])*(min(max((end),(nodes[0])),(nodes[1])))))-(((coefficients[1])*((min(max((start),(nodes[0])),(nodes[1])))*(min(max((start),(nodes[0])),(nodes[1])))))/(2)))+(((coefficients[1])*((min(max((end),(nodes[0])),(nodes[1])))*(min(max((end),(nodes[0])),(nodes[1])))))/(2)));
+(((((-(coefficients[0]))*(min(max((start),(points(0))),(points(1)))))+((coefficients[0])*(min(max((end),(points(0))),(points(1))))))-(((coefficients[1])*((min(max((start),(points(0))),(points(1))))*(min(max((start),(points(0))),(points(1))))))/(2)))+(((coefficients[1])*((min(max((end),(points(0))),(points(1))))*(min(max((end),(points(0))),(points(1))))))/(2)));
 })
 ;
 }

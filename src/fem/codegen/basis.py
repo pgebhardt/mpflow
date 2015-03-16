@@ -130,12 +130,12 @@ class Basis(object):
     def render(self, template):
         # arguments
         points_args = [[
-            'std::get<0>(this->nodes[{}])'.format(i),
-            'std::get<1>(this->nodes[{}])'.format(i)]
+            'this->points({}, 0)'.format(i),
+            'this->points({}, 1)'.format(i)]
             for i in range(self.nodes_per_element)]
 
-        this_coefficients = ['this->coefficients[{}]'.format(i) for i in range(self.nodes_per_element)]
-        other_coefficients = ['other->coefficients[{}]'.format(i) for i in range(self.nodes_per_element)]
+        this_coefficients = ['this->coefficients({})'.format(i) for i in range(self.nodes_per_element)]
+        other_coefficients = ['other->coefficients({})'.format(i) for i in range(self.nodes_per_element)]
 
         # render template
         return template.render(
@@ -145,18 +145,9 @@ class Basis(object):
             # coefficients in constructor
             coefficients=[
                 symbolic(self.basis_function)(
-                    ['std::get<0>(this->nodes[node])', 'std::get<1>(this->nodes[node])'],
+                    ['this->points(node, 0)', 'this->points(node, 1)'],
                     [0.0] * i + [1.0] + [0.0] * (self.nodes_per_element - i - 1))
                 for i in range(self.nodes_per_element)],
-
-            # evaluate basis function
-            evaluate=self.evaluate(
-                ['std::get<{}>(point)'.format(i) for i in range(2)],
-                this_coefficients,
-                dtype='double',
-                custom_args=['std::tuple<double, double> point'],
-                name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
-                ),
 
             # model integrals
             integrateWithBasis=self.integrateWithBasis(
@@ -174,10 +165,10 @@ class Basis(object):
 
             # integrate boundary
             boundaryCoefficiens=coefficients(
-                ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
+                ['points({})'.format(i) for i in range(self.nodes_per_edge)],
                 self.boundary_function),
             integrateBoundaryEdge=self.integrateBoundaryEdge(
-                ['nodes[{}]'.format(i) for i in range(self.nodes_per_edge)],
+                ['points({})'.format(i) for i in range(self.nodes_per_edge)],
                 ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 'start', 'end').expand(),
             )
@@ -231,29 +222,20 @@ class EdgeBasis(object):
     def render(self, template):
         # arguments
         points_args = [[
-            'std::get<0>(this->nodes[{}])'.format(i),
-            'std::get<1>(this->nodes[{}])'.format(i)]
+            'this->points({}, 0)'.format(i),
+            'this->points({}, 1)'.format(i)]
             for i in range(self.nodeBasis.nodes_per_element)]
 
         # coefficients
-        ci1 = ['this->nodeBasis[0].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        ci2 = ['this->nodeBasis[1].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        cj1 = ['other->nodeBasis[0].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        cj2 = ['other->nodeBasis[1].coefficients[{}]'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        ci1 = ['this->nodeBasis[0].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        ci2 = ['this->nodeBasis[1].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj1 = ['other->nodeBasis[0].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj2 = ['other->nodeBasis[1].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
 
         # render template
         return template.render(
             # class name
             name=self.name,
-
-            # evaluate basis function
-            evaluate=self.evaluate(
-                ['std::get<{}>(point)'.format(i) for i in range(2)],
-                'this->length', ci1, ci2,
-                dtype='std::tuple<double, double>',
-                custom_args=['std::tuple<double, double> point'],
-                name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
-                ),
 
             # model integrals
             integrateWithBasis=self.integrateWithBasis(
