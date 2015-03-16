@@ -72,19 +72,23 @@ namespace numeric {
         void max(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
 
         // save matrix as txt
-        void savetxt(std::ostream* ostream, char delimiter=' ') const;
+        void savetxt(std::ostream& ostream, char delimiter=' ') const;
         void savetxt(const std::string filename, char delimiter=' ') const;
 
         // load txt formatted matrix from file
-        static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream* istream,
+        static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream& istream,
             cudaStream_t stream=nullptr, char delimiter=' ');
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
             cudaStream_t stream=nullptr, char delimiter=' ');
 
-        // convert from and to eigen arrays
+        // I/O operators
+        friend std::ostream& operator << (std::ostream& out, const Matrix<type>& matrix) {
+            matrix.savetxt(out);
+            return out;
+        }
 
         // accessors
-        const type& operator() (unsigned i, unsigned j) const {
+        const type operator() (unsigned i, unsigned j) const {
             // check index
             if (this->hostData == nullptr) {
                 throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
