@@ -79,7 +79,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
     std::vector<std::shared_ptr<numeric::SparseMatrix<dataType>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
-    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         // get nodes points of element
         Eigen::ArrayXXd points = mesh->elementNodes(element);
 
@@ -123,7 +123,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
     // determine nodes with common element
     auto commonElementMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
         this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
-    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
         for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
             commonElementMatrix->setValue(this->mesh->elements(element, i), this->mesh->elements(element, j), 1.0f);
@@ -148,7 +148,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
     for (unsigned level = 0; level < connectivityMatrices.size(); ++level) {
-        for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+        for (int element = 0; element < this->mesh->elements.rows(); ++element) {
             for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
             for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
                 unsigned columId = commonElementMatrix->getColumnId(this->mesh->elements(element, i),
@@ -181,7 +181,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
     // calc excitation matrix
     auto excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
-    for (unsigned boundaryElement = 0; boundaryElement < this->mesh->boundary.rows(); ++boundaryElement) {
+    for (int boundaryElement = 0; boundaryElement < this->mesh->boundary.rows(); ++boundaryElement) {
         // get boundary nodes
         nodes = this->mesh->boundaryNodes(boundaryElement);
 
@@ -250,7 +250,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
-    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         // get element points
         Eigen::ArrayXXd points = this->mesh->elementNodes(element);
 

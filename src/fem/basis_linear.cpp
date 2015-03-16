@@ -50,7 +50,7 @@ mpFlow::FEM::basis::Linear::Linear(
 
     // calc coefficients
     auto coefficients = math::gaussElemination<double, pointsPerElement>(A, b);
-    for (unsigned i = 0; i < this->coefficients.rows(); ++i) {
+    for (int i = 0; i < this->coefficients.rows(); ++i) {
         this->coefficients(i) = coefficients[i];
     }
 }

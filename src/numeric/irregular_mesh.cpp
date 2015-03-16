@@ -43,7 +43,7 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned element) {
     Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->elements.cols(), 2);
 
     // get node index and coordinate
-    for (unsigned node = 0; node < this->elements.cols(); ++node) {
+    for (int node = 0; node < this->elements.cols(); ++node) {
         result.row(node) = this->nodes.row(this->elements(element, node));
     }
 
@@ -61,7 +61,7 @@ std::vector<std::tuple<unsigned, std::tuple<double,
     // get node index and coordinate
     unsigned index = -1;
     std::tuple<double, double> coordinates = std::make_tuple(0.0f, 0.0f);
-    for (unsigned node = 0; node < this->boundary.cols(); ++node) {
+    for (int node = 0; node < this->boundary.cols(); ++node) {
         // get index
         index = this->boundary(element, node);
 
@@ -109,14 +109,14 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     unsigned new_bound = 0;
 
     // copy existing elements vom matrix to vector
-    for (unsigned element = 0; element < elements_old.rows(); ++element)
-    for (unsigned element_node = 0; element_node < 3; ++element_node) {
+    for (int element = 0; element < elements_old.rows(); ++element)
+    for (int element_node = 0; element_node < 3; ++element_node) {
         quadratic_elements_vector[element][element_node] = elements_old(element, element_node);
     }
 
     // calculate new midpoints between existing ones
-    for (unsigned element = 0; element < elements_old.rows(); ++element)
-    for (unsigned element_node = 0; element_node < elements_old.cols();
+    for (int element = 0; element < elements_old.rows(); ++element)
+    for (int element_node = 0; element_node < elements_old.cols();
         ++element_node) {
         // get current edge
         current_edge[0][0] = elements_old(element, element_node);
@@ -166,7 +166,7 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     }
 
     // copy nodes from linear mesh and new nodes to one vector
-    for (unsigned node = 0; node < nodes_old.rows(); ++node) {
+    for (int node = 0; node < nodes_old.rows(); ++node) {
         node_from_linear[0][0] = nodes_old(node, 0);
         node_from_linear[0][1] = nodes_old(node, 1);
         quadratic_node_vector.push_back(node_from_linear[0]);
@@ -176,7 +176,7 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     }
 
     // calculate new boundary Matrix
-    for(unsigned bound = 0; bound < boundary_old.rows(); ++bound){
+    for (int bound = 0; bound < boundary_old.rows(); ++bound){
         // get current bound
         linear_bound[0][0] = boundary_old(bound,0);
         linear_bound[0][1] = boundary_old(bound,1);
@@ -242,7 +242,7 @@ std::tuple<
     std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>> localEdgeConnections(elements.rows());
 
     // find all unique edges
-    for (unsigned element = 0; element < elements.rows(); ++element)
+    for (int element = 0; element < elements.rows(); ++element)
     for (unsigned i = 0; i < 3; ++i) {
         // sort edge to guarantee constant global edge orientation
         auto edge = elements(element, i) < elements(element, (i + 1) % 3) ?

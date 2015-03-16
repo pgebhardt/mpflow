@@ -59,7 +59,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     std::vector<std::shared_ptr<numeric::SparseMatrix<thrust::complex<float>>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
-    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
         // extract coordinats of node points of element
@@ -108,7 +108,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     // determine nodes with common element
     auto commonElementMatrix = std::make_shared<numeric::SparseMatrix<thrust::complex<float>>>(
         edges.size(), edges.size(), stream);
-    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
         for (unsigned i = 0; i < 3; ++i)
@@ -135,7 +135,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
     for (unsigned level = 0; level < connectivityMatrices.size(); ++level) {
-        for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+        for (int element = 0; element < this->mesh->elements.rows(); ++element) {
             auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
             for (unsigned i = 0; i < 3; ++i)
@@ -170,7 +170,7 @@ void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<float>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
-    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
         // extract coordinats of node points of element
