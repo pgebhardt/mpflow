@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::${name}::${name}(
-    std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
+    std::array<std::tuple<double, double>, pointsPerElement> nodes,
     dtype::index one)
     : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes) {
     // check one
@@ -35,8 +35,8 @@ mpFlow::FEM::basis::${name}::${name}(
     }
 
     // calc coefficients with gauss
-    std::array<std::array<dtype::real, pointsPerElement>, pointsPerElement> A;
-    std::array<dtype::real, pointsPerElement> b;
+    std::array<std::array<double, pointsPerElement>, pointsPerElement> A;
+    std::array<double, pointsPerElement> b;
     for (dtype::index node = 0; node < pointsPerElement; ++node) {
         b[node] = 0.0;
     }
@@ -50,7 +50,7 @@ mpFlow::FEM::basis::${name}::${name}(
     }
 
     // calc coefficients
-    this->coefficients = math::gaussElemination<dtype::real, pointsPerElement>(A, b);
+    this->coefficients = math::gaussElemination<double, pointsPerElement>(A, b);
 }
 
 // evaluate basis function
@@ -63,17 +63,23 @@ ${integrateWithBasis}
 ${integrateGradientWithBasis}
 
 // integrate edge
-mpFlow::dtype::real mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
-    std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
-    dtype::real start, dtype::real end) {
+double mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
+    std::array<double, pointsPerEdge> nodes, dtype::index one,
+    double start, double end) {
     // calc coefficients for basis function
-    std::array<dtype::real, pointsPerEdge> coefficients;
-% for i in range(len(boundaryCoefficiens)):
+    std::array<double, pointsPerEdge> coefficients;
+% for i in range(len(boundaryCoefficiens) - 1):
     if (one == ${i}) {
     % for j in range(len(boundaryCoefficiens[i])):
         coefficients[${j}] = ${boundaryCoefficiens[i][j].expand()};
     % endfor
     }
+    else
 % endfor
+    {
+    % for j in range(len(boundaryCoefficiens[i])):
+        coefficients[${j}] = ${boundaryCoefficiens[i][j].expand()};
+    % endfor
+    }
     return ${integrateBoundaryEdge};
 }

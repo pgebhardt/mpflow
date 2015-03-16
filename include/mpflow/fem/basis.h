@@ -33,7 +33,7 @@ namespace basis {
     class Basis {
     // constructor and destructor
     protected:
-        Basis(std::array<std::tuple<dtype::real, dtype::real>, _pointsPerElement> points)
+        Basis(std::array<std::tuple<double, double>, _pointsPerElement> points)
             : nodes(points) {
             for (auto& coefficient : this->coefficients) {
                 coefficient = 0.0f;
@@ -48,61 +48,61 @@ namespace basis {
         static const dtype::size pointsPerElement = _pointsPerElement;
 
         // member
-        std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes;
-        std::array<dtype::real, pointsPerElement> coefficients;
+        std::array<std::tuple<double, double>, pointsPerElement> nodes;
+        std::array<double, pointsPerElement> coefficients;
     };
 
     // linear basis class definition
     class Linear : public Basis<2, 3> {
     public:
         // constructor
-        Linear(std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
+        Linear(std::array<std::tuple<double, double>, pointsPerElement> nodes,
             dtype::index one);
 
         // mathematical evaluation of basis
-        dtype::real integrateWithBasis(const std::shared_ptr<Linear> other);
-        dtype::real integrateGradientWithBasis(const std::shared_ptr<Linear> other);
-        static dtype::real integrateBoundaryEdge(
-            std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
-            dtype::real start, dtype::real end);
+        double integrateWithBasis(const std::shared_ptr<Linear> other);
+        double integrateGradientWithBasis(const std::shared_ptr<Linear> other);
+        static double integrateBoundaryEdge(
+            std::array<double, pointsPerEdge> nodes, dtype::index one,
+            double start, double end);
 
         // evaluation
-        dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
+        double evaluate(std::tuple<double, double> point);
     };
 
     // quadratic basis class definition
     class Quadratic : public Basis<3, 6> {
     public:
         // constructor
-        Quadratic(std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
+        Quadratic(std::array<std::tuple<double, double>, pointsPerElement> nodes,
             dtype::index one);
 
         // mathematical evaluation of basis
-        dtype::real integrateWithBasis(const std::shared_ptr<Quadratic> other);
-        dtype::real integrateGradientWithBasis(const std::shared_ptr<Quadratic> other);
-        static dtype::real integrateBoundaryEdge(
-            std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
-            dtype::real start, dtype::real end);
+        double integrateWithBasis(const std::shared_ptr<Quadratic> other);
+        double integrateGradientWithBasis(const std::shared_ptr<Quadratic> other);
+        static double integrateBoundaryEdge(
+            std::array<double, pointsPerEdge> nodes, dtype::index one,
+            double start, double end);
 
         // evaluation
-        dtype::real evaluate(std::tuple<dtype::real, dtype::real> point);
+        double evaluate(std::tuple<double, double> point);
     };
 
     // edge bases basis function definition
     class Edge : public Basis<1, 3> {
     public:
         // constructor
-        Edge(std::array<std::tuple<dtype::real, dtype::real>, Linear::pointsPerElement> nodes,
+        Edge(std::array<std::tuple<double, double>, Linear::pointsPerElement> nodes,
             std::tuple<dtype::index, dtype::index> edge);
 
         // mathematical evaluation of basis
-        dtype::real integrateWithBasis(const std::shared_ptr<Edge> other);
-        dtype::real integrateGradientWithBasis(const std::shared_ptr<Edge> other);
-        std::tuple<dtype::real, dtype::real> evaluate(std::tuple<dtype::real, dtype::real> point);
+        double integrateWithBasis(const std::shared_ptr<Edge> other);
+        double integrateGradientWithBasis(const std::shared_ptr<Edge> other);
+        std::tuple<double, double> evaluate(std::tuple<double, double> point);
 
         // member
         std::array<Linear, 2> nodeBasis;
-        dtype::real length;
+        double length;
     };
 }
 }

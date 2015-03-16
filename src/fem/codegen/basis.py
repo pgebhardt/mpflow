@@ -153,21 +153,21 @@ class Basis(object):
             evaluate=self.evaluate(
                 ['std::get<{}>(point)'.format(i) for i in range(2)],
                 this_coefficients,
-                dtype='mpFlow::dtype::real',
-                custom_args=['std::tuple<dtype::real, dtype::real> point'],
+                dtype='double',
+                custom_args=['std::tuple<double, double> point'],
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
                 ),
 
             # model integrals
             integrateWithBasis=self.integrateWithBasis(
                 points_args, this_coefficients, other_coefficients,
-                dtype='mpFlow::dtype::real',
+                dtype='double',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
                 ),
             integrateGradientWithBasis=self.integrateGradientWithBasis(
                 points_args, this_coefficients, other_coefficients,
-                dtype='mpFlow::dtype::real',
+                dtype='double',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
                 ),
@@ -250,21 +250,21 @@ class EdgeBasis(object):
             evaluate=self.evaluate(
                 ['std::get<{}>(point)'.format(i) for i in range(2)],
                 'this->length', ci1, ci2,
-                dtype='std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>',
-                custom_args=['std::tuple<dtype::real, dtype::real> point'],
+                dtype='std::tuple<double, double>',
+                custom_args=['std::tuple<double, double> point'],
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
                 ),
 
             # model integrals
             integrateWithBasis=self.integrateWithBasis(
                 points_args, 'this->length', 'other->length', ci1, ci2, cj1, cj2,
-                dtype='mpFlow::dtype::real',
+                dtype='double',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
                 ),
             integrateGradientWithBasis=self.integrateGradientWithBasis(
                 points_args, 'this->length', 'other->length', ci1, ci2, cj1, cj2,
-                dtype='mpFlow::dtype::real',
+                dtype='double',
                 custom_args=['const std::shared_ptr<{}> other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
                 ),

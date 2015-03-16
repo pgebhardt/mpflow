@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::Linear::Linear(
-    std::array<std::tuple<dtype::real, dtype::real>, pointsPerElement> nodes,
+    std::array<std::tuple<double, double>, pointsPerElement> nodes,
     dtype::index one)
     : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(nodes) {
     // check one
@@ -35,8 +35,8 @@ mpFlow::FEM::basis::Linear::Linear(
     }
 
     // calc coefficients with gauss
-    std::array<std::array<dtype::real, pointsPerElement>, pointsPerElement> A;
-    std::array<dtype::real, pointsPerElement> b;
+    std::array<std::array<double, pointsPerElement>, pointsPerElement> A;
+    std::array<double, pointsPerElement> b;
     for (dtype::index node = 0; node < pointsPerElement; ++node) {
         b[node] = 0.0;
     }
@@ -50,13 +50,13 @@ mpFlow::FEM::basis::Linear::Linear(
     }
 
     // calc coefficients
-    this->coefficients = math::gaussElemination<dtype::real, pointsPerElement>(A, b);
+    this->coefficients = math::gaussElemination<double, pointsPerElement>(A, b);
 }
 
 // evaluate basis function
 
-mpFlow::dtype::real mpFlow::FEM::basis::Linear::evaluate(
-    std::tuple<dtype::real, dtype::real> point
+double mpFlow::FEM::basis::Linear::evaluate(
+    std::tuple<double, double> point
     ) {
     return ({
 ((((std::get<0>(point))*(this->coefficients[1]))+((std::get<1>(point))*(this->coefficients[2])))+(this->coefficients[0]));
@@ -67,7 +67,7 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::evaluate(
 
 // integrate with basis
 
-mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateWithBasis(
+double mpFlow::FEM::basis::Linear::integrateWithBasis(
     const std::shared_ptr<Linear> other
     ) {
     return ({
@@ -79,7 +79,7 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateWithBasis(
 
 // integrate gradient with basis
 
-mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
+double mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
     const std::shared_ptr<Linear> other
     ) {
     return ({
@@ -90,11 +90,11 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
 
 
 // integrate edge
-mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
-    std::array<dtype::real, pointsPerEdge> nodes, dtype::index one,
-    dtype::real start, dtype::real end) {
+double mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
+    std::array<double, pointsPerEdge> nodes, dtype::index one,
+    double start, double end) {
     // calc coefficients for basis function
-    std::array<dtype::real, pointsPerEdge> coefficients;
+    std::array<double, pointsPerEdge> coefficients;
     if (one == 0) {
         coefficients[0] = ({
 ((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));
@@ -105,13 +105,14 @@ mpFlow::dtype::real mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
 })
 ;
     }
-    if (one == 1) {
+    else
+    {
         coefficients[0] = ({
-(((-1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
+((((1.0)*(nodes[0]))/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))))+(1.0));
 })
 ;
         coefficients[1] = ({
-((1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
+((-1.0)/(((-1.0)*(nodes[0]))+((1.0)*(nodes[1]))));
 })
 ;
     }
