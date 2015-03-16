@@ -81,6 +81,8 @@ namespace numeric {
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
             cudaStream_t stream=nullptr, char delimiter=' ');
 
+        // convert from and to eigen arrays
+
         // accessors
         const type& operator() (dtype::index i, dtype::index j) const {
             // check index

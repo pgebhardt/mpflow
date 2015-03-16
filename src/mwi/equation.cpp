@@ -40,7 +40,7 @@ mpFlow::MWI::Equation::Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
     this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dtype::complex>>(
         edges.size(), edges.size(), stream);
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
-        this->mesh->elements->rows, math::square(3), stream, 0.0, false);
+        this->mesh->elements.rows(), math::square(3), stream, 0.0, false);
 
     this->initElementalMatrices(stream);
     this->initJacobianCalculationMatrix(stream);
@@ -59,16 +59,11 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     std::vector<std::shared_ptr<numeric::SparseMatrix<dtype::complex>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
-    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
+    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
         // extract coordinats of node points of element
-        std::array<std::tuple<dtype::real, dtype::real>, 3> points;
-        dtype::index i = 0;
-        for (const auto& point : mesh->elementNodes(element)) {
-            points[i] = std::get<1>(point);
-            i++;
-        }
+        Eigen::ArrayXXd points = this->mesh->elementNodes(element);
 
         // set connectivity and elemental residual matrix elements
         for (dtype::index i = 0; i < 3; i++)
@@ -90,8 +85,11 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
                 element);
 
             // evaluate integral equations
-            auto basisI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
-            auto basisJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
+            Eigen::ArrayXi edgeI(2), edgeJ(2);
+            edgeI << std::get<0>(std::get<1>(localEdges[i])), std::get<1>(std::get<1>(localEdges[i]));
+            edgeJ << std::get<0>(std::get<1>(localEdges[j])), std::get<1>(std::get<1>(localEdges[j]));
+            auto basisI = std::make_shared<FEM::basis::Edge>(points, edgeI);
+            auto basisJ = std::make_shared<FEM::basis::Edge>(points, edgeJ);
 
             // set elemental system element
             elementalSMatrices[level]->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
@@ -110,7 +108,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     // determine nodes with common element
     auto commonElementMatrix = std::make_shared<numeric::SparseMatrix<dtype::complex>>(
         edges.size(), edges.size(), stream);
-    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
+    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
         for (dtype::index i = 0; i < 3; ++i)
@@ -137,7 +135,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
     for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
-        for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
+        for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
             auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
             for (dtype::index i = 0; i < 3; ++i)
@@ -159,7 +157,7 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
     this->elementalRMatrix->copyToDevice(stream);
 
     // update sMatrix only once
-    auto alpha = std::make_shared<numeric::Matrix<dtype::complex>>(this->mesh->elements->rows, 1, stream);
+    auto alpha = std::make_shared<numeric::Matrix<dtype::complex>>(this->mesh->elements.rows(), 1, stream);
     FEM::equation::updateMatrix<dtype::complex, false>(this->elementalSMatrix, alpha, this->connectivityMatrix,
         dtype::complex(1.0, 0.0), stream, this->sMatrix);
 }
@@ -172,27 +170,25 @@ void mpFlow::MWI::Equation::initJacobianCalculationMatrix(cudaStream_t stream) {
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dtype::real>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
-    for (dtype::index element = 0; element < this->mesh->elements->rows; ++element) {
+    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
         // extract coordinats of node points of element
-        std::array<std::tuple<dtype::real, dtype::real>, 3> points;
-        dtype::index i = 0;
-        for (const auto& point : mesh->elementNodes(element)) {
-            points[i] = std::get<1>(point);
-            i++;
-        }
+        Eigen::ArrayXXd points = this->mesh->elementNodes(element);
 
         // fill matrix
         for (dtype::index i = 0; i < 3; ++i)
         for (dtype::index j = 0; j < 3; ++j) {
             // evaluate integral equations
-            auto edgeI = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[i]));
-            auto edgeJ = std::make_shared<FEM::basis::Edge>(points, std::get<1>(localEdges[j]));
+            Eigen::ArrayXi edgeI(2), edgeJ(2);
+            edgeI << std::get<0>(std::get<1>(localEdges[i])), std::get<1>(std::get<1>(localEdges[i]));
+            edgeJ << std::get<0>(std::get<1>(localEdges[j])), std::get<1>(std::get<1>(localEdges[j]));
+            auto basisI = std::make_shared<FEM::basis::Edge>(points, edgeI);
+            auto basisJ = std::make_shared<FEM::basis::Edge>(points, edgeJ);
 
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i + j * 3) =
-                edgeI->integrateGradientWithBasis(edgeJ);
+                basisI->integrateGradientWithBasis(basisJ);
         }
     }
 

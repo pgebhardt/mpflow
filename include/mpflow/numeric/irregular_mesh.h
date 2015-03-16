@@ -28,48 +28,39 @@ namespace numeric {
     class IrregularMesh {
     public:
         // constructor
-        IrregularMesh(std::shared_ptr<Matrix<dtype::real>> nodes,
-            std::shared_ptr<Matrix<dtype::index>> elements,
-            std::shared_ptr<Matrix<dtype::index>> boundary, dtype::real radius,
-            dtype::real height);
+        IrregularMesh(Eigen::Ref<const Eigen::ArrayXXd> nodes,
+            Eigen::Ref<const Eigen::ArrayXXi> elements, Eigen::Ref<const Eigen::ArrayXXi> boundary,
+            double radius, double height);
 
         // helper methods
-        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
-            elementNodes(dtype::index element);
-        std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>>
-            boundaryNodes(dtype::index element);
+        Eigen::ArrayXXd elementNodes(unsigned element);
+        std::vector<std::tuple<unsigned, std::tuple<double, double>>>
+            boundaryNodes(unsigned element);
 
         // member
-        std::shared_ptr<Matrix<dtype::real>> nodes;
-        std::shared_ptr<Matrix<dtype::index>> elements;
-        std::shared_ptr<Matrix<dtype::index>> boundary;
-        dtype::real radius;
-        dtype::real height;
+        Eigen::ArrayXXd nodes;
+        Eigen::ArrayXXi elements;
+        Eigen::ArrayXXi boundary;
+        double radius;
+        double height;
     };
 
     // mesh helper
     namespace irregularMesh {
         // create mesh for quadratic basis function
         std::shared_ptr<mpFlow::numeric::IrregularMesh> quadraticBasis(
-            std::shared_ptr<Matrix<dtype::real>> nodes,
-            std::shared_ptr<Matrix<dtype::index>> elements,
-            std::shared_ptr<Matrix<dtype::index>> boundary,
-            dtype::real radius, dtype::real height, cudaStream_t stream);
+            Eigen::Ref<const Eigen::ArrayXXd> nodes, Eigen::Ref<const Eigen::ArrayXXi> elements,
+            Eigen::Ref<const Eigen::ArrayXXi> boundary, double radius, double height);
 
         // quadratic mesh from linear
-        std::tuple<
-            std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
-            std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
-            std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>> quadraticMeshFromLinear(
-            const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>> nodes_old,
-            const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements_old,
-            const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> boundary_old,
-            cudaStream_t stream);
+        std::tuple<Eigen::ArrayXXd, Eigen::ArrayXXi, Eigen::ArrayXXi> quadraticMeshFromLinear(
+            Eigen::Ref<const Eigen::ArrayXXd> nodes, Eigen::Ref<const Eigen::ArrayXXi> elements,
+            Eigen::Ref<const Eigen::ArrayXXi> boundary);
 
         std::tuple<
-            std::vector<std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>,
-            std::vector<std::array<std::tuple<mpFlow::dtype::index, std::tuple<mpFlow::dtype::index, mpFlow::dtype::index>>, 3>>>
-            calculateGlobalEdgeIndices(std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> elements);
+            std::vector<std::tuple<unsigned, unsigned>>,
+            std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>>>
+            calculateGlobalEdgeIndices(Eigen::Ref<const Eigen::ArrayXXi> elements);
     }
 }
 }

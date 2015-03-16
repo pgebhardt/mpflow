@@ -46,7 +46,7 @@ mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh> mesh,
 
     // create matrices
     this->dGamma = std::make_shared<numeric::Matrix<dtype::complex>>(
-        mesh->elements->rows, parallelImages, stream);
+        mesh->elements.rows(), parallelImages, stream);
     for (dtype::index image = 0; image < parallelImages; ++image) {
         this->measurement.push_back(std::make_shared<numeric::Matrix<dtype::complex>>(
             jacobian->rows, 1, stream, 0.0, false));

@@ -64,6 +64,7 @@ namespace FEM {
         std::shared_ptr<numeric::Matrix<dataType>> elementalRMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
+        std::shared_ptr<numeric::Matrix<unsigned>> meshElements;
         dataType referenceValue;
     };
 

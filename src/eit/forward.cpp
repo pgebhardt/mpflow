@@ -52,26 +52,26 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
 
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<
-        dataType, numeric::SparseMatrix>>(this->equation->mesh->nodes->rows,
+        dataType, numeric::SparseMatrix>>(this->equation->mesh->nodes.rows(),
         this->source->drivePattern->cols + this->source->measurementPattern->cols, stream);
 
     // create matrices
     this->result = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
     for (dtype::index component = 0; component < components; ++component) {
-        this->phi.push_back(std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes->rows,
+        this->phi.push_back(std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes.rows(),
             this->source->pattern->cols, stream));
     }
-    this->excitation = std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes->rows,
+    this->excitation = std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes.rows(),
         this->source->pattern->cols, stream);
     this->jacobian = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->dataCols * this->source->drivePattern->dataCols,
-        this->equation->mesh->elements->rows, stream, 0.0, false);
+        this->equation->mesh->elements.rows(), stream, 0.0, false);
 
     // TODO: To be moved to new BoundaryValues class
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols,
-        this->equation->mesh->nodes->rows, stream, 0.0, false);
+        this->equation->mesh->nodes.rows(), stream, 0.0, false);
 
     // apply mixed boundary conditions, if applicably
     if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
@@ -138,7 +138,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
 
         // solve linear system
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
-            this->excitation, this->equation->mesh->nodes->rows, nullptr, stream,
+            this->excitation, this->equation->mesh->nodes.rows(), nullptr, stream,
             this->phi[component], tolerance, (component == 0 &&
             this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) ? true : false);
 

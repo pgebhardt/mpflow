@@ -43,15 +43,15 @@ mpFlow::EIT::Solver<numericalSolverType>::Solver(
 
     // create inverse EIT
     this->inverseSolver = std::make_shared<solver::Inverse<dtype::real, numeric::ConjugateGradient>>(
-        equation->mesh->elements->rows, forwardSolver->result->dataRows *
+        equation->mesh->elements.rows(), forwardSolver->result->dataRows *
         forwardSolver->result->dataCols, parallelImages, regularizationFactor,
         handle, stream);
 
     // create matrices
     this->gamma = std::make_shared<numeric::Matrix<dtype::real>>(
-        equation->mesh->elements->rows, parallelImages, stream);
+        equation->mesh->elements.rows(), parallelImages, stream);
     this->dGamma = std::make_shared<numeric::Matrix<dtype::real>>(
-        equation->mesh->elements->rows, parallelImages, stream);
+        equation->mesh->elements.rows(), parallelImages, stream);
     for (dtype::index image = 0; image < parallelImages; ++image) {
         this->measurement.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
             source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
@@ -105,7 +105,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     // solve
     this->inverseSolver->solve(this->forwardSolver->jacobian,
         this->calculation, this->measurement,
-        this->forwardSolver->equation->mesh->elements->rows / 8,
+        this->forwardSolver->equation->mesh->elements.rows() / 8,
         handle, stream, this->dGamma);
 
     return this->dGamma;
@@ -142,7 +142,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
     std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> calculation(
         1, this->forwardSolver->result);
     this->inverseSolver->solve(this->forwardSolver->jacobian, calculation,
-        this->measurement, this->forwardSolver->equation->mesh->elements->rows / 8,
+        this->measurement, this->forwardSolver->equation->mesh->elements.rows() / 8,
         handle, stream, this->dGamma);
 
     // add to gamma
