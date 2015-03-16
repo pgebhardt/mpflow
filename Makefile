@@ -103,11 +103,6 @@ NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH) $(addprefix -Xcompiler
 LINKFLAGS := -fPIC -static-libstdc++
 LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS)) $(addprefix -Xlinker -rpath , $(LIBRARY_DIRS))
 
-# Use double precision floating points
-ifdef DOUBLE_PRECISION
-	COMMON_FLAGS += -DUSE_DOUBLE
-endif
-
 # Set compiler flags for debug configuration
 ifeq ($(DEBUG), 1)
 	COMMON_FLAGS += -g -O0 -DDEBUG
