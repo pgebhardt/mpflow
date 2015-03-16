@@ -43,7 +43,7 @@ mpFlow::numeric::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<t
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::init(dtype::size rows, dtype::size columns,
+void mpFlow::numeric::SparseMatrix<type>::init(unsigned rows, unsigned columns,
     cudaStream_t stream) {
     // check input
     if (rows == 0) {
@@ -78,7 +78,7 @@ void mpFlow::numeric::SparseMatrix<type>::init(dtype::size rows, dtype::size col
         throw std::logic_error("mpFlow::numeric::SparseMatrix::init: create device data memory");
     }
 
-    error = cudaMalloc((void**)&this->deviceColumnIds, sizeof(dtype::index) *
+    error = cudaMalloc((void**)&this->deviceColumnIds, sizeof(unsigned) *
         this->dataRows * sparseMatrix::block_size);
 
     CudaCheckError();
@@ -95,7 +95,7 @@ void mpFlow::numeric::SparseMatrix<type>::init(dtype::size rows, dtype::size col
         throw std::logic_error("mpFlow::numeric::SparseMatrix::init: create host data memory");
     }
 
-    error = cudaHostAlloc((void**)&this->hostColumnIds, sizeof(dtype::index) *
+    error = cudaHostAlloc((void**)&this->hostColumnIds, sizeof(unsigned) *
         this->dataRows * sparseMatrix::block_size, cudaHostAllocDefault);
 
     CudaCheckError();
@@ -104,10 +104,10 @@ void mpFlow::numeric::SparseMatrix<type>::init(dtype::size rows, dtype::size col
     }
 
     // fill matrix with default data
-    for (dtype::index row = 0; row < this->dataRows; ++row)
-    for (dtype::index col = 0; col < sparseMatrix::block_size; ++col) {
+    for (unsigned row = 0; row < this->dataRows; ++row)
+    for (unsigned col = 0; col < sparseMatrix::block_size; ++col) {
         this->hostValues[row * sparseMatrix::block_size + col] = 0.0f;
-        this->hostColumnIds[row * sparseMatrix::block_size + col] = dtype::invalid_index;
+        this->hostColumnIds[row * sparseMatrix::block_size + col] = constants::invalid_index;
     }
     this->copyToDevice(stream);
     cudaStreamSynchronize(stream);
@@ -151,7 +151,7 @@ void mpFlow::numeric::SparseMatrix<type>::copy(const std::shared_ptr<SparseMatri
             cudaMemcpyDeviceToDevice, stream));
     CudaSafeCall(
         cudaMemcpyAsync(this->deviceColumnIds, other->deviceColumnIds,
-            sizeof(dtype::index) * this->dataRows * sparseMatrix::block_size,
+            sizeof(unsigned) * this->dataRows * sparseMatrix::block_size,
             cudaMemcpyDeviceToDevice, stream));
 
     CudaCheckError();
@@ -169,7 +169,7 @@ void mpFlow::numeric::SparseMatrix<type>::copyToDevice(cudaStream_t stream) {
             cudaMemcpyHostToDevice, stream));
     CudaSafeCall(
         cudaMemcpyAsync(this->deviceColumnIds, this->hostColumnIds,
-            sizeof(dtype::index) * this->dataRows * sparseMatrix::block_size,
+            sizeof(unsigned) * this->dataRows * sparseMatrix::block_size,
             cudaMemcpyHostToDevice, stream));
 
     CudaCheckError();
@@ -187,7 +187,7 @@ void mpFlow::numeric::SparseMatrix<type>::copyToHost(cudaStream_t stream) {
             cudaMemcpyDeviceToHost, stream));
     CudaSafeCall(
         cudaMemcpyAsync(this->hostColumnIds, this->deviceColumnIds,
-            sizeof(dtype::index) * this->dataRows * sparseMatrix::block_size,
+            sizeof(unsigned) * this->dataRows * sparseMatrix::block_size,
             cudaMemcpyDeviceToHost, stream));
 
     CudaCheckError();
@@ -205,8 +205,8 @@ void mpFlow::numeric::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<t
     }
 
     // create elementCount matrix
-    auto elementCount = std::make_shared<Matrix<dtype::index>>(this->dataRows, 1, stream);
-    auto maxCount = std::make_shared<Matrix<dtype::index>>(this->dataRows, 1, stream);
+    auto elementCount = std::make_shared<Matrix<unsigned>>(this->dataRows, 1, stream);
+    auto maxCount = std::make_shared<Matrix<unsigned>>(this->dataRows, 1, stream);
 
     // execute kernel
     sparseMatrixKernel::convert(this->dataRows / matrix::block_size,
@@ -277,15 +277,15 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<
 template <
     class type
 >
-mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtype::index row, dtype::index col) const {
+unsigned mpFlow::numeric::SparseMatrix<type>::getColumnId(unsigned row, unsigned col) const {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
         throw std::logic_error("mpFlow::numeric::SparseMatrix::getColumnId(): index out of range");
     }
 
     // find index in column ids
-    dtype::index columnId = dtype::invalid_index;
-    for (dtype::index i = 0; i < sparseMatrix::block_size; ++i) {
+    unsigned columnId = constants::invalid_index;
+    for (unsigned i = 0; i < sparseMatrix::block_size; ++i) {
         if (this->hostColumnIds[row * sparseMatrix::block_size + i] == col) {
             columnId = i;
             break;
@@ -298,12 +298,12 @@ mpFlow::dtype::index mpFlow::numeric::SparseMatrix<type>::getColumnId(dtype::ind
 template <
     class type
 >
-type mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::index col) const {
+type mpFlow::numeric::SparseMatrix<type>::getValue(unsigned row, unsigned col) const {
     // get column id
-    dtype::index columnId = this->getColumnId(row, col);
+    unsigned columnId = this->getColumnId(row, col);
 
-    if (columnId == dtype::invalid_index) {
-        return 0.0f;
+    if (columnId == constants::invalid_index) {
+        return type(0);
     }
     else {
         return this->hostValues[row * sparseMatrix::block_size + columnId];
@@ -313,20 +313,20 @@ type mpFlow::numeric::SparseMatrix<type>::getValue(dtype::index row, dtype::inde
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::setValue(dtype::index row, dtype::index col, const type& value) {
+void mpFlow::numeric::SparseMatrix<type>::setValue(unsigned row, unsigned col, const type& value) {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
         throw std::logic_error("mpFlow::numeric::SparseMatrix::setValue(): index out of range");
     }
 
     // find index in column ids
-    dtype::index columnId = dtype::invalid_index;
-    for (dtype::index i = 0; i < sparseMatrix::block_size; ++i) {
+    unsigned columnId = constants::invalid_index;
+    for (unsigned i = 0; i < sparseMatrix::block_size; ++i) {
         if (this->hostColumnIds[row * sparseMatrix::block_size + i] == col) {
             columnId = i;
             break;
         }
-        else if (this->hostColumnIds[row * sparseMatrix::block_size + i] == dtype::invalid_index) {
+        else if (this->hostColumnIds[row * sparseMatrix::block_size + i] == constants::invalid_index) {
             columnId = i;
             this->hostColumnIds[row * sparseMatrix::block_size + i] = col;
             this->density = std::max(this->density, i + 1);
@@ -345,5 +345,5 @@ template class mpFlow::numeric::SparseMatrix<float>;
 template class mpFlow::numeric::SparseMatrix<double>;
 template class mpFlow::numeric::SparseMatrix<thrust::complex<float>>;
 template class mpFlow::numeric::SparseMatrix<thrust::complex<double>>;
-template class mpFlow::numeric::SparseMatrix<mpFlow::dtype::index>;
-template class mpFlow::numeric::SparseMatrix<Eigen::ArrayXXi::Scalar>;
+template class mpFlow::numeric::SparseMatrix<unsigned>;
+template class mpFlow::numeric::SparseMatrix<int>;

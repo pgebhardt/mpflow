@@ -30,7 +30,7 @@ namespace numeric {
         >
         void updateVector(dim3 blocks, dim3 threads, cudaStream_t stream,
             const dataType* x1, const double sign, const dataType* x2,
-            const dataType* scalar, dtype::size rows, dataType* result);
+            const dataType* scalar, unsigned rows, dataType* result);
     }
 }
 }

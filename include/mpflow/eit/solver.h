@@ -31,26 +31,26 @@ namespace EIT {
     public:
         // constructor
         Solver(std::shared_ptr<EIT::ForwardSolver<>::equationType> equation,
-            std::shared_ptr<FEM::SourceDescriptor<dtype::real>> source, dtype::index components,
-            dtype::index parallelImages, dtype::real regularizationFactor,
+            std::shared_ptr<FEM::SourceDescriptor<float>> source, unsigned components,
+            unsigned parallelImages, double regularizationFactor,
             cublasHandle_t handle, cudaStream_t stream);
 
         // pre solve for accurate initial jacobian
         void preSolve(cublasHandle_t handle, cudaStream_t stream);
 
         // solving
-        std::shared_ptr<numeric::Matrix<dtype::real>> solveDifferential(
+        std::shared_ptr<numeric::Matrix<float>> solveDifferential(
             cublasHandle_t handle, cudaStream_t stream);
-        std::shared_ptr<numeric::Matrix<dtype::real>> solveAbsolute(cublasHandle_t handle,
+        std::shared_ptr<numeric::Matrix<float>> solveAbsolute(cublasHandle_t handle,
             cudaStream_t stream);
 
         // member
         std::shared_ptr<ForwardSolver<numericalSolverType>> forwardSolver;
-        std::shared_ptr<solver::Inverse<dtype::real, numeric::ConjugateGradient>> inverseSolver;
-        std::shared_ptr<numeric::Matrix<dtype::real>> gamma;
-        std::shared_ptr<numeric::Matrix<dtype::real>> dGamma;
-        std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> measurement;
-        std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> calculation;
+        std::shared_ptr<solver::Inverse<float, numeric::ConjugateGradient>> inverseSolver;
+        std::shared_ptr<numeric::Matrix<float>> gamma;
+        std::shared_ptr<numeric::Matrix<float>> dGamma;
+        std::vector<std::shared_ptr<numeric::Matrix<float>>> measurement;
+        std::vector<std::shared_ptr<numeric::Matrix<float>>> calculation;
     };
 }
 }

@@ -36,13 +36,13 @@ mpFlow::FEM::basis::${name}::${name}(
     // calc coefficients with gauss
     std::array<std::array<double, pointsPerElement>, pointsPerElement> A;
     std::array<double, pointsPerElement> b;
-    for (dtype::index node = 0; node < pointsPerElement; ++node) {
+    for (unsigned node = 0; node < pointsPerElement; ++node) {
         b[node] = 0.0;
     }
     b[one] = 1.0;
 
     // fill coefficients
-    for (dtype::index node = 0; node < pointsPerElement; ++node) {
+    for (unsigned node = 0; node < pointsPerElement; ++node) {
 % for i in range(len(coefficients)):
         A[node][${i}] = ${coefficients[i]};
 % endfor

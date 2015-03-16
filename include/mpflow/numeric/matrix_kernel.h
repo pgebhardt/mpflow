@@ -31,63 +31,63 @@ namespace numeric {
             class type
         >
         void fill(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type value, dtype::size rows, type* result);
+            const type value, unsigned rows, type* result);
 
         // add kernel
         template <
             class type
         >
         void add(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* matrix, dtype::size rows, type* result);
+            const type* matrix, unsigned rows, type* result);
 
         // scale kernel
         template <
             class type
         >
         void scale(dim3 blocks, dim3 threads, cudaStream_t stream,
-            type scalar, dtype::size rows, type* result);
+            type scalar, unsigned rows, type* result);
 
         // elementwise multiply kernel
         template <
             class type
         >
         void elementwiseMultiply(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* a, const type* b, dtype::size rows, type* result);
+            const type* a, const type* b, unsigned rows, type* result);
 
         // elementwise division kernel
         template <
             class type
         >
         void elementwiseDivision(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* a, const type* b, dtype::size rows, type* result);
+            const type* a, const type* b, unsigned rows, type* result);
 
         // vectorDotProduct kernel
         template <
             class type
         >
         void vectorDotProduct(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* a, const type* b, dtype::size rows, type* result);
+            const type* a, const type* b, unsigned rows, type* result);
 
         // sum kernel
         template <
             class type
         >
         void sum(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* vector, dtype::size rows, dtype::size offset, type* result);
+            const type* vector, unsigned rows, unsigned offset, type* result);
 
         // min kernel
         template <
             class type
         >
         void min(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* vector, dtype::size rows, dtype::size offset, type* result);
+            const type* vector, unsigned rows, unsigned offset, type* result);
 
         // max kernel
         template <
             class type
         >
         void max(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* vector, dtype::size rows, dtype::size offset, type* result);
+            const type* vector, unsigned rows, unsigned offset, type* result);
     }
 }
 }

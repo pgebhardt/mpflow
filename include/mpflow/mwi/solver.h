@@ -28,21 +28,21 @@ namespace MWI {
     public:
         // constructor
         Solver(std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<numeric::Matrix<dtype::complex>> jacobian,
-            dtype::index parallelImages, dtype::real regularizationFactor,
+            std::shared_ptr<numeric::Matrix<thrust::complex<float>>> jacobian,
+            unsigned parallelImages, double regularizationFactor,
             cublasHandle_t handle, cudaStream_t stream);
 
         // solving
-        std::shared_ptr<numeric::Matrix<dtype::complex>> solveDifferential(
+        std::shared_ptr<numeric::Matrix<thrust::complex<float>>> solveDifferential(
             cublasHandle_t handle, cudaStream_t stream);
 
         // member
-        std::shared_ptr<solver::Inverse<dtype::complex, numeric::ConjugateGradient>> inverseSolver;
+        std::shared_ptr<solver::Inverse<thrust::complex<float>, numeric::ConjugateGradient>> inverseSolver;
         std::shared_ptr<numeric::IrregularMesh> mesh;
-        std::shared_ptr<numeric::Matrix<dtype::complex>> jacobian;
-        std::shared_ptr<numeric::Matrix<dtype::complex>> dGamma;
-        std::vector<std::shared_ptr<numeric::Matrix<dtype::complex>>> measurement;
-        std::vector<std::shared_ptr<numeric::Matrix<dtype::complex>>> calculation;
+        std::shared_ptr<numeric::Matrix<thrust::complex<float>>> jacobian;
+        std::shared_ptr<numeric::Matrix<thrust::complex<float>>> dGamma;
+        std::vector<std::shared_ptr<numeric::Matrix<thrust::complex<float>>>> measurement;
+        std::vector<std::shared_ptr<numeric::Matrix<thrust::complex<float>>>> calculation;
     };
 }
 }

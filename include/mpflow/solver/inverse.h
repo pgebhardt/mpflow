@@ -36,7 +36,7 @@ namespace solver {
         };
 
         // constructor
-        Inverse(dtype::size elementCount, dtype::size measurementCount, dtype::index parallelImages,
+        Inverse(unsigned elementCount, unsigned measurementCount, unsigned parallelImages,
             dataType regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
 
     public:
@@ -45,7 +45,7 @@ namespace solver {
             const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
             const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
             const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement,
-            dtype::size steps, cublasHandle_t handle, cudaStream_t stream,
+            unsigned steps, cublasHandle_t handle, cudaStream_t stream,
             std::shared_ptr<numeric::Matrix<dataType>> gamma);
 
         // calc system matrix

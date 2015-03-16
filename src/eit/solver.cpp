@@ -26,8 +26,8 @@ template <
 >
 mpFlow::EIT::Solver<numericalSolverType>::Solver(
     std::shared_ptr<EIT::ForwardSolver<>::equationType> equation,
-    std::shared_ptr<FEM::SourceDescriptor<dtype::real>> source, dtype::index components,
-    dtype::index parallelImages, dtype::real regularizationFactor,
+    std::shared_ptr<FEM::SourceDescriptor<float>> source, unsigned components,
+    unsigned parallelImages, double regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
     if (equation == nullptr) {
@@ -42,20 +42,20 @@ mpFlow::EIT::Solver<numericalSolverType>::Solver(
         equation, source, components, handle, stream);
 
     // create inverse EIT
-    this->inverseSolver = std::make_shared<solver::Inverse<dtype::real, numeric::ConjugateGradient>>(
+    this->inverseSolver = std::make_shared<solver::Inverse<float, numeric::ConjugateGradient>>(
         equation->mesh->elements.rows(), forwardSolver->result->dataRows *
         forwardSolver->result->dataCols, parallelImages, regularizationFactor,
         handle, stream);
 
     // create matrices
-    this->gamma = std::make_shared<numeric::Matrix<dtype::real>>(
+    this->gamma = std::make_shared<numeric::Matrix<float>>(
         equation->mesh->elements.rows(), parallelImages, stream);
-    this->dGamma = std::make_shared<numeric::Matrix<dtype::real>>(
+    this->dGamma = std::make_shared<numeric::Matrix<float>>(
         equation->mesh->elements.rows(), parallelImages, stream);
-    for (dtype::index image = 0; image < parallelImages; ++image) {
-        this->measurement.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
+    for (unsigned image = 0; image < parallelImages; ++image) {
+        this->measurement.push_back(std::make_shared<numeric::Matrix<float>>(
             source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
-        this->calculation.push_back(std::make_shared<numeric::Matrix<dtype::real>>(
+        this->calculation.push_back(std::make_shared<numeric::Matrix<float>>(
             source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
     }
 }
@@ -77,7 +77,7 @@ void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
 
     // calc system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<dtype::real, numeric::ConjugateGradient>::RegularizationType::square,
+        solver::Inverse<float, numeric::ConjugateGradient>::RegularizationType::square,
         handle, stream);
 
     // set measurement and calculation to initial value of forward EIT
@@ -93,7 +93,7 @@ void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
 template <
     template <class, template <class> class> class numericalSolverType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
+std::shared_ptr<mpFlow::numeric::Matrix<float>>
     mpFlow::EIT::Solver<numericalSolverType>::solveDifferential(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input
@@ -115,7 +115,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 template <
     template <class, template <class> class> class numericalSolverType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
+std::shared_ptr<mpFlow::numeric::Matrix<float>>
     mpFlow::EIT::Solver<numericalSolverType>::solveAbsolute(
     cublasHandle_t handle, cudaStream_t stream) {
     // only execute method, when parallel_images == 1
@@ -135,11 +135,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>
 
     // calc inverse system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<dtype::real, numeric::ConjugateGradient>::RegularizationType::square,
+        solver::Inverse<float, numeric::ConjugateGradient>::RegularizationType::square,
         handle, stream);
 
     // solve inverse
-    std::vector<std::shared_ptr<numeric::Matrix<dtype::real>>> calculation(
+    std::vector<std::shared_ptr<numeric::Matrix<float>>> calculation(
         1, this->forwardSolver->result);
     this->inverseSolver->solve(this->forwardSolver->jacobian, calculation,
         this->measurement, this->forwardSolver->equation->mesh->elements.rows() / 8,

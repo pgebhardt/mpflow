@@ -26,7 +26,7 @@ namespace EIT {
     // forward solver class definition
     template <
         template <class, template <class> class> class numericalSolverType = numeric::ConjugateGradient,
-        class equationType_ = FEM::Equation<dtype::real, FEM::basis::Linear, true>
+        class equationType_ = FEM::Equation<float, FEM::basis::Linear, true>
     >
     class ForwardSolver {
     public:
@@ -36,13 +36,13 @@ namespace EIT {
         // initialization
         ForwardSolver(std::shared_ptr<equationType> equation,
             std::shared_ptr<FEM::SourceDescriptor<dataType>> source,
-            dtype::index components, cublasHandle_t handle, cudaStream_t stream);
+            unsigned components, cublasHandle_t handle, cudaStream_t stream);
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dataType>> solve(
             const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-            cublasHandle_t handle, cudaStream_t stream, dtype::real tolerance=1e-6,
-            dtype::index* steps=nullptr);
+            cublasHandle_t handle, cudaStream_t stream, double tolerance=1e-6,
+            unsigned* steps=nullptr);
 
         // helper methods
         void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dataType>> source,

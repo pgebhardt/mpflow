@@ -21,11 +21,11 @@
 #include "mpflow/mpflow.h"
 
 // convert kartesian to polar coordinates
-std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>
-    mpFlow::math::polar(std::tuple<dtype::real, dtype::real> point) {
+std::tuple<double, double>
+    mpFlow::math::polar(std::tuple<double, double> point) {
     // calc radius
-    dtype::real angle = 0.0f;
-    dtype::real radius = sqrt(square(std::get<0>(point)) + square(std::get<1>(point)));
+    double angle = 0.0f;
+    double radius = sqrt(square(std::get<0>(point)) + square(std::get<1>(point)));
 
     // calc angle
     if (std::get<0>(point) > 0.0f) {
@@ -51,20 +51,20 @@ std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>
 }
 
 // convert polar to kartesian coordinates
-std::tuple<mpFlow::dtype::real, mpFlow::dtype::real>
-    mpFlow::math::kartesian(std::tuple<dtype::real, dtype::real> point) {
-    dtype::real x = std::get<0>(point) * cos(std::get<1>(point));
-    dtype::real y = std::get<0>(point) * sin(std::get<1>(point));
+std::tuple<double, double>
+    mpFlow::math::kartesian(std::tuple<double, double> point) {
+    double x = std::get<0>(point) * cos(std::get<1>(point));
+    double y = std::get<0>(point) * sin(std::get<1>(point));
 
     return std::make_tuple(x, y);
 }
 
 // calc circle parameter
-mpFlow::dtype::real mpFlow::math::circleParameter(
-    std::tuple<dtype::real, dtype::real> point, dtype::real offset) {
+double mpFlow::math::circleParameter(
+    std::tuple<double, double> point, double offset) {
     // convert to polar coordinates
-    std::tuple<dtype::real, dtype::real> polar_point = polar(point);
-    dtype::real angle = std::get<1>(polar_point);
+    std::tuple<double, double> polar_point = polar(point);
+    double angle = std::get<1>(polar_point);
 
     // correct angle
     angle -= offset / std::get<0>(polar_point);

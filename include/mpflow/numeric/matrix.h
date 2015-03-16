@@ -29,19 +29,19 @@ namespace numeric {
 
     // matrix class definition
     template <
-        class type_ = dtype::real
+        class type_
     >
     class Matrix {
     public:
         typedef type_ type;
 
         // constructor and destructor
-        Matrix(dtype::size rows, dtype::size cols, cudaStream_t stream=nullptr,
+        Matrix(unsigned rows, unsigned cols, cudaStream_t stream=nullptr,
             type value=0, bool allocateHostMemory=true);
         virtual ~Matrix();
 
         // create special matrices
-        static std::shared_ptr<Matrix<type>> eye(dtype::size size,
+        static std::shared_ptr<Matrix<type>> eye(unsigned size,
             cudaStream_t stream=nullptr);
 
         // copy methods
@@ -84,7 +84,7 @@ namespace numeric {
         // convert from and to eigen arrays
 
         // accessors
-        const type& operator() (dtype::index i, dtype::index j) const {
+        const type& operator() (unsigned i, unsigned j) const {
             // check index
             if (this->hostData == nullptr) {
                 throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
@@ -97,7 +97,7 @@ namespace numeric {
         }
 
         // mutators
-        type& operator() (dtype::index i, dtype::index j) {
+        type& operator() (unsigned i, unsigned j) {
             // check index
             if (this->hostData == nullptr) {
                 throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
@@ -111,10 +111,10 @@ namespace numeric {
 
         type* hostData;
         type* deviceData;
-        dtype::size rows;
-        dtype::size cols;
-        dtype::size dataRows;
-        dtype::size dataCols;
+        unsigned rows;
+        unsigned cols;
+        unsigned dataRows;
+        unsigned dataCols;
     };
 
     // namespace matrix

@@ -25,8 +25,8 @@ template <
     class dataType,
     template <class, template <class> class> class numericalSolverType
 >
-mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(dtype::size elementCount,
-    dtype::size measurementCount, dtype::index parallelImages,
+mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned elementCount,
+    unsigned measurementCount, unsigned parallelImages,
     dataType regularizationFactor, cublasHandle_t handle, cudaStream_t stream)
     : regularizationFactor(regularizationFactor) {
     // check input
@@ -96,7 +96,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcSystemMatrix(
     else {
         auto diag = std::make_shared<numeric::Matrix<dataType>>(this->systemMatrix->rows,
             this->systemMatrix->cols, stream);
-        for (dtype::index row = 0; row < diag->rows; ++row) {
+        for (unsigned row = 0; row < diag->rows; ++row) {
             (*diag)(row, row) = this->regularizationFactor;
         }
         diag->copyToDevice(stream);
@@ -127,7 +127,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
     cublasSetStream(handle, stream);
 
     // copy measuredVoltage to dVoltage
-    for (dtype::index image = 0; image < this->numericalSolver->cols; ++image) {
+    for (unsigned image = 0; image < this->numericalSolver->cols; ++image) {
         if (numeric::cublasWrapper<dataType>::copy(handle, this->difference->dataRows,
             measurement[image]->deviceData, 1,
             (dataType*)(this->difference->deviceData + image * this->difference->dataRows), 1)
@@ -167,7 +167,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<dataType>>
     mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
     const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
-    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement, dtype::size steps,
+    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement, unsigned steps,
     cublasHandle_t handle, cudaStream_t stream,
     std::shared_ptr<numeric::Matrix<dataType>> gamma) {
     // check input
@@ -195,5 +195,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<dataType>>
 }
 
 // specialisation
-template class mpFlow::solver::Inverse<mpFlow::dtype::real, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Inverse<mpFlow::dtype::complex, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Inverse<float, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Inverse<double, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Inverse<thrust::complex<float>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Inverse<thrust::complex<double>, mpFlow::numeric::ConjugateGradient>;

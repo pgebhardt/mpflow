@@ -28,7 +28,7 @@ template <
 >
 mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     std::shared_ptr<equationType> equation,
-    std::shared_ptr<FEM::SourceDescriptor<dataType>> source, dtype::index components,
+    std::shared_ptr<FEM::SourceDescriptor<dataType>> source, unsigned components,
     cublasHandle_t handle, cudaStream_t stream)
     : equation(equation), source(source) {
     // check input
@@ -58,7 +58,7 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     // create matrices
     this->result = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
-    for (dtype::index component = 0; component < components; ++component) {
+    for (unsigned component = 0; component < components; ++component) {
         this->phi.push_back(std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes.rows(),
             this->source->pattern->cols, stream));
     }
@@ -103,7 +103,7 @@ template <
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
     mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::solve(
     const std::shared_ptr<numeric::Matrix<dataType>> gamma, cublasHandle_t handle,
-    cudaStream_t stream, dtype::real tolerance, dtype::index* steps) {
+    cudaStream_t stream, double tolerance, unsigned* steps) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
@@ -113,8 +113,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
     }
 
     // calculate common excitation for all 2.5D model components
-    dtype::index totalSteps = 0;
-    for (dtype::index component = 0; component < this->phi.size(); ++component) {
+    unsigned totalSteps = 0;
+    for (unsigned component = 0; component < this->phi.size(); ++component) {
         // 2.5D model constants
         dataType alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
         dataType beta = component == 0 ? (1.0 / this->equation->mesh->height) :
@@ -236,18 +236,34 @@ void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
 
 // specialisation
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
-    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, true>>;
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
-    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>>;
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
-    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, true>>;
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
-    mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>>;
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
-    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, true>>;
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
-    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, false>>;
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
-    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, true>>;
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>;
 template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
-    mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, false>>;
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>;

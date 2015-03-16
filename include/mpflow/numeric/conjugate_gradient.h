@@ -32,17 +32,17 @@ namespace numeric {
     class ConjugateGradient {
     public:
         // constructor
-        ConjugateGradient(dtype::size rows, dtype::size columns, cudaStream_t stream);
+        ConjugateGradient(unsigned rows, unsigned columns, cudaStream_t stream);
 
         // solve system
-        dtype::index solve(const std::shared_ptr<matrixType<dataType>> A,
-            const std::shared_ptr<Matrix<dataType>> f, const dtype::size iterations,
+        unsigned solve(const std::shared_ptr<matrixType<dataType>> A,
+            const std::shared_ptr<Matrix<dataType>> f, const unsigned iterations,
             cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
             const double tolerance=0.0, bool dcFree=false);
 
         // member
-        dtype::size rows;
-        dtype::size cols;
+        unsigned rows;
+        unsigned cols;
         std::shared_ptr<Matrix<dataType>> r;
         std::shared_ptr<Matrix<dataType>> p;
         std::shared_ptr<Matrix<dataType>> roh;
@@ -57,7 +57,7 @@ namespace numeric {
             class dataType
         >
         void addScalar(const std::shared_ptr<Matrix<dataType>> scalar,
-            dtype::size rows, dtype::size columns, cudaStream_t stream,
+            unsigned rows, unsigned columns, cudaStream_t stream,
             std::shared_ptr<Matrix<dataType>> vector);
 
         template <

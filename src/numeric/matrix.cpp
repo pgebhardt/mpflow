@@ -33,7 +33,7 @@
 template <
     class type
 >
-mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
+mpFlow::numeric::Matrix<type>::Matrix(unsigned rows, unsigned cols,
     cudaStream_t stream, type value, bool allocateHostMemory)
     : hostData(nullptr), deviceData(nullptr), rows(rows), cols(cols), dataRows(rows), dataCols(cols) {
     // check input
@@ -75,8 +75,8 @@ mpFlow::numeric::Matrix<type>::Matrix(dtype::size rows, dtype::size cols,
         }
 
         // init data with default value
-        for (dtype::size row = 0; row < this->dataRows; ++row)
-        for (dtype::size col = 0; col < this->dataCols; ++col) {
+        for (unsigned row = 0; row < this->dataRows; ++row)
+        for (unsigned col = 0; col < this->dataCols; ++col) {
             this->hostData[row + this->dataRows * col] = value;
         }
         this->copyToDevice(stream);
@@ -108,9 +108,9 @@ template <
     class type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<type>>
-    mpFlow::numeric::Matrix<type>::eye(dtype::size size, cudaStream_t stream) {
+    mpFlow::numeric::Matrix<type>::eye(unsigned size, cudaStream_t stream) {
     auto matrix = std::make_shared<Matrix<type>>(size, size, stream);
-    for (dtype::index i = 0; i < size; ++i) {
+    for (unsigned i = 0; i < size; ++i) {
         (*matrix)(i, i) = 1;
     }
     matrix->copyToDevice(stream);
@@ -322,7 +322,7 @@ void mpFlow::numeric::Matrix<type>::elementwiseMultiply(const std::shared_ptr<Ma
     }
 
     // get minimum colums
-    dtype::size columns = std::min(std::min(this->dataCols,
+    unsigned columns = std::min(std::min(this->dataCols,
         A->dataCols), B->dataCols);
 
     // kernel dimension
@@ -358,7 +358,7 @@ void mpFlow::numeric::Matrix<type>::elementwiseDivision(const std::shared_ptr<Ma
     }
 
     // get minimum colums
-    dtype::size columns = std::min(std::min(this->dataCols,
+    unsigned columns = std::min(std::min(this->dataCols,
         A->dataCols), B->dataCols);
 
     // kernel dimension
@@ -394,7 +394,7 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matri
     }
 
     // get minimum colums
-    dtype::size columns = std::min(std::min(this->dataCols,
+    unsigned columns = std::min(std::min(this->dataCols,
         A->dataCols), B->dataCols);
 
     // kernel dimension
@@ -430,14 +430,14 @@ void mpFlow::numeric::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> valu
     }
 
     // get minimum columns
-    dtype::size columns = std::min(this->dataCols, value->dataCols);
+    unsigned columns = std::min(this->dataCols, value->dataCols);
 
     // kernel settings
     dim3 blocks(this->dataRows / matrix::block_size,
         columns == 1 ? 1 : columns / matrix::block_size);
     dim3 threads(matrix::block_size,
         columns == 1 ? 1 : matrix::block_size);
-    dtype::size offset = 1;
+    unsigned offset = 1;
 
     // start kernel once
     matrixKernel::sum<type>(blocks, threads, stream, value->deviceData,
@@ -474,8 +474,8 @@ void mpFlow::numeric::Matrix<type>::min(const std::shared_ptr<Matrix<type>> valu
     }
 
     // kernel settings
-    dtype::size blocks = this->dataRows / matrix::block_size;
-    dtype::size offset = 1;
+    unsigned blocks = this->dataRows / matrix::block_size;
+    unsigned offset = 1;
 
     // start kernel once
     matrixKernel::min<type>(blocks, matrix::block_size, stream,
@@ -527,8 +527,8 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
     }
 
     // kernel settings
-    dtype::size blocks = this->dataRows / matrix::block_size;
-    dtype::size offset = 1;
+    unsigned blocks = this->dataRows / matrix::block_size;
+    unsigned offset = 1;
 
     // start kernel once
     matrixKernel::max<type>(blocks, matrix::block_size, stream,
@@ -577,8 +577,8 @@ void mpFlow::numeric::Matrix<type>::savetxt(std::ostream* ostream, char delimite
     }
 
     // write data
-    for (dtype::index row = 0; row < this->rows; ++row) {
-        for (dtype::index column = 0; column < this->cols - 1; ++column) {
+    for (unsigned row = 0; row < this->rows; ++row) {
+        for (unsigned column = 0; column < this->cols - 1; ++column) {
             *ostream << (*this)(row, column) << delimiter;
         }
         *ostream << (*this)(row, this->cols - 1) << std::endl;
@@ -599,8 +599,8 @@ namespace numeric {
         }
 
         // write data
-        for (dtype::index row = 0; row < this->rows; ++row) {
-            for (dtype::index column = 0; column < this->cols - 1; ++column) {
+        for (unsigned row = 0; row < this->rows; ++row) {
+            for (unsigned column = 0; column < this->cols - 1; ++column) {
                 *ostream << (*this)(row, column).real() << delimiter;
                 *ostream << (*this)(row, column).imag() << delimiter;
             }
@@ -620,8 +620,8 @@ namespace numeric {
         }
 
         // write data
-        for (dtype::index row = 0; row < this->rows; ++row) {
-            for (dtype::index column = 0; column < this->cols - 1; ++column) {
+        for (unsigned row = 0; row < this->rows; ++row) {
+            for (unsigned column = 0; column < this->cols - 1; ++column) {
                 *ostream << (*this)(row, column).real() << delimiter;
                 *ostream << (*this)(row, column).imag() << delimiter;
             }
@@ -713,8 +713,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
     auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
 
     // add values
-    for (dtype::index row = 0; row < matrix->rows; ++row) {
-        for (dtype::index column = 0; column < matrix->cols; ++column) {
+    for (unsigned row = 0; row < matrix->rows; ++row) {
+        for (unsigned column = 0; column < matrix->cols; ++column) {
             (*matrix)(row, column) = values[row][column];
         }
     }
@@ -743,8 +743,8 @@ namespace numeric {
         auto complexMatrix = std::make_shared<Matrix<thrust::complex<float>>>(
             floatView->rows, floatView->cols / 2, stream);
 
-        for (dtype::index row = 0; row < complexMatrix->rows; ++row)
-        for (dtype::index col = 0; col < complexMatrix->cols; ++col) {
+        for (unsigned row = 0; row < complexMatrix->rows; ++row)
+        for (unsigned col = 0; col < complexMatrix->cols; ++col) {
             (*complexMatrix)(row, col) = thrust::complex<float>((*floatView)(row, col * 2),
                 (*floatView)(row, col * 2 + 1));
         }
@@ -768,8 +768,8 @@ namespace numeric {
         auto complexMatrix = std::make_shared<Matrix<thrust::complex<double>>>(
             floatView->rows, floatView->cols / 2, stream);
 
-        for (dtype::index row = 0; row < complexMatrix->rows; ++row)
-        for (dtype::index col = 0; col < complexMatrix->cols; ++col) {
+        for (unsigned row = 0; row < complexMatrix->rows; ++row)
+        for (unsigned col = 0; col < complexMatrix->cols; ++col) {
             (*complexMatrix)(row, col) = thrust::complex<double>((*floatView)(row, col * 2),
                 (*floatView)(row, col * 2 + 1));
         }
@@ -888,25 +888,25 @@ template Eigen::Array<std::complex<float>, Eigen::Dynamic, Eigen::Dynamic> mpFlo
     std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>);
 template Eigen::Array<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
     std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>);
-template Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>);
-template Eigen::Array<mpFlow::dtype::integral, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::integral>>);
+template Eigen::Array<unsigned, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>);
+template Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<mpFlow::numeric::Matrix<int>>);
 
 template std::shared_ptr<mpFlow::numeric::Matrix<float>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::ArrayXXf>, cudaStream_t);
 template std::shared_ptr<mpFlow::numeric::Matrix<double>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::ArrayXXd>, cudaStream_t);
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
+template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::ArrayXXi>, cudaStream_t);
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<const Eigen::Array<mpFlow::dtype::index, Eigen::Dynamic, Eigen::Dynamic>>, cudaStream_t);
-template std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>> mpFlow::numeric::matrix::fromEigen(
+template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
+    Eigen::Ref<const Eigen::Array<unsigned, Eigen::Dynamic, Eigen::Dynamic>>, cudaStream_t);
+template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
     Eigen::Ref<const Eigen::Array<long, Eigen::Dynamic, Eigen::Dynamic>>, cudaStream_t);
 
 template class mpFlow::numeric::Matrix<float>;
 template class mpFlow::numeric::Matrix<double>;
 template class mpFlow::numeric::Matrix<thrust::complex<float>>;
 template class mpFlow::numeric::Matrix<thrust::complex<double>>;
-template class mpFlow::numeric::Matrix<mpFlow::dtype::index>;
-template class mpFlow::numeric::Matrix<mpFlow::dtype::integral>;
+template class mpFlow::numeric::Matrix<unsigned>;
+template class mpFlow::numeric::Matrix<int>;

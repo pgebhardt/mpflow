@@ -31,8 +31,8 @@ namespace numeric {
             class dataType
         >
         void addScalar(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const dataType* scalar, dtype::size vector_rows,
-            dtype::size rows, dtype::size columns, dataType* vector);
+            const dataType* scalar, unsigned vector_rows,
+            unsigned rows, unsigned columns, dataType* vector);
 
         // update vector kernel
         template <
@@ -40,7 +40,7 @@ namespace numeric {
         >
         void updateVector(dim3 blocks, dim3 threads, cudaStream_t stream,
             const dataType* x1, const double sign, const dataType* x2,
-            const dataType* r1, const dataType* r2, dtype::size rows,
+            const dataType* r1, const dataType* r2, unsigned rows,
             dataType* result);
     }
 }

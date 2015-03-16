@@ -46,7 +46,7 @@ namespace FEM {
 
         void calcJacobian(const std::shared_ptr<numeric::Matrix<dataType>> field,
             const std::shared_ptr<numeric::Matrix<dataType>> factor,
-            dtype::size driveCount, dtype::size measurmentCount, bool additiv,
+            unsigned driveCount, unsigned measurmentCount, bool additiv,
             cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> result);
 
         void update(const std::shared_ptr<numeric::Matrix<dataType>> alpha,
@@ -57,7 +57,7 @@ namespace FEM {
         std::shared_ptr<numeric::IrregularMesh> mesh;
         std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor;
         std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
+        std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix;
         std::shared_ptr<numeric::SparseMatrix<dataType>> sMatrix;
         std::shared_ptr<numeric::SparseMatrix<dataType>> rMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalSMatrix;
@@ -76,7 +76,7 @@ namespace FEM {
         >
         void updateMatrix(const std::shared_ptr<numeric::Matrix<dataType>> elements,
             const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-            const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix, dataType referenceValue,
+            const std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix, dataType referenceValue,
             cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dataType>> matrix);
     }
 }

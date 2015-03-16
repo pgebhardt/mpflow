@@ -23,7 +23,7 @@
 #include <thrust/complex.h>
 #include "mpflow/cuda_error.h"
 
-#include "mpflow/dtype.h"
+#include "mpflow/constants.h"
 #include "mpflow/numeric/constants.h"
 #include "mpflow/numeric/sparse_matrix_kernel.h"
 
@@ -32,24 +32,24 @@ template <
     class type
 >
 static __global__ void convertKernel(const type* matrix,
-    mpFlow::dtype::size rows, mpFlow::dtype::size columns,
-    type* values, mpFlow::dtype::index* columnIds,
-    mpFlow::dtype::index* elementCount) {
+    unsigned rows, unsigned columns,
+    type* values, unsigned* columnIds,
+    unsigned* elementCount) {
     // get id
-    mpFlow::dtype::index i = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
 
     // element count
-    mpFlow::dtype::size count = 0;
+    unsigned count = 0;
 
     // init values and columnIds
-    for (mpFlow::dtype::index j = 0; j < mpFlow::numeric::sparseMatrix::block_size; j++) {
+    for (unsigned j = 0; j < mpFlow::numeric::sparseMatrix::block_size; j++) {
         values[i * mpFlow::numeric::sparseMatrix::block_size + j] = 0.0f;
-        columnIds[i * mpFlow::numeric::sparseMatrix::block_size + j] = mpFlow::dtype::invalid_index;
+        columnIds[i * mpFlow::numeric::sparseMatrix::block_size + j] = mpFlow::constants::invalid_index;
     }
 
     // search non-zero elements
     type element = 0.0f;
-    for (mpFlow::dtype::index j = 0; j < columns; j++) {
+    for (unsigned j = 0; j < columns; j++) {
         // get element
         element = matrix[i + j * rows];
 
@@ -77,8 +77,8 @@ template <
     class type
 >
 void mpFlow::numeric::sparseMatrixKernel::convert(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const type* matrix, dtype::size rows, dtype::size columns,
-    type* values, dtype::index* columnIds, dtype::index* elementCount) {
+    const type* matrix, unsigned rows, unsigned columns,
+    type* values, unsigned* columnIds, unsigned* elementCount) {
     // call cuda kernel
     convertKernel<type><<<blocks, threads, 0, stream>>>(matrix, rows, columns,
         values, columnIds, elementCount);
@@ -91,19 +91,19 @@ template <
     class type
 >
 static __global__ void convertToMatrixKernel(const type* values,
-    const mpFlow::dtype::index* column_ids, mpFlow::dtype::size density,
-    mpFlow::dtype::size rows, type* matrix) {
+    const unsigned* column_ids, unsigned density,
+    unsigned rows, type* matrix) {
     // get row id
-    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // expand sparse matrix
-    mpFlow::dtype::index column_id = mpFlow::dtype::invalid_index;
-    for (mpFlow::dtype::index column = 0; column < density; ++column) {
+    unsigned column_id = mpFlow::constants::invalid_index;
+    for (unsigned column = 0; column < density; ++column) {
         // get column id
         column_id = column_ids[row * mpFlow::numeric::sparseMatrix::block_size + column];
 
         // set matrix value
-        if (column_id != mpFlow::dtype::invalid_index) {
+        if (column_id != mpFlow::constants::invalid_index) {
             matrix[row + column_id * rows] = values[
                 row * mpFlow::numeric::sparseMatrix::block_size + column];
         }
@@ -115,8 +115,8 @@ template <
     class type
 >
 void mpFlow::numeric::sparseMatrixKernel::convertToMatrix(dim3 blocks, dim3 threads,
-    cudaStream_t stream, const type* values, const dtype::index* column_ids,
-    dtype::size density, dtype::size rows, type* matrix) {
+    cudaStream_t stream, const type* values, const unsigned* column_ids,
+    unsigned density, unsigned rows, type* matrix) {
     // call cuda kernel
     convertToMatrixKernel<type><<<blocks, threads, 0, stream>>>(values, column_ids,
         density, rows, matrix);
@@ -129,25 +129,25 @@ template <
     class type
 >
 static __global__ void multiplyKernel(const type* values,
-    const mpFlow::dtype::index* columnIds, const type* matrix,
-    mpFlow::dtype::size result_rows, mpFlow::dtype::size matrix_rows,
-    mpFlow::dtype::size columns, mpFlow::dtype::size density, type* result) {
+    const unsigned* columnIds, const type* matrix,
+    unsigned result_rows, unsigned matrix_rows,
+    unsigned columns, unsigned density, type* result) {
     // get ids
-    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc result
     type res = 0.0f;
-    mpFlow::dtype::index id = mpFlow::dtype::invalid_index;
+    unsigned id = mpFlow::constants::invalid_index;
 
     // read column ids to local memory
-    __shared__ mpFlow::dtype::index columnId[
+    __shared__ unsigned columnId[
         mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
     __shared__ type value[
         mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
 
     columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
-        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::dtype::invalid_index;
+        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::constants::invalid_index;
     value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
         values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : 0.0f;
 
@@ -159,11 +159,11 @@ static __global__ void multiplyKernel(const type* values,
     }
 
     // read matrix to local memory
-    for (mpFlow::dtype::index j = 0; j < density; j++) {
+    for (unsigned j = 0; j < density; j++) {
         // get column id
         id = columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j];
 
-         res += id != mpFlow::dtype::invalid_index ? matrix[id + column * matrix_rows] *
+         res += id != mpFlow::constants::invalid_index ? matrix[id + column * matrix_rows] *
             value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j] : 0.0f;
     }
 
@@ -173,25 +173,25 @@ static __global__ void multiplyKernel(const type* values,
 
 template <>
 __global__ void multiplyKernel(const thrust::complex<float>* values,
-    const mpFlow::dtype::index* columnIds, const thrust::complex<float>* matrix,
-    mpFlow::dtype::size result_rows, mpFlow::dtype::size matrix_rows,
-    mpFlow::dtype::size columns, mpFlow::dtype::size density, thrust::complex<float>* result) {
+    const unsigned* columnIds, const thrust::complex<float>* matrix,
+    unsigned result_rows, unsigned matrix_rows,
+    unsigned columns, unsigned density, thrust::complex<float>* result) {
     // get ids
-    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc result
     cuFloatComplex res = make_cuFloatComplex(0.0f, 0.0f);
-    mpFlow::dtype::index id = mpFlow::dtype::invalid_index;
+    unsigned id = mpFlow::constants::invalid_index;
 
     // read column ids to local memory
-    __shared__ mpFlow::dtype::index columnId[
+    __shared__ unsigned columnId[
         mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
     __shared__ cuFloatComplex value[
         mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
 
     columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
-        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::dtype::invalid_index;
+        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::constants::invalid_index;
     value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].x = row < result_rows ?
         values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].real() : 0.0f;
     value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].y = row < result_rows ?
@@ -205,11 +205,11 @@ __global__ void multiplyKernel(const thrust::complex<float>* values,
     }
 
     // read matrix to local memory
-    for (mpFlow::dtype::index j = 0; j < density; j++) {
+    for (unsigned j = 0; j < density; j++) {
         // get column id
         id = columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j];
         cuFloatComplex element = *(cuFloatComplex*)&matrix[id + column * matrix_rows];
-        cuFloatComplex temp = id != mpFlow::dtype::invalid_index ? cuCmulf(element,
+        cuFloatComplex temp = id != mpFlow::constants::invalid_index ? cuCmulf(element,
             value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j]) : make_cuFloatComplex(0.0f, 0.0f);
 
         res.x += temp.x;
@@ -223,25 +223,25 @@ __global__ void multiplyKernel(const thrust::complex<float>* values,
 
 template <>
 __global__ void multiplyKernel(const thrust::complex<double>* values,
-    const mpFlow::dtype::index* columnIds, const thrust::complex<double>* matrix,
-    mpFlow::dtype::size result_rows, mpFlow::dtype::size matrix_rows,
-    mpFlow::dtype::size columns, mpFlow::dtype::size density, thrust::complex<double>* result) {
+    const unsigned* columnIds, const thrust::complex<double>* matrix,
+    unsigned result_rows, unsigned matrix_rows,
+    unsigned columns, unsigned density, thrust::complex<double>* result) {
     // get ids
-    mpFlow::dtype::index row = blockIdx.x * blockDim.x + threadIdx.x;
-    mpFlow::dtype::index column = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc result
     cuDoubleComplex res = make_cuDoubleComplex(0.0f, 0.0f);
-    mpFlow::dtype::index id = mpFlow::dtype::invalid_index;
+    unsigned id = mpFlow::constants::invalid_index;
 
     // read column ids to local memory
-    __shared__ mpFlow::dtype::index columnId[
+    __shared__ unsigned columnId[
         mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
     __shared__ cuDoubleComplex value[
         mpFlow::numeric::sparseMatrix::block_size * mpFlow::numeric::sparseMatrix::block_size];
 
     columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] = row < result_rows ?
-        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::dtype::invalid_index;
+        columnIds[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y] : mpFlow::constants::invalid_index;
     value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].x = row < result_rows ?
         values[row * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].real() : 0.0f;
     value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + threadIdx.y].y = row < result_rows ?
@@ -255,11 +255,11 @@ __global__ void multiplyKernel(const thrust::complex<double>* values,
     }
 
     // read matrix to local memory
-    for (mpFlow::dtype::index j = 0; j < density; j++) {
+    for (unsigned j = 0; j < density; j++) {
         // get column id
         id = columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j];
         cuDoubleComplex element = *(cuDoubleComplex*)&matrix[id + column * matrix_rows];
-        cuDoubleComplex temp = id != mpFlow::dtype::invalid_index ? cuCmul(element,
+        cuDoubleComplex temp = id != mpFlow::constants::invalid_index ? cuCmul(element,
             value[threadIdx.x * mpFlow::numeric::sparseMatrix::block_size + j]) : make_cuDoubleComplex(0.0f, 0.0f);
 
         res.x += temp.x;
@@ -276,9 +276,9 @@ template <
     class type
 >
 void mpFlow::numeric::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const type* values, const dtype::index* columnIds,
-    const type* matrix, dtype::size result_rows, dtype::size matrix_rows,
-    dtype::size columns, dtype::size density, type* result) {
+    const type* values, const unsigned* columnIds,
+    const type* matrix, unsigned result_rows, unsigned matrix_rows,
+    unsigned columns, unsigned density, type* result) {
     // call cuda kernel
     multiplyKernel<type><<<blocks, threads, 0, stream>>>(values, columnIds, matrix,
         result_rows, matrix_rows, columns, density, result);
@@ -289,66 +289,66 @@ void mpFlow::numeric::sparseMatrixKernel::multiply(dim3 blocks, dim3 threads, cu
 // specialisations
 // convert to sparse matrix kernel
 template void mpFlow::numeric::sparseMatrixKernel::convert<float>(dim3, dim3,
-    cudaStream_t, const float*, mpFlow::dtype::size, mpFlow::dtype::size,
-    float*, mpFlow::dtype::index*, mpFlow::dtype::index*);
+    cudaStream_t, const float*, unsigned, unsigned,
+    float*, unsigned*, unsigned*);
 template void mpFlow::numeric::sparseMatrixKernel::convert<double>(dim3, dim3,
-    cudaStream_t, const double*, mpFlow::dtype::size, mpFlow::dtype::size,
-    double*, mpFlow::dtype::index*, mpFlow::dtype::index*);
+    cudaStream_t, const double*, unsigned, unsigned,
+    double*, unsigned*, unsigned*);
 template void mpFlow::numeric::sparseMatrixKernel::convert<thrust::complex<float> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<float>*, mpFlow::dtype::size, mpFlow::dtype::size,
-    thrust::complex<float>*, mpFlow::dtype::index*, mpFlow::dtype::index*);
+    cudaStream_t, const thrust::complex<float>*, unsigned, unsigned,
+    thrust::complex<float>*, unsigned*, unsigned*);
 template void mpFlow::numeric::sparseMatrixKernel::convert<thrust::complex<double> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<double>*, mpFlow::dtype::size, mpFlow::dtype::size,
-    thrust::complex<double>*, mpFlow::dtype::index*, mpFlow::dtype::index*);
-template void mpFlow::numeric::sparseMatrixKernel::convert<mpFlow::dtype::index>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::size,
-    mpFlow::dtype::index*, mpFlow::dtype::index*, mpFlow::dtype::index*);
+    cudaStream_t, const thrust::complex<double>*, unsigned, unsigned,
+    thrust::complex<double>*, unsigned*, unsigned*);
+template void mpFlow::numeric::sparseMatrixKernel::convert<unsigned>(dim3, dim3,
+    cudaStream_t, const unsigned*, unsigned, unsigned,
+    unsigned*, unsigned*, unsigned*);
 template void mpFlow::numeric::sparseMatrixKernel::convert<int>(dim3, dim3,
-    cudaStream_t, const int*, mpFlow::dtype::size, mpFlow::dtype::size,
-    int*, mpFlow::dtype::index*, mpFlow::dtype::index*);
+    cudaStream_t, const int*, unsigned, unsigned,
+    int*, unsigned*, unsigned*);
 
 // convertToMatrix kernel
 template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<float>(dim3, dim3,
-    cudaStream_t, const float*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::size, float*);
+    cudaStream_t, const float*, const unsigned*,
+    unsigned, unsigned, float*);
 template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<double>(dim3, dim3,
-    cudaStream_t, const double*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::size, double*);
+    cudaStream_t, const double*, const unsigned*,
+    unsigned, unsigned, double*);
 template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<thrust::complex<float> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<float>*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::size, thrust::complex<float>*);
+    cudaStream_t, const thrust::complex<float>*, const unsigned*,
+    unsigned, unsigned, thrust::complex<float>*);
 template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<thrust::complex<double> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<double>*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::size, thrust::complex<double>*);
-template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<mpFlow::dtype::index>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::index* matrix);
+    cudaStream_t, const thrust::complex<double>*, const unsigned*,
+    unsigned, unsigned, thrust::complex<double>*);
+template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<unsigned>(dim3, dim3,
+    cudaStream_t, const unsigned*, const unsigned*,
+    unsigned, unsigned, unsigned* matrix);
 template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<int>(dim3, dim3,
-    cudaStream_t, const int*, const mpFlow::dtype::index*,
-    mpFlow::dtype::size, mpFlow::dtype::size, int* matrix);
+    cudaStream_t, const int*, const unsigned*,
+    unsigned, unsigned, int* matrix);
 
 // multiply kernel
 template void mpFlow::numeric::sparseMatrixKernel::multiply<float>(dim3, dim3,
-    cudaStream_t, const float*, const mpFlow::dtype::index*,
-    const float*, mpFlow::dtype::size, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, float*);
+    cudaStream_t, const float*, const unsigned*,
+    const float*, unsigned, unsigned,
+    unsigned, unsigned, float*);
 template void mpFlow::numeric::sparseMatrixKernel::multiply<double>(dim3, dim3,
-    cudaStream_t, const double*, const mpFlow::dtype::index*,
-    const double*, mpFlow::dtype::size, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, double*);
+    cudaStream_t, const double*, const unsigned*,
+    const double*, unsigned, unsigned,
+    unsigned, unsigned, double*);
 template void mpFlow::numeric::sparseMatrixKernel::multiply<thrust::complex<float> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<float>*, const mpFlow::dtype::index*,
-    const thrust::complex<float>*, mpFlow::dtype::size, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, thrust::complex<float>*);
+    cudaStream_t, const thrust::complex<float>*, const unsigned*,
+    const thrust::complex<float>*, unsigned, unsigned,
+    unsigned, unsigned, thrust::complex<float>*);
 template void mpFlow::numeric::sparseMatrixKernel::multiply<thrust::complex<double> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<double>*, const mpFlow::dtype::index*,
-    const thrust::complex<double>*, mpFlow::dtype::size, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, thrust::complex<double>*);
-template void mpFlow::numeric::sparseMatrixKernel::multiply<mpFlow::dtype::index>(dim3, dim3,
-    cudaStream_t, const mpFlow::dtype::index*, const mpFlow::dtype::index*,
-    const mpFlow::dtype::index*, mpFlow::dtype::size, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, mpFlow::dtype::index*);
+    cudaStream_t, const thrust::complex<double>*, const unsigned*,
+    const thrust::complex<double>*, unsigned, unsigned,
+    unsigned, unsigned, thrust::complex<double>*);
+template void mpFlow::numeric::sparseMatrixKernel::multiply<unsigned>(dim3, dim3,
+    cudaStream_t, const unsigned*, const unsigned*,
+    const unsigned*, unsigned, unsigned,
+    unsigned, unsigned, unsigned*);
 template void mpFlow::numeric::sparseMatrixKernel::multiply<int>(dim3, dim3,
-    cudaStream_t, const int*, const mpFlow::dtype::index*,
-    const int*, mpFlow::dtype::size, mpFlow::dtype::size,
-    mpFlow::dtype::size, mpFlow::dtype::size, int*);
+    cudaStream_t, const int*, const unsigned*,
+    const int*, unsigned, unsigned,
+    unsigned, unsigned, int*);

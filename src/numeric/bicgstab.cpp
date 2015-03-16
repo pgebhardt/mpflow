@@ -26,7 +26,7 @@ template <
     class dataType,
     template <class> class matrixType
 >
-mpFlow::numeric::BiCGSTAB<dataType, matrixType>::BiCGSTAB(dtype::size rows, dtype::size cols, cudaStream_t stream)
+mpFlow::numeric::BiCGSTAB<dataType, matrixType>::BiCGSTAB(unsigned rows, unsigned cols, cudaStream_t stream)
     : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
@@ -58,9 +58,9 @@ template <
     class dataType,
     template <class type> class matrixType
 >
-mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
+unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     const std::shared_ptr<matrixType<dataType>> A,
-    const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+    const std::shared_ptr<Matrix<dataType>> f, unsigned iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
     const double tolerance, bool dcFree) {
     // check input
@@ -98,7 +98,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     cudaStreamSynchronize(stream);
 
     // iterate
-    for (dtype::index step = 0; step < iterations; ++step) {
+    for (unsigned step = 0; step < iterations; ++step) {
         // roh = (rHat, r)
         this->rohOld->copy(this->roh, stream);
         this->roh->vectorDotProduct(this->r, this->rHat, stream);
@@ -164,7 +164,7 @@ mpFlow::dtype::index mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
             this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
-            for (dtype::index i = 0; i < this->error->cols; ++i) {
+            for (unsigned i = 0; i < this->error->cols; ++i) {
                 if (abs(sqrt((*this->error)(0, i))) >= tolerance) {
                     break;
                 }

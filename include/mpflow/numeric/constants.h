@@ -26,12 +26,12 @@ namespace mpFlow {
 namespace numeric {
 namespace matrix {
     // matrix block size
-    const mpFlow::dtype::size block_size = 16;
+    const unsigned block_size = 16;
 }
 
 namespace sparseMatrix {
     // sparse matrix block size
-    const mpFlow::dtype::size block_size = 32;
+    const unsigned block_size = 32;
 }
 }
 }

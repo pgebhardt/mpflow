@@ -28,7 +28,7 @@ namespace forwardKernel {
         class dataType
     >
     void applyMixedBoundaryCondition(dim3 blocks, dim3 threads, cudaStream_t stream,
-        dataType* excitation, dtype::index rows, const dtype::index* columnIds,
+        dataType* excitation, unsigned rows, const unsigned* columnIds,
         dataType* values);
 }
 }

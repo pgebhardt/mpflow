@@ -24,7 +24,6 @@
 #include "common.h"
 #include "version.h"
 #include "cuda_error.h"
-#include "dtype.h"
 #include "constants.h"
 #include "mathematics.h"
 

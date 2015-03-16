@@ -21,7 +21,7 @@
 #include "mpflow/mpflow.h"
 
 mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
-    const std::vector<std::tuple<dtype::real, dtype::real>>& shapes)
+    const std::vector<std::tuple<double, double>>& shapes)
     : count(shapes.size()), coordinates(shapes.size()), shapes(shapes) {
     // check input
     if (this->count == 0) {
@@ -29,14 +29,14 @@ mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
     }
 }
 
-mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(dtype::size count,
-    std::tuple<dtype::real, dtype::real> shape)
-    : BoundaryDescriptor(std::vector<std::tuple<dtype::real, dtype::real>>(count, shape)) {
+mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(unsigned count,
+    std::tuple<double, double> shape)
+    : BoundaryDescriptor(std::vector<std::tuple<double, double>>(count, shape)) {
 }
 
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor::circularBoundary(
-    dtype::size count, std::tuple<dtype::real, dtype::real> shape,
-    dtype::real boundaryRadius, dtype::real offset) {
+    unsigned count, std::tuple<double, double> shape,
+    double boundaryRadius, double offset) {
     // check radius
     if (boundaryRadius == 0.0) {
         throw std::invalid_argument(
@@ -46,11 +46,11 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor
     auto descriptor = std::make_shared<BoundaryDescriptor>(count, shape);
 
     // fill coordinates vectors
-    dtype::real angle = 0.0f;
-    dtype::real deltaAngle = M_PI / (dtype::real)descriptor->count;
-    for (dtype::index electrode = 0; electrode < descriptor->count; ++electrode) {
+    double angle = 0.0f;
+    double deltaAngle = M_PI / (double)descriptor->count;
+    for (unsigned electrode = 0; electrode < descriptor->count; ++electrode) {
         // calc start angle
-        angle = (dtype::real)electrode * 2.0 * deltaAngle + offset / boundaryRadius;
+        angle = (double)electrode * 2.0 * deltaAngle + offset / boundaryRadius;
 
         // calc coordinates
         descriptor->coordinates[electrode] = std::make_tuple(

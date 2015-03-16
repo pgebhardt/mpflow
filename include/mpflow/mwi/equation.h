@@ -34,18 +34,18 @@ namespace MWI {
         void initElementalMatrices(cudaStream_t stream);
         void initJacobianCalculationMatrix(cudaStream_t stream);
 
-        void update(const std::shared_ptr<numeric::Matrix<dtype::complex>> beta,
-            dtype::complex k, cudaStream_t stream);
+        void update(const std::shared_ptr<numeric::Matrix<thrust::complex<float>>> beta,
+            thrust::complex<float> k, cudaStream_t stream);
 
         // member
         std::shared_ptr<numeric::IrregularMesh> mesh;
-        std::shared_ptr<numeric::SparseMatrix<dtype::complex>> systemMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix;
-        std::shared_ptr<numeric::SparseMatrix<dtype::complex>> sMatrix;
-        std::shared_ptr<numeric::SparseMatrix<dtype::complex>> rMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::complex>> elementalSMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::complex>> elementalRMatrix;
-        std::shared_ptr<numeric::Matrix<dtype::real>> elementalJacobianMatrix;
+        std::shared_ptr<numeric::SparseMatrix<thrust::complex<float>>> systemMatrix;
+        std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix;
+        std::shared_ptr<numeric::SparseMatrix<thrust::complex<float>>> sMatrix;
+        std::shared_ptr<numeric::SparseMatrix<thrust::complex<float>>> rMatrix;
+        std::shared_ptr<numeric::Matrix<thrust::complex<float>>> elementalSMatrix;
+        std::shared_ptr<numeric::Matrix<thrust::complex<float>>> elementalRMatrix;
+        std::shared_ptr<numeric::Matrix<float>> elementalJacobianMatrix;
     };
 }
 }

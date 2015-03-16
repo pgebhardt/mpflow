@@ -25,22 +25,22 @@ namespace mpFlow {
 namespace FEM {
     class BoundaryDescriptor {
     public:
-        BoundaryDescriptor(const std::vector<std::tuple<dtype::real, dtype::real>>& shapes);
-        BoundaryDescriptor(dtype::size count, std::tuple<dtype::real, dtype::real> shape);
+        BoundaryDescriptor(const std::vector<std::tuple<double, double>>& shapes);
+        BoundaryDescriptor(unsigned count, std::tuple<double, double> shape);
         virtual ~BoundaryDescriptor() { }
 
         // member
-        dtype::size count;
-        std::vector<std::tuple<std::tuple<dtype::real, dtype::real>,
-            std::tuple<dtype::real, dtype::real>>> coordinates;
-        std::vector<std::tuple<dtype::real, dtype::real>> shapes;
+        unsigned count;
+        std::vector<std::tuple<std::tuple<double, double>,
+            std::tuple<double, double>>> coordinates;
+        std::vector<std::tuple<double, double>> shapes;
     };
 
     namespace boundaryDescriptor {
         // create BoundaryDescriptor on circular boundary
-        std::shared_ptr<BoundaryDescriptor> circularBoundary(dtype::size count,
-            std::tuple<dtype::real, dtype::real> shape, dtype::real boundaryRadius,
-            dtype::real offset=0.0);
+        std::shared_ptr<BoundaryDescriptor> circularBoundary(unsigned count,
+            std::tuple<double, double> shape, double boundaryRadius,
+            double offset=0.0);
     }
 }
 }

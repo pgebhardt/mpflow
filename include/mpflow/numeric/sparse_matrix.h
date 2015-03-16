@@ -26,12 +26,14 @@ namespace mpFlow {
 namespace numeric {
     // sparse matrix class definition
     template <
-        class type = mpFlow::dtype::real
+        class type_
     >
     class SparseMatrix {
     public:
+        typedef type_ type;
+
         // constructor and destructor
-        SparseMatrix(dtype::size rows, dtype::size cols, cudaStream_t stream) {
+        SparseMatrix(unsigned rows, unsigned cols, cudaStream_t stream) {
             this->init(rows, cols, stream);
         }
 
@@ -51,24 +53,24 @@ namespace numeric {
             std::shared_ptr<Matrix<type>> result) const;
 
         // accessors
-        dtype::index getColumnId(dtype::index row, dtype::index col) const;
-        type getValue(dtype::index row, dtype::index col) const;
-        void setValue(dtype::index row, dtype::index col, const type& value);
+        unsigned getColumnId(unsigned row, unsigned col) const;
+        type getValue(unsigned row, unsigned col) const;
+        void setValue(unsigned row, unsigned col, const type& value);
 
         // member
-        dtype::size rows;
-        dtype::size cols;
-        dtype::size dataRows;
-        dtype::size dataCols;
-        dtype::size density;
+        unsigned rows;
+        unsigned cols;
+        unsigned dataRows;
+        unsigned dataCols;
+        unsigned density;
         type* deviceValues;
         type* hostValues;
-        dtype::index* deviceColumnIds;
-        dtype::index* hostColumnIds;
+        unsigned* deviceColumnIds;
+        unsigned* hostColumnIds;
 
     private:
         // init empty sparse matrix
-        void init(dtype::size rows, dtype::size cols, cudaStream_t stream);
+        void init(unsigned rows, unsigned cols, cudaStream_t stream);
 
         // convert to sparse matrix
         void convert(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);

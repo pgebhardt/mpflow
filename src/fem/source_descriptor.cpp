@@ -25,8 +25,8 @@ template <
 >
 mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type,
     const std::vector<dataType>& values, std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
-    std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
-    std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
+    std::shared_ptr<numeric::Matrix<int>> drivePattern,
+    std::shared_ptr<numeric::Matrix<int>> measurementPattern,
     cudaStream_t stream)
     : type(type), electrodes(electrodes), values(values) {
     // check input
@@ -54,16 +54,16 @@ mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type,
         this->drivePattern->cols + this->measurementPattern->cols, stream);
 
     // fill pattern matrix with drive pattern
-    for (dtype::index row = 0; row < this->electrodes->count; ++row)
-    for (dtype::index col = 0; col < this->drivePattern->cols; ++col) {
+    for (unsigned row = 0; row < this->electrodes->count; ++row)
+    for (unsigned col = 0; col < this->drivePattern->cols; ++col) {
         (*this->drivePattern)(row, col) = (*drivePattern)(row, col);
         (*this->pattern)(row, col) = this->values[col] * (*this->drivePattern)(row, col);
     }
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (dtype::index row = 0; row < this->electrodes->count; ++row)
-    for (dtype::index col = 0; col < this->measurementPattern->cols; ++col) {
+    for (unsigned row = 0; row < this->electrodes->count; ++row)
+    for (unsigned col = 0; col < this->measurementPattern->cols; ++col) {
         (*this->measurementPattern)(row, col) = (*measurementPattern)(row, col);
         (*this->pattern)(row, col + this->drivePattern->cols) =
             (*this->measurementPattern)(row, col);
@@ -78,13 +78,15 @@ template <
 >
 mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type, dataType value,
     std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
-    std::shared_ptr<numeric::Matrix<dtype::integral>> drivePattern,
-    std::shared_ptr<numeric::Matrix<dtype::integral>> measurementPattern,
+    std::shared_ptr<numeric::Matrix<int>> drivePattern,
+    std::shared_ptr<numeric::Matrix<int>> measurementPattern,
     cudaStream_t stream)
     : SourceDescriptor<dataType>(type, std::vector<dataType>(drivePattern->cols, value),
         electrodes, drivePattern, measurementPattern, stream) {
 }
 
 // specialisation
-template class mpFlow::FEM::SourceDescriptor<mpFlow::dtype::real>;
-template class mpFlow::FEM::SourceDescriptor<mpFlow::dtype::complex>;
+template class mpFlow::FEM::SourceDescriptor<float>;
+template class mpFlow::FEM::SourceDescriptor<double>;
+template class mpFlow::FEM::SourceDescriptor<thrust::complex<float>>;
+template class mpFlow::FEM::SourceDescriptor<thrust::complex<double>>;

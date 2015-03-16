@@ -30,9 +30,9 @@ namespace equationKernel {
         bool logarithmic
     >
     void updateMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-        const dtype::index* connectivity_matrix, const dataType* elemental_matrix,
-        const dataType* gamma, dataType referenceValue, dtype::size rows,
-        dtype::size columns, dataType* matrix_values);
+        const unsigned* connectivity_matrix, const dataType* elemental_matrix,
+        const dataType* gamma, dataType referenceValue, unsigned rows,
+        unsigned columns, dataType* matrix_values);
 
     // update system matrix kernel
     template <
@@ -40,7 +40,7 @@ namespace equationKernel {
     >
     void updateSystemMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
         const dataType* sMatrixValues, const dataType* rMatrixValues,
-        const dtype::index* sMatrixColumnIds, dtype::size density, dataType k,
+        const unsigned* sMatrixColumnIds, unsigned density, dataType k,
         dataType* systemMatrixValues);
 
     // calc jacobian kernel
@@ -51,10 +51,10 @@ namespace equationKernel {
     >
     void calcJacobian(dim3 blocks, dim3 threads, cudaStream_t stream,
         const dataType* drivePhi, const dataType* measurmentPhi,
-        const dtype::index* connectivityMatrix, const dataType* elementalJacobianMatrix,
-        const dataType* gamma, dataType referenceValue, dtype::size rows,
-        dtype::size columns, dtype::size phiRows, dtype::size elementCount,
-        dtype::size driveCount, dtype::size measurmentCount, bool additiv, dataType* jacobian);
+        const unsigned* connectivityMatrix, const dataType* elementalJacobianMatrix,
+        const dataType* gamma, dataType referenceValue, unsigned rows,
+        unsigned columns, unsigned phiRows, unsigned elementCount,
+        unsigned driveCount, unsigned measurmentCount, bool additiv, dataType* jacobian);
 }
 }
 }

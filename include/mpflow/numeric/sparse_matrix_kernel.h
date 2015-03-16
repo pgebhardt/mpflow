@@ -31,26 +31,26 @@ namespace numeric {
             class type
         >
         void convert(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* matrix, dtype::size rows, dtype::size columns,
-            type* values, dtype::index* columnIds,
-            dtype::index* elementCount);
+            const type* matrix, unsigned rows, unsigned columns,
+            type* values, unsigned* columnIds,
+            unsigned* elementCount);
 
         // convert to matrix kernel
         template <
             class type
         >
         void convertToMatrix(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* values, const dtype::index* column_ids,
-            dtype::size density, dtype::size rows, type* matrix);
+            const type* values, const unsigned* column_ids,
+            unsigned density, unsigned rows, type* matrix);
 
         // sparse matrix multiply kernel
         template <
             class type
         >
         void multiply(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* values, const dtype::index* columnIds,
-            const type* matrix, dtype::size result_rows, dtype::size matrix_rows,
-            dtype::size columns, dtype::size density, type* result);
+            const type* values, const unsigned* columnIds,
+            const type* matrix, unsigned result_rows, unsigned matrix_rows,
+            unsigned columns, unsigned density, type* result);
     }
 }
 }

@@ -22,8 +22,8 @@
 
 // create MWI
 mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh> mesh,
-    std::shared_ptr<numeric::Matrix<dtype::complex>> jacobian,
-    dtype::index parallelImages, dtype::real regularizationFactor,
+    std::shared_ptr<numeric::Matrix<thrust::complex<float>>> jacobian,
+    unsigned parallelImages, double regularizationFactor,
     cublasHandle_t handle, cudaStream_t stream)
     : mesh(mesh), jacobian(jacobian) {
     // check input
@@ -38,25 +38,25 @@ mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh> mesh,
     }
 
     // create inverse solver
-    this->inverseSolver = std::make_shared<solver::Inverse<dtype::complex,
+    this->inverseSolver = std::make_shared<solver::Inverse<thrust::complex<float>,
         numeric::ConjugateGradient>>(jacobian->cols, jacobian->rows,
         parallelImages, regularizationFactor, handle, stream);
     this->inverseSolver->calcSystemMatrix(jacobian,
         this->inverseSolver->RegularizationType::diagonal, handle, stream);
 
     // create matrices
-    this->dGamma = std::make_shared<numeric::Matrix<dtype::complex>>(
+    this->dGamma = std::make_shared<numeric::Matrix<thrust::complex<float>>>(
         mesh->elements.rows(), parallelImages, stream);
-    for (dtype::index image = 0; image < parallelImages; ++image) {
-        this->measurement.push_back(std::make_shared<numeric::Matrix<dtype::complex>>(
+    for (unsigned image = 0; image < parallelImages; ++image) {
+        this->measurement.push_back(std::make_shared<numeric::Matrix<thrust::complex<float>>>(
             jacobian->rows, 1, stream, 0.0, false));
-        this->calculation.push_back(std::make_shared<numeric::Matrix<dtype::complex>>(
+        this->calculation.push_back(std::make_shared<numeric::Matrix<thrust::complex<float>>>(
             jacobian->rows, 1, stream, 0.0, false));
     }
 }
 
 // solve differential
-std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>
+std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>
     mpFlow::MWI::Solver::solveDifferential(
     cublasHandle_t handle, cudaStream_t stream) {
     // check input

@@ -73,24 +73,24 @@ template <
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElementalMatrices(
     cudaStream_t stream) {
     // create intermediate matrices
-    auto elementCount = std::make_shared<numeric::SparseMatrix<dtype::index>>(
+    auto elementCount = std::make_shared<numeric::SparseMatrix<unsigned>>(
         this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
-    std::vector<std::shared_ptr<numeric::SparseMatrix<dtype::index>>> connectivityMatrices;
+    std::vector<std::shared_ptr<numeric::SparseMatrix<unsigned>>> connectivityMatrices;
     std::vector<std::shared_ptr<numeric::SparseMatrix<dataType>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
-    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
         // get nodes points of element
         Eigen::ArrayXXd points = mesh->elementNodes(element);
 
         // set connectivity and elemental residual matrix elements
-        for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; i++)
-        for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; j++) {
+        for (unsigned i = 0; i < basisFunctionType::pointsPerElement; i++)
+        for (unsigned j = 0; j < basisFunctionType::pointsPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
             size_t level = elementCount->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
             if (connectivityMatrices.size() <= level) {
-                connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<dtype::index>>(
+                connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<unsigned>>(
                     this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
                 elementalSMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
                     this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
@@ -123,9 +123,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
     // determine nodes with common element
     auto commonElementMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
         this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
-    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
-        for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
-        for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
+    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+        for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
+        for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
             commonElementMatrix->setValue(this->mesh->elements(element, i), this->mesh->elements(element, j), 1.0f);
         }
     }
@@ -137,9 +137,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
     this->systemMatrix->copy(commonElementMatrix, stream);
 
     // create elemental matrices
-    this->connectivityMatrix = std::make_shared<numeric::Matrix<dtype::index>>(
+    this->connectivityMatrix = std::make_shared<numeric::Matrix<unsigned>>(
         this->mesh->nodes.rows(), numeric::sparseMatrix::block_size * connectivityMatrices.size(),
-        stream, dtype::invalid_index);
+        stream, constants::invalid_index);
     this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
         numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream);
     this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
@@ -147,11 +147,11 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
-    for (dtype::index level = 0; level < connectivityMatrices.size(); ++level) {
-        for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
-            for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
-            for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
-                dtype::index columId = commonElementMatrix->getColumnId(this->mesh->elements(element, i),
+    for (unsigned level = 0; level < connectivityMatrices.size(); ++level) {
+        for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
+            for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
+            for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
+                unsigned columId = commonElementMatrix->getColumnId(this->mesh->elements(element, i),
                     this->mesh->elements(element, j));
 
                 (*this->connectivityMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::block_size + columId) =
@@ -174,7 +174,7 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t stream) {
-    std::vector<std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>> nodes;
+    std::vector<std::tuple<unsigned, std::tuple<double, double>>> nodes;
     Eigen::ArrayXd nodeParameter(basisFunctionType::pointsPerEdge);
     double integrationStart, integrationEnd;
 
@@ -187,8 +187,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
 
         // sort nodes by parameter
         std::sort(nodes.begin(), nodes.end(),
-            [](const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& a,
-                const std::tuple<dtype::index, std::tuple<dtype::real, dtype::real>>& b)
+            [](const std::tuple<unsigned, std::tuple<double, double>>& a,
+                const std::tuple<unsigned, std::tuple<double, double>>& b)
                 -> bool {
                     return math::circleParameter(std::get<1>(b),
                         math::circleParameter(std::get<1>(a), 0.0)) > 0.0;
@@ -222,7 +222,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
             // intgrate if integrationStart is left of integrationEnd
             if (integrationStart < integrationEnd) {
                 // calc element
-                for (dtype::index node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
+                for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
                     (*excitationMatrix)(std::get<0>(nodes[node]), piece) +=
                         basisFunctionType::integrateBoundaryEdge(
                             nodeParameter, node, integrationStart, integrationEnd) /
@@ -250,19 +250,19 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
     // fill connectivity and elementalJacobianMatrix
     auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
-    for (dtype::index element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (unsigned element = 0; element < this->mesh->elements.rows(); ++element) {
         // get element points
         Eigen::ArrayXXd points = this->mesh->elementNodes(element);
 
         // calc corresponding basis functions
-        for (dtype::index node = 0; node < basisFunctionType::pointsPerElement; ++node) {
+        for (unsigned node = 0; node < basisFunctionType::pointsPerElement; ++node) {
             basisFunction[node] = std::make_shared<basisFunctionType>(
                 points, node);
         }
 
         // fill matrix
-        for (dtype::index i = 0; i < basisFunctionType::pointsPerElement; ++i)
-        for (dtype::index j = 0; j < basisFunctionType::pointsPerElement; ++j) {
+        for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
+        for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i +
                 j * basisFunctionType::pointsPerElement) =
@@ -304,7 +304,7 @@ template <
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobian(
     const std::shared_ptr<numeric::Matrix<dataType>> phi,
     const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-    dtype::size driveCount, dtype::size measurmentCount, bool additiv,
+    unsigned driveCount, unsigned measurmentCount, bool additiv,
     cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> jacobian) {
     // check input
     if (phi == nullptr) {
@@ -339,7 +339,7 @@ template <
 void mpFlow::FEM::equation::updateMatrix(
     const std::shared_ptr<numeric::Matrix<dataType>> elements,
     const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-    const std::shared_ptr<numeric::Matrix<dtype::index>> connectivityMatrix,
+    const std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix,
     dataType referenceValue, cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dataType>> matrix) {
     // check input
     if (elements == nullptr) {
@@ -366,32 +366,60 @@ void mpFlow::FEM::equation::updateMatrix(
 }
 
 // specialisation
-template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::real, true>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
-    mpFlow::dtype::real, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::real>>);
-template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::complex, true>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
-    mpFlow::dtype::complex, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::complex>>);
-template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::real, false>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::real>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
-    mpFlow::dtype::real, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::real>>);
-template void mpFlow::FEM::equation::updateMatrix<mpFlow::dtype::complex, false>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::complex>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<mpFlow::dtype::index>>,
-    mpFlow::dtype::complex, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<mpFlow::dtype::complex>>);
+template void mpFlow::FEM::equation::updateMatrix<float, true>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    float, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>);
+template void mpFlow::FEM::equation::updateMatrix<float, false>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    float, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>);
+template void mpFlow::FEM::equation::updateMatrix<double, true>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    double, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>);
+template void mpFlow::FEM::equation::updateMatrix<double, false>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    double, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>);
+template void mpFlow::FEM::equation::updateMatrix<thrust::complex<float>, true>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    thrust::complex<float>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>);
+template void mpFlow::FEM::equation::updateMatrix<thrust::complex<float>, false>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    thrust::complex<float>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>);
+template void mpFlow::FEM::equation::updateMatrix<thrust::complex<double>, true>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    thrust::complex<double>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>);
+template void mpFlow::FEM::equation::updateMatrix<thrust::complex<double>, false>(
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
+    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
+    thrust::complex<double>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>);
 
-template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, true>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Quadratic, true>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Linear, false>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::real, mpFlow::FEM::basis::Quadratic, false>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, true>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Quadratic, true>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Linear, false>;
-template class mpFlow::FEM::Equation<mpFlow::dtype::complex, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>;
+template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>;
+template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>;
+template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>;
+template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>;
+template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>;
+template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>;
+template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>;
+template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Quadratic, false>;

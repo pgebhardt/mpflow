@@ -26,8 +26,8 @@ template <
     class dataType,
     template <class type> class matrixType
 >
-mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(const dtype::size rows,
-    const dtype::size cols, cudaStream_t stream)
+mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(const unsigned rows,
+    const unsigned cols, cudaStream_t stream)
     : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
@@ -51,9 +51,9 @@ template <
     class dataType,
     template <class type> class matrixType
 >
-mpFlow::dtype::index mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
+unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
     const std::shared_ptr<matrixType<dataType>> A,
-    const std::shared_ptr<Matrix<dataType>> f, const dtype::size iterations,
+    const std::shared_ptr<Matrix<dataType>> f, const unsigned iterations,
     cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
     const double tolerance, bool dcFree) {
     // check input
@@ -87,7 +87,7 @@ mpFlow::dtype::index mpFlow::numeric::ConjugateGradient<dataType, matrixType>::s
     this->rohOld->vectorDotProduct(this->r, this->r, stream);
 
     // iterate
-    for (dtype::index step = 0; step < iterations; ++step) {
+    for (unsigned step = 0; step < iterations; ++step) {
         // calc A * p
         this->temp1->multiply(A, this->p, handle, stream);
 
@@ -120,7 +120,7 @@ mpFlow::dtype::index mpFlow::numeric::ConjugateGradient<dataType, matrixType>::s
             this->roh->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
-            for (dtype::index i = 0; i < this->roh->cols; ++i) {
+            for (unsigned i = 0; i < this->roh->cols; ++i) {
                 if (abs(sqrt((*this->roh)(0, i))) >= tolerance) {
                     break;
                 }
@@ -145,7 +145,7 @@ template <
 >
 void mpFlow::numeric::conjugateGradient::addScalar(
     const std::shared_ptr<Matrix<dataType>> scalar,
-    dtype::size rows, dtype::size columns, cudaStream_t stream,
+    unsigned rows, unsigned columns, cudaStream_t stream,
     std::shared_ptr<Matrix<dataType>> vector) {
     // check input
     if (scalar == nullptr) {

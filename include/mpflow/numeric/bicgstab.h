@@ -31,17 +31,17 @@ namespace numeric {
     class BiCGSTAB {
     public:
         // constructor
-        BiCGSTAB(dtype::size rows, dtype::size cols, cudaStream_t stream);
+        BiCGSTAB(unsigned rows, unsigned cols, cudaStream_t stream);
 
         // solve system
-        dtype::index solve(const std::shared_ptr<matrixType<dataType>> A,
-            const std::shared_ptr<Matrix<dataType>> f, dtype::size iterations,
+        unsigned solve(const std::shared_ptr<matrixType<dataType>> A,
+            const std::shared_ptr<Matrix<dataType>> f, unsigned iterations,
             cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
             const double tolerance=0.0, bool dcFree=false);
 
         // member
-        dtype::size rows;
-        dtype::size cols;
+        unsigned rows;
+        unsigned cols;
         std::shared_ptr<Matrix<dataType>> r;
         std::shared_ptr<Matrix<dataType>> rHat;
         std::shared_ptr<Matrix<dataType>> roh;
