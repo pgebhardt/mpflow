@@ -24,10 +24,10 @@
 namespace mpFlow {
 namespace constants {
     // electromagnetic wave
-    const double epsilon0 = 8.8541878176e-12;
-    const double mu0 = 1.2566370614e-6;
-    const double c0 = 1.0 / std::sqrt(epsilon0 * mu0);
-    static const unsigned invalidIndex = (unsigned)(-1);
+    double const mu0 = 4.0 * M_PI * 1e-7;
+    double const c0 = 299792458.0;
+    double const epsilon0 = 1.0 / (c0 * c0 * mu0);
+    unsigned const invalidIndex = (unsigned)(-1);
 }
 }
 
