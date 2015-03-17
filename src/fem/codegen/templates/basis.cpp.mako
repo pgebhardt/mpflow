@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::${name}::${name}(
-    Eigen::Ref<const Eigen::ArrayXXd> points, unsigned one)
+    Eigen::Ref<Eigen::ArrayXXd const> const points, unsigned const one)
     : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(points) {
     // check one
     if (one >= pointsPerElement) {
@@ -63,8 +63,8 @@ ${integrateGradientWithBasis}
 
 // integrate edge
 double mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
-    Eigen::Ref<const Eigen::ArrayXd> points, unsigned one,
-    double start, double end) {
+    Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one,
+    double const start, double const end) {
     // calc coefficients for basis function
     std::array<double, pointsPerEdge> coefficients;
 % for i in range(len(boundaryCoefficiens) - 1):

@@ -25,7 +25,7 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::Linear::Linear(
-    Eigen::Ref<const Eigen::ArrayXXd> points, unsigned one)
+    Eigen::Ref<Eigen::ArrayXXd const> const points, unsigned const one)
     : mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(points) {
     // check one
     if (one >= pointsPerElement) {
@@ -58,8 +58,8 @@ mpFlow::FEM::basis::Linear::Linear(
 // integrate with basis
 
 double mpFlow::FEM::basis::Linear::integrateWithBasis(
-    const std::shared_ptr<Linear> other
-    ) {
+    std::shared_ptr<Linear const> const other
+    ) const {
     return ({
 (((1.0)*((((((((((((((((((((((((((((((((((((((((((((((0.0833333333333)*((this->points(0, 0))*(this->points(0, 0))))*(this->coefficients(1)))*(other->coefficients(1)))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(0, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(0, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(1, 0)))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(1, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 0)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(2, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 0)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(0, 0)))*(this->coefficients(0)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(0, 0)))*(this->coefficients(1)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(0, 1))*(this->points(0, 1))))*(this->coefficients(2)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(1, 0)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(1, 0)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 1)))*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(0, 1)))*(this->points(2, 0)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(0, 1)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(0, 1)))*(this->coefficients(0)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(0, 1)))*(this->coefficients(2)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(1, 0))*(this->points(1, 0))))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(1, 0)))*(this->points(1, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0833333333333)*(this->points(1, 0)))*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(1, 0)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0416666666667)*(this->points(1, 0)))*(this->points(2, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(1, 0)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(1, 0)))*(this->coefficients(0)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(1, 0)))*(this->coefficients(1)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(1, 1))*(this->points(1, 1))))*(this->coefficients(2)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(1, 1)))*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0416666666667)*(this->points(1, 1)))*(this->points(2, 0)))*(this->coefficients(2)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(1, 1)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(1, 1)))*(this->coefficients(0)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(1, 1)))*(this->coefficients(2)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(2, 0))*(this->points(2, 0))))*(this->coefficients(1)))*(other->coefficients(1))))+(((((0.0833333333333)*(this->points(2, 0)))*(this->points(2, 1)))*(this->coefficients(1)))*(other->coefficients(2))))+(((((0.0833333333333)*(this->points(2, 0)))*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(2, 0)))*(this->coefficients(0)))*(other->coefficients(1))))+((((0.166666666667)*(this->points(2, 0)))*(this->coefficients(1)))*(other->coefficients(0))))+((((0.0833333333333)*((this->points(2, 1))*(this->points(2, 1))))*(this->coefficients(2)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(2, 1)))*(this->coefficients(0)))*(other->coefficients(2))))+((((0.166666666667)*(this->points(2, 1)))*(this->coefficients(2)))*(other->coefficients(0))))+(((0.5)*(this->coefficients(0)))*(other->coefficients(0)))))*(abs(((((-(this->points(0, 0)))+(this->points(1, 0)))*((-(this->points(0, 1)))+(this->points(2, 1))))-(((-(this->points(0, 0)))+(this->points(2, 0)))*((-(this->points(0, 1)))+(this->points(1, 1))))))));
 })
@@ -70,8 +70,8 @@ double mpFlow::FEM::basis::Linear::integrateWithBasis(
 // integrate gradient with basis
 
 double mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
-    const std::shared_ptr<Linear> other
-    ) {
+    std::shared_ptr<Linear const> const other
+    ) const {
     return ({
 (((1.0)*((((0.5)*(this->coefficients(1)))*(other->coefficients(1)))+(((0.5)*(this->coefficients(2)))*(other->coefficients(2)))))*(abs(((((-(this->points(0, 0)))+(this->points(1, 0)))*((-(this->points(0, 1)))+(this->points(2, 1))))-(((-(this->points(0, 0)))+(this->points(2, 0)))*((-(this->points(0, 1)))+(this->points(1, 1))))))));
 })
@@ -81,8 +81,8 @@ double mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
 
 // integrate edge
 double mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
-    Eigen::Ref<const Eigen::ArrayXd> points, unsigned one,
-    double start, double end) {
+    Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one,
+    double const start, double const end) {
     // calc coefficients for basis function
     std::array<double, pointsPerEdge> coefficients;
     if (one == 0) {

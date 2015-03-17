@@ -25,10 +25,11 @@ template <
     template <class, template <class> class> class numericalSolverType
 >
 mpFlow::EIT::Solver<numericalSolverType>::Solver(
-    std::shared_ptr<EIT::ForwardSolver<>::equationType> equation,
-    std::shared_ptr<FEM::SourceDescriptor<float>> source, unsigned components,
-    unsigned parallelImages, double regularizationFactor,
-    cublasHandle_t handle, cudaStream_t stream) {
+    std::shared_ptr<EIT::ForwardSolver<>::equationType> const equation,
+    std::shared_ptr<FEM::SourceDescriptor<float> const> const source,
+    unsigned const components, unsigned const parallelImages,
+    double const regularizationFactor, cublasHandle_t const handle,
+    cudaStream_t const stream) {
     // check input
     if (equation == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::Solver::Solver: equation == nullptr");
@@ -65,7 +66,7 @@ template <
     template <class, template <class> class> class numericalSolverType
 >
 void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
-    cublasHandle_t handle, cudaStream_t stream) {
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::Solver::pre_solve: handle == nullptr");
@@ -93,9 +94,9 @@ void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
 template <
     template <class, template <class> class> class numericalSolverType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<float>>
+std::shared_ptr<mpFlow::numeric::Matrix<float> const>
     mpFlow::EIT::Solver<numericalSolverType>::solveDifferential(
-    cublasHandle_t handle, cudaStream_t stream) {
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
@@ -105,7 +106,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<float>>
     // solve
     this->inverseSolver->solve(this->forwardSolver->jacobian,
         this->calculation, this->measurement,
-        this->forwardSolver->equation->mesh->elements.rows() / 8,
+        this->forwardSolver->jacobian->cols / 8,
         handle, stream, this->dGamma);
 
     return this->dGamma;
@@ -115,9 +116,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<float>>
 template <
     template <class, template <class> class> class numericalSolverType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<float>>
+std::shared_ptr<mpFlow::numeric::Matrix<float> const>
     mpFlow::EIT::Solver<numericalSolverType>::solveAbsolute(
-    cublasHandle_t handle, cudaStream_t stream) {
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // only execute method, when parallel_images == 1
     if (this->measurement.size() != 1) {
         throw std::runtime_error(
@@ -139,10 +140,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<float>>
         handle, stream);
 
     // solve inverse
-    std::vector<std::shared_ptr<numeric::Matrix<float>>> calculation(
-        1, this->forwardSolver->result);
-    this->inverseSolver->solve(this->forwardSolver->jacobian, calculation,
-        this->measurement, this->forwardSolver->equation->mesh->elements.rows() / 8,
+    this->inverseSolver->solve(this->forwardSolver->jacobian, { this->forwardSolver->result },
+        this->measurement, this->forwardSolver->jacobian->cols / 8,
         handle, stream, this->dGamma);
 
     // add to gamma

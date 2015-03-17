@@ -139,12 +139,12 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<unsigned>>(
-        this->mesh->nodes.rows(), numeric::sparseMatrix::block_size * connectivityMatrices.size(),
-        stream, constants::invalid_index);
+        this->mesh->nodes.rows(), numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
+        stream, constants::invalidIndex);
     this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
-        numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream);
+        numeric::sparseMatrix::blockSize * elementalSMatrices.size(), stream);
     this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
-        numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
+        numeric::sparseMatrix::blockSize * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
@@ -155,11 +155,11 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
                 unsigned columId = commonElementMatrix->getColumnId(this->mesh->elements(element, i),
                     this->mesh->elements(element, j));
 
-                (*this->connectivityMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::block_size + columId) =
+                (*this->connectivityMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::blockSize + columId) =
                     connectivityMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
-                (*this->elementalSMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::block_size + columId) =
+                (*this->elementalSMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::blockSize + columId) =
                     elementalSMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
-                (*this->elementalRMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::block_size + columId) =
+                (*this->elementalRMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::blockSize + columId) =
                     elementalRMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
             }
         }
@@ -290,8 +290,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::update(
         this->connectivityMatrix, this->referenceValue, stream, this->rMatrix);
 
     // update system matrix
-    FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
-        numeric::matrix::block_size, stream, this->sMatrix->deviceValues, this->rMatrix->deviceValues,
+    FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::blockSize,
+        numeric::matrix::blockSize, stream, this->sMatrix->deviceValues, this->rMatrix->deviceValues,
         this->sMatrix->deviceColumnIds, this->sMatrix->density, k, this->systemMatrix->deviceValues);
 }
 
@@ -318,9 +318,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobi
     }
 
     // dimension
-    dim3 blocks(jacobian->dataRows / numeric::matrix::block_size,
-        jacobian->dataCols / numeric::matrix::block_size);
-    dim3 threads(numeric::matrix::block_size, numeric::matrix::block_size);
+    dim3 blocks(jacobian->dataRows / numeric::matrix::blockSize,
+        jacobian->dataCols / numeric::matrix::blockSize);
+    dim3 threads(numeric::matrix::blockSize, numeric::matrix::blockSize);
 
     // calc jacobian
     FEM::equationKernel::calcJacobian<dataType, basisFunctionType::pointsPerElement, logarithmic>(
@@ -357,8 +357,8 @@ void mpFlow::FEM::equation::updateMatrix(
     }
 
     // dimension
-    dim3 threads(numeric::matrix::block_size, numeric::sparseMatrix::block_size);
-    dim3 blocks(matrix->dataRows / numeric::matrix::block_size, 1);
+    dim3 threads(numeric::matrix::blockSize, numeric::sparseMatrix::blockSize);
+    dim3 blocks(matrix->dataRows / numeric::matrix::blockSize, 1);
 
     // execute kernel
     FEM::equationKernel::updateMatrix<dataType, logarithmic>(blocks, threads, stream,

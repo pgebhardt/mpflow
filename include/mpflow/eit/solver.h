@@ -30,27 +30,30 @@ namespace EIT {
     class Solver {
     public:
         // constructor
-        Solver(std::shared_ptr<EIT::ForwardSolver<>::equationType> equation,
-            std::shared_ptr<FEM::SourceDescriptor<float>> source, unsigned components,
-            unsigned parallelImages, double regularizationFactor,
-            cublasHandle_t handle, cudaStream_t stream);
+        Solver(std::shared_ptr<EIT::ForwardSolver<>::equationType> const equation,
+            std::shared_ptr<FEM::SourceDescriptor<float> const> const source,
+            unsigned const components, unsigned const parallelImages,
+            double const regularizationFactor, cublasHandle_t const handle,
+            cudaStream_t const stream);
 
         // pre solve for accurate initial jacobian
-        void preSolve(cublasHandle_t handle, cudaStream_t stream);
+        void preSolve(cublasHandle_t const handle, cudaStream_t const stream);
 
         // solving
-        std::shared_ptr<numeric::Matrix<float>> solveDifferential(
-            cublasHandle_t handle, cudaStream_t stream);
-        std::shared_ptr<numeric::Matrix<float>> solveAbsolute(cublasHandle_t handle,
-            cudaStream_t stream);
+        std::shared_ptr<numeric::Matrix<float> const> solveDifferential(
+            cublasHandle_t const handle, cudaStream_t const stream);
+        std::shared_ptr<numeric::Matrix<float> const> solveAbsolute(
+            cublasHandle_t const handle, cudaStream_t const stream);
 
         // member
+        std::vector<std::shared_ptr<numeric::Matrix<float>> const> measurement;
+        std::vector<std::shared_ptr<numeric::Matrix<float>> const> calculation;
+
+    private:
         std::shared_ptr<ForwardSolver<numericalSolverType>> forwardSolver;
         std::shared_ptr<solver::Inverse<float, numeric::ConjugateGradient>> inverseSolver;
         std::shared_ptr<numeric::Matrix<float>> gamma;
         std::shared_ptr<numeric::Matrix<float>> dGamma;
-        std::vector<std::shared_ptr<numeric::Matrix<float>>> measurement;
-        std::vector<std::shared_ptr<numeric::Matrix<float>>> calculation;
     };
 }
 }

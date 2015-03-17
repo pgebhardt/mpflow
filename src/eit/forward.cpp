@@ -28,8 +28,8 @@ template <
 >
 mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     std::shared_ptr<equationType> const equation,
-    std::shared_ptr<FEM::SourceDescriptor<dataType>> const source, unsigned components,
-    cublasHandle_t const handle, cudaStream_t const stream)
+    std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
+    unsigned const components, cublasHandle_t const handle, cudaStream_t const stream)
     : equation(equation), source(source) {
     // check input
     if (equation == nullptr) {
@@ -95,7 +95,7 @@ template <
     template <class, template <class> class> class numericalSolverType,
     class equationType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
+std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::solve(
     std::shared_ptr<numeric::Matrix<dataType> const> const gamma, cublasHandle_t const handle,
     cudaStream_t const stream, double const tolerance, unsigned* const steps) {
@@ -219,10 +219,10 @@ void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
         throw std::invalid_argument("fastEIT::ForwardSolver::applyMixedBoundaryCondition: systemMatrix == nullptr");
     }
 
-    dim3 blocks(excitationMatrix->dataRows / numeric::matrix::block_size,
-        excitationMatrix->dataCols == 1 ? 1 : excitationMatrix->dataCols / numeric::matrix::block_size);
-    dim3 threads(numeric::matrix::block_size,
-        excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::block_size);
+    dim3 blocks(excitationMatrix->dataRows / numeric::matrix::blockSize,
+        excitationMatrix->dataCols == 1 ? 1 : excitationMatrix->dataCols / numeric::matrix::blockSize);
+    dim3 threads(numeric::matrix::blockSize,
+        excitationMatrix->dataCols == 1 ? 1 : numeric::matrix::blockSize);
 
     forwardKernel::applyMixedBoundaryCondition<dataType>(blocks, threads, stream,
         excitationMatrix->deviceData, excitationMatrix->dataRows,

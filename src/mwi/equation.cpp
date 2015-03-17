@@ -125,12 +125,12 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<unsigned>>(
-        edges.size(), numeric::sparseMatrix::block_size * connectivityMatrices.size(),
-        stream, constants::invalid_index);
+        edges.size(), numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
+        stream, constants::invalidIndex);
     this->elementalSMatrix = std::make_shared<numeric::Matrix<thrust::complex<float>>>(edges.size(),
-        numeric::sparseMatrix::block_size * elementalSMatrices.size(), stream);
+        numeric::sparseMatrix::blockSize * elementalSMatrices.size(), stream);
     this->elementalRMatrix = std::make_shared<numeric::Matrix<thrust::complex<float>>>(edges.size(),
-        numeric::sparseMatrix::block_size * elementalRMatrices.size(), stream);
+        numeric::sparseMatrix::blockSize * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
@@ -143,11 +143,11 @@ void mpFlow::MWI::Equation::initElementalMatrices(cudaStream_t stream) {
                 unsigned columId = commonElementMatrix->getColumnId(std::get<0>(localEdges[i]),
                     std::get<0>(localEdges[j]));
 
-                (*this->connectivityMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
+                (*this->connectivityMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::blockSize + columId) =
                     connectivityMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
-                (*this->elementalSMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
+                (*this->elementalSMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::blockSize + columId) =
                     elementalSMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
-                (*this->elementalRMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::block_size + columId) =
+                (*this->elementalRMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::blockSize + columId) =
                     elementalRMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
             }
         }
@@ -209,7 +209,7 @@ void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<thrust:
         this->connectivityMatrix, thrust::complex<float>(1.0, 0.0), stream, this->rMatrix);
 
     // update system matrix
-    FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::block_size,
-        numeric::matrix::block_size, stream, this->sMatrix->deviceValues, this->rMatrix->deviceValues,
+    FEM::equationKernel::updateSystemMatrix(this->sMatrix->dataRows / numeric::matrix::blockSize,
+        numeric::matrix::blockSize, stream, this->sMatrix->deviceValues, this->rMatrix->deviceValues,
         this->sMatrix->deviceColumnIds, this->sMatrix->density, k, this->systemMatrix->deviceValues);
 }

@@ -25,8 +25,8 @@ using namespace std;
 
 // create basis class
 mpFlow::FEM::basis::${name}::${name} (
-    Eigen::Ref<const Eigen::ArrayXXd> points,
-    Eigen::Ref<const Eigen::ArrayXi> edge) :
+    Eigen::Ref<Eigen::ArrayXXd const> const points,
+    Eigen::Ref<Eigen::ArrayXi const> const edge) :
     mpFlow::FEM::basis::Basis<pointsPerEdge, pointsPerElement>(points),
     nodeBasis({{ Linear(points, edge(0)), Linear(points, edge(1)) }}) {
     // calculate length of edge

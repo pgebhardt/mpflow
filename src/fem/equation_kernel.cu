@@ -45,26 +45,26 @@ static __global__ void updateMatrixKernel(const unsigned* connectivityMatrix,
 
     // calc residual matrix element
     dataType value = dataType(0);
-    unsigned elementId = mpFlow::constants::invalid_index;
-    for (unsigned k = 0; k < columns / mpFlow::numeric::sparseMatrix::block_size; ++k) {
+    unsigned elementId = mpFlow::constants::invalidIndex;
+    for (unsigned k = 0; k < columns / mpFlow::numeric::sparseMatrix::blockSize; ++k) {
         // get element id
-        elementId = connectivityMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows];
+        elementId = connectivityMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::blockSize) * rows];
 
         if (logarithmic == true) {
-            value += elementId != mpFlow::constants::invalid_index ?
-                elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
+            value += elementId != mpFlow::constants::invalidIndex ?
+                elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::blockSize) * rows] *
                 referenceValue * exp(log(dataType(10)) * gamma[elementId] / dataType(10)) :
                 dataType(0);
         }
         else {
-            value += elementId != mpFlow::constants::invalid_index ?
-                elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::block_size) * rows] *
+            value += elementId != mpFlow::constants::invalidIndex ?
+                elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::blockSize) * rows] *
                 referenceValue * gamma[elementId] : dataType(0);
         }
     }
 
     // set residual matrix element
-    matrix_values[row * mpFlow::numeric::sparseMatrix::block_size + column] = value;
+    matrix_values[row * mpFlow::numeric::sparseMatrix::blockSize + column] = value;
 }
 
 // update matrix kernel wrapper
@@ -128,17 +128,17 @@ static __global__ void updateSystemMatrixKernel(
     unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
 
     // update system matrix
-    unsigned columnId = mpFlow::constants::invalid_index;
+    unsigned columnId = mpFlow::constants::invalidIndex;
     for (unsigned column = 0; column < density; ++column) {
         // get column id
-        columnId = sMatrixColumnIds[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        columnId = sMatrixColumnIds[row * mpFlow::numeric::sparseMatrix::blockSize + column];
 
         // update system matrix element
-        systemMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] =
-            columnId != mpFlow::constants::invalid_index ?
-            sMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] +
-            rMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column] * k :
-            systemMatrixValues[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        systemMatrixValues[row * mpFlow::numeric::sparseMatrix::blockSize + column] =
+            columnId != mpFlow::constants::invalidIndex ?
+            sMatrixValues[row * mpFlow::numeric::sparseMatrix::blockSize + column] +
+            rMatrixValues[row * mpFlow::numeric::sparseMatrix::blockSize + column] * k :
+            systemMatrixValues[row * mpFlow::numeric::sparseMatrix::blockSize + column];
     }
 }
 
@@ -198,9 +198,9 @@ static __global__ void calcJacobianKernel(const dataType* drivePhi,
 
     // calc measurment and drive id
     unsigned roundMeasurmentCount = (
-        (measurmentCount + mpFlow::numeric::matrix::block_size - 1) /
-        mpFlow::numeric::matrix::block_size) *
-        mpFlow::numeric::matrix::block_size;
+        (measurmentCount + mpFlow::numeric::matrix::blockSize - 1) /
+        mpFlow::numeric::matrix::blockSize) *
+        mpFlow::numeric::matrix::blockSize;
     unsigned measurmentId = row % roundMeasurmentCount;
     unsigned driveId = row / roundMeasurmentCount;
 

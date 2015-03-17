@@ -41,8 +41,8 @@ namespace MWI {
         std::shared_ptr<numeric::IrregularMesh> mesh;
         std::shared_ptr<numeric::Matrix<thrust::complex<float>>> jacobian;
         std::shared_ptr<numeric::Matrix<thrust::complex<float>>> dGamma;
-        std::vector<std::shared_ptr<numeric::Matrix<thrust::complex<float>>>> measurement;
-        std::vector<std::shared_ptr<numeric::Matrix<thrust::complex<float>>>> calculation;
+        std::vector<std::shared_ptr<numeric::Matrix<thrust::complex<float>>> const> measurement;
+        std::vector<std::shared_ptr<numeric::Matrix<thrust::complex<float>>> const> calculation;
     };
 }
 }

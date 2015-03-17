@@ -45,11 +45,11 @@ mpFlow::numeric::Matrix<type>::Matrix(unsigned const rows, unsigned const cols,
     cudaError_t error = cudaSuccess;
 
     // correct size to block size
-    if ((this->rows % matrix::block_size != 0) && (this->rows != 1)) {
-        this->dataRows = math::roundTo(this->rows, matrix::block_size);
+    if ((this->rows % matrix::blockSize != 0) && (this->rows != 1)) {
+        this->dataRows = math::roundTo(this->rows, matrix::blockSize);
     }
-    if ((this->cols % matrix::block_size != 0) && (this->cols != 1)) {
-        this->dataCols = math::roundTo(this->cols, matrix::block_size);
+    if ((this->cols % matrix::blockSize != 0) && (this->cols != 1)) {
+        this->dataCols = math::roundTo(this->cols, matrix::blockSize);
     }
 
     // create matrix device data memory
@@ -162,7 +162,7 @@ void mpFlow::numeric::Matrix<type>::copyToDevice(cudaStream_t const stream) {
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t const stream) {
+void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t const stream) const {
     if (this->hostData == nullptr) {
         throw std::runtime_error("mpFlow::numeric::Matrix::copyToHost: host memory was not allocated");
     }
@@ -181,10 +181,10 @@ template <
 >
 void mpFlow::numeric::Matrix<type>::fill(type const value, cudaStream_t const stream) {
     // dimension
-    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
-        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
-    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
-        this->dataCols == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::blockSize,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::blockSize);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::blockSize,
+        this->dataCols == 1 ? 1 : matrix::blockSize);
 
     // call kernel
     matrixKernel::fill(blocks, threads, stream, value,
@@ -209,10 +209,10 @@ void mpFlow::numeric::Matrix<type>::add(std::shared_ptr<Matrix<type> const> cons
     }
 
     // dimension
-    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
-        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
-    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
-        this->dataCols == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::blockSize,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::blockSize);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::blockSize,
+        this->dataCols == 1 ? 1 : matrix::blockSize);
 
     // call kernel
     matrixKernel::add(blocks, threads, stream, value->deviceData,
@@ -291,10 +291,10 @@ template <
 void mpFlow::numeric::Matrix<type>::scalarMultiply(type const scalar,
     cudaStream_t const stream) {
     // dimension
-    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
-        this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
-    dim3 threads(this->dataRows == 1 ? 1 : matrix::block_size,
-        this->dataCols == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::blockSize,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::blockSize);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::blockSize,
+        this->dataCols == 1 ? 1 : matrix::blockSize);
 
     // call kernel
     matrixKernel::scale<type>(blocks, threads, stream, scalar,
@@ -327,10 +327,10 @@ void mpFlow::numeric::Matrix<type>::elementwiseMultiply(
         A->dataCols), B->dataCols);
 
     // kernel dimension
-    dim3 blocks(this->dataRows / matrix::block_size,
-        columns == 1 ? 1 : columns / matrix::block_size);
-    dim3 threads(matrix::block_size,
-        columns == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows / matrix::blockSize,
+        columns == 1 ? 1 : columns / matrix::blockSize);
+    dim3 threads(matrix::blockSize,
+        columns == 1 ? 1 : matrix::blockSize);
 
     // call kernel
     matrixKernel::elementwiseMultiply<type>(blocks, threads, stream,
@@ -364,10 +364,10 @@ void mpFlow::numeric::Matrix<type>::elementwiseDivision(
         A->dataCols), B->dataCols);
 
     // kernel dimension
-    dim3 blocks(this->dataRows / matrix::block_size,
-        columns == 1 ? 1 : columns / matrix::block_size);
-    dim3 threads(matrix::block_size,
-        columns == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows / matrix::blockSize,
+        columns == 1 ? 1 : columns / matrix::blockSize);
+    dim3 threads(matrix::blockSize,
+        columns == 1 ? 1 : matrix::blockSize);
 
     // call kernel
     matrixKernel::elementwiseDivision<type>(blocks, threads, stream,
@@ -401,10 +401,10 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(
         A->dataCols), B->dataCols);
 
     // kernel dimension
-    dim3 blocks(this->dataRows / matrix::block_size,
-        columns == 1 ? 1 : columns / matrix::block_size);
-    dim3 threads(matrix::block_size,
-        columns == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows / matrix::blockSize,
+        columns == 1 ? 1 : columns / matrix::blockSize);
+    dim3 threads(matrix::blockSize,
+        columns == 1 ? 1 : matrix::blockSize);
 
     // call kernel
     matrixKernel::vectorDotProduct<type>(blocks, threads, stream,
@@ -436,10 +436,10 @@ void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> cons
     unsigned columns = std::min(this->dataCols, value->dataCols);
 
     // kernel settings
-    dim3 blocks(this->dataRows / matrix::block_size,
-        columns == 1 ? 1 : columns / matrix::block_size);
-    dim3 threads(matrix::block_size,
-        columns == 1 ? 1 : matrix::block_size);
+    dim3 blocks(this->dataRows / matrix::blockSize,
+        columns == 1 ? 1 : columns / matrix::blockSize);
+    dim3 threads(matrix::blockSize,
+        columns == 1 ? 1 : matrix::blockSize);
     unsigned offset = 1;
 
     // start kernel once
@@ -449,15 +449,15 @@ void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> cons
     // start kernel
     do {
         // update settings
-        offset *= matrix::block_size;
-        blocks.x = (blocks.x + matrix::block_size - 1) /
-            matrix::block_size;
+        offset *= matrix::blockSize;
+        blocks.x = (blocks.x + matrix::blockSize - 1) /
+            matrix::blockSize;
 
         matrixKernel::sum(blocks, threads, stream, this->deviceData,
             this->dataRows, offset, this->deviceData);
 
     }
-    while (offset * matrix::block_size < this->dataRows);
+    while (offset * matrix::blockSize < this->dataRows);
 }
 
 // min
@@ -477,24 +477,24 @@ void mpFlow::numeric::Matrix<type>::min(std::shared_ptr<Matrix<type> const> cons
     }
 
     // kernel settings
-    unsigned blocks = this->dataRows / matrix::block_size;
+    unsigned blocks = this->dataRows / matrix::blockSize;
     unsigned offset = 1;
 
     // start kernel once
-    matrixKernel::min<type>(blocks, matrix::block_size, stream,
+    matrixKernel::min<type>(blocks, matrix::blockSize, stream,
         value->deviceData, this->rows, offset, this->deviceData);
 
     // start kernel
     do {
         // update settings
-        offset *= matrix::block_size;
-        blocks = (blocks + matrix::block_size - 1) / matrix::block_size;
+        offset *= matrix::blockSize;
+        blocks = (blocks + matrix::blockSize - 1) / matrix::blockSize;
 
-        matrixKernel::min<type>(blocks, matrix::block_size, stream,
+        matrixKernel::min<type>(blocks, matrix::blockSize, stream,
             this->deviceData, this->rows, offset, this->deviceData);
 
     }
-    while (offset * matrix::block_size < this->dataRows);
+    while (offset * matrix::blockSize < this->dataRows);
 }
 
 namespace mpFlow {
@@ -532,24 +532,24 @@ void mpFlow::numeric::Matrix<type>::max(std::shared_ptr<Matrix<type> const> cons
     }
 
     // kernel settings
-    unsigned blocks = this->dataRows / matrix::block_size;
+    unsigned blocks = this->dataRows / matrix::blockSize;
     unsigned offset = 1;
 
     // start kernel once
-    matrixKernel::max<type>(blocks, matrix::block_size, stream,
+    matrixKernel::max<type>(blocks, matrix::blockSize, stream,
         value->deviceData, this->rows, offset, this->deviceData);
 
     // start kernel
     do {
         // update settings
-        offset *= matrix::block_size;
-        blocks = (blocks + matrix::block_size - 1) / matrix::block_size;
+        offset *= matrix::blockSize;
+        blocks = (blocks + matrix::blockSize - 1) / matrix::blockSize;
 
-        matrixKernel::max<type>(blocks, matrix::block_size, stream,
+        matrixKernel::max<type>(blocks, matrix::blockSize, stream,
             this->deviceData, this->rows, offset, this->deviceData);
 
     }
-    while (offset * matrix::block_size < this->dataRows);
+    while (offset * matrix::blockSize < this->dataRows);
 }
 
 namespace mpFlow {

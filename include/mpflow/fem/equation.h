@@ -57,15 +57,17 @@ namespace FEM {
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
         std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor;
         std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
+        dataType const referenceValue;
+
+    private:
         std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix;
         std::shared_ptr<numeric::SparseMatrix<dataType>> sMatrix;
         std::shared_ptr<numeric::SparseMatrix<dataType>> rMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalSMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalRMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
-        std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
         std::shared_ptr<numeric::Matrix<unsigned>> meshElements;
-        dataType const referenceValue;
     };
 
     namespace equation {

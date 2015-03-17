@@ -37,7 +37,7 @@ ${dtype} ${name}(
             % endif
         % endfor
     % endif
-    ) {
+    ) const {
 % endif
 % if expression:
     return ${expression};

@@ -201,9 +201,9 @@ void mpFlow::numeric::bicgstab::updateVector(
     }
 
     // kernel dimension
-    dim3 blocks(result->dataRows / matrix::block_size,
-        result->dataCols == 1 ? 1 : result->dataCols / matrix::block_size);
-    dim3 threads(matrix::block_size, result->dataCols == 1 ? 1 : matrix::block_size);
+    dim3 blocks(result->dataRows / matrix::blockSize,
+        result->dataCols == 1 ? 1 : result->dataCols / matrix::blockSize);
+    dim3 threads(matrix::blockSize, result->dataCols == 1 ? 1 : matrix::blockSize);
 
     // execute kernel
     bicgstabKernel::updateVector(blocks, threads, stream, x1->deviceData, sign,

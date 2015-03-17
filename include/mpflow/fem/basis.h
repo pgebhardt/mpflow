@@ -33,7 +33,7 @@ namespace basis {
     class Basis {
     // constructor and destructor
     protected:
-        Basis(Eigen::Ref<const Eigen::ArrayXXd> points)
+        Basis(Eigen::Ref<Eigen::ArrayXXd const> const points)
             : points(points), coefficients(Eigen::ArrayXd::Zero(_pointsPerElement)) { }
 
         virtual ~Basis() { }
@@ -44,7 +44,7 @@ namespace basis {
         static const unsigned pointsPerElement = _pointsPerElement;
 
         // member
-        Eigen::ArrayXXd points;
+        Eigen::ArrayXXd const points;
         Eigen::ArrayXd coefficients;
     };
 
@@ -52,40 +52,41 @@ namespace basis {
     class Linear : public Basis<2, 3> {
     public:
         // constructor
-        Linear(Eigen::Ref<const Eigen::ArrayXXd> points, unsigned one);
+        Linear(Eigen::Ref<Eigen::ArrayXXd const> points, unsigned const one);
 
         // mathematical evaluation of basis
-        double integrateWithBasis(const std::shared_ptr<Linear> other);
-        double integrateGradientWithBasis(const std::shared_ptr<Linear> other);
-        static double integrateBoundaryEdge(Eigen::Ref<const Eigen::ArrayXd> points,
-            unsigned one, double start, double end);
+        double integrateWithBasis(std::shared_ptr<Linear const> const other) const;
+        double integrateGradientWithBasis(std::shared_ptr<Linear const> const other) const;
+        static double integrateBoundaryEdge(Eigen::Ref<Eigen::ArrayXd const> const points,
+            unsigned const one, double const start, double const end);
     };
 
     // quadratic basis class definition
     class Quadratic : public Basis<3, 6> {
     public:
         // constructor
-        Quadratic(Eigen::Ref<const Eigen::ArrayXXd> points, unsigned one);
+        Quadratic(Eigen::Ref<Eigen::ArrayXXd const> points, unsigned const one);
 
         // mathematical evaluation of basis
-        double integrateWithBasis(const std::shared_ptr<Quadratic> other);
-        double integrateGradientWithBasis(const std::shared_ptr<Quadratic> other);
-        static double integrateBoundaryEdge(Eigen::Ref<const Eigen::ArrayXd> points,
-            unsigned one, double start, double end);
+        double integrateWithBasis(std::shared_ptr<Quadratic const> const other) const;
+        double integrateGradientWithBasis(std::shared_ptr<Quadratic const> const other) const;
+        static double integrateBoundaryEdge(Eigen::Ref<Eigen::ArrayXd const> const points,
+            unsigned const one, double const start, double const end);
     };
 
     // edge bases basis function definition
     class Edge : public Basis<1, 3> {
     public:
         // constructor
-        Edge(Eigen::Ref<const Eigen::ArrayXXd> points,
-            Eigen::Ref<const Eigen::ArrayXi> edge);
+        Edge(Eigen::Ref<Eigen::ArrayXXd const> const points,
+            Eigen::Ref<Eigen::ArrayXi const> const edge);
 
         // mathematical evaluation of basis
-        double integrateWithBasis(const std::shared_ptr<Edge> other);
-        double integrateGradientWithBasis(const std::shared_ptr<Edge> other);
+        double integrateWithBasis(std::shared_ptr<Edge const> const other) const;
+        double integrateGradientWithBasis(std::shared_ptr<Edge const> const other) const;
 
         // member
+    protected:
         std::array<Linear, 2> nodeBasis;
         double length;
     };

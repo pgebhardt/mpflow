@@ -35,11 +35,11 @@ namespace EIT {
 
         // initialization
         ForwardSolver(std::shared_ptr<equationType> const equation,
-            std::shared_ptr<FEM::SourceDescriptor<dataType>> const source,
+            std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
             unsigned const components, cublasHandle_t const handle, cudaStream_t const stream);
 
         // forward solving
-        std::shared_ptr<numeric::Matrix<dataType>> solve(
+        std::shared_ptr<numeric::Matrix<dataType> const> solve(
             std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
             cublasHandle_t const handle, cudaStream_t const stream,
             double const tolerance=1e-6, unsigned* const steps=nullptr);
@@ -50,13 +50,15 @@ namespace EIT {
             cublasHandle_t const handle, cudaStream_t const stream);
 
         // member
-        std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::SparseMatrix>> numericalSolver;
-        std::shared_ptr<equationType> equation;
-        std::shared_ptr<FEM::SourceDescriptor<dataType>> source;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
-        std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;
+
+    private:
+        std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::SparseMatrix>> numericalSolver;
+        std::shared_ptr<equationType> const equation;
+        std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source;
+        std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> electrodesAttachmentMatrix;
     };
 

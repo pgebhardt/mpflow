@@ -46,7 +46,7 @@ mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(
     this->temp2 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
 }
 
-// solve conjugateGradient sparse
+// solve conjugateGradient spars conste
 template <
     class dataType,
     template <class type> class matrixType
@@ -156,10 +156,10 @@ void mpFlow::numeric::conjugateGradient::addScalar(
     }
 
     // kernel dimension
-    dim3 blocks(vector->dataRows / matrix::block_size,
-        vector->dataCols == 1 ? 1 : vector->dataCols / matrix::block_size);
-    dim3 threads(matrix::block_size,
-        vector->dataCols == 1 ? 1 : matrix::block_size);
+    dim3 blocks(vector->dataRows / matrix::blockSize,
+        vector->dataCols == 1 ? 1 : vector->dataCols / matrix::blockSize);
+    dim3 threads(matrix::blockSize,
+        vector->dataCols == 1 ? 1 : matrix::blockSize);
 
     // execute kernel
     conjugateGradientKernel::addScalar<dataType>(blocks, threads, stream, scalar->deviceData,
@@ -194,9 +194,9 @@ void mpFlow::numeric::conjugateGradient::updateVector(
     }
 
     // kernel dimension
-    dim3 blocks(result->dataRows / matrix::block_size,
-        result->dataCols == 1 ? 1 : result->dataCols / matrix::block_size);
-    dim3 threads(matrix::block_size, result->dataCols == 1 ? 1 : matrix::block_size);
+    dim3 blocks(result->dataRows / matrix::blockSize,
+        result->dataCols == 1 ? 1 : result->dataCols / matrix::blockSize);
+    dim3 threads(matrix::blockSize, result->dataCols == 1 ? 1 : matrix::blockSize);
 
     // execute kernel
     conjugateGradientKernel::updateVector<dataType>(blocks, threads, stream, x1->deviceData, sign,

@@ -36,35 +36,38 @@ namespace solver {
         };
 
         // constructor
-        Inverse(unsigned elementCount, unsigned measurementCount, unsigned parallelImages,
-            dataType regularizationFactor, cublasHandle_t handle, cudaStream_t stream);
+        Inverse(unsigned const elementCount, unsigned const measurementCount,
+            unsigned const parallelImages, dataType const regularizationFactor,
+            cublasHandle_t const handle, cudaStream_t const stream);
 
     public:
         // inverse solving
-        std::shared_ptr<numeric::Matrix<dataType>> solve(
-            const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
-            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
-            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement,
-            unsigned steps, cublasHandle_t handle, cudaStream_t stream,
+        void solve(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
+            std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& calculation,
+            std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& measurement,
+            unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
             std::shared_ptr<numeric::Matrix<dataType>> gamma);
 
         // calc system matrix
-        void calcSystemMatrix(const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
-            RegularizationType regularizationType, cublasHandle_t handle, cudaStream_t stream);
+        void calcSystemMatrix(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
+            RegularizationType const regularizationType, cublasHandle_t const handle,
+            cudaStream_t const stream);
 
         // calc excitation
-        void calcExcitation(const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
-            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
-            const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement,
-            cublasHandle_t handle, cudaStream_t stream);
+        void calcExcitation(std::shared_ptr<numeric::Matrix<dataType> const> jacobian,
+            std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& calculation,
+            std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& measurement,
+            cublasHandle_t const handle, cudaStream_t const stream);
 
         // member
+        dataType regularizationFactor;
+
+    private:
         std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::Matrix>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dataType>> difference;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> systemMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> jacobianSquare;
-        dataType regularizationFactor;
     };
 }
 }

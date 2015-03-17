@@ -25,9 +25,10 @@ template <
     class dataType,
     template <class, template <class> class> class numericalSolverType
 >
-mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned elementCount,
-    unsigned measurementCount, unsigned parallelImages,
-    dataType regularizationFactor, cublasHandle_t handle, cudaStream_t stream)
+mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned const elementCount,
+    unsigned const measurementCount, unsigned const parallelImages,
+    dataType const regularizationFactor, cublasHandle_t const handle,
+    cudaStream_t const stream)
     : regularizationFactor(regularizationFactor) {
     // check input
     if (handle == nullptr) {
@@ -50,8 +51,8 @@ template <
     template <class, template <class> class> class numericalSolverType
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcSystemMatrix(
-    const std::shared_ptr<numeric::Matrix<dataType>> jacobian, RegularizationType regularizationType,
-    cublasHandle_t handle, cudaStream_t stream) {
+    std::shared_ptr<numeric::Matrix<dataType> const> jacobian, RegularizationType const regularizationType,
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (jacobian == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::calcSystemMatrix: jacobian == nullptr");
@@ -111,10 +112,10 @@ template <
     template <class, template <class> class> class numericalSolverType
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
-    const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
-    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
-    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement, cublasHandle_t handle,
-    cudaStream_t stream) {
+    std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& calculation,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& measurement,
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (jacobian == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::calcExcitation: jacobian == nullptr");
@@ -163,12 +164,11 @@ template <
     class dataType,
     template <class, template <class> class> class numericalSolverType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<dataType>>
-    mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
-    const std::shared_ptr<numeric::Matrix<dataType>> jacobian,
-    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& calculation,
-    const std::vector<std::shared_ptr<numeric::Matrix<dataType>>>& measurement, unsigned steps,
-    cublasHandle_t handle, cudaStream_t stream,
+void mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
+    std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& calculation,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& measurement,
+    unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
     std::shared_ptr<numeric::Matrix<dataType>> gamma) {
     // check input
     if (jacobian == nullptr) {
@@ -190,8 +190,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<dataType>>
     // solve system
     this->numericalSolver->solve(this->systemMatrix, this->excitation,
         steps, handle, stream, gamma);
-
-    return gamma;
 }
 
 // specialisation
@@ -199,3 +197,7 @@ template class mpFlow::solver::Inverse<float, mpFlow::numeric::ConjugateGradient
 template class mpFlow::solver::Inverse<double, mpFlow::numeric::ConjugateGradient>;
 template class mpFlow::solver::Inverse<thrust::complex<float>, mpFlow::numeric::ConjugateGradient>;
 template class mpFlow::solver::Inverse<thrust::complex<double>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Inverse<float, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::solver::Inverse<double, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::solver::Inverse<thrust::complex<float>, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::solver::Inverse<thrust::complex<double>, mpFlow::numeric::BiCGSTAB>;

@@ -14,24 +14,23 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
 #ifndef MPFLOW_INCLUDE_NUMERIC_CONSTANTS_H
 #define MPFLOW_INCLUDE_NUMERIC_CONSTANTS_H
 
-//namespace mpFlow
 namespace mpFlow {
 namespace numeric {
 namespace matrix {
     // matrix block size
-    const unsigned block_size = 16;
+    unsigned const blockSize = 16;
 }
 
 namespace sparseMatrix {
     // sparse matrix block size
-    const unsigned block_size = 32;
+    unsigned const blockSize = 32;
 }
 }
 }

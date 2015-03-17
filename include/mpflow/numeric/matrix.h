@@ -47,7 +47,7 @@ namespace numeric {
         // copy methods
         void copy(std::shared_ptr<Matrix<type> const> const other, cudaStream_t const stream=nullptr);
         void copyToDevice(cudaStream_t const stream=nullptr);
-        void copyToHost(cudaStream_t const stream=nullptr);
+        void copyToHost(cudaStream_t const stream=nullptr) const;
 
         // mathematical methods
         void fill(type const value, cudaStream_t const stream=nullptr);

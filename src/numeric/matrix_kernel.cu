@@ -333,19 +333,19 @@ __global__ void sumKernel(const type* vector, unsigned rows, unsigned offset,
     unsigned lid = threadIdx.x;
 
     // copy data to shared memory
-    volatile __shared__ type res[mpFlow::numeric::matrix::block_size * mpFlow::numeric::matrix::block_size];
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] =
+    volatile __shared__ type res[mpFlow::numeric::matrix::blockSize * mpFlow::numeric::matrix::blockSize];
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] =
         gid * offset < rows ? vector[gid * offset + column * rows] : 0.0f;
 
     // reduce
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size] +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::block_size] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
+        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
+        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
+        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
+        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
     __syncthreads();
 
     // stop rest of worker
@@ -354,7 +354,7 @@ __global__ void sumKernel(const type* vector, unsigned rows, unsigned offset,
     }
 
     // write to global memory
-    result[gid * offset + column * rows] = res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size];
+    result[gid * offset + column * rows] = res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize];
 }
 
 // complex specialisation
@@ -369,32 +369,32 @@ __global__ void sumKernel(const thrust::complex<float>* vector, unsigned rows,
     unsigned lid = threadIdx.x;
 
     // copy data to shared memory
-    volatile __shared__ cuFloatComplex res[mpFlow::numeric::matrix::block_size * mpFlow::numeric::matrix::block_size];
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x =
+    volatile __shared__ cuFloatComplex res[mpFlow::numeric::matrix::blockSize * mpFlow::numeric::matrix::blockSize];
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x =
         gid * offset < rows ? vector[gid * offset + column * rows].real() : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y =
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y =
         gid * offset < rows ? vector[gid * offset + column * rows].imag() : 0.0f;
 
     // reduce
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
     // stop rest of worker
     if (lid != 0) {
@@ -402,8 +402,8 @@ __global__ void sumKernel(const thrust::complex<float>* vector, unsigned rows,
     }
 
     // write to global memory
-    result[gid * offset + column * rows].real(res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x);
-    result[gid * offset + column * rows].imag(res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y);
+    result[gid * offset + column * rows].real(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x);
+    result[gid * offset + column * rows].imag(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y);
 }
 
 template <>
@@ -417,32 +417,32 @@ __global__ void sumKernel(const thrust::complex<double>* vector, unsigned rows,
     unsigned lid = threadIdx.x;
 
     // copy data to shared memory
-    volatile __shared__ cuDoubleComplex res[mpFlow::numeric::matrix::block_size * mpFlow::numeric::matrix::block_size];
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x =
+    volatile __shared__ cuDoubleComplex res[mpFlow::numeric::matrix::blockSize * mpFlow::numeric::matrix::blockSize];
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x =
         gid * offset < rows ? vector[gid * offset + column * rows].real() : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y =
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y =
         gid * offset < rows ? vector[gid * offset + column * rows].imag() : 0.0f;
 
     // reduce
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::block_size].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::block_size].y : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
+        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
+    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
+        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
 
     // stop rest of worker
     if (lid != 0) {
@@ -450,8 +450,8 @@ __global__ void sumKernel(const thrust::complex<double>* vector, unsigned rows,
     }
 
     // write to global memory
-    result[gid * offset + column * rows].real(res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].x);
-    result[gid * offset + column * rows].imag(res[lid + threadIdx.y * mpFlow::numeric::matrix::block_size].y);
+    result[gid * offset + column * rows].real(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x);
+    result[gid * offset + column * rows].imag(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y);
 }
 
 // sum kernel wrapper
@@ -496,7 +496,7 @@ __global__ void minKernel(const type* vector, unsigned rows, unsigned offset, ty
     unsigned lid = threadIdx.x;
 
     // copy data to shared memory
-    volatile __shared__ type res[mpFlow::numeric::matrix::block_size];
+    volatile __shared__ type res[mpFlow::numeric::matrix::blockSize];
     res[lid] = gid * offset < rows ? vector[gid * offset] : NAN;
 
     // reduce
@@ -550,7 +550,7 @@ __global__ void maxKernel(const type* vector, unsigned rows, unsigned offset, ty
     unsigned lid = threadIdx.x;
 
     // copy data to shared memory
-    volatile __shared__ type res[mpFlow::numeric::matrix::block_size];
+    volatile __shared__ type res[mpFlow::numeric::matrix::blockSize];
     res[lid] = gid * offset < rows ? vector[gid * offset] : NAN;
 
     // reduce

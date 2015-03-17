@@ -41,15 +41,15 @@ static __global__ void applyMixedBoundaryConditionKernel(
     excitation[row + col * rows] = abs(excitation[row + col * rows]) >= 1e-9 ? dataType(1) : dataType(0);
 
     // clear matrix row and set diagonal element to 1, if excitation element != 0
-    unsigned columnId = mpFlow::constants::invalid_index;
+    unsigned columnId = mpFlow::constants::invalidIndex;
     for (unsigned column = 0;
-        column < mpFlow::numeric::sparseMatrix::block_size;
+        column < mpFlow::numeric::sparseMatrix::blockSize;
         ++column) {
         // get column id
-        columnId = columnIds[row * mpFlow::numeric::sparseMatrix::block_size + column];
+        columnId = columnIds[row * mpFlow::numeric::sparseMatrix::blockSize + column];
 
         if (excitation[row + col * rows] != dataType(0)) {
-            values[row * mpFlow::numeric::sparseMatrix::block_size + column] =
+            values[row * mpFlow::numeric::sparseMatrix::blockSize + column] =
                 columnId == row ? dataType(1) : dataType(0);
         }
     }
