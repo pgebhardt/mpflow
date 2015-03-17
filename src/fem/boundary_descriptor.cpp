@@ -21,43 +21,45 @@
 #include "mpflow/mpflow.h"
 
 mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
+    Eigen::Ref<Eigen::ArrayXXd const> const coordinates,
     const std::vector<std::tuple<double, double>>& shapes)
-    : count(shapes.size()), coordinates(shapes.size()), shapes(shapes) {
+    : count(coordinates.rows()), coordinates(coordinates), shapes(shapes) {
     // check input
-    if (this->count == 0) {
+    if (coordinates.rows() == 0) {
         throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: count == 0");
     }
 }
 
-mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(unsigned count,
-    std::tuple<double, double> shape)
-    : BoundaryDescriptor(std::vector<std::tuple<double, double>>(count, shape)) {
+mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
+    Eigen::Ref<Eigen::ArrayXXd const> const coordinates, std::tuple<double, double> const shape)
+    : BoundaryDescriptor(coordinates, std::vector<std::tuple<double, double>>(coordinates.rows(), shape)) {
 }
 
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor::circularBoundary(
-    unsigned count, std::tuple<double, double> shape,
-    double boundaryRadius, double offset) {
+    unsigned const count, std::tuple<double, double> const shape,
+    double const boundaryRadius, double const offset) {
     // check radius
     if (boundaryRadius == 0.0) {
         throw std::invalid_argument(
             "mpFlow::FEM::boundaryDescriptor::circularBoundary: boundaryRadius == 0.0");
     }
 
-    auto descriptor = std::make_shared<BoundaryDescriptor>(count, shape);
-
     // fill coordinates vectors
     double angle = 0.0f;
-    double deltaAngle = M_PI / (double)descriptor->count;
-    for (unsigned electrode = 0; electrode < descriptor->count; ++electrode) {
+    double deltaAngle = M_PI / (double)count;
+    Eigen::ArrayXXd coordinates = Eigen::ArrayXXd::Zero(count, 4);
+    for (unsigned electrode = 0; electrode < count; ++electrode) {
         // calc start angle
         angle = (double)electrode * 2.0 * deltaAngle + offset / boundaryRadius;
 
         // calc coordinates
-        descriptor->coordinates[electrode] = std::make_tuple(
-            math::kartesian(std::make_tuple(boundaryRadius, angle)),
-            math::kartesian(std::make_tuple(boundaryRadius,
-                angle + std::get<0>(shape) / boundaryRadius)));
+        Eigen::ArrayXd point(2);
+        point << boundaryRadius, angle;
+        coordinates.block(electrode, 0, 1, 2) = math::kartesian(point).transpose();
+
+        point << boundaryRadius, angle + std::get<0>(shape) / boundaryRadius;
+        coordinates.block(electrode, 2, 1, 2) = math::kartesian(point).transpose();
     }
 
-    return descriptor;
+    return std::make_shared<BoundaryDescriptor>(coordinates, shape);
 }

@@ -21,56 +21,57 @@
 #include "mpflow/mpflow.h"
 
 // convert kartesian to polar coordinates
-std::tuple<double, double>
-    mpFlow::math::polar(std::tuple<double, double> point) {
+Eigen::ArrayXd mpFlow::math::polar(Eigen::Ref<Eigen::ArrayXd const> const point) {
     // calc radius
-    double angle = 0.0f;
-    double radius = sqrt(square(std::get<0>(point)) + square(std::get<1>(point)));
+    double angle = 0.0;
+    double radius = sqrt(point.square().sum());
 
     // calc angle
-    if (std::get<0>(point) > 0.0f) {
-        angle = atan(std::get<1>(point) / std::get<0>(point));
+    if (point(0) > 0.0) {
+        angle = atan(point(1) / point(0));
     }
-    else if ((std::get<0>(point) < 0.0f) && (std::get<1>(point) >= 0.0f)) {
-        angle = atan(std::get<1>(point) / std::get<0>(point)) + M_PI;
+    else if ((point(0) < 0.0) && (point(1) >= 0.0)) {
+        angle = atan(point(1) / point(0)) + M_PI;
     }
-    else if ((std::get<0>(point) < 0.0f) && (std::get<1>(point) < 0.0f)) {
-        angle = atan(std::get<1>(point) / std::get<0>(point)) - M_PI;
+    else if ((point(0) < 0.0) && (point(1) < 0.0)) {
+        angle = atan(point(1) / point(0)) - M_PI;
     }
-    else if ((std::get<0>(point) == 0.0f) && (std::get<1>(point) > 0.0f)) {
-        angle = M_PI / 2.0f;
+    else if ((point(0) == 0.0) && (point(1) > 0.0)) {
+        angle = M_PI / 2.0;
     }
-    else if ((std::get<0>(point) == 0.0f) && (std::get<1>(point) < 0.0f)) {
-        angle = - M_PI / 2.0f;
+    else if ((point(0) == 0.0) && (point(1) < 0.0)) {
+        angle = - M_PI / 2.0;
     }
     else {
-        angle = 0.0f;
+        angle = 0.0;
     }
 
-    return std::make_tuple(radius, angle);
+    Eigen::ArrayXd result(2);
+    result << radius, angle;
+    return result;
 }
 
 // convert polar to kartesian coordinates
-std::tuple<double, double>
-    mpFlow::math::kartesian(std::tuple<double, double> point) {
-    double x = std::get<0>(point) * cos(std::get<1>(point));
-    double y = std::get<0>(point) * sin(std::get<1>(point));
+Eigen::ArrayXd mpFlow::math::kartesian(Eigen::Ref<Eigen::ArrayXd const> const point) {
+    Eigen::ArrayXd result(2);
+    result(0) = point(0) * cos(point(1));
+    result(1) = point(0) * sin(point(1));
 
-    return std::make_tuple(x, y);
+    return result;
 }
 
 // calc circle parameter
-double mpFlow::math::circleParameter(
-    std::tuple<double, double> point, double offset) {
+double mpFlow::math::circleParameter(Eigen::Ref<Eigen::ArrayXd const> const point,
+    double const offset) {
     // convert to polar coordinates
-    std::tuple<double, double> polar_point = polar(point);
-    double angle = std::get<1>(polar_point);
+    Eigen::ArrayXd polarPoint = polar(point);
+    double angle = polarPoint(1);
 
     // correct angle
-    angle -= offset / std::get<0>(polar_point);
-    angle += (angle < -M_PI) ? 2.0f * M_PI : 0.0f;
-    angle -= (angle > M_PI) ? 2.0f * M_PI : 0.0f;
+    angle -= offset / polarPoint(0);
+    angle += (angle < -M_PI) ? 2.0 * M_PI : 0.0;
+    angle -= (angle > M_PI) ? 2.0 * M_PI : 0.0;
 
     // calc parameter
-    return angle * std::get<0>(polar_point);
+    return angle * polarPoint(0);
 }

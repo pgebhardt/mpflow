@@ -24,8 +24,7 @@
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<const Eigen::ArrayXXd> nodes,
     Eigen::Ref<const Eigen::ArrayXXi> elements, Eigen::Ref<const Eigen::ArrayXXi> boundary,
     double radius, double height)
-    : nodes(nodes), elements(elements), boundary(boundary), radius(radius),
-        height(height) {
+    : nodes(nodes), elements(elements), boundary(boundary), radius(radius), height(height) {
     // check input
     if (nodes.cols() != 2) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->cols != 2");
@@ -50,27 +49,13 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned element) {
     return result;
 }
 
-std::vector<std::tuple<unsigned, std::tuple<double,
-    double>>>
-    mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned element) {
-    // result vector
-    std::vector<std::tuple<unsigned,
-        std::tuple<double, double>>> result(
-        this->boundary.cols());
+Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned element) {
+    // result array
+    Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->boundary.cols(), 2);
 
     // get node index and coordinate
-    unsigned index = -1;
-    std::tuple<double, double> coordinates = std::make_tuple(0.0f, 0.0f);
     for (int node = 0; node < this->boundary.cols(); ++node) {
-        // get index
-        index = this->boundary(element, node);
-
-        // get coordinates
-        coordinates = std::make_tuple(this->nodes(index, 0),
-            this->nodes(index, 1));
-
-        // add to array
-        result[node] = std::make_tuple(index, coordinates);
+        result.row(node) = this->nodes.row(this->boundary(element, node));
     }
 
     return result;

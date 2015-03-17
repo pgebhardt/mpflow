@@ -14,34 +14,32 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
 #ifndef MPFLOW_INCLUDE_MATH_H
 #define MPFLOW_INCLUDE_MATH_H
 
-// namespace mpFlow::math
 namespace mpFlow {
 namespace math {
     // square
     template <
         class type
     >
-    inline type square(type value) { return value * value; }
+    inline auto square(type const value) -> decltype(value * value) { return value * value; }
 
     // convert kartesian to polar coordinates
-    std::tuple<double, double> polar(std::tuple<double, double> point);
+    Eigen::ArrayXd polar(Eigen::Ref<Eigen::ArrayXd const> const point);
 
     // convert polar to kartesian coordinates
-    std::tuple<double, double> kartesian(std::tuple<double, double> point);
+    Eigen::ArrayXd kartesian(Eigen::Ref<Eigen::ArrayXd const> const point);
 
     // calc circle parameter
-    double circleParameter(std::tuple<double, double> point,
-        double offset);
+    double circleParameter(Eigen::Ref<Eigen::ArrayXd const> const point, double const offset);
 
     // round to size
-    inline unsigned roundTo(unsigned size, unsigned block_size) {
+    inline unsigned roundTo(unsigned const size, unsigned const block_size) {
         return size == 0 ? 0 : (size / block_size + 1) * block_size;
     }
 

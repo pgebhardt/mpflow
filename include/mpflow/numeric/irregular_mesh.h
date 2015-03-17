@@ -34,15 +34,14 @@ namespace numeric {
 
         // helper methods
         Eigen::ArrayXXd elementNodes(unsigned element);
-        std::vector<std::tuple<unsigned, std::tuple<double, double>>>
-            boundaryNodes(unsigned element);
+        Eigen::ArrayXXd boundaryNodes(unsigned element);
 
         // member
-        Eigen::ArrayXXd nodes;
-        Eigen::ArrayXXi elements;
-        Eigen::ArrayXXi boundary;
-        double radius;
-        double height;
+        Eigen::ArrayXXd const nodes;
+        Eigen::ArrayXXi const elements;
+        Eigen::ArrayXXi const boundary;
+        double const radius;
+        double const height;
     };
 
     // mesh helper
