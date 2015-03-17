@@ -27,6 +27,16 @@ namespace numeric {
     // forward declarations
     template <class type> class SparseMatrix;
 
+    // filter thrust::complex type for eigen array creation
+    template <typename T>
+    struct filterType { typedef T type; };
+
+    template <>
+    struct filterType<thrust::complex<float>> { typedef std::complex<float> type; };
+
+    template <>
+    struct filterType<thrust::complex<double>> { typedef std::complex<double> type; };
+
     // matrix class definition
     template <
         class type_
@@ -81,6 +91,12 @@ namespace numeric {
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::string const filename,
             cudaStream_t const stream=nullptr, char const delimiter=' ');
 
+        // cast from and to eigen arrays
+        auto toEigen() const -> Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic>;
+        static std::shared_ptr<mpFlow::numeric::Matrix<type>> fromEigen(
+            Eigen::Ref<Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
+            cudaStream_t const stream=nullptr);
+
         // I/O operators
         friend std::ostream& operator << (std::ostream& out, Matrix<type> const& matrix) {
             matrix.savetxt(out);
@@ -120,31 +136,6 @@ namespace numeric {
         unsigned dataRows;
         unsigned dataCols;
     };
-
-    // namespace matrix
-    namespace matrix {
-        // converts matrix to eigen array
-        template <
-            class type
-        >
-        Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> toEigen(
-            std::shared_ptr<Matrix<type> const> const matrix);
-
-        template <
-            class type
-        >
-        Eigen::Array<std::complex<type>, Eigen::Dynamic, Eigen::Dynamic> toEigen(
-            std::shared_ptr<Matrix<thrust::complex<type>> const> const matrix);
-
-        // converts eigen array to matrix
-        template <
-            class mpflow_type,
-            class eigen_type
-        >
-        std::shared_ptr<Matrix<mpflow_type>> fromEigen(
-            Eigen::Ref<Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
-            cudaStream_t const stream=nullptr);
-    }
 }
 }
 

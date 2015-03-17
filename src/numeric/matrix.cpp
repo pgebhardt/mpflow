@@ -709,71 +709,39 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
 template <
     class type
 >
-Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<Matrix<type> const> const matrix) {
-    // check input
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::matrix::toEigen: matrix == nullptr");
-    }
-
+auto mpFlow::numeric::Matrix<type>::toEigen() const ->
+    Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> {
     // create eigen array with mpflow_type
-    Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> array(
-        matrix->dataRows, matrix->dataCols);
+    Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> array(
+        this->dataRows, this->dataCols);
 
     // copy data
-    memcpy(array.data(), matrix->hostData, sizeof(type) *
+    memcpy(array.data(), this->hostData, sizeof(type) *
         array.rows() * array.cols());
 
     // resize array
-    array.conservativeResize(matrix->rows, matrix->cols);
-
-    return array;
-}
-
-template <
-    class type
->
-Eigen::Array<std::complex<type>, Eigen::Dynamic, Eigen::Dynamic>
-    mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<Matrix<thrust::complex<type>> const> const matrix) {
-    // check input
-    if (matrix == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::matrix::toEigen: matrix == nullptr");
-    }
-
-    // create eigen array with mpflow_type
-    Eigen::Array<std::complex<type>, Eigen::Dynamic, Eigen::Dynamic> array(
-        matrix->dataRows, matrix->dataCols);
-
-    // copy data
-    memcpy(array.data(), matrix->hostData, sizeof(thrust::complex<type>) *
-        array.rows() * array.cols());
-
-    // resize array
-    array.conservativeResize(matrix->rows, matrix->cols);
+    array.conservativeResize(this->rows, this->cols);
 
     return array;
 }
 
 // converts eigen array to matrix
 template <
-    class mpflow_type,
-    class eigen_type
+    class type
 >
-std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::fromEigen(
+    Eigen::Ref<Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
     cudaStream_t const stream) {
-    // convert array to mpflow_type
-    Eigen::Array<mpflow_type, Eigen::Dynamic, Eigen::Dynamic> mpflow_array =
-        array.template cast<mpflow_type>();
+    // copy array into changable intermediate array
+    Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> tempArray = array;
 
     // create mpflow matrix and resize eigen array to correct size
-    auto matrix = std::make_shared<Matrix<mpflow_type>>(mpflow_array.rows(),
-        mpflow_array.cols(), stream);
-    mpflow_array.conservativeResize(matrix->dataRows, matrix->dataCols);
+    auto matrix = std::make_shared<Matrix<type>>(array.rows(),
+        array.cols(), stream);
+    tempArray.conservativeResize(matrix->dataRows, matrix->dataCols);
 
     // copy data
-    memcpy(matrix->hostData, mpflow_array.data(), sizeof(mpflow_type) *
+    memcpy(matrix->hostData, tempArray.data(), sizeof(type) *
         matrix->dataRows * matrix->dataCols);
 
     // copy data to device
@@ -783,30 +751,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
 }
 
 // specialisation
-template Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const);
-template Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const);
-template Eigen::Array<std::complex<float>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const);
-template Eigen::Array<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const);
-template Eigen::Array<unsigned, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const);
-template Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<int> const> const);
-
-template std::shared_ptr<mpFlow::numeric::Matrix<float>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<Eigen::ArrayXXf const> const, cudaStream_t const);
-template std::shared_ptr<mpFlow::numeric::Matrix<double>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<Eigen::ArrayXXd const> const, cudaStream_t const);
-template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<Eigen::ArrayXXi const> const, cudaStream_t const);
-template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<Eigen::Array<unsigned, Eigen::Dynamic, Eigen::Dynamic> const> const, cudaStream_t const);
-template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<Eigen::Array<long, Eigen::Dynamic, Eigen::Dynamic> const> const, cudaStream_t const);
-
 template class mpFlow::numeric::Matrix<float>;
 template class mpFlow::numeric::Matrix<double>;
 template class mpFlow::numeric::Matrix<thrust::complex<float>>;

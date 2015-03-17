@@ -53,7 +53,7 @@ mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
     this->excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->nodes.rows(), this->boundaryDescriptor->count, stream,
         0.0, false);
-    this->meshElements = numeric::matrix::fromEigen<unsigned, int>(this->mesh->elements, stream);
+    this->meshElements = numeric::Matrix<unsigned>::fromEigen(this->mesh->elements.template cast<unsigned>(), stream);
 
     this->initElementalMatrices(stream);
     this->initExcitationMatrix(stream);
