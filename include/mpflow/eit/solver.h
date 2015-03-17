@@ -46,8 +46,8 @@ namespace EIT {
             cublasHandle_t const handle, cudaStream_t const stream);
 
         // member
-        std::vector<std::shared_ptr<numeric::Matrix<float>> const> measurement;
-        std::vector<std::shared_ptr<numeric::Matrix<float>> const> calculation;
+        std::vector<std::shared_ptr<numeric::Matrix<float>>> measurement;
+        std::vector<std::shared_ptr<numeric::Matrix<float>>> calculation;
 
     private:
         std::shared_ptr<ForwardSolver<numericalSolverType>> forwardSolver;

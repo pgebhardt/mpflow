@@ -113,8 +113,8 @@ template <
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
-    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& calculation,
-    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& measurement,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
     cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (jacobian == nullptr) {
@@ -166,8 +166,8 @@ template <
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
-    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& calculation,
-    std::vector<std::shared_ptr<numeric::Matrix<dataType>> const> const& measurement,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
+    std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
     unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
     std::shared_ptr<numeric::Matrix<dataType>> gamma) {
     // check input
