@@ -21,9 +21,10 @@
 #include "mpflow/mpflow.h"
 
 // create mesh class
-mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<const Eigen::ArrayXXd> nodes,
-    Eigen::Ref<const Eigen::ArrayXXi> elements, Eigen::Ref<const Eigen::ArrayXXi> boundary,
-    double radius, double height)
+mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
+    Eigen::Ref<Eigen::ArrayXXi const> const elements,
+    Eigen::Ref<Eigen::ArrayXXi const> const boundary,
+    double const radius, double const height)
     : nodes(nodes), elements(elements), boundary(boundary), radius(radius), height(height) {
     // check input
     if (nodes.cols() != 2) {
@@ -37,7 +38,7 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<const Eigen::ArrayXXd> 
     }
 }
 
-Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned element) {
+Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const element) const {
     // result array
     Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->elements.cols(), 2);
 
@@ -49,7 +50,7 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned element) {
     return result;
 }
 
-Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned element) {
+Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned const element) const {
     // result array
     Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->boundary.cols(), 2);
 
@@ -63,8 +64,10 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned element) 
 
 // create mesh for quadratic basis function
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::quadraticBasis(
-    Eigen::Ref<const Eigen::ArrayXXd> nodes, Eigen::Ref<const Eigen::ArrayXXi> elements,
-    Eigen::Ref<const Eigen::ArrayXXi> boundary, double radius, double height) {
+    Eigen::Ref<Eigen::ArrayXXd const> const nodes,
+    Eigen::Ref<Eigen::ArrayXXi const> const elements,
+    Eigen::Ref<Eigen::ArrayXXi const> const boundary,
+    double const radius, double const height) {
     // create quadratic grid
     Eigen::ArrayXXd n;
     Eigen::ArrayXXi e, b;
@@ -77,8 +80,9 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::
 // function create quadratic mesh from linear
 std::tuple<Eigen::ArrayXXd, Eigen::ArrayXXi, Eigen::ArrayXXi>
 mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
-    Eigen::Ref<const Eigen::ArrayXXd> nodes_old, Eigen::Ref<const Eigen::ArrayXXi> elements_old,
-    Eigen::Ref<const Eigen::ArrayXXi> boundary_old) {
+    Eigen::Ref<Eigen::ArrayXXd const> const nodes_old,
+    Eigen::Ref<Eigen::ArrayXXi const> const elements_old,
+    Eigen::Ref<Eigen::ArrayXXi const> const boundary_old) {
     // define vectors for calculation
     std::vector<std::array<unsigned, 2> > already_calc_midpoints(0);
     std::vector<std::array<double, 2> > new_calc_nodes(0);
@@ -222,7 +226,7 @@ std::tuple<
     std::vector<std::tuple<unsigned, unsigned>>,
     std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>>>
     mpFlow::numeric::irregularMesh::calculateGlobalEdgeIndices(
-        Eigen::Ref<const Eigen::ArrayXXi> elements) {
+        Eigen::Ref<Eigen::ArrayXXi const> const elements) {
     std::vector<std::tuple<unsigned, unsigned>> edges;
     std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>> localEdgeConnections(elements.rows());
 

@@ -31,17 +31,19 @@ namespace numeric {
     class BiCGSTAB {
     public:
         // constructor
-        BiCGSTAB(unsigned rows, unsigned cols, cudaStream_t stream);
+        BiCGSTAB(unsigned const rows, unsigned const cols, cudaStream_t const stream);
 
         // solve system
-        unsigned solve(const std::shared_ptr<matrixType<dataType>> A,
-            const std::shared_ptr<Matrix<dataType>> f, unsigned iterations,
-            cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
-            const double tolerance=0.0, bool dcFree=false);
+        unsigned solve(std::shared_ptr<matrixType<dataType> const> const A,
+            std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
+            cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> x,
+            double const tolerance=0.0, bool const dcFree=false);
 
         // member
-        unsigned rows;
-        unsigned cols;
+        unsigned const rows;
+        unsigned const cols;
+
+    private:
         std::shared_ptr<Matrix<dataType>> r;
         std::shared_ptr<Matrix<dataType>> rHat;
         std::shared_ptr<Matrix<dataType>> roh;
@@ -63,9 +65,9 @@ namespace numeric {
         template <
             class dataType
         >
-        void updateVector(const std::shared_ptr<Matrix<dataType>> x1,
-            const double sign, const std::shared_ptr<Matrix<dataType>> x2,
-            const std::shared_ptr<Matrix<dataType>> scalar, cudaStream_t stream,
+        void updateVector(std::shared_ptr<Matrix<dataType> const> const x1,
+            double const sign, std::shared_ptr<Matrix<dataType> const> const x2,
+            std::shared_ptr<Matrix<dataType> const> const scalar, cudaStream_t const stream,
             std::shared_ptr<Matrix<dataType>> result);
     }
 }

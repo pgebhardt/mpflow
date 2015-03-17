@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -28,13 +28,14 @@ namespace numeric {
     class IrregularMesh {
     public:
         // constructor
-        IrregularMesh(Eigen::Ref<const Eigen::ArrayXXd> nodes,
-            Eigen::Ref<const Eigen::ArrayXXi> elements, Eigen::Ref<const Eigen::ArrayXXi> boundary,
-            double radius, double height);
+        IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
+            Eigen::Ref<Eigen::ArrayXXi const> const elements,
+            Eigen::Ref<Eigen::ArrayXXi const> const boundary,
+            double const radius, double const height);
 
         // helper methods
-        Eigen::ArrayXXd elementNodes(unsigned element);
-        Eigen::ArrayXXd boundaryNodes(unsigned element);
+        Eigen::ArrayXXd elementNodes(unsigned const element) const;
+        Eigen::ArrayXXd boundaryNodes(unsigned const element) const;
 
         // member
         Eigen::ArrayXXd const nodes;
@@ -48,18 +49,18 @@ namespace numeric {
     namespace irregularMesh {
         // create mesh for quadratic basis function
         std::shared_ptr<mpFlow::numeric::IrregularMesh> quadraticBasis(
-            Eigen::Ref<const Eigen::ArrayXXd> nodes, Eigen::Ref<const Eigen::ArrayXXi> elements,
-            Eigen::Ref<const Eigen::ArrayXXi> boundary, double radius, double height);
+            Eigen::Ref<Eigen::ArrayXXd const> const nodes, Eigen::Ref<Eigen::ArrayXXi const> const elements,
+            Eigen::Ref<Eigen::ArrayXXi const> const boundary, double const radius, double const height);
 
         // quadratic mesh from linear
         std::tuple<Eigen::ArrayXXd, Eigen::ArrayXXi, Eigen::ArrayXXi> quadraticMeshFromLinear(
-            Eigen::Ref<const Eigen::ArrayXXd> nodes, Eigen::Ref<const Eigen::ArrayXXi> elements,
-            Eigen::Ref<const Eigen::ArrayXXi> boundary);
+            Eigen::Ref<Eigen::ArrayXXd const> const nodes, Eigen::Ref<Eigen::ArrayXXi const> const elements,
+            Eigen::Ref<Eigen::ArrayXXi const> const boundary);
 
         std::tuple<
             std::vector<std::tuple<unsigned, unsigned>>,
             std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>>>
-            calculateGlobalEdgeIndices(Eigen::Ref<const Eigen::ArrayXXi> elements);
+            calculateGlobalEdgeIndices(Eigen::Ref<Eigen::ArrayXXi const> const elements);
     }
 }
 }

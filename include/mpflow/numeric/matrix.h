@@ -36,59 +36,59 @@ namespace numeric {
         typedef type_ type;
 
         // constructor and destructor
-        Matrix(unsigned rows, unsigned cols, cudaStream_t stream=nullptr,
-            type value=0, bool allocateHostMemory=true);
+        Matrix(unsigned const rows, unsigned const cols, cudaStream_t const stream=nullptr,
+            type const value=0, bool const allocateHostMemory=true);
         virtual ~Matrix();
 
         // create special matrices
-        static std::shared_ptr<Matrix<type>> eye(unsigned size,
-            cudaStream_t stream=nullptr);
+        static std::shared_ptr<Matrix<type>> eye(unsigned const size,
+            cudaStream_t const stream=nullptr);
 
         // copy methods
-        void copy(const std::shared_ptr<Matrix<type>> other, cudaStream_t stream=nullptr);
-        void copyToDevice(cudaStream_t stream=nullptr);
-        void copyToHost(cudaStream_t stream=nullptr);
+        void copy(std::shared_ptr<Matrix<type> const> const other, cudaStream_t const stream=nullptr);
+        void copyToDevice(cudaStream_t const stream=nullptr);
+        void copyToHost(cudaStream_t const stream=nullptr);
 
         // mathematical methods
-        void fill(type value, cudaStream_t stream=nullptr);
-        void add(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
-        void multiply(const std::shared_ptr<Matrix<type>> A,
-            const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle,
-            cudaStream_t stream=nullptr);
-        void multiply(const std::shared_ptr<SparseMatrix<type>> A,
-            const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle,
-            cudaStream_t stream=nullptr);
-        void scalarMultiply(type scalar, cudaStream_t stream=nullptr);
-        void elementwiseMultiply(const std::shared_ptr<Matrix<type>> A,
-            const std::shared_ptr<Matrix<type>> B, cudaStream_t stream=nullptr);
-        void elementwiseDivision(const std::shared_ptr<Matrix<type>> A,
-            const std::shared_ptr<Matrix<type>> B, cudaStream_t stream=nullptr);
-        void vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
-            const std::shared_ptr<Matrix<type>> B, cudaStream_t stream=nullptr);
+        void fill(type const value, cudaStream_t const stream=nullptr);
+        void add(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
+        void multiply(std::shared_ptr<Matrix<type> const> const A,
+            std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const handle,
+            cudaStream_t const stream=nullptr);
+        void multiply(std::shared_ptr<SparseMatrix<type> const> const A,
+            std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const handle,
+            cudaStream_t const stream=nullptr);
+        void scalarMultiply(type const scalar, cudaStream_t const stream=nullptr);
+        void elementwiseMultiply(std::shared_ptr<Matrix<type> const> const A,
+            std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream=nullptr);
+        void elementwiseDivision(std::shared_ptr<Matrix<type> const> const A,
+            std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream=nullptr);
+        void vectorDotProduct(std::shared_ptr<Matrix<type> const> const A,
+            std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream=nullptr);
 
         // reduce methods
-        void sum(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
-        void min(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
-        void max(const std::shared_ptr<Matrix<type>> value, cudaStream_t stream=nullptr);
+        void sum(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
+        void min(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
+        void max(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
 
         // save matrix as txt
-        void savetxt(std::ostream& ostream, char delimiter=' ') const;
-        void savetxt(const std::string filename, char delimiter=' ') const;
+        void savetxt(std::ostream& ostream, char const delimiter=' ') const;
+        void savetxt(std::string const filename, char const delimiter=' ') const;
 
         // load txt formatted matrix from file
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::istream& istream,
-            cudaStream_t stream=nullptr, char delimiter=' ');
-        static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(const std::string filename,
-            cudaStream_t stream=nullptr, char delimiter=' ');
+            cudaStream_t const stream=nullptr, char const delimiter=' ');
+        static std::shared_ptr<mpFlow::numeric::Matrix<type>> loadtxt(std::string const filename,
+            cudaStream_t const stream=nullptr, char const delimiter=' ');
 
         // I/O operators
-        friend std::ostream& operator << (std::ostream& out, const Matrix<type>& matrix) {
+        friend std::ostream& operator << (std::ostream& out, Matrix<type> const& matrix) {
             matrix.savetxt(out);
             return out;
         }
 
         // accessors
-        const type operator() (unsigned i, unsigned j) const {
+        const type operator() (unsigned const i, unsigned const j) const {
             // check index
             if (this->hostData == nullptr) {
                 throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
@@ -101,7 +101,7 @@ namespace numeric {
         }
 
         // mutators
-        type& operator() (unsigned i, unsigned j) {
+        type& operator() (unsigned const i, unsigned const j) {
             // check index
             if (this->hostData == nullptr) {
                 throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
@@ -115,8 +115,8 @@ namespace numeric {
 
         type* hostData;
         type* deviceData;
-        unsigned rows;
-        unsigned cols;
+        unsigned const rows;
+        unsigned const cols;
         unsigned dataRows;
         unsigned dataCols;
     };
@@ -128,13 +128,13 @@ namespace numeric {
             class type
         >
         Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> toEigen(
-            std::shared_ptr<Matrix<type>> matrix);
+            std::shared_ptr<Matrix<type> const> const matrix);
 
         template <
             class type
         >
         Eigen::Array<std::complex<type>, Eigen::Dynamic, Eigen::Dynamic> toEigen(
-            std::shared_ptr<Matrix<thrust::complex<type>>> matrix);
+            std::shared_ptr<Matrix<thrust::complex<type>> const> const matrix);
 
         // converts eigen array to matrix
         template <
@@ -142,8 +142,8 @@ namespace numeric {
             class eigen_type
         >
         std::shared_ptr<Matrix<mpflow_type>> fromEigen(
-            Eigen::Ref<const Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic>> array,
-            cudaStream_t stream=nullptr);
+            Eigen::Ref<Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
+            cudaStream_t const stream=nullptr);
     }
 }
 }

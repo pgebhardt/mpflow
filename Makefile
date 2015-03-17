@@ -96,7 +96,7 @@ endif
 # Compiler Flags
 ##############################
 GIT_VERSION := $(shell git describe --tags --long)
-WARNINGS := #-Wall -Wextra -Werror
+WARNINGS := -Wall -Wextra -Werror
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\"
 CXXFLAGS := -std=c++11 -fPIC $(WARNINGS)
 NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH) $(addprefix -Xcompiler , $(WARNINGS))

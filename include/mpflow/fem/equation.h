@@ -35,27 +35,27 @@ namespace FEM {
         typedef dataType_ dataType;
 
         // constructor
-        Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
-            std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor,
-            dataType referenceValue, cudaStream_t stream);
+        Equation(std::shared_ptr<numeric::IrregularMesh const> const mesh,
+            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+            dataType const referenceValue, cudaStream_t const stream);
 
         // init methods
-        void initElementalMatrices(cudaStream_t stream);
-        void initExcitationMatrix(cudaStream_t stream);
-        void initJacobianCalculationMatrix(cudaStream_t stream);
+        void initElementalMatrices(cudaStream_t const stream);
+        void initExcitationMatrix(cudaStream_t const stream);
+        void initJacobianCalculationMatrix(cudaStream_t const stream);
 
-        void calcJacobian(const std::shared_ptr<numeric::Matrix<dataType>> field,
-            const std::shared_ptr<numeric::Matrix<dataType>> factor,
-            unsigned driveCount, unsigned measurmentCount, bool additiv,
-            cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> result);
+        void calcJacobian(std::shared_ptr<numeric::Matrix<dataType> const> const field,
+            std::shared_ptr<numeric::Matrix<dataType> const> const factor,
+            unsigned const driveCount, unsigned const measurmentCount, bool const additiv,
+            cudaStream_t const stream, std::shared_ptr<numeric::Matrix<dataType>> result) const;
 
-        void update(const std::shared_ptr<numeric::Matrix<dataType>> alpha,
-            const dataType k, const std::shared_ptr<numeric::Matrix<dataType>> beta,
-            cudaStream_t stream);
+        void update(std::shared_ptr<numeric::Matrix<dataType> const> const alpha,
+            dataType const k, std::shared_ptr<numeric::Matrix<dataType> const> const beta,
+            cudaStream_t const stream);
 
         // member
-        std::shared_ptr<numeric::IrregularMesh> mesh;
-        std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor;
+        std::shared_ptr<numeric::IrregularMesh const> const mesh;
+        std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor;
         std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix;
         std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix;
         std::shared_ptr<numeric::SparseMatrix<dataType>> sMatrix;
@@ -65,7 +65,7 @@ namespace FEM {
         std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
         std::shared_ptr<numeric::Matrix<unsigned>> meshElements;
-        dataType referenceValue;
+        dataType const referenceValue;
     };
 
     namespace equation {
@@ -74,10 +74,11 @@ namespace FEM {
             class dataType,
             bool logarithmic
         >
-        void updateMatrix(const std::shared_ptr<numeric::Matrix<dataType>> elements,
-            const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-            const std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix, dataType referenceValue,
-            cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dataType>> matrix);
+        void updateMatrix(std::shared_ptr<numeric::Matrix<dataType> const> const elements,
+            std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
+            std::shared_ptr<numeric::Matrix<unsigned> const> const connectivityMatrix,
+            dataType const referenceValue, cudaStream_t const stream,
+            std::shared_ptr<numeric::SparseMatrix<dataType>> matrix);
     }
 }
 }

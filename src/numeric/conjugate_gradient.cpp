@@ -26,8 +26,8 @@ template <
     class dataType,
     template <class type> class matrixType
 >
-mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(const unsigned rows,
-    const unsigned cols, cudaStream_t stream)
+mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(
+    unsigned const rows, unsigned const cols, cudaStream_t const stream)
     : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
@@ -52,10 +52,10 @@ template <
     template <class type> class matrixType
 >
 unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
-    const std::shared_ptr<matrixType<dataType>> A,
-    const std::shared_ptr<Matrix<dataType>> f, const unsigned iterations,
-    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
-    const double tolerance, bool dcFree) {
+    std::shared_ptr<matrixType<dataType> const> const A,
+    std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
+    cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> x,
+    double const tolerance, bool const dcFree) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::ConjugateGradient::solve: A == nullptr");
@@ -73,7 +73,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
     // regularize for dc free solution
     if (dcFree == true) {
         this->temp1->sum(x, stream);
-        conjugateGradient::addScalar(this->temp1, this->rows, this->cols,
+        conjugateGradient::addScalar<dataType>(this->temp1, this->rows, this->cols,
             stream, this->r);
     }
 
@@ -94,7 +94,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
         // regularize for dc free solution
         if (dcFree == true) {
             this->temp2->sum(this->p, stream);
-            conjugateGradient::addScalar(this->temp2, this->rows, this->cols,
+            conjugateGradient::addScalar<dataType>(this->temp2, this->rows, this->cols,
                 stream, this->temp1);
         }
 
@@ -144,8 +144,8 @@ template <
     class dataType
 >
 void mpFlow::numeric::conjugateGradient::addScalar(
-    const std::shared_ptr<Matrix<dataType>> scalar,
-    unsigned rows, unsigned columns, cudaStream_t stream,
+    std::shared_ptr<Matrix<dataType> const> const scalar,
+    unsigned const rows, unsigned const columns, cudaStream_t const stream,
     std::shared_ptr<Matrix<dataType>> vector) {
     // check input
     if (scalar == nullptr) {
@@ -171,10 +171,10 @@ template <
     class dataType
 >
 void mpFlow::numeric::conjugateGradient::updateVector(
-    const std::shared_ptr<Matrix<dataType>> x1, const double sign,
-    const std::shared_ptr<Matrix<dataType>> x2,
-    const std::shared_ptr<Matrix<dataType>> r1,
-    const std::shared_ptr<Matrix<dataType>> r2, cudaStream_t stream,
+    std::shared_ptr<Matrix<dataType> const> const x1, double const sign,
+    std::shared_ptr<Matrix<dataType> const> const x2,
+    std::shared_ptr<Matrix<dataType> const> const r1,
+    std::shared_ptr<Matrix<dataType> const> const r2, cudaStream_t const stream,
     std::shared_ptr<Matrix<dataType>> result) {
     // check input
     if (x1 == nullptr) {

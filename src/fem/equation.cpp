@@ -28,9 +28,9 @@ template <
     bool logarithmic
 >
 mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
-    std::shared_ptr<numeric::IrregularMesh> mesh,
-    std::shared_ptr<FEM::BoundaryDescriptor> boundaryDescriptor,
-    dataType referenceValue, cudaStream_t stream)
+    std::shared_ptr<numeric::IrregularMesh const> const mesh,
+    std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+    dataType const referenceValue, cudaStream_t const stream)
     : mesh(mesh), boundaryDescriptor(boundaryDescriptor), referenceValue(referenceValue) {
     // check input
     if (mesh == nullptr) {
@@ -72,7 +72,7 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElementalMatrices(
-    cudaStream_t stream) {
+    cudaStream_t const stream) {
     // create intermediate matrices
     auto elementCount = std::make_shared<numeric::SparseMatrix<unsigned>>(
         this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
@@ -174,7 +174,7 @@ template <
     class basisFunctionType,
     bool logarithmic
 >
-void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t stream) {
+void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t const stream) {
     Eigen::ArrayXd nodeParameter(basisFunctionType::pointsPerEdge);
     double integrationStart, integrationEnd;
 
@@ -242,7 +242,7 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
-    ::initJacobianCalculationMatrix(cudaStream_t stream) {
+    ::initJacobianCalculationMatrix(cudaStream_t const stream) {
     // variables
     std::array<std::shared_ptr<basisFunctionType>,
         basisFunctionType::pointsPerElement> basisFunction;
@@ -281,8 +281,8 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::update(
-    const std::shared_ptr<numeric::Matrix<dataType>> alpha, const dataType k,
-    const std::shared_ptr<numeric::Matrix<dataType>> beta, cudaStream_t stream) {
+    std::shared_ptr<numeric::Matrix<dataType> const> const alpha, dataType const k,
+    std::shared_ptr<numeric::Matrix<dataType> const> const beta, cudaStream_t const stream) {
     // update matrices
     FEM::equation::updateMatrix<dataType, logarithmic>(this->elementalSMatrix, alpha,
         this->connectivityMatrix, this->referenceValue, stream, this->sMatrix);
@@ -302,10 +302,10 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobian(
-    const std::shared_ptr<numeric::Matrix<dataType>> phi,
-    const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-    unsigned driveCount, unsigned measurmentCount, bool additiv,
-    cudaStream_t stream, std::shared_ptr<numeric::Matrix<dataType>> jacobian) {
+    std::shared_ptr<numeric::Matrix<dataType> const> const phi,
+    std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
+    unsigned const driveCount, unsigned const measurmentCount, bool const additiv,
+    cudaStream_t const stream, std::shared_ptr<numeric::Matrix<dataType>> jacobian) const {
     // check input
     if (phi == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: phi == nullptr");
@@ -337,10 +337,11 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::equation::updateMatrix(
-    const std::shared_ptr<numeric::Matrix<dataType>> elements,
-    const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-    const std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix,
-    dataType referenceValue, cudaStream_t stream, std::shared_ptr<numeric::SparseMatrix<dataType>> matrix) {
+    std::shared_ptr<numeric::Matrix<dataType> const> const elements,
+    std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
+    std::shared_ptr<numeric::Matrix<unsigned> const> const connectivityMatrix,
+    dataType const referenceValue, cudaStream_t const stream,
+    std::shared_ptr<numeric::SparseMatrix<dataType>> matrix) {
     // check input
     if (elements == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::equation::updateMatrix: elements == nullptr");
@@ -367,45 +368,49 @@ void mpFlow::FEM::equation::updateMatrix(
 
 // specialisation
 template void mpFlow::FEM::equation::updateMatrix<float, true>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    float, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    float const, cudaStream_t const, std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>);
 template void mpFlow::FEM::equation::updateMatrix<float, false>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<float>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    float, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    float const, cudaStream_t const, std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>);
 template void mpFlow::FEM::equation::updateMatrix<double, true>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    double, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    double const, cudaStream_t const, std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>);
 template void mpFlow::FEM::equation::updateMatrix<double, false>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<double>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    double, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    double const, cudaStream_t const, std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>);
 template void mpFlow::FEM::equation::updateMatrix<thrust::complex<float>, true>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    thrust::complex<float>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    thrust::complex<float> const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>);
 template void mpFlow::FEM::equation::updateMatrix<thrust::complex<float>, false>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    thrust::complex<float>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    thrust::complex<float> const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>);
 template void mpFlow::FEM::equation::updateMatrix<thrust::complex<double>, true>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    thrust::complex<double>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    thrust::complex<double> const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>);
 template void mpFlow::FEM::equation::updateMatrix<thrust::complex<double>, false>(
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>,
-    const std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>,
-    thrust::complex<double>, cudaStream_t, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const,
+    thrust::complex<double> const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>);
 
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Quadratic, true>;

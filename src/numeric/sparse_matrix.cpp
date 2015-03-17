@@ -25,8 +25,9 @@
 template <
     class type
 >
-mpFlow::numeric::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<type>> matrix,
-    cudaStream_t stream) {
+mpFlow::numeric::SparseMatrix<type>::SparseMatrix(std::shared_ptr<Matrix<type> const> const matrix,
+    cudaStream_t const stream)
+    : rows(matrix->rows), cols(matrix->cols) {
     // check input
     if (matrix == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::SparseMatrix: matrix == nullptr");
@@ -43,8 +44,8 @@ mpFlow::numeric::SparseMatrix<type>::SparseMatrix(const std::shared_ptr<Matrix<t
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::init(unsigned rows, unsigned columns,
-    cudaStream_t stream) {
+void mpFlow::numeric::SparseMatrix<type>::init(unsigned const rows, unsigned const columns,
+    cudaStream_t const stream) {
     // check input
     if (rows == 0) {
         throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::init: rows == 0");
@@ -54,8 +55,6 @@ void mpFlow::numeric::SparseMatrix<type>::init(unsigned rows, unsigned columns,
     }
 
     // init struct
-    this->rows = rows;
-    this->cols = columns;
     this->dataRows = rows;
     this->dataCols = columns;
     this->density = 0;
@@ -130,8 +129,8 @@ mpFlow::numeric::SparseMatrix<type>::~SparseMatrix() {
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::copy(const std::shared_ptr<SparseMatrix<type>> other,
-    cudaStream_t stream) {
+void mpFlow::numeric::SparseMatrix<type>::copy(std::shared_ptr<SparseMatrix<type> const> const other,
+    cudaStream_t const stream) {
     // check input
     if (other == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::SparseMatrix::copy: other == nullptr");
@@ -161,7 +160,7 @@ void mpFlow::numeric::SparseMatrix<type>::copy(const std::shared_ptr<SparseMatri
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::copyToDevice(cudaStream_t stream) {
+void mpFlow::numeric::SparseMatrix<type>::copyToDevice(cudaStream_t const stream) {
     // copy host buffer to device
     CudaSafeCall(
         cudaMemcpyAsync(this->deviceValues, this->hostValues,
@@ -179,7 +178,7 @@ void mpFlow::numeric::SparseMatrix<type>::copyToDevice(cudaStream_t stream) {
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::copyToHost(cudaStream_t stream) {
+void mpFlow::numeric::SparseMatrix<type>::copyToHost(cudaStream_t const stream) {
     // copy host buffer to device
     CudaSafeCall(
         cudaMemcpyAsync(this->hostValues, this->deviceValues,
@@ -197,8 +196,8 @@ void mpFlow::numeric::SparseMatrix<type>::copyToHost(cudaStream_t stream) {
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::convert(const std::shared_ptr<Matrix<type>> matrix,
-    cudaStream_t stream) {
+void mpFlow::numeric::SparseMatrix<type>::convert(std::shared_ptr<Matrix<type> const> const matrix,
+    cudaStream_t const stream) {
     // check input
     if (matrix == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::convert: matrix == nullptr");
@@ -228,7 +227,7 @@ template <
     class type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::SparseMatrix<type>::toMatrix(
-    cudaStream_t stream) {
+    cudaStream_t const stream) const {
     // create empty matrix
     auto matrix = std::make_shared<Matrix<type>>(this->rows,
         this->cols, stream);
@@ -245,8 +244,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::SparseMatrix<typ
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<type>> matrix,
-    cudaStream_t stream, std::shared_ptr<Matrix<type>> result) const {
+void mpFlow::numeric::SparseMatrix<type>::multiply(std::shared_ptr<Matrix<type> const> const matrix,
+    cudaStream_t const stream, std::shared_ptr<Matrix<type>> result) const {
     // check input
     if (matrix == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::numeric::SparseMatrix::multiply: matrix == nullptr");
@@ -277,7 +276,7 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(const std::shared_ptr<Matrix<
 template <
     class type
 >
-unsigned mpFlow::numeric::SparseMatrix<type>::getColumnId(unsigned row, unsigned col) const {
+unsigned mpFlow::numeric::SparseMatrix<type>::getColumnId(unsigned const row, unsigned const col) const {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
         throw std::logic_error("mpFlow::numeric::SparseMatrix::getColumnId(): index out of range");
@@ -298,7 +297,7 @@ unsigned mpFlow::numeric::SparseMatrix<type>::getColumnId(unsigned row, unsigned
 template <
     class type
 >
-type mpFlow::numeric::SparseMatrix<type>::getValue(unsigned row, unsigned col) const {
+type mpFlow::numeric::SparseMatrix<type>::getValue(unsigned const row, unsigned const col) const {
     // get column id
     unsigned columnId = this->getColumnId(row, col);
 
@@ -313,7 +312,7 @@ type mpFlow::numeric::SparseMatrix<type>::getValue(unsigned row, unsigned col) c
 template <
     class type
 >
-void mpFlow::numeric::SparseMatrix<type>::setValue(unsigned row, unsigned col, const type& value) {
+void mpFlow::numeric::SparseMatrix<type>::setValue(unsigned const row, unsigned const col, type const& value) {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
         throw std::logic_error("mpFlow::numeric::SparseMatrix::setValue(): index out of range");

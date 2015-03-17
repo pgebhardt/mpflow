@@ -26,15 +26,12 @@
 #include "mpflow/mpflow.h"
 #include "mpflow/numeric/matrix_kernel.h"
 
-// zero copy is not used by default
-// bool mpFlow::numeric::Matrix<type>::useZeroCopy = false;
-
 // create new matrix
 template <
     class type
 >
-mpFlow::numeric::Matrix<type>::Matrix(unsigned rows, unsigned cols,
-    cudaStream_t stream, type value, bool allocateHostMemory)
+mpFlow::numeric::Matrix<type>::Matrix(unsigned const rows, unsigned const cols,
+    cudaStream_t const stream, type const value, bool const allocateHostMemory)
     : hostData(nullptr), deviceData(nullptr), rows(rows), cols(cols), dataRows(rows), dataCols(cols) {
     // check input
     if (rows == 0) {
@@ -108,7 +105,7 @@ template <
     class type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<type>>
-    mpFlow::numeric::Matrix<type>::eye(unsigned size, cudaStream_t stream) {
+    mpFlow::numeric::Matrix<type>::eye(unsigned const size, cudaStream_t const stream) {
     auto matrix = std::make_shared<Matrix<type>>(size, size, stream);
     for (unsigned i = 0; i < size; ++i) {
         (*matrix)(i, i) = 1;
@@ -122,8 +119,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>>
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> other,
-    cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::copy(std::shared_ptr<Matrix<type> const> const other,
+    cudaStream_t const stream) {
     // check input
     if (other == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::copy: other == nullptr");
@@ -147,7 +144,7 @@ void mpFlow::numeric::Matrix<type>::copy(const std::shared_ptr<Matrix<type>> oth
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::copyToDevice(cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::copyToDevice(cudaStream_t const stream) {
     if (this->hostData == nullptr) {
         throw std::runtime_error("mpFlow::numeric::Matrix::copyToDevice: host memory was not allocated");
     }
@@ -165,7 +162,7 @@ void mpFlow::numeric::Matrix<type>::copyToDevice(cudaStream_t stream) {
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t const stream) {
     if (this->hostData == nullptr) {
         throw std::runtime_error("mpFlow::numeric::Matrix::copyToHost: host memory was not allocated");
     }
@@ -182,7 +179,7 @@ void mpFlow::numeric::Matrix<type>::copyToHost(cudaStream_t stream) {
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::fill(type value, cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::fill(type const value, cudaStream_t const stream) {
     // dimension
     dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
         this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
@@ -198,8 +195,8 @@ void mpFlow::numeric::Matrix<type>::fill(type value, cudaStream_t stream) {
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::add(const std::shared_ptr<Matrix<type>> value,
-    cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::add(std::shared_ptr<Matrix<type> const> const value,
+    cudaStream_t const stream) {
     // check input
     if (value == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::add: value == nullptr");
@@ -227,8 +224,9 @@ void mpFlow::numeric::Matrix<type>::add(const std::shared_ptr<Matrix<type>> valu
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>> A,
-    const std::shared_ptr<Matrix<type>> B, cublasHandle_t handle, cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::multiply(std::shared_ptr<Matrix<type> const> const A,
+    std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const handle,
+    cudaStream_t const stream) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
@@ -274,8 +272,9 @@ void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<Matrix<type>>
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<SparseMatrix<type>> A,
-    const std::shared_ptr<Matrix<type>> B, cublasHandle_t, cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::multiply(std::shared_ptr<SparseMatrix<type> const> const A,
+    std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const,
+    cudaStream_t const stream) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
@@ -289,7 +288,8 @@ void mpFlow::numeric::Matrix<type>::multiply(const std::shared_ptr<SparseMatrix<
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::scalarMultiply(type scalar, cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::scalarMultiply(type const scalar,
+    cudaStream_t const stream) {
     // dimension
     dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::block_size,
         this->dataCols == 1 ? 1 : this->dataCols / matrix::block_size);
@@ -305,8 +305,9 @@ void mpFlow::numeric::Matrix<type>::scalarMultiply(type scalar, cudaStream_t str
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::elementwiseMultiply(const std::shared_ptr<Matrix<type>> A,
-    const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::elementwiseMultiply(
+    std::shared_ptr<Matrix<type> const> const A,
+    std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseMultiply: A == nullptr");
@@ -341,8 +342,9 @@ void mpFlow::numeric::Matrix<type>::elementwiseMultiply(const std::shared_ptr<Ma
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::elementwiseDivision(const std::shared_ptr<Matrix<type>> A,
-    const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::elementwiseDivision(
+    std::shared_ptr<Matrix<type> const> const A,
+    std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseDivision: A == nullptr");
@@ -377,8 +379,9 @@ void mpFlow::numeric::Matrix<type>::elementwiseDivision(const std::shared_ptr<Ma
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matrix<type>> A,
-    const std::shared_ptr<Matrix<type>> B, cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::vectorDotProduct(
+    std::shared_ptr<Matrix<type> const> const A,
+    std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: A == nullptr");
@@ -417,8 +420,8 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(const std::shared_ptr<Matri
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> value,
-    cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> const value,
+    cudaStream_t const stream) {
     // check input
     if (value == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::sum: value == nullptr");
@@ -461,8 +464,8 @@ void mpFlow::numeric::Matrix<type>::sum(const std::shared_ptr<Matrix<type>> valu
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::min(const std::shared_ptr<Matrix<type>> value,
-    cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::min(std::shared_ptr<Matrix<type> const> const value,
+    cudaStream_t const stream) {
     // check input
     if (value == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::min: value == nullptr");
@@ -497,14 +500,16 @@ void mpFlow::numeric::Matrix<type>::min(const std::shared_ptr<Matrix<type>> valu
 namespace mpFlow {
 namespace numeric {
     template <>
-    void Matrix<thrust::complex<float>>::min(const std::shared_ptr<Matrix<thrust::complex<float>>>,
-    cudaStream_t) {
+    void Matrix<thrust::complex<float>>::min(
+        std::shared_ptr<Matrix<thrust::complex<float>> const> const,
+        cudaStream_t const) {
         throw std::runtime_error("mpFlow::numeric::Matrix::min: not possible for complex values");
     }
 
     template <>
-    void Matrix<thrust::complex<double>>::min(const std::shared_ptr<Matrix<thrust::complex<double>>>,
-    cudaStream_t) {
+    void Matrix<thrust::complex<double>>::min(
+        std::shared_ptr<Matrix<thrust::complex<double>> const> const,
+        cudaStream_t const) {
         throw std::runtime_error("mpFlow::numeric::Matrix::min: not possible for complex values");
     }
 }
@@ -514,8 +519,8 @@ namespace numeric {
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> value,
-    cudaStream_t stream) {
+void mpFlow::numeric::Matrix<type>::max(std::shared_ptr<Matrix<type> const> const value,
+    cudaStream_t const stream) {
     // check input
     if (value == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::max: value == nullptr");
@@ -550,14 +555,16 @@ void mpFlow::numeric::Matrix<type>::max(const std::shared_ptr<Matrix<type>> valu
 namespace mpFlow {
 namespace numeric {
     template <>
-    void Matrix<thrust::complex<float>>::max(const std::shared_ptr<Matrix<thrust::complex<float>>>,
-    cudaStream_t) {
+    void Matrix<thrust::complex<float>>::max(
+        std::shared_ptr<Matrix<thrust::complex<float>> const> const,
+        cudaStream_t const) {
         throw std::runtime_error("mpFlow::numeric::Matrix::max: not possible for complex values");
     }
 
     template <>
-    void Matrix<thrust::complex<double>>::max(const std::shared_ptr<Matrix<thrust::complex<double>>>,
-    cudaStream_t) {
+    void Matrix<thrust::complex<double>>::max(
+        std::shared_ptr<Matrix<thrust::complex<double>> const> const,
+        cudaStream_t const) {
         throw std::runtime_error("mpFlow::numeric::Matrix::max: not possible for complex values");
     }
 }
@@ -567,7 +574,7 @@ namespace numeric {
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::savetxt(std::ostream& ostream, char delimiter) const {
+void mpFlow::numeric::Matrix<type>::savetxt(std::ostream& ostream, char const delimiter) const {
     // check input
     if (this->hostData == nullptr) {
         throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
@@ -591,7 +598,7 @@ void mpFlow::numeric::Matrix<type>::savetxt(std::ostream& ostream, char delimite
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::savetxt(const std::string filename, char delimiter) const {
+void mpFlow::numeric::Matrix<type>::savetxt(std::string const filename, char const delimiter) const {
     // check input
     if (this->hostData == nullptr) {
         throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: host memory was not allocated");
@@ -616,8 +623,8 @@ void mpFlow::numeric::Matrix<type>::savetxt(const std::string filename, char del
 template <
     class type
 >
-std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::loadtxt(std::istream& istream,
-    cudaStream_t stream, char delimiter) {
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::loadtxt(
+    std::istream& istream, cudaStream_t const stream, char const delimiter) {
     // read matrix
     std::vector<std::vector<type>> values;
     std::string line;
@@ -680,7 +687,7 @@ template <
     class type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::loadtxt(
-    const std::string filename, cudaStream_t stream, char delimiter) {
+    std::string const filename, cudaStream_t const stream, char const delimiter) {
     // open file stream
     std::ifstream file(filename.c_str());
 
@@ -703,7 +710,7 @@ template <
     class type
 >
 Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<Matrix<type>> matrix) {
+    std::shared_ptr<Matrix<type> const> const matrix) {
     // check input
     if (matrix == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::matrix::toEigen: matrix == nullptr");
@@ -726,8 +733,9 @@ Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEi
 template <
     class type
 >
-Eigen::Array<std::complex<type>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<Matrix<thrust::complex<type>>> matrix) {
+Eigen::Array<std::complex<type>, Eigen::Dynamic, Eigen::Dynamic>
+    mpFlow::numeric::matrix::toEigen(
+    std::shared_ptr<Matrix<thrust::complex<type>> const> const matrix) {
     // check input
     if (matrix == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::matrix::toEigen: matrix == nullptr");
@@ -753,8 +761,8 @@ template <
     class eigen_type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<const Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic>> array,
-    cudaStream_t stream) {
+    Eigen::Ref<Eigen::Array<eigen_type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
+    cudaStream_t const stream) {
     // convert array to mpflow_type
     Eigen::Array<mpflow_type, Eigen::Dynamic, Eigen::Dynamic> mpflow_array =
         array.template cast<mpflow_type>();
@@ -776,28 +784,28 @@ std::shared_ptr<mpFlow::numeric::Matrix<mpflow_type>> mpFlow::numeric::matrix::f
 
 // specialisation
 template Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<float>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const);
 template Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<double>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const);
 template Eigen::Array<std::complex<float>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const);
 template Eigen::Array<std::complex<double>, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const);
 template Eigen::Array<unsigned, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<unsigned>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<unsigned> const> const);
 template Eigen::Array<int, Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::matrix::toEigen(
-    std::shared_ptr<mpFlow::numeric::Matrix<int>>);
+    std::shared_ptr<mpFlow::numeric::Matrix<int> const> const);
 
 template std::shared_ptr<mpFlow::numeric::Matrix<float>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<const Eigen::ArrayXXf>, cudaStream_t);
+    Eigen::Ref<Eigen::ArrayXXf const> const, cudaStream_t const);
 template std::shared_ptr<mpFlow::numeric::Matrix<double>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<const Eigen::ArrayXXd>, cudaStream_t);
+    Eigen::Ref<Eigen::ArrayXXd const> const, cudaStream_t const);
 template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<const Eigen::ArrayXXi>, cudaStream_t);
+    Eigen::Ref<Eigen::ArrayXXi const> const, cudaStream_t const);
 template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<const Eigen::Array<unsigned, Eigen::Dynamic, Eigen::Dynamic>>, cudaStream_t);
+    Eigen::Ref<Eigen::Array<unsigned, Eigen::Dynamic, Eigen::Dynamic> const> const, cudaStream_t const);
 template std::shared_ptr<mpFlow::numeric::Matrix<unsigned>> mpFlow::numeric::matrix::fromEigen(
-    Eigen::Ref<const Eigen::Array<long, Eigen::Dynamic, Eigen::Dynamic>>, cudaStream_t);
+    Eigen::Ref<Eigen::Array<long, Eigen::Dynamic, Eigen::Dynamic> const> const, cudaStream_t const);
 
 template class mpFlow::numeric::Matrix<float>;
 template class mpFlow::numeric::Matrix<double>;

@@ -27,9 +27,9 @@ template <
     class equationType
 >
 mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
-    std::shared_ptr<equationType> equation,
-    std::shared_ptr<FEM::SourceDescriptor<dataType>> source, unsigned components,
-    cublasHandle_t handle, cudaStream_t stream)
+    std::shared_ptr<equationType> const equation,
+    std::shared_ptr<FEM::SourceDescriptor<dataType>> const source, unsigned components,
+    cublasHandle_t const handle, cudaStream_t const stream)
     : equation(equation), source(source) {
     // check input
     if (equation == nullptr) {
@@ -43,11 +43,6 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     if (handle == nullptr) {
         throw std::invalid_argument(
             "mpFlow::EIT::ForwardSolver::ForwardSolver: handle == nullptr");
-    }
-
-    // disable 2.5D mode for fixed boundary conditions
-    if (source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
-        components = 1;
     }
 
     // create numericalSolver solver
@@ -102,8 +97,8 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType>>
     mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::solve(
-    const std::shared_ptr<numeric::Matrix<dataType>> gamma, cublasHandle_t handle,
-    cudaStream_t stream, double tolerance, unsigned* steps) {
+    std::shared_ptr<numeric::Matrix<dataType> const> const gamma, cublasHandle_t const handle,
+    cudaStream_t const stream, double const tolerance, unsigned* const steps) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
@@ -184,9 +179,9 @@ template <
     class equationType
 >
 void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasurementPattern(
-    const std::shared_ptr<numeric::Matrix<dataType>> source,
-    std::shared_ptr<numeric::Matrix<dataType>> result, bool additiv,
-    cublasHandle_t handle, cudaStream_t stream) {
+    std::shared_ptr<numeric::Matrix<dataType> const> const source,
+    std::shared_ptr<numeric::Matrix<dataType>> result, bool const additiv,
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (source == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: source == nullptr");
@@ -215,7 +210,7 @@ template <
 >
 void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
     std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix,
-    std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t stream) {
+    std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t const stream) {
     // check input
     if (excitationMatrix == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::applyMixedBoundaryCondition: excitationMatrix == nullptr");

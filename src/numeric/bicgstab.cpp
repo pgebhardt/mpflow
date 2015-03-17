@@ -26,7 +26,8 @@ template <
     class dataType,
     template <class> class matrixType
 >
-mpFlow::numeric::BiCGSTAB<dataType, matrixType>::BiCGSTAB(unsigned rows, unsigned cols, cudaStream_t stream)
+mpFlow::numeric::BiCGSTAB<dataType, matrixType>::BiCGSTAB(
+    unsigned const rows, unsigned const cols, cudaStream_t const stream)
     : rows(rows), cols(cols) {
     // check input
     if (rows < 1) {
@@ -59,10 +60,10 @@ template <
     template <class type> class matrixType
 >
 unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
-    const std::shared_ptr<matrixType<dataType>> A,
-    const std::shared_ptr<Matrix<dataType>> f, unsigned iterations,
-    cublasHandle_t handle, cudaStream_t stream, std::shared_ptr<Matrix<dataType>> x,
-    const double tolerance, bool dcFree) {
+    std::shared_ptr<matrixType<dataType> const> const A,
+    std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
+    cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> x,
+    double const tolerance, bool const dcFree) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: A == nullptr");
@@ -80,7 +81,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
     // regularize for dc free solution
     if (dcFree == true) {
         this->temp1->sum(x, stream);
-        conjugateGradient::addScalar(this->temp1, this->rows, this->cols,
+        conjugateGradient::addScalar<dataType>(this->temp1, this->rows, this->cols,
             stream, this->r);
     }
 
@@ -109,9 +110,9 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         this->beta->elementwiseMultiply(this->temp1, this->temp2, stream);
 
         // p = r + beta * (p - omega * nu)
-        bicgstab::updateVector(this->p, -1.0, this->nu, this->omega, stream,
+        bicgstab::updateVector<dataType>(this->p, -1.0, this->nu, this->omega, stream,
             this->temp1);
-        bicgstab::updateVector(this->r, 1.0, this->temp1, this->beta, stream,
+        bicgstab::updateVector<dataType>(this->r, 1.0, this->temp1, this->beta, stream,
             this->p);
 
         // nu = A * p
@@ -120,7 +121,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         // regularize for dc free solution
         if (dcFree == true) {
             this->temp2->sum(this->p, stream);
-            conjugateGradient::addScalar(this->temp2, this->rows, this->cols,
+            conjugateGradient::addScalar<dataType>(this->temp2, this->rows, this->cols,
                 stream, this->nu);
         }
 
@@ -129,7 +130,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         this->alpha->elementwiseDivision(this->roh, this->temp1, stream);
 
         // s = r - alpha * nu
-        bicgstab::updateVector(this->r, -1.0, this->nu, this->alpha, stream,
+        bicgstab::updateVector<dataType>(this->r, -1.0, this->nu, this->alpha, stream,
             this->s);
 
         // t = A * s
@@ -138,7 +139,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         // regularize for dc free solution
         if (dcFree == true) {
             this->temp2->sum(this->s, stream);
-            conjugateGradient::addScalar(this->temp2, this->rows, this->cols,
+            conjugateGradient::addScalar<dataType>(this->temp2, this->rows, this->cols,
                 stream, this->t);
         }
 
@@ -148,11 +149,11 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType, matrixType>::solve(
         this->omega->elementwiseDivision(this->temp1, this->temp2, stream);
 
         // x = x + alpha * p + omega * s
-        bicgstab::updateVector(x, 1.0, this->p, this->alpha, stream, x);
-        bicgstab::updateVector(x, 1.0, this->s, this->omega, stream, x);
+        bicgstab::updateVector<dataType>(x, 1.0, this->p, this->alpha, stream, x);
+        bicgstab::updateVector<dataType>(x, 1.0, this->s, this->omega, stream, x);
 
         // r = s - omega * t
-        bicgstab::updateVector(this->s, -1.0, this->t, this->omega, stream,
+        bicgstab::updateVector<dataType>(this->s, -1.0, this->t, this->omega, stream,
             this->r);
 
         // check error bound for all column vectors of residuum
@@ -181,9 +182,9 @@ template <
     class dataType
 >
 void mpFlow::numeric::bicgstab::updateVector(
-    const std::shared_ptr<Matrix<dataType>> x1, const double sign,
-    const std::shared_ptr<Matrix<dataType>> x2,
-    const std::shared_ptr<Matrix<dataType>> scalar, cudaStream_t stream,
+    std::shared_ptr<Matrix<dataType> const> const x1, double const sign,
+    std::shared_ptr<Matrix<dataType> const> const x2,
+    std::shared_ptr<Matrix<dataType> const> const scalar, cudaStream_t const stream,
     std::shared_ptr<Matrix<dataType>> result) {
     // check input
     if (x1 == nullptr) {

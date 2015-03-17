@@ -33,33 +33,34 @@ namespace numeric {
         typedef type_ type;
 
         // constructor and destructor
-        SparseMatrix(unsigned rows, unsigned cols, cudaStream_t stream) {
+        SparseMatrix(unsigned const rows, unsigned const cols, cudaStream_t const stream)
+            : rows(rows), cols(cols) {
             this->init(rows, cols, stream);
         }
 
-        SparseMatrix(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);
+        SparseMatrix(std::shared_ptr<Matrix<type> const> const matrix, cudaStream_t const stream);
         virtual ~SparseMatrix();
 
         // copy methods
-        void copy(const std::shared_ptr<SparseMatrix<type>> other, cudaStream_t stream=nullptr);
-        void copyToDevice(cudaStream_t stream=nullptr);
-        void copyToHost(cudaStream_t stream=nullptr);
+        void copy(std::shared_ptr<SparseMatrix<type> const> const other, cudaStream_t const stream=nullptr);
+        void copyToDevice(cudaStream_t const stream=nullptr);
+        void copyToHost(cudaStream_t const stream=nullptr);
 
         // convert to matrix
-        std::shared_ptr<Matrix<type>> toMatrix(cudaStream_t stream);
+        std::shared_ptr<Matrix<type>> toMatrix(cudaStream_t const stream) const;
 
         // matrix multiply
-        void multiply(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream,
+        void multiply(std::shared_ptr<Matrix<type> const> const matrix, cudaStream_t const stream,
             std::shared_ptr<Matrix<type>> result) const;
 
         // accessors
-        unsigned getColumnId(unsigned row, unsigned col) const;
-        type getValue(unsigned row, unsigned col) const;
-        void setValue(unsigned row, unsigned col, const type& value);
+        unsigned getColumnId(unsigned const row, unsigned const col) const;
+        type getValue(unsigned const row, unsigned const col) const;
+        void setValue(unsigned const row, unsigned const col, type const& value);
 
         // member
-        unsigned rows;
-        unsigned cols;
+        unsigned const rows;
+        unsigned const cols;
         unsigned dataRows;
         unsigned dataCols;
         unsigned density;
@@ -70,11 +71,10 @@ namespace numeric {
 
     private:
         // init empty sparse matrix
-        void init(unsigned rows, unsigned cols, cudaStream_t stream);
+        void init(unsigned const rows, unsigned const cols, cudaStream_t const stream);
 
         // convert to sparse matrix
-        void convert(const std::shared_ptr<Matrix<type>> matrix, cudaStream_t stream);
-
+        void convert(std::shared_ptr<Matrix<type> const> const matrix, cudaStream_t const stream);
     };
 }
 }

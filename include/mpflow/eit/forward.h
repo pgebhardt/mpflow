@@ -34,24 +34,23 @@ namespace EIT {
         typedef typename equationType::dataType dataType;
 
         // initialization
-        ForwardSolver(std::shared_ptr<equationType> equation,
-            std::shared_ptr<FEM::SourceDescriptor<dataType>> source,
-            unsigned components, cublasHandle_t handle, cudaStream_t stream);
+        ForwardSolver(std::shared_ptr<equationType> const equation,
+            std::shared_ptr<FEM::SourceDescriptor<dataType>> const source,
+            unsigned const components, cublasHandle_t const handle, cudaStream_t const stream);
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dataType>> solve(
-            const std::shared_ptr<numeric::Matrix<dataType>> gamma,
-            cublasHandle_t handle, cudaStream_t stream, double tolerance=1e-6,
-            unsigned* steps=nullptr);
+            std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
+            cublasHandle_t const handle, cudaStream_t const stream,
+            double const tolerance=1e-6, unsigned* const steps=nullptr);
 
         // helper methods
-        void applyMeasurementPattern(const std::shared_ptr<numeric::Matrix<dataType>> source,
-            std::shared_ptr<numeric::Matrix<dataType>> result, bool additiv,
-            cublasHandle_t handle, cudaStream_t stream);
+        void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dataType> const> const source,
+            std::shared_ptr<numeric::Matrix<dataType>> const result, bool const additiv,
+            cublasHandle_t const handle, cudaStream_t const stream);
 
         // member
-        std::shared_ptr<numericalSolverType<dataType,
-            mpFlow::numeric::SparseMatrix>> numericalSolver;
+        std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::SparseMatrix>> numericalSolver;
         std::shared_ptr<equationType> equation;
         std::shared_ptr<FEM::SourceDescriptor<dataType>> source;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
@@ -66,7 +65,7 @@ namespace EIT {
             class dataType
         >
         void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix,
-            std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t stream);
+            std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t const stream);
     }
 }
 }
