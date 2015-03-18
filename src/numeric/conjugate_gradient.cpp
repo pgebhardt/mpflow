@@ -54,7 +54,7 @@ template <
 unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
     std::shared_ptr<matrixType<dataType> const> const A,
     std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
-    cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> x,
+    cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
     double const tolerance, bool const dcFree) {
     // check input
     if (A == nullptr) {
@@ -73,8 +73,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
     // regularize for dc free solution
     if (dcFree == true) {
         this->temp1->sum(x, stream);
-        conjugateGradient::addScalar<dataType>(this->temp1, this->rows, this->cols,
-            stream, this->r);
+        addScalar(this->temp1, this->rows, this->cols, stream, this->r);
     }
 
     this->r->scalarMultiply(-1.0, stream);
@@ -94,20 +93,17 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
         // regularize for dc free solution
         if (dcFree == true) {
             this->temp2->sum(this->p, stream);
-            conjugateGradient::addScalar<dataType>(this->temp2, this->rows, this->cols,
-                stream, this->temp1);
+            addScalar(this->temp2, this->rows, this->cols, stream, this->temp1);
         }
 
         // calc p * A * p
         this->temp2->vectorDotProduct(this->p, this->temp1, stream);
 
         // update residuum
-        conjugateGradient::updateVector<dataType>(this->r, -1.0f, this->temp1,
-            this->rohOld, this->temp2, stream, this->r);
+        updateVector(this->r, -1.0, this->temp1, this->rohOld, this->temp2, stream, this->r);
 
         // update x
-        conjugateGradient::updateVector<dataType>(x, 1.0f, this->p, this->rohOld,
-            this->temp2, stream, x);
+        updateVector(x, 1.0, this->p, this->rohOld, this->temp2, stream, x);
 
         // calc rsnew
         this->roh->vectorDotProduct(this->r, this->r, stream);
@@ -129,8 +125,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
         }
 
         // update projection
-        conjugateGradient::updateVector<dataType>(this->r, 1.0f, this->p,
-            this->roh, this->rohOld, stream, this->p);
+        updateVector(this->r, 1.0, this->p, this->roh, this->rohOld, stream, this->p);
 
         // copy rsnew to rsold
         this->rohOld->copy(this->roh, stream);
@@ -141,12 +136,13 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
 
 // add scalar
 template <
-    class dataType
+    class dataType,
+    template <class type> class matrixType
 >
-void mpFlow::numeric::conjugateGradient::addScalar(
+void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::addScalar(
     std::shared_ptr<Matrix<dataType> const> const scalar,
     unsigned const rows, unsigned const columns, cudaStream_t const stream,
-    std::shared_ptr<Matrix<dataType>> vector) {
+    std::shared_ptr<Matrix<dataType>> const vector) {
     // check input
     if (scalar == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::conjugateGradient::addScalar: scalar == nullptr");
@@ -168,14 +164,15 @@ void mpFlow::numeric::conjugateGradient::addScalar(
 
 // update vector
 template <
-    class dataType
+    class dataType,
+    template <class type> class matrixType
 >
-void mpFlow::numeric::conjugateGradient::updateVector(
+void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::updateVector(
     std::shared_ptr<Matrix<dataType> const> const x1, double const sign,
     std::shared_ptr<Matrix<dataType> const> const x2,
     std::shared_ptr<Matrix<dataType> const> const r1,
     std::shared_ptr<Matrix<dataType> const> const r2, cudaStream_t const stream,
-    std::shared_ptr<Matrix<dataType>> result) {
+    std::shared_ptr<Matrix<dataType>> const result) {
     // check input
     if (x1 == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::conjugateGradient::addScalar: x1 == nullptr");

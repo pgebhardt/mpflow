@@ -23,12 +23,12 @@
 template <
     class dataType
 >
-mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type,
-    const std::vector<dataType>& values, std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
-    std::shared_ptr<numeric::Matrix<int>> drivePattern,
-    std::shared_ptr<numeric::Matrix<int>> measurementPattern,
-    cudaStream_t stream)
-    : type(type), electrodes(electrodes), values(values) {
+mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type,
+    std::vector<dataType> const& values, std::shared_ptr<FEM::BoundaryDescriptor const> const electrodes,
+    std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
+    std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
+    cudaStream_t const stream)
+    : type(type), values(values), electrodes(electrodes) {
     // check input
     if (electrodes == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: electrodes == nullptr");
@@ -76,11 +76,11 @@ mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type,
 template <
     class dataType
 >
-mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type type, dataType value,
-    std::shared_ptr<FEM::BoundaryDescriptor> electrodes,
-    std::shared_ptr<numeric::Matrix<int>> drivePattern,
-    std::shared_ptr<numeric::Matrix<int>> measurementPattern,
-    cudaStream_t stream)
+mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type, dataType const value,
+    std::shared_ptr<FEM::BoundaryDescriptor const> const electrodes,
+    std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
+    std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
+    cudaStream_t const stream)
     : SourceDescriptor<dataType>(type, std::vector<dataType>(drivePattern->cols, value),
         electrodes, drivePattern, measurementPattern, stream) {
 }

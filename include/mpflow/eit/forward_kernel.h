@@ -27,9 +27,9 @@ namespace forwardKernel {
     template <
         class dataType
     >
-    void applyMixedBoundaryCondition(dim3 blocks, dim3 threads, cudaStream_t stream,
-        dataType* excitation, unsigned rows, const unsigned* columnIds,
-        dataType* values);
+    void applyMixedBoundaryCondition(dim3 const blocks, dim3 const threads,
+        cudaStream_t const stream, dataType* const excitation, unsigned const rows,
+        unsigned const* const columnIds, dataType* const values);
 }
 }
 }

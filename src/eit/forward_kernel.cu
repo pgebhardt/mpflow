@@ -32,19 +32,17 @@ template <
     class dataType
 >
 static __global__ void applyMixedBoundaryConditionKernel(
-    dataType* excitation, unsigned rows,
-    const unsigned* columnIds, dataType* values) {
-    unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned col = blockIdx.y * blockDim.y + threadIdx.y;
+    dataType* const excitation, unsigned const rows,
+    unsigned const* const columnIds, dataType* const values) {
+    unsigned const row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned const col = blockIdx.y * blockDim.y + threadIdx.y;
 
     // clip excitation value
     excitation[row + col * rows] = abs(excitation[row + col * rows]) >= 1e-9 ? dataType(1) : dataType(0);
 
     // clear matrix row and set diagonal element to 1, if excitation element != 0
     unsigned columnId = mpFlow::constants::invalidIndex;
-    for (unsigned column = 0;
-        column < mpFlow::numeric::sparseMatrix::blockSize;
-        ++column) {
+    for (unsigned column = 0; column < mpFlow::numeric::sparseMatrix::blockSize; ++column) {
         // get column id
         columnId = columnIds[row * mpFlow::numeric::sparseMatrix::blockSize + column];
 
@@ -60,9 +58,9 @@ template <
     class dataType
 >
 void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition(
-    dim3 blocks, dim3 threads, cudaStream_t stream,
-    dataType* excitation, unsigned rows,
-    const unsigned* columnIds, dataType* values) {
+    dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    dataType* const excitation, unsigned const rows,
+    unsigned const* const columnIds, dataType* const values) {
     // call cuda kernel
     applyMixedBoundaryConditionKernel<dataType><<<blocks, threads, 0, stream>>>(
         excitation, rows, columnIds, values);
@@ -71,14 +69,14 @@ void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition(
 }
 
 template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<float>(
-    dim3, dim3, cudaStream_t, float*, unsigned,
-    const unsigned*, float*);
+    dim3 const, dim3 const, cudaStream_t const, float* const, unsigned const,
+    unsigned const* const, float* const);
 template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<double>(
-    dim3, dim3, cudaStream_t, double*, unsigned,
-    const unsigned*, double*);
+    dim3 const, dim3 const, cudaStream_t const, double* const, unsigned const,
+    unsigned const* const, double* const);
 template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<thrust::complex<float> >(
-    dim3, dim3, cudaStream_t, thrust::complex<float>*, unsigned,
-    const unsigned*, thrust::complex<float>*);
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<float>* const, unsigned const,
+    unsigned const* const, thrust::complex<float>* const);
 template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<thrust::complex<double> >(
-    dim3, dim3, cudaStream_t, thrust::complex<double>*, unsigned,
-    const unsigned*, thrust::complex<double>*);
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<double>* const, unsigned const,
+    unsigned const* const, thrust::complex<double>* const);

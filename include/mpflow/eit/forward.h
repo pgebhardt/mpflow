@@ -48,6 +48,8 @@ namespace EIT {
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dataType> const> const source,
             std::shared_ptr<numeric::Matrix<dataType>> const result, bool const additiv,
             cublasHandle_t const handle, cudaStream_t const stream) const;
+        static void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dataType>> const excitationMatrix,
+            std::shared_ptr<numeric::SparseMatrix<dataType>> const systemMatrix, cudaStream_t const stream);
 
         // member
         std::shared_ptr<equationType> const equation;
@@ -61,14 +63,6 @@ namespace EIT {
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> electrodesAttachmentMatrix;
     };
-
-    namespace forwardSolver {
-        template <
-            class dataType
-        >
-        void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix,
-            std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t const stream);
-    }
 }
 }
 

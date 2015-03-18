@@ -37,8 +37,18 @@ namespace numeric {
         // solve system
         unsigned solve(std::shared_ptr<matrixType<dataType> const> const A,
             std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
-            cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> x,
+            cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
             double const tolerance=0.0, bool const dcFree=false);
+
+        // helper
+        static void addScalar(std::shared_ptr<Matrix<dataType> const> const scalar,
+            unsigned const rows, unsigned const columns, cudaStream_t const stream,
+            std::shared_ptr<Matrix<dataType>> const vector);
+        static void updateVector(std::shared_ptr<Matrix<dataType> const> const x1,
+            double const sign, std::shared_ptr<Matrix<dataType> const> const x2,
+            std::shared_ptr<Matrix<dataType> const> const r1,
+            std::shared_ptr<Matrix<dataType> const> const r2, cudaStream_t const stream,
+            std::shared_ptr<Matrix<dataType>> const result);
 
         // member
         unsigned const rows;
@@ -52,25 +62,6 @@ namespace numeric {
         std::shared_ptr<Matrix<dataType>> temp1;
         std::shared_ptr<Matrix<dataType>> temp2;
     };
-
-    // helper functions
-    namespace conjugateGradient {
-        template <
-            class dataType
-        >
-        void addScalar(std::shared_ptr<Matrix<dataType> const> const scalar,
-            unsigned const rows, unsigned const columns, cudaStream_t const stream,
-            std::shared_ptr<Matrix<dataType>> vector);
-
-        template <
-            class dataType
-        >
-        void updateVector(std::shared_ptr<Matrix<dataType> const> const x1,
-            double const sign, std::shared_ptr<Matrix<dataType> const> const x2,
-            std::shared_ptr<Matrix<dataType> const> const r1,
-            std::shared_ptr<Matrix<dataType> const> const r2, cudaStream_t const stream,
-            std::shared_ptr<Matrix<dataType>> result);
-    }
 }
 }
 

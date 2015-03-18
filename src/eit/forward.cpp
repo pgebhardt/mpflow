@@ -70,8 +70,7 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
 
     // apply mixed boundary conditions, if applicably
     if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
-        forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
-            this->equation->systemMatrix, stream);
+        applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
     }
 
     cublasSetStream(handle, stream);
@@ -120,8 +119,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         this->equation->update(gamma, alpha, gamma, stream);
 
         if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
-            forwardSolver::applyMixedBoundaryCondition(this->equation->excitationMatrix,
-                this->equation->systemMatrix, stream);
+            applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
         }
 
         this->excitation->multiply(this->equation->excitationMatrix,
@@ -180,7 +178,7 @@ template <
 >
 void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasurementPattern(
     std::shared_ptr<numeric::Matrix<dataType> const> const source,
-    std::shared_ptr<numeric::Matrix<dataType>> result, bool const additiv,
+    std::shared_ptr<numeric::Matrix<dataType>> const result, bool const additiv,
     cublasHandle_t const handle, cudaStream_t const stream) const {
     // check input
     if (source == nullptr) {
@@ -206,11 +204,12 @@ void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasure
 }
 
 template <
-    class dataType
+    template <class, template <class> class> class numericalSolverType,
+    class equationType
 >
-void mpFlow::EIT::forwardSolver::applyMixedBoundaryCondition(
-    std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix,
-    std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix, cudaStream_t const stream) {
+void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMixedBoundaryCondition(
+    std::shared_ptr<numeric::Matrix<dataType>> const excitationMatrix,
+    std::shared_ptr<numeric::SparseMatrix<dataType>> const systemMatrix, cudaStream_t const stream) {
     // check input
     if (excitationMatrix == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::applyMixedBoundaryCondition: excitationMatrix == nullptr");
