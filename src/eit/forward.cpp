@@ -75,7 +75,7 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     }
 
     cublasSetStream(handle, stream);
-    dataType alpha = 1.0, beta = 0.0;
+    dataType alpha = dataType(1), beta = dataType(0);
     if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
         this->source->measurementPattern->dataCols,
         this->equation->excitationMatrix->dataRows,
@@ -162,12 +162,12 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
     // current source specific correction for jacobian matrix
     if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) {
-        this->jacobian->scalarMultiply(-1.0, stream);
+        this->jacobian->scalarMultiply(dataType(-1), stream);
     }
 
     // return mean step count
     if (steps != nullptr) {
-        *steps = totalSteps / this->phi.size();
+        *steps = totalSteps;
     }
 
     return this->result;
@@ -181,7 +181,7 @@ template <
 void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasurementPattern(
     std::shared_ptr<numeric::Matrix<dataType> const> const source,
     std::shared_ptr<numeric::Matrix<dataType>> result, bool const additiv,
-    cublasHandle_t const handle, cudaStream_t const stream) {
+    cublasHandle_t const handle, cudaStream_t const stream) const {
     // check input
     if (source == nullptr) {
         throw std::invalid_argument("fastEIT::ForwardSolver::applyMeasurementPattern: source == nullptr");
@@ -197,7 +197,7 @@ void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasure
     cublasSetStream(handle, stream);
 
     // add result
-    dataType alpha = 1.0f, beta = additiv ? 1.0 : 0.0;
+    dataType alpha = dataType(1), beta = additiv ? dataType(1) : dataType(0);
     numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
         this->source->drivePattern->cols, this->electrodesAttachmentMatrix->dataCols, &alpha,
         this->electrodesAttachmentMatrix->deviceData, this->electrodesAttachmentMatrix->dataRows,

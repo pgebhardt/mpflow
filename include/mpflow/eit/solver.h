@@ -48,10 +48,10 @@ namespace EIT {
         // member
         std::vector<std::shared_ptr<numeric::Matrix<float>>> measurement;
         std::vector<std::shared_ptr<numeric::Matrix<float>>> calculation;
-
-    private:
         std::shared_ptr<ForwardSolver<numericalSolverType>> forwardSolver;
         std::shared_ptr<solver::Inverse<float, numeric::ConjugateGradient>> inverseSolver;
+
+    private:
         std::shared_ptr<numeric::Matrix<float>> gamma;
         std::shared_ptr<numeric::Matrix<float>> dGamma;
     };

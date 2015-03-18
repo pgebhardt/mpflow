@@ -47,17 +47,17 @@ namespace EIT {
         // helper methods
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dataType> const> const source,
             std::shared_ptr<numeric::Matrix<dataType>> const result, bool const additiv,
-            cublasHandle_t const handle, cudaStream_t const stream);
+            cublasHandle_t const handle, cudaStream_t const stream) const;
 
         // member
+        std::shared_ptr<equationType> const equation;
+        std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;
 
     private:
         std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::SparseMatrix>> numericalSolver;
-        std::shared_ptr<equationType> const equation;
-        std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> electrodesAttachmentMatrix;
     };
