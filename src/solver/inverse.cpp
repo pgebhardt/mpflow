@@ -23,7 +23,7 @@
 // create inverse_solver
 template <
     class dataType,
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned const elementCount,
     unsigned const measurementCount, unsigned const parallelImages,
@@ -42,13 +42,13 @@ mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned const e
     this->jacobianSquare = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
 
     // create numerical EIT
-    this->numericalSolver = std::make_shared<numericalSolverType<dataType, mpFlow::numeric::Matrix>>(elementCount, parallelImages, stream);
+    this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(elementCount, parallelImages, stream);
 }
 
 // calc system matrix
 template <
     class dataType,
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcSystemMatrix(
     std::shared_ptr<numeric::Matrix<dataType> const> jacobian, RegularizationType const regularizationType,
@@ -109,7 +109,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcSystemMatrix(
 // calc excitation
 template <
     class dataType,
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
@@ -162,7 +162,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
 // inverse solving
 template <
     class dataType,
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,

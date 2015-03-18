@@ -23,10 +23,9 @@
 
 // create conjugateGradient solver
 template <
-    class dataType,
-    template <class type> class matrixType
+    class dataType
 >
-mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(
+mpFlow::numeric::ConjugateGradient<dataType>::ConjugateGradient(
     unsigned const rows, unsigned const cols, cudaStream_t const stream)
     : rows(rows), cols(cols) {
     // check input
@@ -48,11 +47,13 @@ mpFlow::numeric::ConjugateGradient<dataType, matrixType>::ConjugateGradient(
 
 // solve conjugateGradient spars conste
 template <
-    class dataType,
-    template <class type> class matrixType
+    class dataType
 >
-unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
-    std::shared_ptr<matrixType<dataType> const> const A,
+template <
+    template <class> class matrixType
+>
+unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(
+    std::shared_ptr<matrixType<dataType>> const A,
     std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
     cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
     double const tolerance, bool const dcFree) {
@@ -136,10 +137,9 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType, matrixType>::solve(
 
 // add scalar
 template <
-    class dataType,
-    template <class type> class matrixType
+    class dataType
 >
-void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::addScalar(
+void mpFlow::numeric::ConjugateGradient<dataType>::addScalar(
     std::shared_ptr<Matrix<dataType> const> const scalar,
     unsigned const rows, unsigned const columns, cudaStream_t const stream,
     std::shared_ptr<Matrix<dataType>> const vector) {
@@ -164,10 +164,9 @@ void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::addScalar(
 
 // update vector
 template <
-    class dataType,
-    template <class type> class matrixType
+    class dataType
 >
-void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::updateVector(
+void mpFlow::numeric::ConjugateGradient<dataType>::updateVector(
     std::shared_ptr<Matrix<dataType> const> const x1, double const sign,
     std::shared_ptr<Matrix<dataType> const> const x2,
     std::shared_ptr<Matrix<dataType> const> const r1,
@@ -202,11 +201,56 @@ void mpFlow::numeric::ConjugateGradient<dataType, matrixType>::updateVector(
 }
 
 // specialisations
-template class mpFlow::numeric::ConjugateGradient<float, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::ConjugateGradient<float, mpFlow::numeric::SparseMatrix>;
-template class mpFlow::numeric::ConjugateGradient<double, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::ConjugateGradient<double, mpFlow::numeric::SparseMatrix>;
-template class mpFlow::numeric::ConjugateGradient<thrust::complex<float>, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::ConjugateGradient<thrust::complex<float>, mpFlow::numeric::SparseMatrix>;
-template class mpFlow::numeric::ConjugateGradient<thrust::complex<double>, mpFlow::numeric::Matrix>;
-template class mpFlow::numeric::ConjugateGradient<thrust::complex<double>, mpFlow::numeric::SparseMatrix>;
+template class mpFlow::numeric::ConjugateGradient<float>;
+template class mpFlow::numeric::ConjugateGradient<double>;
+template class mpFlow::numeric::ConjugateGradient<thrust::complex<float>>;
+template class mpFlow::numeric::ConjugateGradient<thrust::complex<double>>;
+
+template unsigned mpFlow::numeric::ConjugateGradient<float>::solve<mpFlow::numeric::Matrix>(
+    std::shared_ptr<mpFlow::numeric::Matrix<float>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<float>> const,
+    double const, bool const);
+template unsigned mpFlow::numeric::ConjugateGradient<float>::solve<mpFlow::numeric::SparseMatrix>(
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<float>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<float>> const,
+    double const, bool const);
+template unsigned mpFlow::numeric::ConjugateGradient<double>::solve<mpFlow::numeric::Matrix>(
+    std::shared_ptr<mpFlow::numeric::Matrix<double>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<double>> const,
+    double const, bool const);
+template unsigned mpFlow::numeric::ConjugateGradient<double>::solve<mpFlow::numeric::SparseMatrix>(
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<double>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<double>> const,
+    double const, bool const);
+template unsigned mpFlow::numeric::ConjugateGradient<thrust::complex<float>>::solve<mpFlow::numeric::Matrix>(
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const,
+    double const, bool const);
+template unsigned mpFlow::numeric::ConjugateGradient<thrust::complex<float>>::solve<mpFlow::numeric::SparseMatrix>(
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const,
+    double const, bool const);
+template unsigned mpFlow::numeric::ConjugateGradient<thrust::complex<double>>::solve<mpFlow::numeric::Matrix>(
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const,
+    double const, bool const);
+template unsigned mpFlow::numeric::ConjugateGradient<thrust::complex<double>>::solve<mpFlow::numeric::SparseMatrix>(
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
+    unsigned const, cublasHandle_t const, cudaStream_t const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const,
+    double const, bool const);

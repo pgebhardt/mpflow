@@ -25,8 +25,7 @@ namespace mpFlow {
 namespace numeric {
     // conjugate gradient class definition
     template <
-        class dataType,
-        template <class> class matrixType
+        class dataType
     >
     class BiCGSTAB {
     public:
@@ -34,7 +33,10 @@ namespace numeric {
         BiCGSTAB(unsigned const rows, unsigned const cols, cudaStream_t const stream);
 
         // solve system
-        unsigned solve(std::shared_ptr<matrixType<dataType> const> const A,
+        template <
+            template <class> class matrixType
+        >
+        unsigned solve(std::shared_ptr<matrixType<dataType>> const A,
             std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
             cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
             double const tolerance=0.0, bool const dcFree=false);

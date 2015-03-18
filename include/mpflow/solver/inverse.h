@@ -26,7 +26,7 @@ namespace solver {
     // inverse solver class definition
     template <
         class dataType,
-        template <class, template <class> class> class numericalSolverType
+        template <class> class numericalSolverType
     >
     class Inverse {
     public:
@@ -63,7 +63,7 @@ namespace solver {
         dataType regularizationFactor;
 
     private:
-        std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::Matrix>> numericalSolver;
+        std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dataType>> difference;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> systemMatrix;

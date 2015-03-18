@@ -25,7 +25,7 @@ namespace mpFlow {
 namespace EIT {
     // forward solver class definition
     template <
-        template <class, template <class> class> class numericalSolverType = numeric::ConjugateGradient,
+        template <class> class numericalSolverType = numeric::ConjugateGradient,
         class equationType_ = FEM::Equation<float, FEM::basis::Linear, true>
     >
     class ForwardSolver {
@@ -59,7 +59,7 @@ namespace EIT {
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;
 
     private:
-        std::shared_ptr<numericalSolverType<dataType, mpFlow::numeric::SparseMatrix>> numericalSolver;
+        std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> electrodesAttachmentMatrix;
     };

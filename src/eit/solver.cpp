@@ -22,7 +22,7 @@
 
 // create EIT
 template <
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 mpFlow::EIT::Solver<numericalSolverType>::Solver(
     std::shared_ptr<EIT::ForwardSolver<>::equationType> const equation,
@@ -63,7 +63,7 @@ mpFlow::EIT::Solver<numericalSolverType>::Solver(
 
 // pre solve for accurate initial jacobian
 template <
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
     cublasHandle_t const handle, cudaStream_t const stream) {
@@ -92,7 +92,7 @@ void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
 
 // solve differential
 template <
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 std::shared_ptr<mpFlow::numeric::Matrix<float> const>
     mpFlow::EIT::Solver<numericalSolverType>::solveDifferential(
@@ -114,7 +114,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<float> const>
 
 // solve absolute
 template <
-    template <class, template <class> class> class numericalSolverType
+    template <class> class numericalSolverType
 >
 std::shared_ptr<mpFlow::numeric::Matrix<float> const>
     mpFlow::EIT::Solver<numericalSolverType>::solveAbsolute(

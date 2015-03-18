@@ -23,7 +23,7 @@
 
 // create forward_solver
 template <
-    template <class, template <class> class> class numericalSolverType,
+    template <class> class numericalSolverType,
     class equationType
 >
 mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
@@ -46,8 +46,8 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     }
 
     // create numericalSolver solver
-    this->numericalSolver = std::make_shared<numericalSolverType<
-        dataType, numeric::SparseMatrix>>(this->equation->mesh->nodes.rows(),
+    this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(
+        this->equation->mesh->nodes.rows(),
         this->source->drivePattern->cols + this->source->measurementPattern->cols, stream);
 
     // create matrices
@@ -91,7 +91,7 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
 
 // forward solving
 template <
-    template <class, template <class> class> class numericalSolverType,
+    template <class> class numericalSolverType,
     class equationType
 >
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
@@ -173,7 +173,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
 // helper methods
 template <
-    template <class, template <class> class> class numericalSolverType,
+    template <class> class numericalSolverType,
     class equationType
 >
 void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasurementPattern(
@@ -204,7 +204,7 @@ void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMeasure
 }
 
 template <
-    template <class, template <class> class> class numericalSolverType,
+    template <class> class numericalSolverType,
     class equationType
 >
 void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMixedBoundaryCondition(

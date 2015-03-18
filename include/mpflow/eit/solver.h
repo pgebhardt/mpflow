@@ -25,7 +25,7 @@ namespace mpFlow {
 namespace EIT {
     // class for solving differential EIT
     template <
-        template <class, template <class> class> class numericalSolverType
+        template <class> class numericalSolverType
     >
     class Solver {
     public:
