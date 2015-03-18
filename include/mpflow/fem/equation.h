@@ -47,7 +47,7 @@ namespace FEM {
         void calcJacobian(std::shared_ptr<numeric::Matrix<dataType> const> const field,
             std::shared_ptr<numeric::Matrix<dataType> const> const factor,
             unsigned const driveCount, unsigned const measurmentCount, bool const additiv,
-            cudaStream_t const stream, std::shared_ptr<numeric::Matrix<dataType>> result) const;
+            cudaStream_t const stream, std::shared_ptr<numeric::Matrix<dataType>> const result) const;
 
         void update(std::shared_ptr<numeric::Matrix<dataType> const> const alpha,
             dataType const k, std::shared_ptr<numeric::Matrix<dataType> const> const beta,
@@ -80,7 +80,7 @@ namespace FEM {
             std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
             std::shared_ptr<numeric::Matrix<unsigned> const> const connectivityMatrix,
             dataType const referenceValue, cudaStream_t const stream,
-            std::shared_ptr<numeric::SparseMatrix<dataType>> matrix);
+            std::shared_ptr<numeric::SparseMatrix<dataType>> const matrix);
     }
 }
 }
