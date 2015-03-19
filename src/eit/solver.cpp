@@ -22,13 +22,14 @@
 
 // create EIT
 template <
-    template <class> class numericalSolverType
+    template <class> class numericalSolverType,
+    class equationType
 >
-mpFlow::EIT::Solver<numericalSolverType>::Solver(
-    std::shared_ptr<EIT::ForwardSolver<>::equationType> const equation,
-    std::shared_ptr<FEM::SourceDescriptor<float> const> const source,
+mpFlow::EIT::Solver<numericalSolverType, equationType>::Solver(
+    std::shared_ptr<equationType> const equation,
+    std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
     unsigned const components, unsigned const parallelImages,
-    double const regularizationFactor, cublasHandle_t const handle,
+    dataType const regularizationFactor, cublasHandle_t const handle,
     cudaStream_t const stream) {
     // check input
     if (equation == nullptr) {
@@ -39,33 +40,34 @@ mpFlow::EIT::Solver<numericalSolverType>::Solver(
     }
 
     // create
-    this->forwardSolver = std::make_shared<EIT::ForwardSolver<numericalSolverType>>(
+    this->forwardSolver = std::make_shared<EIT::ForwardSolver<numericalSolverType, equationType>>(
         equation, source, components, handle, stream);
 
     // create inverse EIT
-    this->inverseSolver = std::make_shared<solver::Inverse<float, numeric::ConjugateGradient>>(
+    this->inverseSolver = std::make_shared<solver::Inverse<dataType, numericalSolverType>>(
         equation->mesh->elements.rows(), forwardSolver->result->dataRows *
         forwardSolver->result->dataCols, parallelImages, regularizationFactor,
         handle, stream);
 
     // create matrices
-    this->gamma = std::make_shared<numeric::Matrix<float>>(
+    this->gamma = std::make_shared<numeric::Matrix<dataType>>(
         equation->mesh->elements.rows(), parallelImages, stream);
-    this->dGamma = std::make_shared<numeric::Matrix<float>>(
+    this->dGamma = std::make_shared<numeric::Matrix<dataType>>(
         equation->mesh->elements.rows(), parallelImages, stream);
     for (unsigned image = 0; image < parallelImages; ++image) {
-        this->measurement.push_back(std::make_shared<numeric::Matrix<float>>(
+        this->measurement.push_back(std::make_shared<numeric::Matrix<dataType>>(
             source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
-        this->calculation.push_back(std::make_shared<numeric::Matrix<float>>(
+        this->calculation.push_back(std::make_shared<numeric::Matrix<dataType>>(
             source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
     }
 }
 
 // pre solve for accurate initial jacobian
 template <
-    template <class> class numericalSolverType
+    template <class> class numericalSolverType,
+    class equationType
 >
-void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
+void mpFlow::EIT::Solver<numericalSolverType, equationType>::preSolve(
     cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (handle == nullptr) {
@@ -78,7 +80,7 @@ void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
 
     // calc system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<float, numeric::ConjugateGradient>::RegularizationType::square,
+        solver::Inverse<dataType, numericalSolverType>::RegularizationType::square,
         handle, stream);
 
     // set measurement and calculation to initial value of forward EIT
@@ -92,10 +94,11 @@ void mpFlow::EIT::Solver<numericalSolverType>::preSolve(
 
 // solve differential
 template <
-    template <class> class numericalSolverType
+    template <class> class numericalSolverType,
+    class equationType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<float> const>
-    mpFlow::EIT::Solver<numericalSolverType>::solveDifferential(
+std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
+    mpFlow::EIT::Solver<numericalSolverType, equationType>::solveDifferential(
     cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (handle == nullptr) {
@@ -114,10 +117,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<float> const>
 
 // solve absolute
 template <
-    template <class> class numericalSolverType
+    template <class> class numericalSolverType,
+    class equationType
 >
-std::shared_ptr<mpFlow::numeric::Matrix<float> const>
-    mpFlow::EIT::Solver<numericalSolverType>::solveAbsolute(
+std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
+    mpFlow::EIT::Solver<numericalSolverType, equationType>::solveAbsolute(
     cublasHandle_t const handle, cudaStream_t const stream) {
     // only execute method, when parallel_images == 1
     if (this->measurement.size() != 1) {
@@ -136,7 +140,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<float> const>
 
     // calc inverse system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<float, numeric::ConjugateGradient>::RegularizationType::square,
+        solver::Inverse<dataType, numericalSolverType>::RegularizationType::square,
         handle, stream);
 
     // solve inverse
@@ -151,5 +155,35 @@ std::shared_ptr<mpFlow::numeric::Matrix<float> const>
 }
 
 // specialisation
-template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::ConjugateGradient,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>;
+template class mpFlow::EIT::Solver<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>;

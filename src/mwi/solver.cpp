@@ -21,10 +21,10 @@
 #include "mpflow/mpflow.h"
 
 // create MWI
-mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh> mesh,
-    std::shared_ptr<numeric::Matrix<thrust::complex<float>>> jacobian,
-    unsigned parallelImages, double regularizationFactor,
-    cublasHandle_t handle, cudaStream_t stream)
+mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh const> const mesh,
+    std::shared_ptr<numeric::Matrix<thrust::complex<float>> const> const jacobian,
+    unsigned const parallelImages, double const regularizationFactor,
+    cublasHandle_t const handle, cudaStream_t const stream)
     : mesh(mesh), jacobian(jacobian) {
     // check input
     if (mesh == nullptr) {
@@ -56,9 +56,9 @@ mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh> mesh,
 }
 
 // solve differential
-std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>>
+std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const>
     mpFlow::MWI::Solver::solveDifferential(
-    cublasHandle_t handle, cudaStream_t stream) {
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(

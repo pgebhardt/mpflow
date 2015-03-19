@@ -25,35 +25,38 @@ namespace mpFlow {
 namespace EIT {
     // class for solving differential EIT
     template <
-        template <class> class numericalSolverType
+        template <class> class numericalSolverType = numeric::ConjugateGradient,
+        class equationType = FEM::Equation<float, FEM::basis::Linear, true>
     >
     class Solver {
     public:
+        typedef typename equationType::dataType dataType;
+
         // constructor
-        Solver(std::shared_ptr<EIT::ForwardSolver<>::equationType> const equation,
-            std::shared_ptr<FEM::SourceDescriptor<float> const> const source,
+        Solver(std::shared_ptr<equationType> const equation,
+            std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
             unsigned const components, unsigned const parallelImages,
-            double const regularizationFactor, cublasHandle_t const handle,
+            dataType const regularizationFactor, cublasHandle_t const handle,
             cudaStream_t const stream);
 
         // pre solve for accurate initial jacobian
         void preSolve(cublasHandle_t const handle, cudaStream_t const stream);
 
         // solving
-        std::shared_ptr<numeric::Matrix<float> const> solveDifferential(
+        std::shared_ptr<numeric::Matrix<dataType> const> solveDifferential(
             cublasHandle_t const handle, cudaStream_t const stream);
-        std::shared_ptr<numeric::Matrix<float> const> solveAbsolute(
+        std::shared_ptr<numeric::Matrix<dataType> const> solveAbsolute(
             cublasHandle_t const handle, cudaStream_t const stream);
 
         // member
-        std::vector<std::shared_ptr<numeric::Matrix<float>>> measurement;
-        std::vector<std::shared_ptr<numeric::Matrix<float>>> calculation;
-        std::shared_ptr<ForwardSolver<numericalSolverType>> forwardSolver;
-        std::shared_ptr<solver::Inverse<float, numeric::ConjugateGradient>> inverseSolver;
+        std::vector<std::shared_ptr<numeric::Matrix<dataType>>> measurement;
+        std::vector<std::shared_ptr<numeric::Matrix<dataType>>> calculation;
+        std::shared_ptr<ForwardSolver<numericalSolverType, equationType>> forwardSolver;
+        std::shared_ptr<solver::Inverse<dataType, numericalSolverType>> inverseSolver;
 
     private:
-        std::shared_ptr<numeric::Matrix<float>> gamma;
-        std::shared_ptr<numeric::Matrix<float>> dGamma;
+        std::shared_ptr<numeric::Matrix<dataType>> gamma;
+        std::shared_ptr<numeric::Matrix<dataType>> dGamma;
     };
 }
 }
