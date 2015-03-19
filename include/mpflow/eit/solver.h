@@ -53,8 +53,6 @@ namespace EIT {
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> calculation;
         std::shared_ptr<ForwardSolver<numericalSolverType, equationType>> forwardSolver;
         std::shared_ptr<solver::Inverse<dataType, numericalSolverType>> inverseSolver;
-
-    private:
         std::shared_ptr<numeric::Matrix<dataType>> gamma;
         std::shared_ptr<numeric::Matrix<dataType>> dGamma;
     };
