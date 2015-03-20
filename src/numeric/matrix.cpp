@@ -666,17 +666,12 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
         }
     }
 
-    // create matrix
+    // covert STL vector to Matrix
     auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
-
-    // add values
-    for (unsigned row = 0; row < matrix->rows; ++row) {
-        for (unsigned column = 0; column < matrix->cols; ++column) {
-            (*matrix)(row, column) = values[row][column];
-        }
+    for (unsigned row = 0; row < matrix->rows; ++row)
+    for (unsigned col = 0; col < matrix->cols; ++col) {
+        (*matrix)(row, col) = values[row][col];
     }
-
-    // copy data to device
     matrix->copyToDevice(stream);
 
     return matrix;

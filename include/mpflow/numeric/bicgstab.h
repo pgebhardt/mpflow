@@ -64,6 +64,7 @@ namespace numeric {
         std::shared_ptr<Matrix<dataType>> t;
         std::shared_ptr<Matrix<dataType>> s;
         std::shared_ptr<Matrix<dataType>> error;
+        std::shared_ptr<Matrix<dataType>> reference;
         std::shared_ptr<Matrix<dataType>> temp1;
         std::shared_ptr<Matrix<dataType>> temp2;
     };

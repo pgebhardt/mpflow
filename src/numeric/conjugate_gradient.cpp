@@ -41,6 +41,7 @@ mpFlow::numeric::ConjugateGradient<dataType>::ConjugateGradient(
     this->p = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->roh = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0);
     this->rohOld = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->reference = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
     this->temp1 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->temp2 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
 }
@@ -86,6 +87,11 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(
     // calc rsold
     this->rohOld->vectorDotProduct(this->r, this->r, stream);
 
+    // initialize error reference
+    this->reference->vectorDotProduct(f, f, stream);
+    this->reference->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+
     // iterate
     for (unsigned step = 0; step < iterations; ++step) {
         // calc A * p
@@ -118,7 +124,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(
             cudaStreamSynchronize(stream);
 
             for (unsigned i = 0; i < this->roh->cols; ++i) {
-                if (abs(sqrt((*this->roh)(0, i))) >= tolerance) {
+                if (abs(sqrt((*this->roh)(0, i) / (*this->reference)(0, i))) >= tolerance) {
                     break;
                 }
                 return step + 1;

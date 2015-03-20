@@ -49,6 +49,7 @@ mpFlow::numeric::BiCGSTAB<dataType>::BiCGSTAB(
     this->t = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->s = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->error = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
+    this->reference = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
     this->temp1 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->temp2 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
 }
@@ -86,7 +87,9 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
 
     // initialize current error vector
     this->error->vectorDotProduct(this->r, this->r, stream);
+    this->reference->vectorDotProduct(f, f, stream);
     this->error->copyToHost(stream);
+    this->reference->copyToHost(stream);
     cudaStreamSynchronize(stream);
 
     // iterate
@@ -139,7 +142,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
             cudaStreamSynchronize(stream);
 
             for (unsigned i = 0; i < this->error->cols; ++i) {
-                if (abs(sqrt((*this->error)(0, i))) >= tolerance) {
+                if (abs(sqrt((*this->error)(0, i) / (*this->reference)(0, i))) >= tolerance) {
                     break;
                 }
                 return step + 1;
