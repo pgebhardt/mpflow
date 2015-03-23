@@ -20,7 +20,6 @@
 
 #include "mpflow/mpflow.h"
 #include "mpflow/fem/equation_kernel.h"
-#include <iostream>
 
 template <
     class dataType,
@@ -191,7 +190,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
             nodesVector[i] = nodes.row(i);
         }
         std::sort(nodesVector.begin(), nodesVector.end(),
-            [](Eigen::Ref<const Eigen::ArrayXd> a, Eigen::Ref<const Eigen::ArrayXd> b) -> bool {
+            [](Eigen::Ref<Eigen::ArrayXd const> const a, Eigen::Ref<Eigen::ArrayXd const> const b) -> bool {
             return math::circleParameter(b, math::circleParameter(a, 0.0)) > 0.0;
         });
         for (unsigned i = 0; i < nodes.rows(); ++i) {

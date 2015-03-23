@@ -21,6 +21,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 
 #include "mpflow/mpflow.h"
@@ -613,6 +614,7 @@ void mpFlow::numeric::Matrix<type>::savetxt(std::string const filename, char con
     }
 
     // save matrix
+    file.precision(std::numeric_limits<double>::digits10 + 1);
     this->savetxt(file, delimiter);
 
     // close file
