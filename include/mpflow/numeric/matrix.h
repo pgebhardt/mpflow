@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -92,9 +92,9 @@ namespace numeric {
             cudaStream_t const stream=nullptr, char const delimiter=' ');
 
         // cast from and to eigen arrays
-        auto toEigen() const -> Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic>;
+        Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> toEigen() const;
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> fromEigen(
-            Eigen::Ref<Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
+            Eigen::Ref<Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
             cudaStream_t const stream=nullptr);
 
         // I/O operators
