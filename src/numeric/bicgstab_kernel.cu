@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -28,47 +28,42 @@
 #include "mpflow/numeric/bicgstab_kernel.h"
 
 // update vector kernel
-template <
-    class dataType
->
-static __global__ void updateVectorKernel(const dataType* x1,
-    const double sign, const dataType* x2, const dataType* scalar,
-    unsigned rows, dataType* result) {
+template <class dataType>
+__global__ void updateVectorKernel(dataType const* const x1,
+    double const sign, dataType const* const scalar, dataType const* const x2,
+    unsigned const rows, dataType* const result) {
     // get ids
     unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned col = blockIdx.y * blockDim.y + threadIdx.y;
 
     // calc value
-    result[row + column * rows] = x1[row + column * rows] +
-        dataType(sign) * scalar[column * rows] * x2[row + column * rows];
+    result[row + col * rows] = x1[row + col * rows] +
+        dataType(sign) * scalar[col * rows] * x2[row + col * rows];
 }
 
 // update vector kernel wrapper
-template <
-    class dataType
->
-void mpFlow::numeric::bicgstabKernel::updateVector(dim3 blocks, dim3 threads,
-    cudaStream_t stream, const dataType* x1, const double sign,
-    const dataType* x2, const dataType* scalar, unsigned rows,
-    dataType* result) {
+template <class dataType>
+void mpFlow::numeric::bicgstabKernel::updateVector(
+    dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    dataType const* const x1, double const sign, dataType const* const scalar,
+    dataType const* const x2, unsigned const rows, dataType* const result) {
     // call cuda kernel
-    updateVectorKernel<<<blocks, threads, 0, stream>>>(x1, sign, x2, scalar, rows,
-        result);
+    updateVectorKernel<<<blocks, threads, 0, stream>>>(x1, sign, scalar, x2, rows, result);
 
     CudaCheckError();
 }
 
-template void mpFlow::numeric::bicgstabKernel::updateVector<float>(dim3, dim3,
-    cudaStream_t, const float*, const double,
-    const float*, const float*, unsigned, float*);
-template void mpFlow::numeric::bicgstabKernel::updateVector<double>(dim3, dim3,
-    cudaStream_t, const double*, const double,
-    const double*, const double*, unsigned, double*);
-template void mpFlow::numeric::bicgstabKernel::updateVector<thrust::complex<float> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<float>*, const double,
-    const thrust::complex<float>*, const thrust::complex<float>*, unsigned,
-    thrust::complex<float>*);
-template void mpFlow::numeric::bicgstabKernel::updateVector<thrust::complex<double> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<double>*, const double,
-    const thrust::complex<double>*, const thrust::complex<double>*, unsigned,
-    thrust::complex<double>*);
+template void mpFlow::numeric::bicgstabKernel::updateVector<float>(dim3 const, dim3 const,
+    cudaStream_t const, float const* const, double const,
+    float const* const, float const* const, unsigned const, float* const);
+template void mpFlow::numeric::bicgstabKernel::updateVector<double>(dim3 const, dim3 const,
+    cudaStream_t const, double const* const, double const,
+    double const* const, double const* const, unsigned const, double* const);
+template void mpFlow::numeric::bicgstabKernel::updateVector<thrust::complex<float> >(
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<float> const* const,
+    double const, thrust::complex<float> const* const, thrust::complex<float> const* const,
+    unsigned const, thrust::complex<float>* const);
+template void mpFlow::numeric::bicgstabKernel::updateVector<thrust::complex<double> >(
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<double> const* const,
+    double const, thrust::complex<double> const* const, thrust::complex<double> const* const,
+    unsigned const, thrust::complex<double>* const);

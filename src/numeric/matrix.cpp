@@ -72,11 +72,17 @@ mpFlow::numeric::Matrix<type>::Matrix(unsigned const rows, unsigned const cols,
             throw std::runtime_error("mpFlow::numeric::Matrix::Matrix: create host data memory");
         }
 
-        // init data with default value
-        for (unsigned row = 0; row < this->dataRows; ++row)
-        for (unsigned col = 0; col < this->dataCols; ++col) {
-            this->hostData[row + this->dataRows * col] = value;
+        // init all data with zeros
+        std::memset(this->hostData, 0, sizeof(type) * this->dataRows * this->dataCols);
+
+        // when default value differs from zero, overwrite only used part of matrix
+        if (value != type(0)) {
+            for (unsigned row = 0; row < this->dataRows; ++row)
+            for (unsigned col = 0; col < this->dataCols; ++col) {
+                this->hostData[row + this->dataRows * col] = value;
+            }
         }
+
         this->copyToDevice(stream);
         cudaStreamSynchronize(stream);
     }
@@ -189,7 +195,7 @@ void mpFlow::numeric::Matrix<type>::fill(type const value, cudaStream_t const st
 
     // call kernel
     matrixKernel::fill(blocks, threads, stream, value,
-        this->dataRows, this->deviceData);
+        this->rows, this->cols, this->dataRows, this->deviceData);
 }
 
 // add matrix

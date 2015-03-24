@@ -20,6 +20,7 @@
 
 #include "mpflow/mpflow.h"
 #include "mpflow/numeric/bicgstab_kernel.h"
+#include <iostream>
 
 // create bicgstab solver
 template <
@@ -42,7 +43,7 @@ mpFlow::numeric::BiCGSTAB<dataType>::BiCGSTAB(
     this->roh = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
     this->rohOld = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
     this->alpha = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
-    this->beta = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->beta = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
     this->omega = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 1.0, false);
     this->nu = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->p = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
@@ -83,7 +84,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
     this->r->add(f, stream);
 
     // Choose an arbitrary vector rHat such that (r, rHat) != 0, e.g. rHat = r
-    // this->rHat->copy(r, stream);
+    this->rHat->copy(r, stream);
 
     // initialize current error vector
     this->error->vectorDotProduct(this->r, this->r, stream);
@@ -104,8 +105,8 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
         this->beta->elementwiseMultiply(this->temp1, this->temp2, stream);
 
         // p = r + beta * (p - omega * nu)
-        updateVector(this->p, -1.0, this->nu, this->omega, stream, this->temp1);
-        updateVector(this->r, 1.0, this->temp1, this->beta, stream, this->p);
+        updateVector(this->p, -1.0, this->omega, this->nu, stream, this->temp1);
+        updateVector(this->r, 1.0, this->beta, this->temp1, stream, this->p);
 
         // nu = A * p
         this->nu->multiply(A, this->p, handle, stream);
@@ -115,7 +116,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
         this->alpha->elementwiseDivision(this->roh, this->temp1, stream);
 
         // s = r - alpha * nu
-        updateVector(this->r, -1.0, this->nu, this->alpha, stream, this->s);
+        updateVector(this->r, -1.0, this->alpha, this->nu, stream, this->s);
 
         // t = A * s
         this->t->multiply(A, this->s, handle, stream);
@@ -126,11 +127,11 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
         this->omega->elementwiseDivision(this->temp1, this->temp2, stream);
 
         // x = x + alpha * p + omega * s
-        updateVector(x, 1.0, this->p, this->alpha, stream, x);
-        updateVector(x, 1.0, this->s, this->omega, stream, x);
+        updateVector(x, 1.0, this->alpha, this->p, stream, x);
+        updateVector(x, 1.0, this->omega, this->s, stream, x);
 
         // r = s - omega * t
-        updateVector(this->s, -1.0, this->t, this->omega, stream, this->r);
+        updateVector(this->s, -1.0, this->omega, this->t, stream, this->r);
 
         // check error bound for all column vectors of residuum
         if (tolerance > 0.0) {
@@ -141,6 +142,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
             this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
+            std::cout << "step: " << step << ", error: " << abs(sqrt((*this->error)(0, 0) / (*this->reference)(0, 0))) << std::endl;
             for (unsigned i = 0; i < this->error->cols; ++i) {
                 if (abs(sqrt((*this->error)(0, i) / (*this->reference)(0, i))) >= tolerance) {
                     break;

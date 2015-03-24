@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -27,11 +27,10 @@ namespace numeric {
     // matrix kernel
     namespace matrixKernel {
         // fill kernel
-        template <
-            class type
-        >
-        void fill(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type value, unsigned rows, type* result);
+        template <class type>
+        void fill(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            type const value, unsigned const rows, unsigned const cols,
+            unsigned const dataRows, type* const result);
 
         // add kernel
         template <

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -31,46 +31,47 @@
 template <
     class type
 >
-__global__ void fillKernel(const type value, unsigned rows, type* result) {
+__global__ void fillKernel(type const value, unsigned const rows,
+    unsigned const cols, unsigned const dataRows, type* const result) {
     // get ids
     unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned col = blockIdx.y * blockDim.y + threadIdx.y;
 
     // add B to A
-    result[row + column * rows] = value;
+    result[row + col * dataRows] = (row < rows && col < cols) ? value : type(0);
 }
 
 // fill kernel wrapper
 template <
     class type
 >
-void mpFlow::numeric::matrixKernel::fill(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const type value, unsigned rows, type* result) {
+void mpFlow::numeric::matrixKernel::fill(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    type const value, unsigned const rows, unsigned const cols, unsigned const dataRows, type* const result) {
     // call cuda kernel
-    fillKernel<type><<<blocks, threads, 0, stream>>>(value, rows, result);
+    fillKernel<type><<<blocks, threads, 0, stream>>>(value, rows, cols, dataRows, result);
 
     CudaCheckError();
 }
 
 // fill specialisation
 template void mpFlow::numeric::matrixKernel::fill<float>(
-    dim3, dim3, cudaStream_t, const float,
-    unsigned, float*);
+    dim3 const, dim3 const, cudaStream_t const, float const,
+    unsigned const, unsigned const, unsigned const, float* const);
 template void mpFlow::numeric::matrixKernel::fill<double>(
-    dim3, dim3, cudaStream_t, const double,
-    unsigned, double*);
+    dim3 const, dim3 const, cudaStream_t const, double const,
+    unsigned const, unsigned const, unsigned const, double* const);
 template void mpFlow::numeric::matrixKernel::fill<thrust::complex<float> >(
-    dim3, dim3, cudaStream_t, const thrust::complex<float>,
-    unsigned, thrust::complex<float>*);
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<float> const,
+    unsigned const, unsigned const, unsigned const, thrust::complex<float>* const);
 template void mpFlow::numeric::matrixKernel::fill<thrust::complex<double> >(
-    dim3, dim3, cudaStream_t, const thrust::complex<double>,
-    unsigned, thrust::complex<double>*);
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<double> const,
+    unsigned const, unsigned const, unsigned const, thrust::complex<double>* const);
 template void mpFlow::numeric::matrixKernel::fill<unsigned>(
-    dim3, dim3, cudaStream_t, const unsigned,
-    unsigned, unsigned*);
+    dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, unsigned const, unsigned const, unsigned* const);
 template void mpFlow::numeric::matrixKernel::fill<int>(
-    dim3, dim3, cudaStream_t, const int,
-    unsigned, int*);
+    dim3 const, dim3 const, cudaStream_t const, int const,
+    unsigned const, unsigned const, unsigned const, int* const);
 
 // add kernel
 template <
@@ -218,10 +219,10 @@ __global__ void elementwiseDivisionKernel(const type* a, const type* b, unsigned
     type* result) {
     // get ids
     unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
+    unsigned col = blockIdx.y * blockDim.y + threadIdx.y;
 
     // elementwise division
-    result[row + column * rows] = a[row + column * rows] / b[row + column * rows];
+    result[row + col * rows] = b[row + col * rows] != type(0) ? a[row + col * rows] / b[row + col * rows] : type(0);
 }
 
 // elementwise division kernel wrapper

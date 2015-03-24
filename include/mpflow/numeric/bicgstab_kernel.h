@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -25,12 +25,10 @@ namespace mpFlow {
 namespace numeric {
     namespace bicgstabKernel {
         // update vector kernel
-        template <
-            class dataType
-        >
-        void updateVector(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const dataType* x1, const double sign, const dataType* x2,
-            const dataType* scalar, unsigned rows, dataType* result);
+        template <class dataType>
+        void updateVector(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            dataType const* const x1, double const sign, dataType const* const scalar,
+            dataType const* const x2, unsigned const rows, dataType* const result);
     }
 }
 }
