@@ -59,6 +59,7 @@ namespace numeric {
     private:
         std::shared_ptr<Matrix<dataType>> r;
         std::shared_ptr<Matrix<dataType>> p;
+        std::shared_ptr<Matrix<dataType>> z;
         std::shared_ptr<Matrix<dataType>> roh;
         std::shared_ptr<Matrix<dataType>> rohOld;
         std::shared_ptr<Matrix<dataType>> reference;

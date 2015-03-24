@@ -39,6 +39,7 @@ mpFlow::numeric::ConjugateGradient<dataType>::ConjugateGradient(
     // create matrices
     this->r = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->p = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
+    this->z = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->roh = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0);
     this->rohOld = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
     this->reference = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream);
@@ -57,7 +58,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(
     std::shared_ptr<matrixType<dataType>> const A,
     std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
     cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-    double const tolerance, bool const dcFree, std::shared_ptr<matrixType<dataType>> const) {
+    double const tolerance, bool const dcFree, std::shared_ptr<matrixType<dataType>> const K) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::ConjugateGradient::solve: A == nullptr");
@@ -81,11 +82,19 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(
     this->r->scalarMultiply(-1.0, stream);
     this->r->add(f, stream);
 
-    // p = r
-    this->p->copy(this->r, stream);
+    // z = K * r
+    if (K != nullptr) {
+        this->z->multiply(K, this->r, handle, stream);
+    }
+    else {
+        this->z->copy(this->r, stream);
+    }
+
+    // p = z
+    this->p->copy(this->z, stream);
 
     // calc rsold
-    this->rohOld->vectorDotProduct(this->r, this->r, stream);
+    this->rohOld->vectorDotProduct(this->r, this->z, stream);
 
     // initialize error reference
     this->reference->vectorDotProduct(f, f, stream);
@@ -112,8 +121,16 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(
         // update x
         updateVector(x, 1.0, this->p, this->rohOld, this->temp2, stream, x);
 
+        // update precodition
+        if (K != nullptr) {
+            this->z->multiply(K, this->r, handle, stream);
+        }
+        else {
+            this->z->copy(this->r, stream);
+        }
+
         // calc rsnew
-        this->roh->vectorDotProduct(this->r, this->r, stream);
+        this->roh->vectorDotProduct(this->r, this->z, stream);
 
         // check error bound for all column vectors of residuum
         if (tolerance > 0.0) {
@@ -132,7 +149,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(
         }
 
         // update projection
-        updateVector(this->r, 1.0, this->p, this->roh, this->rohOld, stream, this->p);
+        updateVector(this->z, 1.0, this->p, this->roh, this->rohOld, stream, this->p);
 
         // copy rsnew to rsold
         this->rohOld->copy(this->roh, stream);

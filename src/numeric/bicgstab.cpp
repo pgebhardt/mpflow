@@ -20,7 +20,6 @@
 
 #include "mpflow/mpflow.h"
 #include "mpflow/numeric/bicgstab_kernel.h"
-#include <iostream>
 
 // create bicgstab solver
 template <
@@ -162,7 +161,6 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
             this->error->copyToHost(stream);
             cudaStreamSynchronize(stream);
 
-            std::cout << "step: " << step << ", error: " << abs(sqrt((*this->error)(0, 0) / (*this->reference)(0, 0))) << std::endl;
             for (unsigned i = 0; i < this->error->cols; ++i) {
                 if (abs(sqrt((*this->error)(0, i) / (*this->reference)(0, i))) >= tolerance) {
                     break;
