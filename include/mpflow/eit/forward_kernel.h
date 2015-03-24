@@ -30,6 +30,11 @@ namespace forwardKernel {
     void applyMixedBoundaryCondition(dim3 const blocks, dim3 const threads,
         cudaStream_t const stream, dataType* const excitation, unsigned const rows,
         unsigned const* const columnIds, dataType* const values);
+
+    template <class dataType>
+    void createPreconditioner(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+        dataType const* const inputValues, unsigned const* const inputColumnIds,
+        dataType* const outputValues, unsigned* const outputColumnIds);
 }
 }
 }

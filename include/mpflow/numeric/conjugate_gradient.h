@@ -40,7 +40,7 @@ namespace numeric {
         unsigned solve(std::shared_ptr<matrixType<dataType>> const A,
             std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
             cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-            double const tolerance=0.0, bool const dcFree=false);
+            double const tolerance=0.0, bool const dcFree=false, std::shared_ptr<matrixType<dataType>> const K=nullptr);
 
         // helper
         static void addScalar(std::shared_ptr<Matrix<dataType> const> const scalar,

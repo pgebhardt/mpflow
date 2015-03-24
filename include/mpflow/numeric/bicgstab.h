@@ -39,7 +39,7 @@ namespace numeric {
         unsigned solve(std::shared_ptr<matrixType<dataType>> const A,
             std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
             cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-            double const tolerance=0.0, bool const dcFree=false);
+            double const tolerance=0.0, bool const dcFree=false, std::shared_ptr<matrixType<dataType>> const K=nullptr);
 
         // helper
         static void updateVector(std::shared_ptr<Matrix<dataType> const> const x1,
@@ -63,6 +63,8 @@ namespace numeric {
         std::shared_ptr<Matrix<dataType>> p;
         std::shared_ptr<Matrix<dataType>> t;
         std::shared_ptr<Matrix<dataType>> s;
+        std::shared_ptr<Matrix<dataType>> y;
+        std::shared_ptr<Matrix<dataType>> z;
         std::shared_ptr<Matrix<dataType>> error;
         std::shared_ptr<Matrix<dataType>> reference;
         std::shared_ptr<Matrix<dataType>> temp1;

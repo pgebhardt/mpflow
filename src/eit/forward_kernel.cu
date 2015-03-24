@@ -80,3 +80,47 @@ template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<thrust::co
 template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<thrust::complex<double> >(
     dim3 const, dim3 const, cudaStream_t const, thrust::complex<double>* const, unsigned const,
     unsigned const* const, thrust::complex<double>* const);
+
+template <class dataType>
+__global__ void createPreconditionerKernel(dataType const* const inputValues, unsigned const* const inputColumnIds,
+    dataType* const outputValues, unsigned* const outputColumnIds) {
+    unsigned const row = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // update columnIds
+    for (int i = 0; i < mpFlow::numeric::sparseMatrix::blockSize; ++i) {
+        outputColumnIds[row * mpFlow::numeric::sparseMatrix::blockSize + i] = i == 0 ? row : mpFlow::constants::invalidIndex;
+    }
+
+    // search for diagonal element
+    outputValues[row * mpFlow::numeric::sparseMatrix::blockSize] = dataType(0);
+    for (int i = 0; i < mpFlow::numeric::sparseMatrix::blockSize; ++i) {
+        unsigned const columnId = inputColumnIds[row * mpFlow::numeric::sparseMatrix::blockSize + i];
+
+        if (columnId == row) {
+            outputValues[row * mpFlow::numeric::sparseMatrix::blockSize] =
+                dataType(1) / inputValues[row * mpFlow::numeric::sparseMatrix::blockSize + i];
+            break;
+        }
+    }
+}
+
+template <class dataType>
+void mpFlow::EIT::forwardKernel::createPreconditioner(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    dataType const* const inputValues, unsigned const* const inputColumnIds,
+    dataType* const outputValues, unsigned* const outputColumnIds) {
+    createPreconditionerKernel<dataType><<<blocks, threads, 0, stream>>>(
+        inputValues, inputColumnIds, outputValues, outputColumnIds);
+
+    CudaCheckError();
+}
+
+template void mpFlow::EIT::forwardKernel::createPreconditioner<float>(dim3 const, dim3 const,
+    cudaStream_t const, float const* const, unsigned const* const, float* const, unsigned* const);
+template void mpFlow::EIT::forwardKernel::createPreconditioner<double>(dim3 const, dim3 const,
+    cudaStream_t const, double const* const, unsigned const* const, double* const, unsigned* const);
+template void mpFlow::EIT::forwardKernel::createPreconditioner<thrust::complex<float> >(dim3 const, dim3 const,
+    cudaStream_t const, thrust::complex<float> const* const, unsigned const* const,
+    thrust::complex<float>* const, unsigned* const);
+template void mpFlow::EIT::forwardKernel::createPreconditioner<thrust::complex<double> >(dim3 const, dim3 const,
+    cudaStream_t const, thrust::complex<double> const* const, unsigned const* const,
+    thrust::complex<double>* const, unsigned* const);

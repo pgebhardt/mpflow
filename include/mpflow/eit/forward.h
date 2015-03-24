@@ -50,6 +50,8 @@ namespace EIT {
             cublasHandle_t const handle, cudaStream_t const stream) const;
         static void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dataType>> const excitationMatrix,
             std::shared_ptr<numeric::SparseMatrix<dataType>> const systemMatrix, cudaStream_t const stream);
+        static void createPreconditioner(std::shared_ptr<numeric::SparseMatrix<dataType> const> const systemMatrix,
+            std::shared_ptr<numeric::SparseMatrix<dataType>> const preconditioner, cudaStream_t const stream);
 
         // member
         std::shared_ptr<equationType> const equation;
