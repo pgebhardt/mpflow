@@ -55,7 +55,7 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
         this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
     for (unsigned component = 0; component < components; ++component) {
         this->phi.push_back(std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes.rows(),
-            this->source->pattern->cols, stream, 1.0));
+            this->source->pattern->cols, stream));
     }
     this->excitation = std::make_shared<numeric::Matrix<dataType>>(this->equation->mesh->nodes.rows(),
         this->source->pattern->cols, stream);
