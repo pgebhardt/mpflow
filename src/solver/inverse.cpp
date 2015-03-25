@@ -188,8 +188,8 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     this->calcExcitation(jacobian, calculation, measurement, handle, stream);
 
     // solve system
-    this->numericalSolver->solve(this->systemMatrix, this->excitation,
-        steps, handle, stream, gamma);
+    this->numericalSolver->template solve<numeric::Matrix>(this->systemMatrix,
+        this->excitation, handle, stream, gamma, nullptr, false, steps);
 }
 
 // specialisation

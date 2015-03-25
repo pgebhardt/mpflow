@@ -63,33 +63,36 @@ template <
 template <
     template <class type> class matrixType
 >
-unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(
-    std::shared_ptr<matrixType<dataType>> const A,
-    std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
-    cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-    double const tolerance, bool const, std::shared_ptr<matrixType<dataType>> const K) {
+unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(std::shared_ptr<matrixType<dataType>> const A,
+    std::shared_ptr<Matrix<dataType> const> const b, cublasHandle_t const handle,
+    cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
+    std::shared_ptr<matrixType<dataType>> const K, bool const,
+    unsigned const maxIterations, double const tolerance) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: A == nullptr");
     }
-    if (f == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: f == nullptr");
+    if (b == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: b == nullptr");
     }
     if (x == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::BiCGSTAB::solve: x == nullptr");
     }
 
-    // r0 = f - A * x0
+    // default iteration count to matrix size
+    unsigned const iterations = maxIterations == 0 ? A->rows : maxIterations;
+
+    // r0 = b - A * x0
     this->r->multiply(A, x, handle, stream);
     this->r->scalarMultiply(-1.0, stream);
-    this->r->add(f, stream);
+    this->r->add(b, stream);
 
     // Choose an arbitrary vector rHat such that (r, rHat) != 0, e.g. rHat = r
     this->rHat->copy(r, stream);
 
     // initialize current error vector
     this->error->vectorDotProduct(this->r, this->r, stream);
-    this->reference->vectorDotProduct(f, f, stream);
+    this->reference->vectorDotProduct(b, b, stream);
     this->error->copyToHost(stream);
     this->reference->copyToHost(stream);
     cudaStreamSynchronize(stream);
@@ -213,50 +216,34 @@ template class mpFlow::numeric::BiCGSTAB<thrust::complex<float>>;
 template class mpFlow::numeric::BiCGSTAB<thrust::complex<double>>;
 
 template unsigned mpFlow::numeric::BiCGSTAB<float>::solve<mpFlow::numeric::Matrix>(
-    std::shared_ptr<mpFlow::numeric::Matrix<float>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<float>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::Matrix<float>> const);
+    std::shared_ptr<mpFlow::numeric::Matrix<float>> const, std::shared_ptr<Matrix<float> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<float>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<float>> const, bool const, unsigned const, double const);
 template unsigned mpFlow::numeric::BiCGSTAB<float>::solve<mpFlow::numeric::SparseMatrix>(
-    std::shared_ptr<mpFlow::numeric::SparseMatrix<float>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<float> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<float>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::SparseMatrix<float>> const);
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<float>> const, std::shared_ptr<Matrix<float> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<float>> const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<float>> const, bool const, unsigned const, double const);
 template unsigned mpFlow::numeric::BiCGSTAB<double>::solve<mpFlow::numeric::Matrix>(
-    std::shared_ptr<mpFlow::numeric::Matrix<double>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<double>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::Matrix<double>> const);
+    std::shared_ptr<mpFlow::numeric::Matrix<double>> const, std::shared_ptr<Matrix<double> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<double>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<double>> const, bool const, unsigned const, double const);
 template unsigned mpFlow::numeric::BiCGSTAB<double>::solve<mpFlow::numeric::SparseMatrix>(
-    std::shared_ptr<mpFlow::numeric::SparseMatrix<double>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<double> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<double>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::SparseMatrix<double>> const);
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<double>> const, std::shared_ptr<Matrix<double> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<double>> const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<double>> const, bool const, unsigned const, double const);
 template unsigned mpFlow::numeric::BiCGSTAB<thrust::complex<float>>::solve<mpFlow::numeric::Matrix>(
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const, std::shared_ptr<Matrix<thrust::complex<float>> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<thrust::complex<float>>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const, bool const, unsigned const, double const);
 template unsigned mpFlow::numeric::BiCGSTAB<thrust::complex<float>>::solve<mpFlow::numeric::SparseMatrix>(
-    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>> const);
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>> const, std::shared_ptr<Matrix<thrust::complex<float>> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<thrust::complex<float>>> const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>> const, bool const, unsigned const, double const);
 template unsigned mpFlow::numeric::BiCGSTAB<thrust::complex<double>>::solve<mpFlow::numeric::Matrix>(
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const);
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const, std::shared_ptr<Matrix<thrust::complex<double>> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<thrust::complex<double>>> const,
+    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const, bool const, unsigned const, double const);
 template unsigned mpFlow::numeric::BiCGSTAB<thrust::complex<double>>::solve<mpFlow::numeric::SparseMatrix>(
-    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>> const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>> const> const,
-    unsigned const, cublasHandle_t const, cudaStream_t const,
-    std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<double>>> const,
-    double const, bool const, std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>> const);
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>> const, std::shared_ptr<Matrix<thrust::complex<double>> const> const,
+    cublasHandle_t const, cudaStream_t const, std::shared_ptr<Matrix<thrust::complex<double>>> const,
+    std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>> const, bool const, unsigned const, double const);

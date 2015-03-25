@@ -712,11 +712,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
 template <
     class type
 >
-Eigen::Array<typename mpFlow::numeric::filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic>
-    mpFlow::numeric::Matrix<type>::toEigen() const {
+Eigen::Array<typename mpFlow::typeTraits::convertComplexType<type>::type,
+    Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::Matrix<type>::toEigen() const {
     // create eigen array with mpflow_type
-    Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> array(
-        this->dataRows, this->dataCols);
+    Eigen::Array<typename typeTraits::convertComplexType<type>::type,
+        Eigen::Dynamic, Eigen::Dynamic> array(this->dataRows, this->dataCols);
 
     // copy data
     memcpy(array.data(), this->hostData, sizeof(type) *
@@ -733,10 +733,11 @@ template <
     class type
 >
 std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::fromEigen(
-    Eigen::Ref<Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
-    cudaStream_t const stream) {
+    Eigen::Ref<Eigen::Array<typename typeTraits::convertComplexType<type>::type,
+    Eigen::Dynamic, Eigen::Dynamic> const> const array, cudaStream_t const stream) {
     // copy array into changable intermediate array
-    Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> tempArray = array;
+    Eigen::Array<typename typeTraits::convertComplexType<type>::type,
+        Eigen::Dynamic, Eigen::Dynamic> tempArray = array;
 
     // create mpflow matrix and resize eigen array to correct size
     auto matrix = std::make_shared<Matrix<type>>(array.rows(),

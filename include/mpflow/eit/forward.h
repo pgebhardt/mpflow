@@ -42,7 +42,7 @@ namespace EIT {
         std::shared_ptr<numeric::Matrix<dataType> const> solve(
             std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
             cublasHandle_t const handle, cudaStream_t const stream,
-            double const tolerance=1e-6, unsigned* const steps=nullptr);
+            unsigned* const steps=nullptr);
 
         // helper methods
         void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dataType> const> const source,

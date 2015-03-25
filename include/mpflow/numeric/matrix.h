@@ -27,16 +27,6 @@ namespace numeric {
     // forward declarations
     template <class type> class SparseMatrix;
 
-    // filter thrust::complex type for eigen array creation
-    template <typename T>
-    struct filterType { typedef T type; };
-
-    template <>
-    struct filterType<thrust::complex<float>> { typedef std::complex<float> type; };
-
-    template <>
-    struct filterType<thrust::complex<double>> { typedef std::complex<double> type; };
-
     // matrix class definition
     template <
         class type_
@@ -92,9 +82,11 @@ namespace numeric {
             cudaStream_t const stream=nullptr, char const delimiter=' ');
 
         // cast from and to eigen arrays
-        Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> toEigen() const;
+        Eigen::Array<typename typeTraits::convertComplexType<type>::type,
+            Eigen::Dynamic, Eigen::Dynamic> toEigen() const;
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> fromEigen(
-            Eigen::Ref<Eigen::Array<typename filterType<type>::type, Eigen::Dynamic, Eigen::Dynamic> const> const array,
+            Eigen::Ref<Eigen::Array<typename typeTraits::convertComplexType<type>::type,
+                Eigen::Dynamic, Eigen::Dynamic> const> const array,
             cudaStream_t const stream=nullptr);
 
         // I/O operators

@@ -38,9 +38,11 @@ namespace numeric {
             template <class> class matrixType
         >
         unsigned solve(std::shared_ptr<matrixType<dataType>> const A,
-            std::shared_ptr<Matrix<dataType> const> const f, unsigned const iterations,
-            cublasHandle_t const handle, cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-            double const tolerance=0.0, bool const dcFree=false, std::shared_ptr<matrixType<dataType>> const K=nullptr);
+            std::shared_ptr<Matrix<dataType> const> const b, cublasHandle_t const handle,
+            cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
+            std::shared_ptr<matrixType<dataType>> const K=nullptr, bool const dcFree=false,
+            unsigned const maxIterations=0,
+            double const tolerance=std::numeric_limits<typename typeTraits::extractNumericalType<dataType>::type>::epsilon());
 
         // helper
         static void addScalar(std::shared_ptr<Matrix<dataType> const> const scalar,

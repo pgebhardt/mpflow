@@ -97,7 +97,7 @@ template <
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::solve(
     std::shared_ptr<numeric::Matrix<dataType> const> const gamma, cublasHandle_t const handle,
-    cudaStream_t const stream, double const tolerance, unsigned* const steps) {
+    cudaStream_t const stream, unsigned* const steps) {
     // check input
     if (gamma == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::ForwardSolver::solve: gamma == nullptr");
@@ -134,9 +134,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         // solve linear system
         createPreconditioner(this->equation->systemMatrix, K, stream);
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
-            this->excitation, this->equation->mesh->nodes.rows(), nullptr, stream,
-            this->phi[component], tolerance, (component == 0 &&
-            this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) ? true : false, K);
+            this->excitation, nullptr, stream, this->phi[component], K,
+            (component == 0 && this->source->type ==
+                FEM::SourceDescriptor<dataType>::Type::Open) ? true : false);
 
         // calc jacobian
         this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,
