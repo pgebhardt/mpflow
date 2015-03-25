@@ -42,7 +42,7 @@ namespace solver {
 
     public:
         // inverse solving
-        void solve(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
+        unsigned solve(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
             unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,

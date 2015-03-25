@@ -159,7 +159,7 @@ template <
     class dataType,
     template <class> class numericalSolverType
 >
-void mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
+unsigned mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
@@ -183,7 +183,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     this->calcExcitation(jacobian, calculation, measurement, handle, stream);
 
     // solve system
-    this->numericalSolver->template solve<numeric::Matrix>(this->systemMatrix,
+    return this->numericalSolver->template solve<numeric::Matrix>(this->systemMatrix,
         this->excitation, handle, stream, gamma, nullptr, false, steps);
 }
 

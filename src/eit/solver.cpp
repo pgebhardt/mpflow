@@ -98,7 +98,8 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     mpFlow::EIT::Solver<numericalSolverType, equationType>::solveDifferential(
-    cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations) {
+    cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations,
+    unsigned* const iterations) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
@@ -106,9 +107,13 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     }
 
     // solve
-    this->inverseSolver->solve(this->forwardSolver->jacobian,
+    unsigned const steps = this->inverseSolver->solve(this->forwardSolver->jacobian,
         this->calculation, this->measurement, maxIterations,
         handle, stream, this->dGamma);
+
+    if (iterations != nullptr) {
+        *iterations = steps;
+    }
 
     return this->dGamma;
 }
