@@ -26,6 +26,7 @@
 #include "cuda_error.h"
 #include "constants.h"
 #include "mathematics.h"
+#include "type_traits.h"
 
 // numeric solver
 #include "numeric/cublas_wrapper.h"
