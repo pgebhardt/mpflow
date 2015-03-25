@@ -115,9 +115,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>>
     mpFlow::numeric::Matrix<type>::eye(unsigned const size, cudaStream_t const stream) {
     auto matrix = std::make_shared<Matrix<type>>(size, size, stream);
     for (unsigned i = 0; i < size; ++i) {
-        (*matrix)(i, i) = 1;
+        (*matrix)(i, i) = type(1);
     }
     matrix->copyToDevice(stream);
+    cudaStreamSynchronize(stream);
 
     return matrix;
 }

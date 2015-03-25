@@ -79,7 +79,7 @@ void mpFlow::EIT::Solver<numericalSolverType, equationType>::preSolve(
 
     // calc system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<dataType, numericalSolverType>::RegularizationType::square,
+        solver::Inverse<dataType, numericalSolverType>::RegularizationType::diagonal,
         handle, stream);
 
     // set measurement and calculation to initial value of forward EIT
@@ -98,7 +98,7 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     mpFlow::EIT::Solver<numericalSolverType, equationType>::solveDifferential(
-    cublasHandle_t const handle, cudaStream_t const stream) {
+    cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
@@ -107,8 +107,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
     // solve
     this->inverseSolver->solve(this->forwardSolver->jacobian,
-        this->calculation, this->measurement,
-        this->forwardSolver->jacobian->cols / 8,
+        this->calculation, this->measurement, maxIterations,
         handle, stream, this->dGamma);
 
     return this->dGamma;

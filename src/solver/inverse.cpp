@@ -95,13 +95,8 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcSystemMatrix(
         }
     }
     else {
-        auto diag = std::make_shared<numeric::Matrix<dataType>>(this->systemMatrix->rows,
-            this->systemMatrix->cols, stream);
-        for (unsigned row = 0; row < diag->rows; ++row) {
-            (*diag)(row, row) = this->regularizationFactor;
-        }
-        diag->copyToDevice(stream);
-
+        auto diag = numeric::Matrix<dataType>::eye(this->systemMatrix->rows, stream);
+        diag->scalarMultiply(this->regularizationFactor, stream);
         this->systemMatrix->add(diag, stream);
     }
 }
