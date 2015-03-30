@@ -205,6 +205,10 @@ void mpFlow::MWI::Equation::update(const std::shared_ptr<numeric::Matrix<thrust:
     }
 
     // update matrices
+    auto alpha = std::make_shared<numeric::Matrix<thrust::complex<float>>>(beta->rows, beta->cols, stream,
+        1.0f);
+    FEM::equation::updateMatrix<thrust::complex<float>, false>(this->elementalSMatrix, alpha,
+        this->connectivityMatrix, thrust::complex<float>(1.0, 0.0), stream, this->sMatrix);
     FEM::equation::updateMatrix<thrust::complex<float>, false>(this->elementalRMatrix, beta,
         this->connectivityMatrix, thrust::complex<float>(1.0, 0.0), stream, this->rMatrix);
 
