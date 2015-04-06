@@ -28,29 +28,21 @@ namespace typeTraits {
     template <typename type_>
     struct extractNumericalType { typedef type_ type; };
 
-    template <>
-    struct extractNumericalType<thrust::complex<float>> { typedef float type; };
-    template <>
-    struct extractNumericalType<thrust::complex<double>> { typedef double type; };
+    template <typename type_>
+    struct extractNumericalType<thrust::complex<type_>> { typedef type_ type; };
 
-    template <>
-    struct extractNumericalType<std::complex<float>> { typedef float type; };
-    template <>
-    struct extractNumericalType<std::complex<double>> { typedef double type; };
+    template <typename type_>
+    struct extractNumericalType<std::complex<type_>> { typedef type_ type; };
 
     // convert thrust::complex to std::complex and vice versa
     template <typename type_>
     struct convertComplexType { typedef type_ type; };
 
-    template <>
-    struct convertComplexType<thrust::complex<float>> { typedef std::complex<float> type; };
-    template <>
-    struct convertComplexType<thrust::complex<double>> { typedef std::complex<double> type; };
+    template <typename type_>
+    struct convertComplexType<thrust::complex<type_>> { typedef std::complex<type_> type; };
 
-    template <>
-    struct convertComplexType<std::complex<float>> { typedef thrust::complex<float> type; };
-    template <>
-    struct convertComplexType<std::complex<double>> { typedef thrust::complex<double> type; };
+    template <typename type_>
+    struct convertComplexType<std::complex<type_>> { typedef thrust::complex<type_> type; };
 }
 }
 
