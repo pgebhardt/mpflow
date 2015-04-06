@@ -27,12 +27,13 @@ namespace FEM {
     template <
         class dataType_,
         class basisFunctionType_,
-        bool logarithmic=true
+        bool logarithmic_=true
     >
     class Equation {
     public:
         typedef basisFunctionType_ basisFunctionType;
         typedef dataType_ dataType;
+        static bool const logarithmic = logarithmic_;
 
         // constructor
         Equation(std::shared_ptr<numeric::IrregularMesh const> const mesh,

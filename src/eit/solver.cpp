@@ -51,7 +51,8 @@ mpFlow::EIT::Solver<numericalSolverType, equationType>::Solver(
 
     // create matrices
     this->gamma = std::make_shared<numeric::Matrix<dataType>>(
-        equation->mesh->elements.rows(), parallelImages, stream);
+        equation->mesh->elements.rows(), parallelImages, stream,
+        equation->logarithmic ? dataType(0) : dataType(1));
     this->dGamma = std::make_shared<numeric::Matrix<dataType>>(
         equation->mesh->elements.rows(), parallelImages, stream);
     for (unsigned image = 0; image < parallelImages; ++image) {
