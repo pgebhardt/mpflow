@@ -40,8 +40,7 @@ namespace numeric {
         unsigned solve(std::shared_ptr<matrixType<dataType>> const A,
             std::shared_ptr<Matrix<dataType> const> const b, cublasHandle_t const handle,
             cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-            std::shared_ptr<matrixType<dataType>> const K=nullptr, bool const dcFree=false,
-            unsigned const maxIterations=0,
+            std::shared_ptr<matrixType<dataType>> const KInv=nullptr, unsigned const maxIterations=0,
             double const tolerance=std::numeric_limits<typename typeTraits::extractNumericalType<dataType>::type>::epsilon());
 
         // helper

@@ -184,7 +184,7 @@ unsigned mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
 
     // solve system
     return this->numericalSolver->template solve<numeric::Matrix>(this->systemMatrix,
-        this->excitation, handle, stream, gamma, nullptr, false, steps);
+        this->excitation, handle, stream, gamma, nullptr, steps);
 }
 
 // specialisation

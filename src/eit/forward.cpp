@@ -134,9 +134,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         // solve linear system
         createPreconditioner(this->equation->systemMatrix, K, stream);
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
-            this->excitation, nullptr, stream, this->phi[component], K,
-            (component == 0 && this->source->type ==
-                FEM::SourceDescriptor<dataType>::Type::Open) ? true : false);
+            this->excitation, nullptr, stream, this->phi[component], K);
 
         // calc jacobian
         this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,
