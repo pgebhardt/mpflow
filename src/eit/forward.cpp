@@ -114,8 +114,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         // 2.5D model constants
         dataType alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
         dataType beta = component == 0 ? (1.0 / this->equation->mesh->height) :
-            (2.0 * sin(component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0]) / this->equation->mesh->height) /
-                (component * M_PI * std::get<1>(this->equation->boundaryDescriptor->shapes[0])));
+            (2.0 * sin(component * M_PI * this->equation->boundaryDescriptor->height / this->equation->mesh->height) /
+                (component * M_PI * this->equation->boundaryDescriptor->height));
 
         // update system matrix for different 2.5D components
         this->equation->update(gamma, alpha, gamma, stream);
@@ -147,7 +147,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
             this->excitation->multiply(this->equation->systemMatrix,
                 this->phi[component], handle, stream);
-            this->excitation->scalarMultiply(std::get<1>(this->equation->boundaryDescriptor->shapes[0]),
+            this->excitation->scalarMultiply(this->equation->boundaryDescriptor->height,
                 stream);
 
             this->applyMeasurementPattern(this->excitation, this->result,

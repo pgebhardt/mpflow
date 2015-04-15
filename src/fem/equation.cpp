@@ -225,7 +225,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
                     (*excitationMatrix)(this->mesh->boundary(boundaryElement, node), piece) +=
                         basisFunctionType::integrateBoundaryEdge(
                             nodeParameter, node, integrationStart, integrationEnd) /
-                        std::get<0>(this->boundaryDescriptor->shapes[piece]);
+                        (integrationEnd - integrationStart);
                 }
             }
         }

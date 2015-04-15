@@ -22,21 +22,16 @@
 
 mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
     Eigen::Ref<Eigen::ArrayXXd const> const coordinates,
-    const std::vector<std::tuple<double, double>>& shapes)
-    : count(coordinates.rows()), coordinates(coordinates), shapes(shapes) {
+    double const height)
+    : coordinates(coordinates), height(height), count(coordinates.rows()) {
     // check input
     if (coordinates.rows() == 0) {
         throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: count == 0");
     }
 }
 
-mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
-    Eigen::Ref<Eigen::ArrayXXd const> const coordinates, std::tuple<double, double> const shape)
-    : BoundaryDescriptor(coordinates, std::vector<std::tuple<double, double>>(coordinates.rows(), shape)) {
-}
-
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor::circularBoundary(
-    unsigned const count, std::tuple<double, double> const shape,
+    unsigned const count, double const width, double const height,
     double const boundaryRadius, double const offset) {
     // check radius
     if (boundaryRadius == 0.0) {
@@ -57,9 +52,9 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor
         point << boundaryRadius, angle;
         coordinates.block(electrode, 0, 1, 2) = math::kartesian(point).transpose();
 
-        point << boundaryRadius, angle + std::get<0>(shape) / boundaryRadius;
+        point << boundaryRadius, angle + width / boundaryRadius;
         coordinates.block(electrode, 2, 1, 2) = math::kartesian(point).transpose();
     }
 
-    return std::make_shared<BoundaryDescriptor>(coordinates, shape);
+    return std::make_shared<BoundaryDescriptor>(coordinates, height);
 }

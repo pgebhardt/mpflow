@@ -26,21 +26,19 @@ namespace FEM {
     class BoundaryDescriptor {
     public:
         BoundaryDescriptor(Eigen::Ref<Eigen::ArrayXXd const> const coordinates,
-            const std::vector<std::tuple<double, double>>& shapes);
-        BoundaryDescriptor(Eigen::Ref<Eigen::ArrayXXd const> const coordinates,
-            std::tuple<double, double> const shape);
+            double const height);
         virtual ~BoundaryDescriptor() { }
 
         // member
-        unsigned const count;
         Eigen::ArrayXXd const coordinates;
-        std::vector<std::tuple<double, double>> const shapes;
+        double const height;
+        unsigned const count;
     };
 
     namespace boundaryDescriptor {
         // create BoundaryDescriptor on circular boundary
         std::shared_ptr<BoundaryDescriptor> circularBoundary(unsigned const count,
-            std::tuple<double, double> const shape, double const boundaryRadius,
+            double const width, double const height, double const boundaryRadius,
             double const offset=0.0);
     }
 }
