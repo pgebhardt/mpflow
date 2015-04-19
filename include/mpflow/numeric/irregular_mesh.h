@@ -31,7 +31,7 @@ namespace numeric {
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
             Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary,
-            double const radius, double const height);
+            double const height);
 
         // helper methods
         Eigen::ArrayXXd elementNodes(unsigned const element) const;
@@ -41,7 +41,6 @@ namespace numeric {
         Eigen::ArrayXXd const nodes;
         Eigen::ArrayXXi const elements;
         Eigen::ArrayXXi const boundary;
-        double const radius;
         double const height;
     };
 
@@ -50,7 +49,7 @@ namespace numeric {
         // create mesh for quadratic basis function
         std::shared_ptr<mpFlow::numeric::IrregularMesh> quadraticBasis(
             Eigen::Ref<Eigen::ArrayXXd const> const nodes, Eigen::Ref<Eigen::ArrayXXi const> const elements,
-            Eigen::Ref<Eigen::ArrayXXi const> const boundary, double const radius, double const height);
+            Eigen::Ref<Eigen::ArrayXXi const> const boundary, double const height);
 
         // quadratic mesh from linear
         std::tuple<Eigen::ArrayXXd, Eigen::ArrayXXi, Eigen::ArrayXXi> quadraticMeshFromLinear(

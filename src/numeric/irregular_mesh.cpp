@@ -24,14 +24,11 @@
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements,
     Eigen::Ref<Eigen::ArrayXXi const> const boundary,
-    double const radius, double const height)
-    : nodes(nodes), elements(elements), boundary(boundary), radius(radius), height(height) {
+    double const height)
+    : nodes(nodes), elements(elements), boundary(boundary), height(height) {
     // check input
     if (nodes.cols() != 2) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->cols != 2");
-    }
-    if (radius <= 0.0) {
-        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: radius <= 0.0");
     }
     if (height <= 0.0) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: height <= 0.0");
@@ -67,14 +64,14 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::
     Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements,
     Eigen::Ref<Eigen::ArrayXXi const> const boundary,
-    double const radius, double const height) {
+    double const height) {
     // create quadratic grid
     Eigen::ArrayXXd n;
     Eigen::ArrayXXi e, b;
     std::tie(n, e, b) = quadraticMeshFromLinear(nodes, elements, boundary);
 
     // create mesh
-    return std::make_shared<numeric::IrregularMesh>(n, e, b, radius, height);
+    return std::make_shared<numeric::IrregularMesh>(n, e, b, height);
 }
 
 // function create quadratic mesh from linear
