@@ -37,7 +37,7 @@ namespace MWI {
             cublasHandle_t const handle, cudaStream_t const stream);
 
         // member
-        std::shared_ptr<solver::Inverse<thrust::complex<float>, numeric::ConjugateGradient>> inverseSolver;
+        std::shared_ptr<solver::Inverse<thrust::complex<float>, numeric::BiCGSTAB>> inverseSolver;
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
         std::shared_ptr<numeric::Matrix<thrust::complex<float>> const> const jacobian;
         std::shared_ptr<numeric::Matrix<thrust::complex<float>>> dGamma;

@@ -43,6 +43,7 @@ namespace numeric {
             double const tolerance=std::numeric_limits<typename typeTraits::extractNumericalType<dataType>::type>::epsilon());
 
         // helper
+        void reset(cudaStream_t const stream);
         static void updateVector(std::shared_ptr<Matrix<dataType> const> const x1,
             double const sign, std::shared_ptr<Matrix<dataType> const> const x2,
             std::shared_ptr<Matrix<dataType> const> const scalar, cudaStream_t const stream,

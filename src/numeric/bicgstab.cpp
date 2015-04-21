@@ -56,6 +56,23 @@ mpFlow::numeric::BiCGSTAB<dataType>::BiCGSTAB(
     this->temp2 = std::make_shared<Matrix<dataType>>(this->rows, this->cols, stream, 0.0, false);
 }
 
+template <
+    class dataType
+>
+void mpFlow::numeric::BiCGSTAB<dataType>::reset(cudaStream_t const stream) {
+    // reset all helper matrices to default values
+    this->rohOld->fill(1.0, stream);
+    this->alpha->fill(1.0, stream);
+    this->beta->fill(0.0, stream);
+    this->omega->fill(1.0, stream);
+    this->nu->fill(0.0, stream);
+    this->p->fill(0.0, stream);
+    this->t->fill(0.0, stream);
+    this->s->fill(0.0, stream);
+    this->y->fill(0.0, stream);
+    this->z->fill(0.0, stream);
+}
+
 // solve bicgstab sparse
 template <
     class dataType
@@ -81,6 +98,9 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(std::shared_ptr<matrixType<d
 
     // default iteration count to matrix size
     unsigned const iterations = maxIterations == 0 ? A->rows : maxIterations;
+
+    // reset helper matrices
+    this->reset(stream);
 
     // r0 = b - A * x0
     this->r->multiply(A, x, handle, stream);
