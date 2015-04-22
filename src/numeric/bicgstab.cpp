@@ -67,10 +67,6 @@ void mpFlow::numeric::BiCGSTAB<dataType>::reset(cudaStream_t const stream) {
     this->omega->fill(1.0, stream);
     this->nu->fill(0.0, stream);
     this->p->fill(0.0, stream);
-    this->t->fill(0.0, stream);
-    this->s->fill(0.0, stream);
-    this->y->fill(0.0, stream);
-    this->z->fill(0.0, stream);
 }
 
 // solve bicgstab sparse
@@ -101,7 +97,6 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(std::shared_ptr<matrixType<d
 
     // reset helper matrices
     this->reset(stream);
-    cudaStreamSynchronize(stream);
 
     // r0 = b - A * x0
     this->r->multiply(A, x, handle, stream);
