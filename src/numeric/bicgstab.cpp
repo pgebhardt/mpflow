@@ -101,6 +101,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(std::shared_ptr<matrixType<d
 
     // reset helper matrices
     this->reset(stream);
+    cudaStreamSynchronize(stream);
 
     // r0 = b - A * x0
     this->r->multiply(A, x, handle, stream);
