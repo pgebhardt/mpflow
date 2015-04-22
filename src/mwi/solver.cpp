@@ -58,7 +58,8 @@ mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh const> const 
 // solve differential
 std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const>
     mpFlow::MWI::Solver::solveDifferential(
-    cublasHandle_t const handle, cudaStream_t const stream) {
+    cublasHandle_t const handle, cudaStream_t const stream,
+    unsigned const maxIterations) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
@@ -67,7 +68,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const>
 
     // solve
     this->inverseSolver->solve(this->jacobian, this->calculation, this->measurement,
-        200, handle, stream, this->dGamma);
+        maxIterations, handle, stream, this->dGamma);
 
     return this->dGamma;
 }

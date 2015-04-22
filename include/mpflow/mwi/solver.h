@@ -34,7 +34,8 @@ namespace MWI {
 
         // solving
         std::shared_ptr<numeric::Matrix<thrust::complex<float>> const> solveDifferential(
-            cublasHandle_t const handle, cudaStream_t const stream);
+            cublasHandle_t const handle, cudaStream_t const stream,
+            unsigned const maxIterations=0);
 
         // member
         std::shared_ptr<solver::Inverse<thrust::complex<float>, numeric::BiCGSTAB>> inverseSolver;
