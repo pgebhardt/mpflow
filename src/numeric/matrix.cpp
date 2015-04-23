@@ -665,7 +665,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
             if (line_stream.bad()) {
                 throw std::runtime_error("mpFlow::numeric::Matrix::loadtxt: invalid value");
             }
-            else if (!line_stream.fail()) {
+            else if (!valueStream.fail()) {
                 row.push_back(value);
             }
         }
