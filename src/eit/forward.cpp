@@ -132,7 +132,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         }
 
         // solve linear system
-        createPreconditioner(this->equation->systemMatrix, K, stream);
+        numeric::preconditioner::diagonal<dataType>(this->equation->systemMatrix, stream, K);
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
             this->excitation, nullptr, stream, this->phi[component], K);
 
@@ -227,30 +227,6 @@ void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::applyMixedBo
     forwardKernel::applyMixedBoundaryCondition<dataType>(blocks, threads, stream,
         excitationMatrix->deviceData, excitationMatrix->dataRows,
         systemMatrix->deviceColumnIds, systemMatrix->deviceValues);
-}
-
-template <
-    template <class> class numericalSolverType,
-    class equationType
->
-void mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::createPreconditioner(
-    std::shared_ptr<numeric::SparseMatrix<dataType> const> const systemMatrix,
-    std::shared_ptr<numeric::SparseMatrix<dataType>> const preconditioner, cudaStream_t const stream) {
-    // check input
-    if (systemMatrix == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::createPreconditioner: systemMatrix == nullptr");
-    }
-    if (preconditioner == nullptr) {
-        throw std::invalid_argument("mpFlow::EIT::ForwardSolver::createPreconditioner: preconditioner == nullptr");
-    }
-
-    dim3 blocks(systemMatrix->dataRows / numeric::matrix::blockSize, 1);
-    dim3 threads(numeric::matrix::blockSize, 1);
-
-    forwardKernel::createPreconditioner<dataType>(blocks, threads, stream,
-        systemMatrix->deviceValues, systemMatrix->deviceColumnIds,
-        preconditioner->deviceValues, preconditioner->deviceColumnIds);
-    preconditioner->density = 1;
 }
 
 // specialisation

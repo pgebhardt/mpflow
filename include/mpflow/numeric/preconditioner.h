@@ -18,18 +18,20 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_EIT_FORWARD_KERNEL_H
-#define MPFLOW_INCLDUE_EIT_FORWARD_KERNEL_H
+#ifndef MPFLOW_INCLDUE_NUMERIC_PRECONDITIONER_H
+#define MPFLOW_INCLDUE_NUMERIC_PRECONDITIONER_H
 
 namespace mpFlow {
-namespace EIT {
-namespace forwardKernel {
-    template <
-        class dataType
-    >
-    void applyMixedBoundaryCondition(dim3 const blocks, dim3 const threads,
-        cudaStream_t const stream, dataType* const excitation, unsigned const rows,
-        unsigned const* const columnIds, dataType* const values);
+namespace numeric {
+namespace preconditioner {
+    // diagnoal preconditioner
+    template <class type>
+    void diagonal(std::shared_ptr<Matrix<type> const> const matrix, cudaStream_t const stream,
+        std::shared_ptr<SparseMatrix<type>> const result);
+
+    template <class type>
+    void diagonal(std::shared_ptr<SparseMatrix<type> const> const matrix, cudaStream_t const stream,
+        std::shared_ptr<SparseMatrix<type>> const result);
 }
 }
 }
