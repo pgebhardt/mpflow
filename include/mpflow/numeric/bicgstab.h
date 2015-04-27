@@ -34,13 +34,13 @@ namespace numeric {
 
         // solve system
         template <
-            template <class> class matrixType
+            template <class> class matrixType,
+            template <class> class preconditionerType = matrixType
         >
         unsigned solve(std::shared_ptr<matrixType<dataType>> const A,
             std::shared_ptr<Matrix<dataType> const> const b, cublasHandle_t const handle,
             cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-            std::shared_ptr<matrixType<dataType>> const KInv=nullptr, unsigned const maxIterations=0,
-            double const tolerance=std::numeric_limits<typename typeTraits::extractNumericalType<dataType>::type>::epsilon());
+            std::shared_ptr<preconditionerType<dataType>> const KInv=nullptr, unsigned const maxIterations=0);
 
         // helper
         void reset(cudaStream_t const stream);
