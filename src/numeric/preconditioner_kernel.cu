@@ -37,7 +37,7 @@ __global__ void diagonalKernel(type const* const data, unsigned const rows,
         outputColumnIds[row * mpFlow::numeric::sparseMatrix::blockSize + i] = i == 0 ? row : mpFlow::constants::invalidIndex;
     }
 
-    outputValues[row * mpFlow::numeric::sparseMatrix::blockSize] = data[row + row * rows];
+    outputValues[row * mpFlow::numeric::sparseMatrix::blockSize] = type(1) / data[row + row * rows];
 }
 
 template <class type>
