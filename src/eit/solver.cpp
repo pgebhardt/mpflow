@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ void mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType,
 
     // calc system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<dataType, numeric::ConjugateGradient>::RegularizationType::diagonal,
+        solver::Inverse<dataType, numericalInverseSolverType>::RegularizationType::diagonal,
         handle, stream);
 
     // set measurement and calculation to initial value of forward EIT
@@ -148,7 +148,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
     // calc inverse system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<dataType, numeric::ConjugateGradient>::RegularizationType::diagonal,
+        solver::Inverse<dataType, numericalInverseSolverType>::RegularizationType::diagonal,
         handle, stream);
 
     // solve inverse
