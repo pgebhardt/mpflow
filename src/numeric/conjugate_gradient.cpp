@@ -74,7 +74,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(std::shared_ptr<mat
     }
 
     // default iteration count to matrix size
-    unsigned const iterations = maxIterations == 0 ? A->rows : maxIterations;
+    unsigned const iterations = maxIterations == 0 ? 10 * A->rows : maxIterations;
 
     // calc residuum r = b - A * x
     this->r->multiply(A, x, handle, stream);

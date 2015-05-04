@@ -96,7 +96,7 @@ unsigned mpFlow::numeric::BiCGSTAB<dataType>::solve(std::shared_ptr<matrixType<d
     }
 
     // default iteration count to matrix size
-    unsigned const iterations = maxIterations == 0 ? A->rows : maxIterations;
+    unsigned const iterations = maxIterations == 0 ? 10 * A->rows : maxIterations;
 
     // reset helper matrices
     this->reset(stream);
