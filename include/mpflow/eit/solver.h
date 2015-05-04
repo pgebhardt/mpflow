@@ -25,7 +25,8 @@ namespace mpFlow {
 namespace EIT {
     // class for solving differential EIT
     template <
-        template <class> class numericalSolverType = numeric::ConjugateGradient,
+        template <class> class numericalForwardSolverType = numeric::ConjugateGradient,
+        template <class> class numericalInverseSolverType = numeric::ConjugateGradient,
         class equationType = FEM::Equation<float, FEM::basis::Linear, true>
     >
     class Solver {
@@ -52,8 +53,8 @@ namespace EIT {
         // member
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> measurement;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> calculation;
-        std::shared_ptr<ForwardSolver<numericalSolverType, equationType>> forwardSolver;
-        std::shared_ptr<solver::Inverse<dataType, numericalSolverType>> inverseSolver;
+        std::shared_ptr<ForwardSolver<numericalForwardSolverType, equationType>> forwardSolver;
+        std::shared_ptr<solver::Inverse<dataType, numericalInverseSolverType>> inverseSolver;
         std::shared_ptr<numeric::Matrix<dataType>> gamma;
         std::shared_ptr<numeric::Matrix<dataType>> dGamma;
     };
