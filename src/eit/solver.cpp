@@ -20,7 +20,6 @@
 
 #include "mpflow/mpflow.h"
 
-// create EIT
 template <
     template <class> class numericalForwardSolverType,
     template <class> class numericalInverseSolverType,
@@ -40,11 +39,11 @@ mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equa
         throw std::invalid_argument("mpFlow::EIT::Solver::Solver: handle == nullptr");
     }
 
-    // create
+    // create forward solver
     this->forwardSolver = std::make_shared<EIT::ForwardSolver<numericalForwardSolverType, equationType>>(
         equation, source, components, handle, stream);
 
-    // create inverse EIT
+    // create inverse solver
     this->inverseSolver = std::make_shared<solver::Inverse<dataType, numericalInverseSolverType>>(
         equation->mesh->elements.rows(), forwardSolver->result->dataRows *
         forwardSolver->result->dataCols, parallelImages, regularizationFactor,
@@ -53,9 +52,10 @@ mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equa
     // create matrices
     this->gamma = std::make_shared<numeric::Matrix<dataType>>(
         equation->mesh->elements.rows(), parallelImages, stream,
-        equation->logarithmic ? dataType(0) : dataType(1));
+        equation->logarithmic ? dataType(0) : equation->referenceValue);
     this->dGamma = std::make_shared<numeric::Matrix<dataType>>(
         equation->mesh->elements.rows(), parallelImages, stream);
+        
     for (unsigned image = 0; image < parallelImages; ++image) {
         this->measurement.push_back(std::make_shared<numeric::Matrix<dataType>>(
             source->measurementPattern->cols, source->drivePattern->cols, stream, 0.0, false));
@@ -130,7 +130,8 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equationType>::solveAbsolute(
-    cublasHandle_t const handle, cudaStream_t const stream) {
+    cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations,
+    unsigned* const iterations) {
     // only execute method, when parallel_images == 1
     if (this->measurement.size() != 1) {
         throw std::runtime_error(
@@ -152,9 +153,13 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         handle, stream);
 
     // solve inverse
-    this->inverseSolver->solve(this->forwardSolver->jacobian, { this->forwardSolver->result },
-        this->measurement, this->forwardSolver->jacobian->cols / 8,
+    unsigned const steps = this->inverseSolver->solve(this->forwardSolver->jacobian,
+        { this->forwardSolver->result }, this->measurement, maxIterations,
         handle, stream, this->dGamma);
+
+    if (iterations != nullptr) {
+        *iterations = steps;
+    }
 
     // add to gamma
     this->gamma->add(this->dGamma, stream);

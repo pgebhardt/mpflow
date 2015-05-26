@@ -48,7 +48,8 @@ namespace EIT {
             cublasHandle_t const handle, cudaStream_t const stream,
             unsigned const maxIterations=0, unsigned* const iterations=nullptr);
         std::shared_ptr<numeric::Matrix<dataType> const> solveAbsolute(
-            cublasHandle_t const handle, cudaStream_t const stream);
+            cublasHandle_t const handle, cudaStream_t const stream,
+            unsigned const maxIterations=0, unsigned* const iterations=nullptr);
 
         // member
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> measurement;
