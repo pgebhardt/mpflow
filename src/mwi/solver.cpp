@@ -39,10 +39,9 @@ mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh const> const 
 
     // create inverse solver
     this->inverseSolver = std::make_shared<solver::Inverse<thrust::complex<float>,
-        numeric::BiCGSTAB>>(jacobian->cols, jacobian->rows,
-        parallelImages, regularizationFactor, handle, stream);
-    this->inverseSolver->calcSystemMatrix(jacobian,
-        this->inverseSolver->RegularizationType::diagonal, handle, stream);
+        numeric::BiCGSTAB>>(jacobian->cols, jacobian->rows, parallelImages, handle, stream);
+    this->inverseSolver->updateJacobian(jacobian, handle, stream);
+    this->inverseSolver->setRegularizationFactor(regularizationFactor, stream);
 
     // create matrices
     this->dGamma = std::make_shared<numeric::Matrix<thrust::complex<float>>>(
@@ -63,11 +62,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const>
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
-            "mpFlow::MWI::Solver::solve_differential: handle == nullptr");
+            "mpFlow::MWI::Solver::solveDifferential: handle == nullptr");
     }
 
     // solve
-    this->inverseSolver->solve(this->jacobian, this->calculation, this->measurement,
+    this->inverseSolver->solve(this->calculation, this->measurement,
         maxIterations, handle, stream, this->dGamma);
 
     return this->dGamma;

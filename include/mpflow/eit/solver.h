@@ -37,8 +37,7 @@ namespace EIT {
         Solver(std::shared_ptr<equationType> const equation,
             std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
             unsigned const components, unsigned const parallelImages,
-            dataType const regularizationFactor, cublasHandle_t const handle,
-            cudaStream_t const stream);
+            cublasHandle_t const handle, cudaStream_t const stream);
 
         // pre solve for accurate initial jacobian
         void preSolve(cublasHandle_t const handle, cudaStream_t const stream);

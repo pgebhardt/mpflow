@@ -27,9 +27,9 @@ template <
 >
 mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned const elementCount,
     unsigned const measurementCount, unsigned const parallelImages,
-    dataType const regularizationFactor, cublasHandle_t const handle,
-    cudaStream_t const stream)
-    : regularizationFactor(regularizationFactor) {
+    cublasHandle_t const handle, cudaStream_t const stream)
+    : regularizationFactor_(dataType(0)), regularizationType_(Inverse<dataType, numericalSolverType>::unity),
+    jacobian(nullptr) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::Inverse: handle == nullptr");
@@ -38,27 +38,67 @@ mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned const e
     // create matrices
     this->difference = std::make_shared<numeric::Matrix<dataType>>(measurementCount, parallelImages, stream, 0.0, false);
     this->excitation = std::make_shared<numeric::Matrix<dataType>>(elementCount, parallelImages, stream, 0.0, false);
-    this->systemMatrix = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
     this->jacobianSquare = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
-
+    this->regularizationMatrix = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
+    this->systemMatrix = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
+    
     // create numerical EIT
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(elementCount, parallelImages, stream);
 }
 
-// calc system matrix
 template <
     class dataType,
     template <class> class numericalSolverType
 >
-void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcSystemMatrix(
-    std::shared_ptr<numeric::Matrix<dataType> const> jacobian, RegularizationType const regularizationType,
+void mpFlow::solver::Inverse<dataType, numericalSolverType>::updateJacobian(
+    std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
     cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (jacobian == nullptr) {
-        throw std::invalid_argument("mpFlow::solver::Inverse::calcSystemMatrix: jacobian == nullptr");
+        throw std::invalid_argument("mpFlow::solver::Inverse::updateJacobian: jacobian == nullptr");
     }
+
+    // save jacobian for future use
+    this->jacobian = jacobian;
+    
+    // update system matrix
+    this->calcJacobianSquare(handle, stream);
+    this->systemMatrix->copy(this->jacobianSquare, stream);
+    this->systemMatrix->add(this->regularizationMatrix, stream);
+}
+
+template <
+    class dataType,
+    template <class> class numericalSolverType
+>
+void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationMatrix(
+    cudaStream_t const stream) {
+    // calculate regularization matrix according to type
+    if (this->regularizationType() == RegularizationType::unity) {
+        this->regularizationMatrix->setEye(stream);
+    }   
+    else {
+        throw std::runtime_error(
+            "mpFlow::solver::Inverse::calcRegularizationMatrix: regularization type not implemented yet");
+    }
+    
+    // apply regularization factor
+    this->regularizationMatrix->scalarMultiply(this->regularizationFactor(), stream);
+    
+    // update system matrix
+    this->systemMatrix->copy(this->jacobianSquare, stream);
+    this->systemMatrix->add(this->regularizationMatrix, stream);
+}
+
+template <
+    class dataType,
+    template <class> class numericalSolverType
+>
+void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcJacobianSquare(
+    cublasHandle_t const handle, cudaStream_t const stream) {
+    // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::solver::Inverse::calcSystemMatrix: handle == nullptr");
+        throw std::invalid_argument("mpFlow::solver::Inverse::calcJacobianSquare: handle == nullptr");
     }
 
     // switch to correct stream
@@ -69,35 +109,12 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcSystemMatrix(
 
     // calc Jt * J
     if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare->dataRows,
-        this->jacobianSquare->dataCols, jacobian->dataRows, &alpha,
-        jacobian->deviceData, jacobian->dataRows, jacobian->deviceData,
-        jacobian->dataRows, &beta, this->jacobianSquare->deviceData,
+        this->jacobianSquare->dataCols, this->jacobian->dataRows, &alpha,
+        this->jacobian->deviceData, this->jacobian->dataRows, this->jacobian->deviceData,
+        this->jacobian->dataRows, &beta, this->jacobianSquare->deviceData,
         this->jacobianSquare->dataRows)
         != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("mpFlow::solver::Inverse::calcSystemMatrix: calc Jt * J");
-    }
-
-    // copy jacobianSquare to systemMatrix
-    this->systemMatrix->copy(this->jacobianSquare, stream);
-
-    // choose regularizationType
-    if (regularizationType == RegularizationType::square) {
-        // add lambda * Jt * J * Jt * J to systemMatrix
-        beta = this->regularizationFactor;
-        if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->jacobianSquare->dataCols,
-            this->jacobianSquare->dataRows, this->jacobianSquare->dataCols,
-            &beta, this->jacobianSquare->deviceData,
-            this->jacobianSquare->dataRows, this->jacobianSquare->deviceData,
-            this->jacobianSquare->dataRows, &alpha, this->systemMatrix->deviceData,
-            this->systemMatrix->dataRows) != CUBLAS_STATUS_SUCCESS) {
-            throw std::logic_error(
-                "mpFlow::solver::Inverse::calcSystemMatrix: add lambda * Jt * J * Jt * J to systemMatrix");
-        }
-    }
-    else {
-        auto diag = numeric::Matrix<dataType>::eye(this->systemMatrix->rows, stream);
-        diag->scalarMultiply(this->regularizationFactor, stream);
-        this->systemMatrix->add(diag, stream);
+        throw std::logic_error("mpFlow::solver::Inverse::calcJacobianSquare: calc Jt * J");
     }
 }
 
@@ -107,14 +124,10 @@ template <
     template <class> class numericalSolverType
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
-    std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
     cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
-    if (jacobian == nullptr) {
-        throw std::invalid_argument("mpFlow::solver::Inverse::calcExcitation: jacobian == nullptr");
-    }
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::calcExcitation: handle == nullptr");
     }
@@ -146,9 +159,10 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
     // calc excitation
     dataType alpha = 1.0f;
     dataType beta = 0.0f;
-    if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, jacobian->dataCols, this->difference->dataCols,
-        jacobian->dataRows, &alpha, jacobian->deviceData, jacobian->dataRows, this->difference->deviceData,
-        this->difference->dataRows, &beta, this->excitation->deviceData, this->excitation->dataRows)
+    if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobian->dataCols,
+        this->difference->dataCols, this->jacobian->dataRows, &alpha, this->jacobian->deviceData,
+        this->jacobian->dataRows, this->difference->deviceData, this->difference->dataRows, &beta,
+        this->excitation->deviceData, this->excitation->dataRows)
         != CUBLAS_STATUS_SUCCESS) {
         throw std::logic_error("mpFlow::solver::Inverse::calcExcitation: calc excitation");
     }
@@ -160,31 +174,27 @@ template <
     template <class> class numericalSolverType
 >
 unsigned mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
-    std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
     unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
-    std::shared_ptr<numeric::Matrix<dataType>> gamma) {
+    std::shared_ptr<numeric::Matrix<dataType>> result) {
     // check input
-    if (jacobian == nullptr) {
-        throw std::invalid_argument("mpFlow::solver::Inverse::solve: jacobian == nullptr");
-    }
-    if (gamma == nullptr) {
-        throw std::invalid_argument("mpFlow::solver::Inverse::solve: gamma == nullptr");
+    if (result == nullptr) {
+        throw std::invalid_argument("mpFlow::solver::Inverse::solve: result == nullptr");
     }
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::solve: handle == nullptr");
     }
 
-    // reset gamma
-    gamma->fill(dataType(0), stream);
+    // reset result vector
+    result->fill(dataType(0), stream);
 
     // calc excitation
-    this->calcExcitation(jacobian, calculation, measurement, handle, stream);
+    this->calcExcitation(calculation, measurement, handle, stream);
 
     // solve system
     return this->numericalSolver->template solve<numeric::Matrix, numeric::Matrix>(
-        this->systemMatrix, this->excitation, handle, stream, gamma, nullptr, steps);
+        this->systemMatrix, this->excitation, handle, stream, result, nullptr, steps);
 }
 
 // specialisation

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -31,43 +31,61 @@ namespace solver {
     class Inverse {
     public:
         enum RegularizationType {
+            unity,
             diagonal,
-            square
+            firstOrder,
+            secondOrder
         };
 
         // constructor
         Inverse(unsigned const elementCount, unsigned const measurementCount,
-            unsigned const parallelImages, dataType const regularizationFactor,
+            unsigned const parallelImages, cublasHandle_t const handle,
+            cudaStream_t const stream);
+
+    public:
+        // update jacobian matrix and recalculated all intermediate matrices
+        void updateJacobian(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
+            cublasHandle_t const handle, cudaStream_t const stream);
+            
+        // inverse solving
+        unsigned solve(std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
+            std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
+            unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
+            std::shared_ptr<numeric::Matrix<dataType>> result);
+            
+    private:
+        // update intermediate matrices
+        void calcRegularizationMatrix(cudaStream_t const stream);
+        void calcJacobianSquare(cublasHandle_t const handle, cudaStream_t const stream);
+        void calcExcitation(std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
+            std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
             cublasHandle_t const handle, cudaStream_t const stream);
 
     public:
-        // inverse solving
-        unsigned solve(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
-            std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
-            std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
-            unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
-            std::shared_ptr<numeric::Matrix<dataType>> gamma);
-
-        // calc system matrix
-        void calcSystemMatrix(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
-            RegularizationType const regularizationType, cublasHandle_t const handle,
-            cudaStream_t const stream);
-
-        // calc excitation
-        void calcExcitation(std::shared_ptr<numeric::Matrix<dataType> const> jacobian,
-            std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
-            std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
-            cublasHandle_t const handle, cudaStream_t const stream);
-
-        // member
-        dataType regularizationFactor;
-
+        // accessors for regularization parameter
+        void setRegularizationFactor(dataType const factor, cudaStream_t const stream) {
+            this->regularizationFactor_ = factor;
+            this->calcRegularizationMatrix(stream);
+        }
+        void setRegularizationType(RegularizationType const type, cudaStream_t const stream) {
+            this->regularizationType_ = type;
+            this->calcRegularizationMatrix(stream);
+        }
+        
+        dataType regularizationFactor() const { return this->regularizationFactor_; }
+        RegularizationType regularizationType() const { return this->regularizationType_; }
+        
     private:
+        // member
+        dataType regularizationFactor_;
+        RegularizationType regularizationType_;
         std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dataType>> difference;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
-        std::shared_ptr<numeric::Matrix<dataType>> systemMatrix;
+        std::shared_ptr<numeric::Matrix<dataType> const> jacobian;
         std::shared_ptr<numeric::Matrix<dataType>> jacobianSquare;
+        std::shared_ptr<numeric::Matrix<dataType>> regularizationMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> systemMatrix;
     };
 }
 }
