@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -177,7 +177,7 @@ unsigned mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     }
 
     // reset gamma
-    gamma->fill(0.0, stream);
+    gamma->fill(dataType(0), stream);
 
     // calc excitation
     this->calcExcitation(jacobian, calculation, measurement, handle, stream);
