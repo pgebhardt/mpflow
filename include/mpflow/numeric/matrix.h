@@ -51,6 +51,7 @@ namespace numeric {
 
         // mathematical methods
         void fill(type const value, cudaStream_t const stream=nullptr);
+        void setEye(cudaStream_t const stream=nullptr);        
         void add(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
         void multiply(std::shared_ptr<Matrix<type> const> const A,
             std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const handle,

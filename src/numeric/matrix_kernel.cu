@@ -73,6 +73,52 @@ template void mpFlow::numeric::matrixKernel::fill<int>(
     dim3 const, dim3 const, cudaStream_t const, int const,
     unsigned const, unsigned const, unsigned const, int* const);
 
+// fill unity matrix kernel
+template <
+    class type
+>
+__global__ void setEyeKernel(unsigned const rows, unsigned const dataRows,
+    type* const matrix) {
+    // get ids
+    unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned col = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // set unity matrix
+    matrix[row + col * dataRows] = row < rows ? (row == col ? type(1) : type(0)) : type(0);
+}
+
+// fill unity matrix
+template <
+    class type
+>
+void mpFlow::numeric::matrixKernel::setEye(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    unsigned const rows, unsigned const dataRows, type* matrix) {
+    // call cuda kernel
+    setEyeKernel<type><<<blocks, threads, 0, stream>>>(rows, dataRows, matrix);
+
+    CudaCheckError();        
+}            
+
+// setEye specialisation
+template void mpFlow::numeric::matrixKernel::setEye<float>(
+    dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, float* const);
+template void mpFlow::numeric::matrixKernel::setEye<double>(
+    dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, double* const);
+template void mpFlow::numeric::matrixKernel::setEye<thrust::complex<float> >(
+    dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, thrust::complex<float>* const);
+template void mpFlow::numeric::matrixKernel::setEye<thrust::complex<double> >(
+    dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, thrust::complex<double>* const);
+template void mpFlow::numeric::matrixKernel::setEye<unsigned>(
+    dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, unsigned* const);
+template void mpFlow::numeric::matrixKernel::setEye<int>(
+    dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, int* const);
+    
 // add kernel
 template <
     class type

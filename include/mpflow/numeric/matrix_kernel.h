@@ -32,6 +32,11 @@ namespace numeric {
             type const value, unsigned const rows, unsigned const cols,
             unsigned const dataRows, type* const result);
 
+        // fill unity matrix
+        template <class type>
+        void setEye(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            unsigned const rows, unsigned const dataRows, type* matrix);
+            
         // add kernel
         template <
             class type

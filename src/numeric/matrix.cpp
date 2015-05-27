@@ -114,10 +114,9 @@ template <
 std::shared_ptr<mpFlow::numeric::Matrix<type>>
     mpFlow::numeric::Matrix<type>::eye(unsigned const size, cudaStream_t const stream) {
     auto matrix = std::make_shared<Matrix<type>>(size, size, stream);
-    for (unsigned i = 0; i < size; ++i) {
-        (*matrix)(i, i) = type(1);
-    }
-    matrix->copyToDevice(stream);
+    
+    matrix->setEye(stream);
+    matrix->copyToHost(stream);
     cudaStreamSynchronize(stream);
 
     return matrix;
@@ -197,6 +196,21 @@ void mpFlow::numeric::Matrix<type>::fill(type const value, cudaStream_t const st
     // call kernel
     matrixKernel::fill(blocks, threads, stream, value,
         this->rows, this->cols, this->dataRows, this->deviceData);
+}
+
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::setEye(cudaStream_t const stream) {
+    // dimension
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::blockSize,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::blockSize);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::blockSize,
+        this->dataCols == 1 ? 1 : matrix::blockSize);
+
+    // call kernel
+    matrixKernel::setEye(blocks, threads, stream, this->rows,
+        this->dataRows, this->deviceData);
 }
 
 // add matrix
