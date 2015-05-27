@@ -50,10 +50,9 @@ mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equa
         handle, stream);
 
     // create matrices
-    this->gamma = std::make_shared<numeric::Matrix<dataType>>(
-        equation->mesh->elements.rows(), parallelImages, stream,
-        equation->logarithmic ? dataType(0) : equation->referenceValue);
-    this->dGamma = std::make_shared<numeric::Matrix<dataType>>(
+    this->result = std::make_shared<numeric::Matrix<dataType>>(
+        equation->mesh->elements.rows(), parallelImages, stream);
+    this->delta = std::make_shared<numeric::Matrix<dataType>>(
         equation->mesh->elements.rows(), parallelImages, stream);
         
     for (unsigned image = 0; image < parallelImages; ++image) {
@@ -78,14 +77,17 @@ void mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType,
     }
 
     // forward solving a few steps
-    auto initialValue = this->forwardSolver->solve(this->gamma, handle, stream);
+    auto const initialDistribution = std::make_shared<numeric::Matrix<dataType>>(
+        this->result->rows, this->result->cols, stream,
+        equationType::logarithmic ? dataType(0) : this->forwardSolver->equation->referenceValue);
+    auto const initialValue = this->forwardSolver->solve(initialDistribution, handle, stream);
 
-    // calc system matrix
+    // calc initial system matrix
     this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
         solver::Inverse<dataType, numericalInverseSolverType>::RegularizationType::diagonal,
         handle, stream);
 
-    // set measurement and calculation to initial value of forward EIT
+    // set measurement and calculation to initial value of forward model
     for (auto level : this->measurement) {
         level->copy(initialValue, stream);
     }
@@ -113,13 +115,13 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     // solve
     unsigned const steps = this->inverseSolver->solve(this->forwardSolver->jacobian,
         this->calculation, this->measurement, maxIterations,
-        handle, stream, this->dGamma);
+        handle, stream, this->result);
 
     if (iterations != nullptr) {
         *iterations = steps;
     }
 
-    return this->dGamma;
+    return this->result;
 }
 
 // solve absolute
@@ -130,41 +132,43 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equationType>::solveAbsolute(
-    cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations,
-    unsigned* const iterations) {
-    // only execute method, when parallel_images == 1
+    unsigned const iterations, cublasHandle_t const handle, cudaStream_t const stream) {
+    // only execute method, when parallelImages == 1
     if (this->measurement.size() != 1) {
         throw std::runtime_error(
-            "mpFlow::EIT::Solver::solve_absolute: parallel_images != 1");
+            "mpFlow::EIT::Solver::solveAbsolute: parallelImages != 1");
     }
 
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
-            "mpFlow::EIT::Solver::solve_absolute: handle == nullptr");
+            "mpFlow::EIT::Solver::solveAbsolute: handle == nullptr");
     }
 
-    // solve forward
-    this->forwardSolver->solve(this->gamma, handle, stream);
-
-    // calc inverse system matrix
-    this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
-        solver::Inverse<dataType, numericalInverseSolverType>::RegularizationType::diagonal,
-        handle, stream);
-
-    // solve inverse
-    unsigned const steps = this->inverseSolver->solve(this->forwardSolver->jacobian,
-        { this->forwardSolver->result }, this->measurement, maxIterations,
-        handle, stream, this->dGamma);
-
-    if (iterations != nullptr) {
-        *iterations = steps;
+    // initialize with homogeneous material distribution
+    this->result->fill(equationType::logarithmic ? dataType(0) :
+        this->forwardSolver->equation->referenceValue, stream);
+    
+    // do newton iterations
+    for (unsigned step = 0; step < iterations; ++step) {
+        // solve forward
+        this->forwardSolver->solve(this->result, handle, stream);
+    
+        // calc inverse system matrix
+        this->inverseSolver->calcSystemMatrix(this->forwardSolver->jacobian,
+            solver::Inverse<dataType, numericalInverseSolverType>::RegularizationType::diagonal,
+            handle, stream);
+    
+        // solve inverse
+        this->inverseSolver->solve(this->forwardSolver->jacobian, { this->forwardSolver->result },
+            this->measurement, 0, handle, stream, this->delta);
+    
+        // add to result
+        this->result->add(this->delta, stream);
+        this->delta->fill(dataType(0), stream);
     }
-
-    // add to gamma
-    this->gamma->add(this->dGamma, stream);
-
-    return this->gamma;
+    
+    return this->result;
 }
 
 // specialisation

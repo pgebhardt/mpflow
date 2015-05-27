@@ -48,16 +48,16 @@ namespace EIT {
             cublasHandle_t const handle, cudaStream_t const stream,
             unsigned const maxIterations=0, unsigned* const iterations=nullptr);
         std::shared_ptr<numeric::Matrix<dataType> const> solveAbsolute(
-            cublasHandle_t const handle, cudaStream_t const stream,
-            unsigned const maxIterations=0, unsigned* const iterations=nullptr);
+            unsigned const iterations, cublasHandle_t const handle,
+            cudaStream_t const stream);
 
         // member
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> measurement;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> calculation;
         std::shared_ptr<ForwardSolver<numericalForwardSolverType, equationType>> forwardSolver;
         std::shared_ptr<solver::Inverse<dataType, numericalInverseSolverType>> inverseSolver;
-        std::shared_ptr<numeric::Matrix<dataType>> gamma;
-        std::shared_ptr<numeric::Matrix<dataType>> dGamma;
+        std::shared_ptr<numeric::Matrix<dataType>> result;
+        std::shared_ptr<numeric::Matrix<dataType>> delta;
     };
 }
 }
