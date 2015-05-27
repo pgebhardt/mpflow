@@ -213,6 +213,30 @@ void mpFlow::numeric::Matrix<type>::setEye(cudaStream_t const stream) {
         this->dataRows, this->deviceData);
 }
 
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::diag(std::shared_ptr<Matrix<type> const> const matrix,
+    cudaStream_t const stream) {
+    // check input
+    if (matrix == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::diag: matrix == nullptr");
+    }
+    if ((this->rows != matrix->rows) || (this->cols != matrix->cols)) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::diag: shapes do not match");
+    }
+    
+    // dimension
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::blockSize,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::blockSize);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::blockSize,
+        this->dataCols == 1 ? 1 : matrix::blockSize);
+
+    // call kernel
+    matrixKernel::diag(blocks, threads, stream, matrix->deviceData,
+        this->dataRows, this->deviceData);
+}
+
 // add matrix
 template <
     class type

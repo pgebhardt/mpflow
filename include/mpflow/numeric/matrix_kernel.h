@@ -35,8 +35,13 @@ namespace numeric {
         // fill unity matrix
         template <class type>
         void setEye(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
-            unsigned const rows, unsigned const dataRows, type* matrix);
+            unsigned const rows, unsigned const dataRows, type* const matrix);
             
+        // create diagonal matrix
+        template <class type>
+        void diag(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            type const* const matrix, unsigned const dataRows, type* const result);
+        
         // add kernel
         template <
             class type

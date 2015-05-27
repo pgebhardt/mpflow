@@ -92,7 +92,7 @@ template <
     class type
 >
 void mpFlow::numeric::matrixKernel::setEye(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
-    unsigned const rows, unsigned const dataRows, type* matrix) {
+    unsigned const rows, unsigned const dataRows, type* const matrix) {
     // call cuda kernel
     setEyeKernel<type><<<blocks, threads, 0, stream>>>(rows, dataRows, matrix);
 
@@ -117,6 +117,52 @@ template void mpFlow::numeric::matrixKernel::setEye<unsigned>(
     unsigned const, unsigned* const);
 template void mpFlow::numeric::matrixKernel::setEye<int>(
     dim3 const, dim3 const, cudaStream_t const, unsigned const,
+    unsigned const, int* const);
+
+// create diagonal matrix kernel
+template <
+    class type
+>
+__global__ void diagKernel(type const* const matrix, unsigned const dataRows,
+    type* const result) {
+    // get ids
+    unsigned row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned col = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // set unity matrix
+    result[row + col * dataRows] = row == col ? matrix[row + col * dataRows] : type(0);
+}
+
+// create diagonal matrix
+template <
+    class type
+>
+void mpFlow::numeric::matrixKernel::diag(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    type const* const matrix, unsigned const dataRows, type* const result) {
+    // call cuda kernel
+    diagKernel<type><<<blocks, threads, 0, stream>>>(matrix, dataRows, result);
+
+    CudaCheckError();        
+}
+
+// diag specialisation
+template void mpFlow::numeric::matrixKernel::diag<float>(
+    dim3 const, dim3 const, cudaStream_t const, float const* const,
+    unsigned const, float* const);
+template void mpFlow::numeric::matrixKernel::diag<double>(
+    dim3 const, dim3 const, cudaStream_t const, double const* const,
+    unsigned const, double* const);
+template void mpFlow::numeric::matrixKernel::diag<thrust::complex<float> >(
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<float> const* const,
+    unsigned const, thrust::complex<float>* const);
+template void mpFlow::numeric::matrixKernel::diag<thrust::complex<double> >(
+    dim3 const, dim3 const, cudaStream_t const, thrust::complex<double> const* const,
+    unsigned const, thrust::complex<double>* const);
+template void mpFlow::numeric::matrixKernel::diag<unsigned>(
+    dim3 const, dim3 const, cudaStream_t const, unsigned const* const,
+    unsigned const, unsigned* const);
+template void mpFlow::numeric::matrixKernel::diag<int>(
+    dim3 const, dim3 const, cudaStream_t const, int const* const,
     unsigned const, int* const);
     
 // add kernel
