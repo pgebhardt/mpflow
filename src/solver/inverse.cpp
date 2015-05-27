@@ -76,7 +76,10 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
     // calculate regularization matrix according to type
     if (this->regularizationType() == RegularizationType::unity) {
         this->regularizationMatrix->setEye(stream);
-    }   
+    }
+    else if (this->regularizationType() == RegularizationType::diagonal) {
+        this->regularizationMatrix->diag(this->jacobianSquare, stream);
+    }
     else {
         throw std::runtime_error(
             "mpFlow::solver::Inverse::calcRegularizationMatrix: regularization type not implemented yet");
