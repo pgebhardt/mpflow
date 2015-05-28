@@ -33,12 +33,12 @@ namespace solver {
         enum RegularizationType {
             unity,
             diagonal,
-            firstOrder,
-            secondOrder
+            totalVariational
         };
 
         // constructor
-        Inverse(unsigned const elementCount, unsigned const measurementCount,
+        Inverse(std::shared_ptr<numeric::IrregularMesh const> const mesh,
+            std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
             unsigned const parallelImages, cublasHandle_t const handle,
             cudaStream_t const stream);
 
@@ -86,6 +86,7 @@ namespace solver {
         std::shared_ptr<numeric::Matrix<dataType>> jacobianSquare;
         std::shared_ptr<numeric::Matrix<dataType>> regularizationMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> systemMatrix;
+        std::shared_ptr<numeric::IrregularMesh const> const mesh;
     };
 }
 }

@@ -25,25 +25,29 @@ template <
     class dataType,
     template <class> class numericalSolverType
 >
-mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(unsigned const elementCount,
-    unsigned const measurementCount, unsigned const parallelImages,
-    cublasHandle_t const handle, cudaStream_t const stream)
+mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(
+    std::shared_ptr<numeric::IrregularMesh const> const mesh,
+    std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
+    unsigned const parallelImages, cublasHandle_t const handle, cudaStream_t const stream)
     : regularizationFactor_(dataType(0)), regularizationType_(Inverse<dataType, numericalSolverType>::unity),
-    jacobian(nullptr) {
+    jacobian(jacobian), mesh(mesh) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::Inverse: handle == nullptr");
     }
 
     // create matrices
-    this->difference = std::make_shared<numeric::Matrix<dataType>>(measurementCount, parallelImages, stream, 0.0, false);
-    this->excitation = std::make_shared<numeric::Matrix<dataType>>(elementCount, parallelImages, stream, 0.0, false);
-    this->jacobianSquare = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
-    this->regularizationMatrix = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
-    this->systemMatrix = std::make_shared<numeric::Matrix<dataType>>(elementCount, elementCount, stream, 0.0, false);
+    this->difference = std::make_shared<numeric::Matrix<dataType>>(jacobian->rows, parallelImages, stream, 0.0, false);
+    this->excitation = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), parallelImages, stream, 0.0, false);
+    this->jacobianSquare = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
+    this->regularizationMatrix = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
+    this->systemMatrix = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
     
     // create numerical EIT
-    this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(elementCount, parallelImages, stream);
+    this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(mesh->elements.rows(), parallelImages, stream);
+        
+    // initialize matrices
+    this->updateJacobian(jacobian, handle, stream);
 }
 
 template <

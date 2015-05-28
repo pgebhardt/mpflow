@@ -44,8 +44,7 @@ mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equa
 
     // create inverse solver
     this->inverseSolver = std::make_shared<solver::Inverse<dataType, numericalInverseSolverType>>(
-        equation->mesh->elements.rows(), forwardSolver->result->dataRows *
-        forwardSolver->result->dataCols, parallelImages, handle, stream);
+        equation->mesh, forwardSolver->jacobian, parallelImages, handle, stream);
 
     // create matrices
     this->result = std::make_shared<numeric::Matrix<dataType>>(

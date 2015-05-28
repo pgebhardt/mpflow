@@ -39,8 +39,7 @@ mpFlow::MWI::Solver::Solver(std::shared_ptr<numeric::IrregularMesh const> const 
 
     // create inverse solver
     this->inverseSolver = std::make_shared<solver::Inverse<thrust::complex<float>,
-        numeric::BiCGSTAB>>(jacobian->cols, jacobian->rows, parallelImages, handle, stream);
-    this->inverseSolver->updateJacobian(jacobian, handle, stream);
+        numeric::BiCGSTAB>>(mesh, jacobian, parallelImages, handle, stream);
     this->inverseSolver->setRegularizationFactor(regularizationFactor, stream);
 
     // create matrices
