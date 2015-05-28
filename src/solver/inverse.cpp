@@ -29,7 +29,7 @@ mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
     unsigned const parallelImages, cublasHandle_t const handle, cudaStream_t const stream)
-    : regularizationFactor_(dataType(0)), regularizationType_(Inverse<dataType, numericalSolverType>::unity),
+    : regularizationFactor_(dataType(0)), regularizationType_(Inverse<dataType, numericalSolverType>::identity),
     jacobian(jacobian), mesh(mesh) {
     // check input
     if (handle == nullptr) {
@@ -76,25 +76,72 @@ template <
     template <class> class numericalSolverType
 >
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationMatrix(
-    cudaStream_t const stream) {
+    cublasHandle_t const handle, cudaStream_t const stream) {
+    // check input
+    if (handle == nullptr) {
+        throw std::invalid_argument("mpFlow::solver::Inverse::calcRegularizationMatrix: handle == nullptr");
+    }
+
     // calculate regularization matrix according to type
-    if (this->regularizationType() == RegularizationType::unity) {
+    if (this->regularizationType() == RegularizationType::identity) {
         this->regularizationMatrix->setEye(stream);
     }
     else if (this->regularizationType() == RegularizationType::diagonal) {
         this->regularizationMatrix->diag(this->jacobianSquare, stream);
+    }
+    else if (this->regularizationType() == RegularizationType::totalVariational) {
+        // get edges of mesh
+        auto const globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
+        auto const edges = std::get<0>(globalEdgeIndex);
+
+        // calculate length of each edge
+        auto D = std::make_shared<numeric::Matrix<dataType>>(edges.size(), edges.size(), stream);
+        for (unsigned i = 0; i < edges.size(); ++i) {
+            (*D)(i, i) = std::sqrt(
+                math::square(this->mesh->nodes(std::get<0>(edges[i]), 0) - this->mesh->nodes(std::get<1>(edges[i]), 0)) +
+                math::square(this->mesh->nodes(std::get<0>(edges[i]), 1) - this->mesh->nodes(std::get<1>(edges[i]), 1)));
+        }
+        D->copyToDevice(stream);
+        
+        // calculate connection matrix
+        Eigen::ArrayXf signs = Eigen::ArrayXf::Ones(edges.size());
+        auto L = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
+            this->mesh->elements.rows(), stream);
+        auto LT = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements.rows(),
+            edges.size(), stream);
+        for (int element = 0; element < this->mesh->elements.rows(); ++element) {
+            auto const localEdges = std::get<1>(globalEdgeIndex)[element];
+
+            for (unsigned i = 0; i < localEdges.size(); ++i) {
+                (*L)(std::get<0>(localEdges[i]), element) = signs(std::get<0>(localEdges[i]));
+                (*LT)(element, std::get<0>(localEdges[i])) = signs(std::get<0>(localEdges[i]));
+                signs(std::get<0>(localEdges[i])) *= -1;
+            }
+        }
+        L->copyToDevice(stream);
+        LT->copyToDevice(stream);
+        cudaStreamSynchronize(stream);
+        
+        // calculate regularization matrix
+        auto temp1 = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements.rows(),
+            edges.size(), stream, 0.0, false);
+        auto temp2 = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
+            this->mesh->elements.rows(), stream, 0.0, false);
+        
+        temp1->multiply(LT, D, handle, stream);
+        temp2->multiply(D, L, handle, stream);
+        this->regularizationMatrix->multiply(temp1, temp2, handle, stream);
+        this->regularizationMatrix->scalarMultiply(this->regularizationFactor(), stream);
     }
     else {
         throw std::runtime_error(
             "mpFlow::solver::Inverse::calcRegularizationMatrix: regularization type not implemented yet");
     }
     
-    // apply regularization factor
-    this->regularizationMatrix->scalarMultiply(this->regularizationFactor(), stream);
-    
     // update system matrix
-    this->systemMatrix->copy(this->jacobianSquare, stream);
-    this->systemMatrix->add(this->regularizationMatrix, stream);
+    this->systemMatrix->copy(this->regularizationMatrix, stream);
+    this->systemMatrix->scalarMultiply(this->regularizationFactor(), stream);
+    this->systemMatrix->add(this->jacobianSquare, stream);
 }
 
 template <
@@ -153,7 +200,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
         }
 
         // substract calculatedVoltage
-        dataType alpha = -1.0f;
+        dataType alpha = -1.0;
         if (numeric::cublasWrapper<dataType>::axpy(handle, this->difference->dataRows, &alpha,
             calculation[image]->deviceData, 1,
             (dataType*)(this->difference->deviceData + image * this->difference->dataRows), 1)
@@ -164,8 +211,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
     }
 
     // calc excitation
-    dataType alpha = 1.0f;
-    dataType beta = 0.0f;
+    dataType alpha = 1.0, beta = 0.0;
     if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobian->dataCols,
         this->difference->dataCols, this->jacobian->dataRows, &alpha, this->jacobian->deviceData,
         this->jacobian->dataRows, this->difference->deviceData, this->difference->dataRows, &beta,

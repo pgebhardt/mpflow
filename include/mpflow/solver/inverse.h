@@ -31,7 +31,7 @@ namespace solver {
     class Inverse {
     public:
         enum RegularizationType {
-            unity,
+            identity,
             diagonal,
             totalVariational
         };
@@ -55,7 +55,7 @@ namespace solver {
             
     private:
         // update intermediate matrices
-        void calcRegularizationMatrix(cudaStream_t const stream);
+        void calcRegularizationMatrix(cublasHandle_t const handle, cudaStream_t const stream);
         void calcJacobianSquare(cublasHandle_t const handle, cudaStream_t const stream);
         void calcExcitation(std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
@@ -63,13 +63,21 @@ namespace solver {
 
     public:
         // accessors for regularization parameter
-        void setRegularizationFactor(dataType const factor, cudaStream_t const stream) {
+        void setRegularizationFactor(dataType const factor, cublasHandle_t const handle,
+            cudaStream_t const stream) {
             this->regularizationFactor_ = factor;
-            this->calcRegularizationMatrix(stream);
+            this->calcRegularizationMatrix(handle, stream);
         }
-        void setRegularizationType(RegularizationType const type, cudaStream_t const stream) {
+        void setRegularizationType(RegularizationType const type, cublasHandle_t const handle,
+            cudaStream_t const stream) {
             this->regularizationType_ = type;
-            this->calcRegularizationMatrix(stream);
+            this->calcRegularizationMatrix(handle, stream);
+        }
+        void setRegularizationParameter(dataType const factor, RegularizationType const type,
+            cublasHandle_t const handle, cudaStream_t const stream) {
+            this->regularizationFactor_ = factor;
+            this->regularizationType_ = type;
+            this->calcRegularizationMatrix(handle, stream);
         }
         
         dataType regularizationFactor() const { return this->regularizationFactor_; }
