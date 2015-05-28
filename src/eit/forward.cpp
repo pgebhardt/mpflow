@@ -62,11 +62,13 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     this->jacobian = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->dataCols * this->source->drivePattern->dataCols,
         this->equation->mesh->elements.rows(), stream, 0.0, false);
+    this->preconditioner = std::make_shared<numeric::SparseMatrix<dataType>>(
+        this->equation->systemMatrix->rows, this->equation->systemMatrix->cols, stream);
 
     // TODO: To be moved to new BoundaryValues class
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols,
-        this->equation->mesh->nodes.rows(), stream, 0.0, false);
+        this->equation->mesh->nodes.rows(), stream, 0.0, false);        
 
     // apply mixed boundary conditions, if applicably
     if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
@@ -108,8 +110,6 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
     // calculate common excitation for all 2.5D model components
     unsigned totalSteps = 0;
-    auto K = std::make_shared<numeric::SparseMatrix<dataType>>(this->equation->systemMatrix->rows,
-        this->equation->systemMatrix->cols, stream);
     for (unsigned component = 0; component < this->phi.size(); ++component) {
         // 2.5D model constants
         dataType alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
@@ -132,9 +132,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         }
 
         // solve linear system
-        numeric::preconditioner::diagonal<dataType>(this->equation->systemMatrix, stream, K);
+        numeric::preconditioner::diagonal<dataType>(this->equation->systemMatrix, stream, this->preconditioner);
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
-            this->excitation, nullptr, stream, this->phi[component], K);
+            this->excitation, nullptr, stream, this->phi[component], this->preconditioner);
 
         // calc jacobian
         this->equation->calcJacobian(this->phi[component], gamma, this->source->drivePattern->cols,

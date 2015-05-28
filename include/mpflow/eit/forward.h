@@ -62,6 +62,7 @@ namespace EIT {
         std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> electrodesAttachmentMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> preconditioner;
     };
 }
 }
