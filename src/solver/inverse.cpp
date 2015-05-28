@@ -67,8 +67,9 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::updateJacobian(
     
     // update system matrix
     this->calcJacobianSquare(handle, stream);
-    this->systemMatrix->copy(this->jacobianSquare, stream);
-    this->systemMatrix->add(this->regularizationMatrix, stream);
+    this->systemMatrix->copy(this->regularizationMatrix, stream);
+    this->systemMatrix->scalarMultiply(this->regularizationFactor(), stream);
+    this->systemMatrix->add(this->jacobianSquare, stream);
 }
 
 template <
@@ -94,15 +95,6 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
         auto const globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
         auto const edges = std::get<0>(globalEdgeIndex);
 
-        // calculate length of each edge
-        auto D = std::make_shared<numeric::Matrix<dataType>>(edges.size(), edges.size(), stream);
-        for (unsigned i = 0; i < edges.size(); ++i) {
-            (*D)(i, i) = std::sqrt(
-                math::square(this->mesh->nodes(std::get<0>(edges[i]), 0) - this->mesh->nodes(std::get<1>(edges[i]), 0)) +
-                math::square(this->mesh->nodes(std::get<0>(edges[i]), 1) - this->mesh->nodes(std::get<1>(edges[i]), 1)));
-        }
-        D->copyToDevice(stream);
-        
         // calculate connection matrix
         Eigen::ArrayXf signs = Eigen::ArrayXf::Ones(edges.size());
         auto L = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
@@ -113,8 +105,15 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
             auto const localEdges = std::get<1>(globalEdgeIndex)[element];
 
             for (unsigned i = 0; i < localEdges.size(); ++i) {
-                (*L)(std::get<0>(localEdges[i]), element) = signs(std::get<0>(localEdges[i]));
-                (*LT)(element, std::get<0>(localEdges[i])) = signs(std::get<0>(localEdges[i]));
+                auto const edge = std::get<0>(localEdges[i]);
+                auto const length = std::sqrt(
+                    math::square(this->mesh->nodes(std::get<0>(edges[edge]), 0) -
+                        this->mesh->nodes(std::get<1>(edges[edge]), 0)) +
+                    math::square(this->mesh->nodes(std::get<0>(edges[edge]), 1) -
+                        this->mesh->nodes(std::get<1>(edges[edge]), 1)));
+                        
+                (*L)(edge, element) = signs(edge) * length;
+                (*LT)(element, edge) = signs(edge) * length;
                 signs(std::get<0>(localEdges[i])) *= -1;
             }
         }
@@ -123,15 +122,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
         cudaStreamSynchronize(stream);
         
         // calculate regularization matrix
-        auto temp1 = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements.rows(),
-            edges.size(), stream, 0.0, false);
-        auto temp2 = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
-            this->mesh->elements.rows(), stream, 0.0, false);
-        
-        temp1->multiply(LT, D, handle, stream);
-        temp2->multiply(D, L, handle, stream);
-        this->regularizationMatrix->multiply(temp1, temp2, handle, stream);
-        this->regularizationMatrix->scalarMultiply(this->regularizationFactor(), stream);
+        this->regularizationMatrix->multiply(LT, L, handle, stream);
     }
     else {
         throw std::runtime_error(
