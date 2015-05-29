@@ -99,8 +99,6 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
         Eigen::ArrayXf signs = Eigen::ArrayXf::Ones(edges.size());
         auto L = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
             this->mesh->elements.rows(), stream);
-        auto LT = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements.rows(),
-            edges.size(), stream);
         for (int element = 0; element < this->mesh->elements.rows(); ++element) {
             auto const localEdges = std::get<1>(globalEdgeIndex)[element];
 
@@ -113,16 +111,14 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
                         this->mesh->nodes(std::get<1>(edges[edge]), 1)));
                         
                 (*L)(edge, element) = signs(edge) * length;
-                (*LT)(element, edge) = signs(edge) * length;
                 signs(std::get<0>(localEdges[i])) *= -1;
             }
         }
         L->copyToDevice(stream);
-        LT->copyToDevice(stream);
         cudaStreamSynchronize(stream);
         
         // calculate regularization matrix
-        this->regularizationMatrix->multiply(LT, L, handle, stream);
+        this->regularizationMatrix->multiply(L, L, handle, stream, CUBLAS_OP_T);
     }
     else {
         throw std::runtime_error(

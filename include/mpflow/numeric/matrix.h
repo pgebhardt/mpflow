@@ -56,7 +56,8 @@ namespace numeric {
         void add(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
         void multiply(std::shared_ptr<Matrix<type> const> const A,
             std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const handle,
-            cudaStream_t const stream=nullptr);
+            cudaStream_t const stream=nullptr, cublasOperation_t const transA=CUBLAS_OP_N,
+            cublasOperation_t const transB=CUBLAS_OP_N);
         void multiply(std::shared_ptr<SparseMatrix<type> const> const A,
             std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const handle,
             cudaStream_t const stream=nullptr);

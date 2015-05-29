@@ -272,7 +272,7 @@ template <
 >
 void mpFlow::numeric::Matrix<type>::multiply(std::shared_ptr<Matrix<type> const> const A,
     std::shared_ptr<Matrix<type> const> const B, cublasHandle_t const handle,
-    cudaStream_t const stream) {
+    cudaStream_t const stream, cublasOperation_t const transA, cublasOperation_t const transB) {
     // check input
     if (A == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: A == nullptr");
@@ -284,29 +284,21 @@ void mpFlow::numeric::Matrix<type>::multiply(std::shared_ptr<Matrix<type> const>
         throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: handle == NULL");
     }
 
-    // check size
-    if ((A->cols != B->rows) ||
-        (this->rows != A->rows) ||
-        (this->cols != B->cols)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::multiply: shape does not match");
-    }
-
     // set cublas stream
     cublasSetStream(handle, stream);
 
     // multiply matrices
-    type alpha = 1.0f;
-    type beta = 0.0f;
-
+    type alpha = 1.0, beta = 0.0;
     if (B->dataCols == 1) {
-        if (cublasWrapper<type>::gemv(handle, CUBLAS_OP_N, A->dataRows, A->dataCols, &alpha, A->deviceData,
+        if (cublasWrapper<type>::gemv(handle, transA, A->dataRows, A->dataCols, &alpha, A->deviceData,
             A->dataRows, B->deviceData, 1, &beta, this->deviceData, 1)
             != CUBLAS_STATUS_SUCCESS) {
             throw std::runtime_error("mpFlow::numeric::Matrix::multiply: cublasSgemv");
         }
     }
     else {
-        if (cublasWrapper<type>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, A->dataRows, B->dataCols, A->dataCols,
+        if (cublasWrapper<type>::gemm(handle, transA, transB, this->dataRows, this->dataCols,
+            transA == CUBLAS_OP_T ? A->dataRows : A->dataCols,
             &alpha, A->deviceData, A->dataRows, B->deviceData, B->dataRows, &beta,
             this->deviceData, this->dataRows) != CUBLAS_STATUS_SUCCESS) {
             throw std::runtime_error("mpFlow::numeric::Matrix::multiply: cublasSgemm");

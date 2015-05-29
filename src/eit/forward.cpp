@@ -65,30 +65,17 @@ mpFlow::EIT::ForwardSolver<numericalSolverType, equationType>::ForwardSolver(
     this->preconditioner = std::make_shared<numeric::SparseMatrix<dataType>>(
         this->equation->systemMatrix->rows, this->equation->systemMatrix->cols, stream);
 
-    // TODO: To be moved to new BoundaryValues class
+    // create matrix to calculate system excitation from electrode excitation
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols,
-        this->equation->mesh->nodes.rows(), stream, 0.0, false);        
-
-    // apply mixed boundary conditions, if applicably
+        this->equation->mesh->nodes.rows(), stream, 0.0, false);
+          
     if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
         applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
     }
-
-    cublasSetStream(handle, stream);
-    dataType alpha = dataType(1), beta = dataType(0);
-    if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_T,
-        this->source->measurementPattern->dataCols,
-        this->equation->excitationMatrix->dataRows,
-        this->source->measurementPattern->dataRows, &alpha,
-        this->source->measurementPattern->deviceData,
-        this->source->measurementPattern->dataRows,
-        this->equation->excitationMatrix->deviceData,
-        this->equation->excitationMatrix->dataRows,
-        &beta, this->electrodesAttachmentMatrix->deviceData,
-        this->electrodesAttachmentMatrix->dataRows) != CUBLAS_STATUS_SUCCESS) {
-        throw std::logic_error("mpFlow::EIT::ForwardSolver: calc result calculation");
-    }
+    
+    this->electrodesAttachmentMatrix->multiply(this->source->measurementPattern,
+        this->equation->excitationMatrix, handle, stream, CUBLAS_OP_T, CUBLAS_OP_T);
 }
 
 // forward solving
