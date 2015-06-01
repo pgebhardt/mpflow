@@ -47,8 +47,12 @@ mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equa
         equation->mesh, forwardSolver->jacobian, parallelImages, handle, stream);
 
     // create matrices
-    this->result = std::make_shared<numeric::Matrix<dataType>>(
-        equation->mesh->elements.rows(), parallelImages, stream);
+    this->referenceDistribution = std::make_shared<numeric::Matrix<dataType>>(
+        equation->mesh->elements.rows(), parallelImages, stream,
+        equationType::logarithmic ? dataType(0) : equation->referenceValue);
+    this->materialDistribution = std::make_shared<numeric::Matrix<dataType>>(
+        equation->mesh->elements.rows(), parallelImages, stream,
+        equationType::logarithmic ? dataType(0) : equation->referenceValue);
     this->delta = std::make_shared<numeric::Matrix<dataType>>(
         equation->mesh->elements.rows(), parallelImages, stream);
         
@@ -74,10 +78,8 @@ void mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType,
     }
 
     // forward solving a few steps
-    auto const initialDistribution = std::make_shared<numeric::Matrix<dataType>>(
-        this->result->rows, this->result->cols, stream,
-        equationType::logarithmic ? dataType(0) : this->forwardSolver->equation->referenceValue);
-    auto const initialValue = this->forwardSolver->solve(initialDistribution, handle, stream);
+    auto const initialValue = this->forwardSolver->solve(this->referenceDistribution,
+        handle, stream);
 
     // calc initial system matrix
     this->inverseSolver->updateJacobian(this->forwardSolver->jacobian, handle, stream);
@@ -109,13 +111,13 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
     // solve
     unsigned const steps = this->inverseSolver->solve(this->calculation, this->measurement,
-        maxIterations, handle, stream, this->result);
+        maxIterations, handle, stream, this->delta);
 
     if (iterations != nullptr) {
         *iterations = steps;
     }
 
-    return this->result;
+    return this->delta;
 }
 
 // solve absolute
@@ -139,14 +141,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
             "mpFlow::EIT::Solver::solveAbsolute: handle == nullptr");
     }
 
-    // initialize with homogeneous material distribution
-    this->result->fill(equationType::logarithmic ? dataType(0) :
-        this->forwardSolver->equation->referenceValue, stream);
-    
     // do newton iterations
     for (unsigned step = 0; step < iterations; ++step) {
         // solve for new jacobian and reference data
-        this->forwardSolver->solve(this->result, handle, stream);
+        this->forwardSolver->solve(this->materialDistribution, handle, stream);
         this->inverseSolver->updateJacobian(this->forwardSolver->jacobian, handle, stream);
     
         // solve inverse
@@ -154,10 +152,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
             this->measurement, 0, handle, stream, this->delta);
     
         // add to result
-        this->result->add(this->delta, stream);
+        this->materialDistribution->add(this->delta, stream);
     }
     
-    return this->result;
+    return this->materialDistribution;
 }
 
 // specialisation
