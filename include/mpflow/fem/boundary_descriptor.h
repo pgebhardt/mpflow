@@ -29,6 +29,13 @@ namespace FEM {
             double const height);
         virtual ~BoundaryDescriptor() { }
 
+        // factories
+        static std::shared_ptr<BoundaryDescriptor> circularBoundary(unsigned const count,
+            double const width, double const height, double const boundaryRadius,
+            double const offset=0.0, bool const clockwise=false);
+        static std::shared_ptr<BoundaryDescriptor> fromConfig(json_value const& config,
+            double const modelRadius);
+
         // member
         Eigen::ArrayXXd const coordinates;
         double const height;
@@ -37,9 +44,6 @@ namespace FEM {
 
     namespace boundaryDescriptor {
         // create BoundaryDescriptor on circular boundary
-        std::shared_ptr<BoundaryDescriptor> circularBoundary(unsigned const count,
-            double const width, double const height, double const boundaryRadius,
-            double const offset=0.0);
     }
 }
 }

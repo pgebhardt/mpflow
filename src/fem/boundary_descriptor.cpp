@@ -30,9 +30,9 @@ mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
     }
 }
 
-std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor::circularBoundary(
+std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::circularBoundary(
     unsigned const count, double const width, double const height,
-    double const boundaryRadius, double const offset) {
+    double const boundaryRadius, double const offset, bool const clockwise) {
     // check radius
     if (boundaryRadius == 0.0) {
         throw std::invalid_argument(
@@ -56,5 +56,48 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::boundaryDescriptor
         coordinates.block(electrode, 2, 1, 2) = math::kartesian(point).transpose();
     }
 
-    return std::make_shared<BoundaryDescriptor>(coordinates, height);
+    // create boundary descriptor
+    auto const boundaryDescriptor = std::make_shared<BoundaryDescriptor>(coordinates, height);
+
+    // change element direction
+    if (clockwise) {
+        Eigen::ArrayXXd coordinates = boundaryDescriptor->coordinates;
+
+        coordinates.block(0, 0, coordinates.rows(), 2) =
+            boundaryDescriptor->coordinates.block(0, 2, coordinates.rows(), 2);
+        coordinates.block(0, 2, coordinates.rows(), 2) =
+            boundaryDescriptor->coordinates.block(0, 0, coordinates.rows(), 2);
+
+        coordinates.col(1) = -coordinates.col(1);
+        coordinates.col(3) = -coordinates.col(3);
+
+        return std::make_shared<mpFlow::FEM::BoundaryDescriptor>(coordinates, height);
+    }
+    else {
+        return boundaryDescriptor;
+    }
 }
+
+std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::fromConfig(
+    json_value const& config, double const modelRadius) {
+    // check for correct config
+    if (config["height"].type == json_none) {
+        return nullptr;
+    }
+
+    // extract descriptor coordinates from config, or create circular descriptor
+    // if no coordinates are given
+    if (config["coordinates"].type != json_none) {
+        return std::make_shared<mpFlow::FEM::BoundaryDescriptor>(
+            numeric::eigenFromJsonArray<double>(config["coordinates"]), config["height"].u.dbl);
+    }
+    else if ((config["width"].type != json_none) && (config["count"].type != json_none)) {
+        return mpFlow::FEM::BoundaryDescriptor::circularBoundary(
+            config["count"].u.integer, config["width"].u.dbl, config["height"].u.dbl,
+            modelRadius, config["offset"].u.dbl, config["invertDirection"].u.boolean);
+    }
+    else {
+        return nullptr;
+    }
+}
+
