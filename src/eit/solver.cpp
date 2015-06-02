@@ -211,13 +211,6 @@ void mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType,
         throw std::invalid_argument("mpFlow::EIT::Solver::pre_solve: handle == nullptr");
     }
     
-    // use override initial guess of potential for fixed sources to improve convergence
-    if (this->forwardSolver->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
-        for (auto phi : this->forwardSolver->phi) {
-            phi->fill(dataType(1), stream);
-        }
-    }
-    
     // forward solving a few steps
     auto const initialValue = this->forwardSolver->solve(this->referenceDistribution,
         handle, stream);

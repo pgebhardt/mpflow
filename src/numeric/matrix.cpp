@@ -740,6 +740,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
     // load matrix from file
     try {
         auto const matrix = Matrix<type>::loadtxt(file, stream, delimiter);
+            
         file.close();
         return matrix;        
     }
