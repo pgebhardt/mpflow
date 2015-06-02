@@ -45,7 +45,8 @@ endif
 # Compiler
 ##############################
 AR := ar rcs
-CXX ?= /usr/bin/g++
+CC ?= gcc
+CXX ?= g++
 NVCC := $(CUDA_TOOLKIT_ROOT)/bin/nvcc
 
 # use of custom compiler
@@ -76,9 +77,9 @@ STATIC_NAME := $(BUILD_DIR)/lib/lib$(PROJECT)_static.a
 ##############################
 # Includes and libraries
 ##############################
-LIBRARIES := distmesh_static qhullstatic cudart_static cublas_static culibos pthread dl
+LIBRARIES := distmesh_static qhull cudart_static cublas_static culibos pthread dl
 LIBRARY_DIRS +=
-INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./tools/utils/include
+INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./utils/stringtools/include ./utils/json-parser
 
 # link aganinst librt, only if it exists
 ifeq ($(shell echo "int main() {}" | $(CXX) -o /dev/null -x c - -lrt 2>&1),)
@@ -97,9 +98,12 @@ endif
 ##############################
 GIT_VERSION := $(shell git describe --tags --long)
 WARNINGS := -Wall -Wextra -Werror
+
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\"
 CXXFLAGS := -std=c++11 -fPIC $(WARNINGS)
+CFLAGS := -fPIC
 NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH) $(addprefix -Xcompiler , $(WARNINGS))
+
 LINKFLAGS := -fPIC -static-libstdc++
 LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS)) $(addprefix -Xlinker -rpath , $(LIBRARY_DIRS))
 
@@ -114,12 +118,13 @@ endif
 ##############################
 # Source Files
 ##############################
-CXX_SRCS := $(shell find src -name "*.cpp")
+CXX_SRCS := $(shell find src -name "*.cpp") utils/json-parser/json.c
 HXX_SRCS := $(shell find include -name "*.h")
 CU_SRCS := $(shell find src -name "*.cu")
 
 # Object files
-CXX_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CXX_SRCS:.cpp=.o))
+CXX_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CXX_SRCS:.c=.o))
+CXX_OBJS := $(CXX_OBJS:.cpp=.o)
 CU_OBJS := $(addprefix $(BUILD_DIR)/objs/, $(CU_SRCS:.cu=.o))
 
 ##############################
@@ -143,6 +148,11 @@ $(BUILD_DIR)/objs/%.o: %.cu $(HXX_SRCS)
 	@echo [ NVCC ] $<
 	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
 	@$(NVCC) $(NVCCFLAGS) $(COMMON_FLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/objs/%.o: %.c
+	@echo [ CC ] $<
+	@$(foreach d, $(subst /, ,${@D}), mkdir -p $d && cd $d && ):
+	@$(CC) $(CFLAGS) $(COMMON_FLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/objs/%.o: %.cpp $(HXX_SRCS)
 	@echo [ CXX ] $<
