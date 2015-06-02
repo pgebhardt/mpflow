@@ -22,6 +22,7 @@
 #define MPFLOW_INCLUDE_COMMON_H
 
 // std lib includes
+#include <sys/stat.h>
 #include <stdexcept>
 #include <string>
 #include <istream>
@@ -39,5 +40,14 @@
 
 // eigen for easier array handling on cpu
 #include <Eigen/Dense>
+
+// library for improved handling of strings
+#include <stringtools/all.hpp>
+
+// library from mesh generation
+#include <distmesh/distmesh.h>
+
+// library to parse json
+#include "json.h"
 
 #endif
