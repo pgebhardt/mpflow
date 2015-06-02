@@ -21,7 +21,13 @@
 #ifndef MPFLOW_INCLUDE_NUMERIC_IRREGULAR_MESH_H
 #define MPFLOW_INCLUDE_NUMERIC_IRREGULAR_MESH_H
 
-// namespace mpFlow::numeric
+// forward declarations
+namespace mpFlow {
+namespace FEM {
+    class BoundaryDescriptor;
+}
+}
+
 namespace mpFlow {
 namespace numeric {
     // class for holdingding irregular meshs
@@ -32,6 +38,11 @@ namespace numeric {
             Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary,
             double const height);
+
+        // factories
+        static std::shared_ptr<IrregularMesh> fromConfig(json_value const& config,
+            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+            cudaStream_t const stream, std::string const path="./");
 
         // helper methods
         Eigen::ArrayXXd elementNodes(unsigned const element) const;
