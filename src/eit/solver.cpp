@@ -64,6 +64,140 @@ mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType, equa
     }
 }
 
+template <class dataType>
+dataType parseReferenceValue(json_value const& config) {
+    if (config.type == json_double) {
+        return config.u.dbl;
+    }
+    else {
+        return 1.0;
+    }
+}
+
+template <>
+thrust::complex<double> parseReferenceValue(json_value const& config) {
+    if (config.type == json_array) {
+        return thrust::complex<double>(config[0], config[1]);
+    }
+    else if (config.type == json_double) {
+        return thrust::complex<double>(config.u.dbl);
+    }
+    else {
+        return thrust::complex<double>(1.0);
+    }
+}
+
+template <
+    template <class> class numericalForwardSolverType,
+    template <class> class numericalInverseSolverType,
+    class equationType
+>
+std::shared_ptr<mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType,
+    equationType>> mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType,
+    equationType>::fromConfig(json_value const& config, cublasHandle_t const handle,
+    cudaStream_t const stream, std::string const path,
+    std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
+    // check input
+    if (handle == nullptr) {
+        return nullptr;
+    }
+
+    // extract model config
+    auto const modelConfig = config["model"];
+    if (modelConfig.type == json_none) {
+        return nullptr;
+    }
+
+    // extract solver config
+    auto const solverConfig = config["solver"];
+    if (solverConfig.type == json_none) {
+        return nullptr;
+    }
+
+    // load electrodes from config
+    auto const electrodes = FEM::BoundaryDescriptor::fromConfig(modelConfig["electrodes"],
+        modelConfig["mesh"]["radius"].u.dbl);
+    if (electrodes == nullptr) {
+        return nullptr;
+    }
+
+    // load source from config
+    auto const source = FEM::SourceDescriptor<dataType>::fromConfig(modelConfig["source"],
+        electrodes, stream);
+    if (source == nullptr) {
+        return nullptr;
+    }
+
+    // read out reference value and distribution
+    auto const referenceValue = parseReferenceValue<dataType>(modelConfig["material"]);
+    auto const referenceDistribution = [=](json_value const& config) {
+        if (config.type == json_string) {
+            return numeric::Matrix<dataType>::loadtxt(
+                str::format("%s/%s")(path, std::string(config)), stream);
+        }
+        else {
+            return std::shared_ptr<numeric::Matrix<dataType>>(nullptr);
+        }
+    }(modelConfig["material"]);
+
+    // load mesh from config
+    auto const mesh = externalMesh != nullptr ? externalMesh :
+        numeric::IrregularMesh::fromConfig(modelConfig["mesh"],
+        electrodes, stream, path);
+    if (mesh == nullptr) {
+        return nullptr;
+    }
+
+    // initialize equation
+    auto equation = std::make_shared<equationType>(mesh, source->electrodes, referenceValue,
+        stream);
+
+    // extract parallel images count
+    int const parallelImages = std::max(1, (int)solverConfig["parallelImages"].u.integer);
+
+    // create inverse solver and forward model
+    auto solver = std::make_shared<EIT::Solver<numericalForwardSolverType,
+        numericalInverseSolverType, equationType>>(equation, source,
+        std::max(1, (int)modelConfig["componentsCount"].u.integer),
+        parallelImages, handle, stream);
+
+    // override reference Distribution, if applicable
+    if (referenceDistribution != nullptr) {
+        solver->referenceDistribution = referenceDistribution;
+    }
+    solver->preSolve(handle, stream);
+
+    // clear jacobian matrix for not needed elements
+    if (modelConfig["mesh"]["noSensitivity"].type != json_none) {
+        solver->forwardSolver->jacobian->elementwiseMultiply(solver->forwardSolver->jacobian,
+            numeric::Matrix<dataType>::loadtxt(str::format("%s/%s")(path, std::string(modelConfig["mesh"]["noSensitivity"])), stream),
+            stream);
+        solver->inverseSolver->updateJacobian(solver->forwardSolver->jacobian,
+            handle, stream);
+    }
+
+    // extract regularization parameter
+    double const regularizationFactor = solverConfig["regularizationFactor"].u.dbl;
+    auto const regularizationType = [](json_value const& config) {
+        typedef solver::Inverse<dataType, numericalInverseSolverType> inverseSolverType;
+        
+        if (std::string(config) == "diagonal") {
+            return inverseSolverType::RegularizationType::diagonal;
+        }
+        else if (std::string(config) == "totalVariational") {
+            return inverseSolverType::RegularizationType::totalVariational;
+        }
+        else {
+            return inverseSolverType::RegularizationType::identity;
+        }
+    }(solverConfig["regularizationType"]);
+
+    solver->inverseSolver->setRegularizationParameter(regularizationFactor, regularizationType,
+        handle, stream);
+
+    return solver;
+}
+
 // pre solve for accurate initial jacobian
 template <
     template <class> class numericalForwardSolverType,
@@ -76,7 +210,14 @@ void mpFlow::EIT::Solver<numericalForwardSolverType, numericalInverseSolverType,
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::EIT::Solver::pre_solve: handle == nullptr");
     }
-
+    
+    // use override initial guess of potential for fixed sources to improve convergence
+    if (this->forwardSolver->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
+        for (auto phi : this->forwardSolver->phi) {
+            phi->fill(dataType(1), stream);
+        }
+    }
+    
     // forward solving a few steps
     auto const initialValue = this->forwardSolver->solve(this->referenceDistribution,
         handle, stream);

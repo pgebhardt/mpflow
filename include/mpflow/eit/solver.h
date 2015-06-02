@@ -39,6 +39,12 @@ namespace EIT {
             unsigned const components, unsigned const parallelImages,
             cublasHandle_t const handle, cudaStream_t const stream);
 
+        // factories
+        static std::shared_ptr<Solver<numericalForwardSolverType, numericalInverseSolverType,
+            equationType>> fromConfig(json_value const& config, cublasHandle_t const handle,
+            cudaStream_t const stream, std::string const path="./",
+            std::shared_ptr<numeric::IrregularMesh const> const externalMesh=nullptr);
+
         // pre solve for accurate initial jacobian
         void preSolve(cublasHandle_t const handle, cudaStream_t const stream);
 
