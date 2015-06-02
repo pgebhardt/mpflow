@@ -85,6 +85,52 @@ mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type, dataT
         electrodes, drivePattern, measurementPattern, stream) {
 }
 
+template <
+    class dataType
+>
+std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDescriptor<dataType>::fromConfig(
+    json_value const& config, std::shared_ptr<BoundaryDescriptor const> const boundaryDescriptor,
+    cudaStream_t const stream) {
+    // load excitation and measurement pattern from config or assume standard pattern, if not given
+    std::shared_ptr<mpFlow::numeric::Matrix<int>> drivePattern = nullptr;
+    if (config["drivePattern"].type != json_none) {
+        drivePattern = numeric::Matrix<int>::fromJsonArray(config["drivePattern"], stream);
+    }
+    else {
+        drivePattern = mpFlow::numeric::Matrix<int>::eye(boundaryDescriptor->count, stream);
+    }
+
+    std::shared_ptr<mpFlow::numeric::Matrix<int>> measurementPattern = nullptr;
+    if (config["measurementPattern"].type != json_none) {
+        measurementPattern = numeric::Matrix<int>::fromJsonArray(config["measurementPattern"], stream);
+    }
+    else {
+        measurementPattern = mpFlow::numeric::Matrix<int>::eye(boundaryDescriptor->count, stream);
+    }
+
+    // read out currents
+    std::vector<dataType> excitation(drivePattern->cols);
+    if (config["value"].type == json_array) {
+        for (unsigned i = 0; i < drivePattern->cols; ++i) {
+            excitation[i] = config["value"][i].u.dbl;
+        }
+    }
+    else {
+        excitation = std::vector<dataType>(drivePattern->cols,
+            config["value"].type != json_none ? config["value"].u.dbl : dataType(1));
+    }
+
+    // create source descriptor
+    auto sourceType = std::string(config["type"]) == "voltage" ?
+        mpFlow::FEM::SourceDescriptor<dataType>::Type::Fixed :
+        mpFlow::FEM::SourceDescriptor<dataType>::Type::Open;
+    auto source = std::make_shared<mpFlow::FEM::SourceDescriptor<dataType>>(sourceType,
+        excitation, boundaryDescriptor, drivePattern, measurementPattern, stream);
+
+    return source;
+
+}
+
 // specialisation
 template class mpFlow::FEM::SourceDescriptor<float>;
 template class mpFlow::FEM::SourceDescriptor<double>;

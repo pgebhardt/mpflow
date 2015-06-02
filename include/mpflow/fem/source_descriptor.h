@@ -46,6 +46,11 @@ namespace FEM {
             cudaStream_t const stream);
         virtual ~SourceDescriptor() { }
 
+        // factories
+        static std::shared_ptr<SourceDescriptor<dataType>> fromConfig(json_value const& config,
+            std::shared_ptr<BoundaryDescriptor const> const boundaryDescriptor,
+            cudaStream_t const stream);
+
         // member
         Type const type;
         std::vector<dataType> const values;
