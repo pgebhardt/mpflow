@@ -706,6 +706,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
         }
     }
 
+    // check for empty matrix
+    if ((values.size() == 0) || (values[0].size() == 0)) {
+        throw std::runtime_error("mpFlow::numeric::Matrix::loadtxt: cannot parse file!");
+    }
+    
     // covert STL vector to Matrix
     auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
     for (unsigned row = 0; row < matrix->rows; ++row)
@@ -728,16 +733,20 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
 
     // check open
     if (file.fail()) {
-        throw std::runtime_error("mpFlow::numeric::Matrix::loadtxt: cannot open file!");
+        throw std::runtime_error(
+            str::format("mpFlow::numeric::Matrix::loadtxt: cannot open file: %s")(filename));
     }
 
-    // load matrix
-    auto matrix = Matrix<type>::loadtxt(file, stream, delimiter);
-
-    // close file
-    file.close();
-
-    return matrix;
+    // load matrix from file
+    try {
+        auto const matrix = Matrix<type>::loadtxt(file, stream, delimiter);
+        file.close();
+        return matrix;        
+    }
+    catch (std::exception const&) {
+        throw std::runtime_error(
+            str::format("mpFlow::numeric::Matrix::loadtxt: cannot parse file: %s")(filename));
+    }
 }
 
 // converts matrix to eigen array
@@ -781,6 +790,40 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::fr
         matrix->dataRows * matrix->dataCols);
 
     // copy data to device
+    matrix->copyToDevice(stream);
+
+    return matrix;
+}
+
+template <
+    class type
+>
+std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::fromJsonArray(
+    json_value const& array, cudaStream_t const stream) {
+    // check type of json value
+    if (array.type != json_array) {
+        return nullptr;
+    }
+
+    // exctract sizes
+    unsigned const rows = array.u.array.length;
+    unsigned const cols = array[0].type == json_array ? array[0].u.array.length : 1;
+
+    // create matrix
+    auto matrix = std::make_shared<mpFlow::numeric::Matrix<type>>(rows, cols, stream);
+
+    // exctract values
+    if (array[0].type != json_array) {
+        for (unsigned row = 0; row < matrix->rows; ++row) {
+            (*matrix)(row, 0) = array[row].u.dbl;
+        }
+    }
+    else {
+        for (unsigned row = 0; row < matrix->rows; ++row)
+        for (unsigned col = 0; col < matrix->cols; ++col) {
+            (*matrix)(row, col) = array[row][col].u.dbl;
+        }
+    }
     matrix->copyToDevice(stream);
 
     return matrix;

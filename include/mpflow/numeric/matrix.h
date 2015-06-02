@@ -92,6 +92,10 @@ namespace numeric {
                 Eigen::Dynamic, Eigen::Dynamic> const> const array,
             cudaStream_t const stream=nullptr);
 
+        // create from json array
+        static std::shared_ptr<Matrix<type>> fromJsonArray(json_value const& array,
+            cudaStream_t const stream=nullptr);
+
         // I/O operators
         friend std::ostream& operator << (std::ostream& out, Matrix<type> const& matrix) {
             matrix.savetxt(out);
@@ -131,6 +135,38 @@ namespace numeric {
         unsigned dataRows;
         unsigned dataCols;
     };
+
+    // creates eigen array from an json array
+    template <class type>
+    Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> eigenFromJsonArray(
+        json_value const& array) {
+        // check type of json value
+        if (array.type != json_array) {
+            return Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic>();
+        }
+
+        // exctract sizes
+        unsigned const rows = array.u.array.length;
+        unsigned const cols = array[0].type == json_array ? array[0].u.array.length : 1;
+
+        // create array
+        Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> eigenArray(rows, cols);
+
+        // extract values
+        if (array[0].type != json_array) {
+            for (unsigned row = 0; row < eigenArray.rows(); ++row) {
+                eigenArray(row, 0) = array[row].u.dbl;
+            }
+        }
+        else {
+            for (unsigned row = 0; row < eigenArray.rows(); ++row)
+            for (unsigned col = 0; col < eigenArray.cols(); ++col) {
+                eigenArray(row, col) = array[row][col].u.dbl;
+            }
+        }
+
+        return eigenArray;
+    }
 }
 }
 
