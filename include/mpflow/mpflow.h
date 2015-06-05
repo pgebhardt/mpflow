@@ -44,15 +44,15 @@
 #include "fem/source_descriptor.h"
 #include "fem/equation.h"
 
+// EIT specific
+#include "eit/forward.h"
+
 // generic solver
 #include "solver/inverse.h"
+#include "solver/solver.h"
 
 // MWI specific
 #include "mwi/equation.h"
 #include "mwi/solver.h"
-
-// EIT specific
-#include "eit/forward.h"
-#include "eit/solver.h"
 
 #endif

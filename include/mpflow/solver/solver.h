@@ -14,34 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_EIT_SOLVER_H
-#define MPFLOW_INCLDUE_EIT_SOLVER_H
+#ifndef MPFLOW_INCLDUE_SOLVER_SOLVER_H
+#define MPFLOW_INCLDUE_SOLVER_SOLVER_H
 
 namespace mpFlow {
-namespace EIT {
-    // class for solving differential EIT
+namespace solver {
     template <
-        template <class> class numericalForwardSolverType = numeric::ConjugateGradient,
-        template <class> class numericalInverseSolverType = numeric::ConjugateGradient,
-        class equationType = FEM::Equation<float, FEM::basis::Linear, true>
+        class forwardModelType = EIT::ForwardSolver<>,
+        template <class> class numericalInverseSolverType = numeric::ConjugateGradient
     >
     class Solver {
     public:
-        typedef typename equationType::dataType dataType;
+        typedef typename forwardModelType::dataType dataType;
 
         // constructor
-        Solver(std::shared_ptr<equationType> const equation,
-            std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
-            unsigned const components, unsigned const parallelImages,
-            cublasHandle_t const handle, cudaStream_t const stream);
+        Solver(std::shared_ptr<forwardModelType> const forwardModel,
+            unsigned const parallelImages, cublasHandle_t const handle,
+            cudaStream_t const stream);
 
         // factories
-        static std::shared_ptr<Solver<numericalForwardSolverType, numericalInverseSolverType,
-            equationType>> fromConfig(json_value const& config, cublasHandle_t const handle,
+        static std::shared_ptr<Solver<forwardModelType, numericalInverseSolverType>>
+            fromConfig(json_value const& config, cublasHandle_t const handle,
             cudaStream_t const stream, std::string const path="./",
             std::shared_ptr<numeric::IrregularMesh const> const externalMesh=nullptr);
 
@@ -57,10 +54,10 @@ namespace EIT {
             cudaStream_t const stream);
 
         // member
+        std::shared_ptr<forwardModelType> const forwardModel;
+        std::shared_ptr<solver::Inverse<dataType, numericalInverseSolverType>> inverseSolver;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> measurement;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> calculation;
-        std::shared_ptr<ForwardSolver<numericalForwardSolverType, equationType>> forwardSolver;
-        std::shared_ptr<solver::Inverse<dataType, numericalInverseSolverType>> inverseSolver;
         std::shared_ptr<numeric::Matrix<dataType>> referenceDistribution;
         std::shared_ptr<numeric::Matrix<dataType>> materialDistribution;
         std::shared_ptr<numeric::Matrix<dataType>> delta;
