@@ -51,8 +51,7 @@ namespace solver {
         unsigned solve(std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
             unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
-            std::shared_ptr<numeric::Matrix<dataType>> result,
-            std::shared_ptr<numeric::Matrix<dataType> const> const referenceDistribution=nullptr);
+            std::shared_ptr<numeric::Matrix<dataType>> result);
             
     private:
         // update intermediate matrices
@@ -60,8 +59,7 @@ namespace solver {
         void calcJacobianSquare(cublasHandle_t const handle, cudaStream_t const stream);
         void calcExcitation(std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
-            cublasHandle_t const handle, cudaStream_t const stream,
-            std::shared_ptr<numeric::Matrix<dataType> const> const referenceDistribution=nullptr);
+            cublasHandle_t const handle, cudaStream_t const stream);
 
     public:
         // accessors for regularization parameter

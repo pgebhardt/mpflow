@@ -167,8 +167,7 @@ template <
 void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
-    cublasHandle_t const handle, cudaStream_t const stream,
-    std::shared_ptr<numeric::Matrix<dataType> const> const referenceDistribution) {
+    cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::calcExcitation: handle == nullptr");
@@ -188,7 +187,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
         }
 
         // substract calculatedVoltage
-        dataType alpha = -1.0;
+        dataType const alpha = -1.0;
         if (numeric::cublasWrapper<dataType>::axpy(handle, this->difference->dataRows, &alpha,
             calculation[image]->deviceData, 1,
             (dataType*)(this->difference->deviceData + image * this->difference->dataRows), 1)
@@ -199,14 +198,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcExcitation(
     }
 
     // calc excitation
-    dataType alpha = 1.0, beta = 0.0;
-    
-    if (referenceDistribution != nullptr) {
-        this->excitation->multiply(this->regularizationMatrix, referenceDistribution, handle, stream);
-        this->excitation->scalarMultiply(this->regularizationFactor(), stream);
-        beta = 1.0;
-    }
-    
+    dataType const alpha = 1.0, beta = 0.0;
     if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobian->dataCols,
         this->difference->dataCols, this->jacobian->dataRows, &alpha, this->jacobian->deviceData,
         this->jacobian->dataRows, this->difference->deviceData, this->difference->dataRows, &beta,
@@ -225,8 +217,7 @@ unsigned mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
     unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
-    std::shared_ptr<numeric::Matrix<dataType>> result,
-    std::shared_ptr<numeric::Matrix<dataType> const> const referenceDistribution) {
+    std::shared_ptr<numeric::Matrix<dataType>> result) {
     // check input
     if (result == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::solve: result == nullptr");
@@ -239,7 +230,7 @@ unsigned mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     result->fill(dataType(0), stream);
 
     // calc excitation
-    this->calcExcitation(calculation, measurement, handle, stream, referenceDistribution);
+    this->calcExcitation(calculation, measurement, handle, stream);
 
     // solve system
     return this->numericalSolver->template solve<numeric::Matrix, numeric::Matrix>(
