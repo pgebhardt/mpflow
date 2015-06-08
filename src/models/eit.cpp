@@ -83,6 +83,71 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
         this->equation->excitationMatrix, handle, stream, CUBLAS_OP_T, CUBLAS_OP_T);
 }
 
+template <class dataType>
+static dataType parseReferenceValue(json_value const& config) {
+    if (config.type == json_double) {
+        return config.u.dbl;
+    }
+    else {
+        return 1.0;
+    }
+}
+
+template <>
+thrust::complex<double> parseReferenceValue(json_value const& config) {
+    if (config.type == json_array) {
+        return thrust::complex<double>(config[0], config[1]);
+    }
+    else if (config.type == json_double) {
+        return thrust::complex<double>(config.u.dbl);
+    }
+    else {
+        return thrust::complex<double>(1.0);
+    }
+}
+
+template <
+    template <class> class numericalSolverType,
+    class equationType
+>
+std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
+    mpFlow::models::EIT<numericalSolverType, equationType>::fromConfig(
+    json_value const& config, cublasHandle_t const handle, cudaStream_t const stream,
+    std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
+    // check input
+    if (handle == nullptr) {
+        return nullptr;
+    }
+
+    // load boundary descriptor from config
+    auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(config["boundary"],
+        config["mesh"]["radius"].u.dbl);
+    if (boundaryDescriptor == nullptr) {
+        return nullptr;
+    }
+
+    // load source from config
+    auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
+        config["source"], boundaryDescriptor, stream);
+    if (source == nullptr) {
+        return nullptr;
+    }
+
+    // load mesh from config
+    auto const mesh = externalMesh != nullptr ? externalMesh :
+        numeric::IrregularMesh::fromConfig(config["mesh"], boundaryDescriptor, stream, path);
+    if (mesh == nullptr) {
+        return nullptr;
+    }
+
+    // read out reference value
+    auto const referenceValue = parseReferenceValue<dataType>(config["material"]);
+    
+    // create forward model
+    return std::make_shared<EIT<numericalSolverType, equationType>>(mesh, source, referenceValue,
+        std::max(1, (int)config["componentsCount"].u.integer), handle, stream);
+}
+
 // forward solving
 template <
     template <class> class numericalSolverType,
