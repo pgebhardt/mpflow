@@ -50,37 +50,12 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
             this->forwardModel->source->drivePattern->cols, stream, 0.0, false));
     }
 
-    auto const initialValue = forwardModelType::equationType::logarithmic ? dataType(0) :
-        this->forwardModel->referenceValue;
     this->referenceDistribution = std::make_shared<numeric::Matrix<dataType>>(
         this->forwardModel->mesh->elements.rows(), parallelImages, stream,
-        initialValue);
+        this->forwardModel->referenceValue);
     this->materialDistribution = std::make_shared<numeric::Matrix<dataType>>(
         this->forwardModel->mesh->elements.rows(), parallelImages, stream,
-        initialValue);
-}
-
-template <class dataType>
-dataType parseReferenceValue(json_value const& config) {
-    if (config.type == json_double) {
-        return config.u.dbl;
-    }
-    else {
-        return 1.0;
-    }
-}
-
-template <>
-thrust::complex<double> parseReferenceValue(json_value const& config) {
-    if (config.type == json_array) {
-        return thrust::complex<double>(config[0], config[1]);
-    }
-    else if (config.type == json_double) {
-        return thrust::complex<double>(config.u.dbl);
-    }
-    else {
-        return thrust::complex<double>(1.0);
-    }
+        this->forwardModel->referenceValue);
 }
 
 template <
@@ -108,22 +83,13 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
         return nullptr;
     }
 
-    // load boundary descriptor from config
-    auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(modelConfig["boundary"],
-        modelConfig["mesh"]["radius"].u.dbl);
-    if (boundaryDescriptor == nullptr) {
+    // load forward model from config
+    auto forwardModel = forwardModelType::fromConfig(modelConfig, handle, stream, path, externalMesh);
+    if (forwardModel == nullptr) {
         return nullptr;
     }
 
-    // load source from config
-    auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
-        modelConfig["source"], boundaryDescriptor, stream);
-    if (source == nullptr) {
-        return nullptr;
-    }
-
-    // read out reference value and distribution
-    auto const referenceValue = parseReferenceValue<dataType>(modelConfig["material"]);
+    // read out reference distribution
     auto const referenceDistribution = [=](json_value const& config) {
         if (config.type == json_string) {
             return numeric::Matrix<dataType>::loadtxt(
@@ -134,21 +100,9 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
         }
     }(modelConfig["material"]);
 
-    // load mesh from config
-    auto const mesh = externalMesh != nullptr ? externalMesh :
-        numeric::IrregularMesh::fromConfig(modelConfig["mesh"],
-        boundaryDescriptor, stream, path);
-    if (mesh == nullptr) {
-        return nullptr;
-    }
-
     // extract parallel images count
     int const parallelImages = std::max(1, (int)solverConfig["parallelImages"].u.integer);
-
-    // create forward model
-    auto forwardModel = std::make_shared<forwardModelType>(mesh, source, referenceValue,
-        std::max(1, (int)modelConfig["componentsCount"].u.integer), handle, stream);
-        
+       
     // create inverse solver and forward model
     auto solver = std::make_shared<solver::Solver<forwardModelType, numericalInverseSolverType>>(
         forwardModel, parallelImages, handle, stream);
@@ -345,3 +299,12 @@ template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGS
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
 template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
+    
+template class mpFlow::solver::Solver<mpFlow::models::Constant<float>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Solver<mpFlow::models::Constant<float>, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::solver::Solver<mpFlow::models::Constant<double>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Solver<mpFlow::models::Constant<double>, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<float>>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<float>>, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<double>>, mpFlow::numeric::ConjugateGradient>;
+template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<double>>, mpFlow::numeric::BiCGSTAB>;
