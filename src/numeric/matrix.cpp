@@ -135,7 +135,9 @@ void mpFlow::numeric::Matrix<type>::copy(std::shared_ptr<Matrix<type> const> con
 
     // check size
     if ((other->rows != this->rows) || (other->cols != this->cols)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::copy: shape does not match");
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::copy: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, other->rows, other->cols));
     }
 
     // copy data
