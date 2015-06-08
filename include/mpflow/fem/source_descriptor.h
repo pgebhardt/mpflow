@@ -35,12 +35,12 @@ namespace FEM {
 
         // constructor
         SourceDescriptor(Type const type, std::vector<dataType> const& values,
-            std::shared_ptr<FEM::BoundaryDescriptor const> const electrodes,
+            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
             std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
             std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
             cudaStream_t const stream);
         SourceDescriptor(Type const type, dataType const value,
-            std::shared_ptr<FEM::BoundaryDescriptor const> const electrodes,
+            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
             std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
             std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
             cudaStream_t const stream);
@@ -54,7 +54,7 @@ namespace FEM {
         // member
         Type const type;
         std::vector<dataType> const values;
-        std::shared_ptr<FEM::BoundaryDescriptor const> const electrodes;
+        std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor;
         std::shared_ptr<numeric::Matrix<dataType>> drivePattern;
         std::shared_ptr<numeric::Matrix<dataType>> measurementPattern;
         std::shared_ptr<numeric::Matrix<dataType>> pattern;
