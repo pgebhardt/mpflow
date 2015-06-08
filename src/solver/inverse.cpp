@@ -42,7 +42,8 @@ mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(
     this->jacobianSquare = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
     this->regularizationMatrix = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
     this->systemMatrix = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
-    
+    this->result = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), parallelImages, stream, 0.0, false);
+        
     // create numerical EIT
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(mesh->elements.rows(), parallelImages, stream);
         
@@ -213,28 +214,32 @@ template <
     class dataType,
     template <class> class numericalSolverType
 >
-unsigned mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
+std::shared_ptr<mpFlow::numeric::Matrix<dataType> const>
+    mpFlow::solver::Inverse<dataType, numericalSolverType>::solve(
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
     std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
-    unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
-    std::shared_ptr<numeric::Matrix<dataType>> result) {
+    cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations,
+    unsigned* const iterations) {
     // check input
-    if (result == nullptr) {
-        throw std::invalid_argument("mpFlow::solver::Inverse::solve: result == nullptr");
-    }
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Inverse::solve: handle == nullptr");
     }
 
     // reset result vector
-    result->fill(dataType(0), stream);
+    this->result->fill(dataType(0), stream);
 
     // calc excitation
     this->calcExcitation(calculation, measurement, handle, stream);
 
     // solve system
-    return this->numericalSolver->template solve<numeric::Matrix, numeric::Matrix>(
-        this->systemMatrix, this->excitation, handle, stream, result, nullptr, steps);
+    unsigned const steps = this->numericalSolver->template solve<numeric::Matrix, numeric::Matrix>(
+        this->systemMatrix, this->excitation, handle, stream, this->result, nullptr, maxIterations);
+        
+    if (iterations != nullptr) {
+        *iterations = steps; 
+    }
+    
+    return this->result;
 }
 
 // specialisation

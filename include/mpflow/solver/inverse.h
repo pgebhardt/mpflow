@@ -48,10 +48,11 @@ namespace solver {
             cublasHandle_t const handle, cudaStream_t const stream);
             
         // inverse solving
-        unsigned solve(std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
+        std::shared_ptr<numeric::Matrix<dataType> const> solve(
+            std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
-            unsigned const steps, cublasHandle_t const handle, cudaStream_t const stream,
-            std::shared_ptr<numeric::Matrix<dataType>> result);
+            cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations=0,
+            unsigned* const iterations=nullptr);
             
     private:
         // update intermediate matrices
@@ -95,6 +96,7 @@ namespace solver {
         std::shared_ptr<numeric::Matrix<dataType>> regularizationMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> systemMatrix;
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
+        std::shared_ptr<numeric::Matrix<dataType>> result;
     };
 }
 }

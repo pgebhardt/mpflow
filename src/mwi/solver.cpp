@@ -65,8 +65,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<thrust::complex<float>> const>
     }
 
     // solve
-    this->inverseSolver->solve(this->calculation, this->measurement,
-        maxIterations, handle, stream, this->dGamma);
+    auto const result = this->inverseSolver->solve(this->calculation, this->measurement,
+        handle, stream, maxIterations);
+    this->dGamma->copy(result, stream);
 
     return this->dGamma;
 }

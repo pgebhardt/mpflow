@@ -60,7 +60,6 @@ namespace solver {
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> calculation;
         std::shared_ptr<numeric::Matrix<dataType>> referenceDistribution;
         std::shared_ptr<numeric::Matrix<dataType>> materialDistribution;
-        std::shared_ptr<numeric::Matrix<dataType>> delta;
     };
 }
 }

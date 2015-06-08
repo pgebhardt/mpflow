@@ -59,8 +59,6 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
     this->materialDistribution = std::make_shared<numeric::Matrix<dataType>>(
         this->forwardModel->equation->mesh->elements.rows(), parallelImages, stream,
         initialValue);
-    this->delta = std::make_shared<numeric::Matrix<dataType>>(
-        this->forwardModel->equation->mesh->elements.rows(), parallelImages, stream);        
 }
 
 template <class dataType>
@@ -111,16 +109,16 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
         return nullptr;
     }
 
-    // load electrodes from config
-    auto const electrodes = FEM::BoundaryDescriptor::fromConfig(modelConfig["electrodes"],
+    // load boundary descriptor from config
+    auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(modelConfig["boundary"],
         modelConfig["mesh"]["radius"].u.dbl);
-    if (electrodes == nullptr) {
+    if (boundaryDescriptor == nullptr) {
         return nullptr;
     }
 
     // load source from config
     auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
-        modelConfig["source"], electrodes, stream);
+        modelConfig["source"], boundaryDescriptor, stream);
     if (source == nullptr) {
         return nullptr;
     }
@@ -140,14 +138,14 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     // load mesh from config
     auto const mesh = externalMesh != nullptr ? externalMesh :
         numeric::IrregularMesh::fromConfig(modelConfig["mesh"],
-        electrodes, stream, path);
+        boundaryDescriptor, stream, path);
     if (mesh == nullptr) {
         return nullptr;
     }
 
     // initialize equation
     auto equation = std::make_shared<typename forwardModelType::equationType>(
-        mesh, source->electrodes, referenceValue, stream);
+        mesh, boundaryDescriptor, referenceValue, stream);
 
     // extract parallel images count
     int const parallelImages = std::max(1, (int)solverConfig["parallelImages"].u.integer);
@@ -240,14 +238,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> con
     }
 
     // solve
-    unsigned const steps = this->inverseSolver->solve(this->calculation, this->measurement,
-        maxIterations, handle, stream, this->delta);
+    auto const result = this->inverseSolver->solve(this->calculation, this->measurement,
+        handle, stream, maxIterations, iterations);
+    this->materialDistribution->copy(result, stream);
 
-    if (iterations != nullptr) {
-        *iterations = steps;
-    }
-
-    return this->delta;
+    return this->materialDistribution;
 }
 
 // solve absolute
@@ -277,11 +272,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> con
         this->inverseSolver->updateJacobian(this->forwardModel->jacobian, handle, stream);
     
         // solve inverse
-        this->inverseSolver->solve({ this->forwardModel->result },
-            this->measurement, 0, handle, stream, this->delta);
+        auto const result = this->inverseSolver->solve({ this->forwardModel->result },
+            this->measurement, handle, stream);
     
         // add to result
-        this->materialDistribution->add(this->delta, stream);
+        this->materialDistribution->add(result, stream);
     }
     
     return this->materialDistribution;
