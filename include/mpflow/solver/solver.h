@@ -24,7 +24,7 @@
 namespace mpFlow {
 namespace solver {
     template <
-        class forwardModelType = EIT::ForwardSolver<>,
+        class forwardModelType = models::EIT<>,
         template <class> class numericalInverseSolverType = numeric::ConjugateGradient
     >
     class Solver {

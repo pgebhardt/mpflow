@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -44,8 +44,8 @@
 #include "fem/source_descriptor.h"
 #include "fem/equation.h"
 
-// EIT specific
-#include "eit/forward.h"
+// Models
+#include "models/eit.h"
 
 // generic solver
 #include "solver/inverse.h"

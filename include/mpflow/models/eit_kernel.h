@@ -14,16 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_EIT_FORWARD_KERNEL_H
-#define MPFLOW_INCLDUE_EIT_FORWARD_KERNEL_H
+#ifndef MPFLOW_INCLDUE_MODELS_EIT_KERNEL_H
+#define MPFLOW_INCLDUE_MODELS_EIT_KERNEL_H
 
 namespace mpFlow {
-namespace EIT {
-namespace forwardKernel {
+namespace models {
+namespace eitKernel {
     template <
         class dataType
     >

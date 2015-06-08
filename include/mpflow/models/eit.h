@@ -14,33 +14,34 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_EIT_FORWARDSOLVER_H
-#define MPFLOW_INCLDUE_EIT_FORWARDSOLVER_H
+#ifndef MPFLOW_INCLDUE_MODELS_EIT_H
+#define MPFLOW_INCLDUE_MODELS_EIT_H
 
 namespace mpFlow {
-namespace EIT {
-    // forward solver class definition
+namespace models {
+    // 2.5D EIT forward model
     template <
         template <class> class numericalSolverType = numeric::ConjugateGradient,
         class equationType_ = FEM::Equation<float, FEM::basis::Linear, true>
     >
-    class ForwardSolver {
+    class EIT {
     public:
         typedef equationType_ equationType;
         typedef typename equationType::dataType dataType;
 
         // initialization
-        ForwardSolver(std::shared_ptr<equationType> const equation,
+        EIT(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
-            unsigned const components, cublasHandle_t const handle, cudaStream_t const stream);
+            dataType const referenceValue, unsigned const components, cublasHandle_t const handle,
+            cudaStream_t const stream);
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dataType> const> solve(
-            std::shared_ptr<numeric::Matrix<dataType> const> const gamma,
+            std::shared_ptr<numeric::Matrix<dataType> const> const materialDistribution,
             cublasHandle_t const handle, cudaStream_t const stream,
             unsigned* const steps=nullptr);
 
@@ -52,13 +53,15 @@ namespace EIT {
             std::shared_ptr<numeric::SparseMatrix<dataType>> const systemMatrix, cudaStream_t const stream);
 
         // member
-        std::shared_ptr<equationType> const equation;
+        std::shared_ptr<numeric::IrregularMesh const> const mesh;
         std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source;
+        dataType const referenceValue;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;
 
     private:
+        std::shared_ptr<equationType> equation;
         std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> electrodesAttachmentMatrix;

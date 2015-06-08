@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -25,7 +25,7 @@
 
 #include "mpflow/constants.h"
 #include "mpflow/numeric/constants.h"
-#include "mpflow/eit/forward_kernel.h"
+#include "mpflow/models/eit_kernel.h"
 
 // calc voltage kernel
 template <
@@ -57,7 +57,7 @@ static __global__ void applyMixedBoundaryConditionKernel(
 template <
     class dataType
 >
-void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition(
+void mpFlow::models::eitKernel::applyMixedBoundaryCondition(
     dim3 const blocks, dim3 const threads, cudaStream_t const stream,
     dataType* const excitation, unsigned const rows,
     unsigned const* const columnIds, dataType* const values) {
@@ -68,15 +68,15 @@ void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition(
     CudaCheckError();
 }
 
-template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<float>(
+template void mpFlow::models::eitKernel::applyMixedBoundaryCondition<float>(
     dim3 const, dim3 const, cudaStream_t const, float* const, unsigned const,
     unsigned const* const, float* const);
-template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<double>(
+template void mpFlow::models::eitKernel::applyMixedBoundaryCondition<double>(
     dim3 const, dim3 const, cudaStream_t const, double* const, unsigned const,
     unsigned const* const, double* const);
-template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<thrust::complex<float> >(
+template void mpFlow::models::eitKernel::applyMixedBoundaryCondition<thrust::complex<float> >(
     dim3 const, dim3 const, cudaStream_t const, thrust::complex<float>* const, unsigned const,
     unsigned const* const, thrust::complex<float>* const);
-template void mpFlow::EIT::forwardKernel::applyMixedBoundaryCondition<thrust::complex<double> >(
+template void mpFlow::models::eitKernel::applyMixedBoundaryCondition<thrust::complex<double> >(
     dim3 const, dim3 const, cudaStream_t const, thrust::complex<double>* const, unsigned const,
     unsigned const* const, thrust::complex<double>* const);

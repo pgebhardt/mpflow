@@ -38,8 +38,7 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
 
     // create inverse solver
     this->inverseSolver = std::make_shared<solver::Inverse<dataType, numericalInverseSolverType>>(
-        this->forwardModel->equation->mesh, this->forwardModel->jacobian, parallelImages,
-        handle, stream);
+        this->forwardModel->mesh, this->forwardModel->jacobian, parallelImages, handle, stream);
 
     // create matrices
     for (unsigned image = 0; image < parallelImages; ++image) {
@@ -52,12 +51,12 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
     }
 
     auto const initialValue = forwardModelType::equationType::logarithmic ? dataType(0) :
-        this->forwardModel->equation->referenceValue;
+        this->forwardModel->referenceValue;
     this->referenceDistribution = std::make_shared<numeric::Matrix<dataType>>(
-        this->forwardModel->equation->mesh->elements.rows(), parallelImages, stream,
+        this->forwardModel->mesh->elements.rows(), parallelImages, stream,
         initialValue);
     this->materialDistribution = std::make_shared<numeric::Matrix<dataType>>(
-        this->forwardModel->equation->mesh->elements.rows(), parallelImages, stream,
+        this->forwardModel->mesh->elements.rows(), parallelImages, stream,
         initialValue);
 }
 
@@ -143,15 +142,11 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
         return nullptr;
     }
 
-    // initialize equation
-    auto equation = std::make_shared<typename forwardModelType::equationType>(
-        mesh, boundaryDescriptor, referenceValue, stream);
-
     // extract parallel images count
     int const parallelImages = std::max(1, (int)solverConfig["parallelImages"].u.integer);
 
     // create forward model
-    auto forwardModel = std::make_shared<forwardModelType>(equation, source,
+    auto forwardModel = std::make_shared<forwardModelType>(mesh, source, referenceValue,
         std::max(1, (int)modelConfig["componentsCount"].u.integer), handle, stream);
         
     // create inverse solver and forward model
@@ -283,70 +278,70 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> con
 }
 
 // specialisation
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
 
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
 
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
 
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::ConjugateGradient,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::ConjugateGradient,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>>, mpFlow::numeric::BiCGSTAB>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::ConjugateGradient>;
-template class mpFlow::solver::Solver<mpFlow::EIT::ForwardSolver<mpFlow::numeric::BiCGSTAB,
+template class mpFlow::solver::Solver<mpFlow::models::EIT<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>>, mpFlow::numeric::BiCGSTAB>;
