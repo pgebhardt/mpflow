@@ -43,6 +43,7 @@
 #include "fem/boundary_descriptor.h"
 #include "fem/source_descriptor.h"
 #include "fem/equation.h"
+#include "mwi/equation.h"
 
 // Models
 #include "models/eit.h"
@@ -51,9 +52,5 @@
 // generic solver
 #include "solver/inverse.h"
 #include "solver/solver.h"
-
-// MWI specific
-#include "mwi/equation.h"
-#include "mwi/solver.h"
 
 #endif
