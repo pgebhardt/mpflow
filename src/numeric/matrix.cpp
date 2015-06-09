@@ -297,7 +297,7 @@ void mpFlow::numeric::Matrix<type>::multiply(std::shared_ptr<Matrix<type> const>
     cublasSetStream(handle, stream);
 
     // multiply matrices
-    type alpha = 1.0, beta = 0.0;
+    type const alpha = 1.0, beta = 0.0;
     if (B->dataCols == 1) {
         if (cublasWrapper<type>::gemv(handle, transA, A->dataRows, A->dataCols, &alpha, A->deviceData,
             A->dataRows, B->deviceData, 1, &beta, this->deviceData, 1)

@@ -138,7 +138,7 @@ void mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::preSo
     cublasHandle_t const handle, cudaStream_t const stream) {
     // check input
     if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::solver::Solver::pre_solve: handle == nullptr");
+        throw std::invalid_argument("mpFlow::solver::Solver::preSolve: handle == nullptr");
     }
     
     // forward solving a few steps
@@ -169,7 +169,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> con
     // check input
     if (handle == nullptr) {
         throw std::invalid_argument(
-            "mpFlow::solver::Solver::solve_differential: handle == nullptr");
+            "mpFlow::solver::Solver::solveDifferential: handle == nullptr");
     }
 
     // solve
