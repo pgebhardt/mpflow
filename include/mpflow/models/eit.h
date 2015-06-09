@@ -32,7 +32,8 @@ namespace models {
     public:
         typedef equationType_ equationType;
         typedef typename equationType::dataType dataType;
-
+        static bool const logarithmic = equationType::logarithmic;
+        
         // initialization
         EIT(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,

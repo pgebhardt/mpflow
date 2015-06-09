@@ -21,9 +21,11 @@
 #include "mpflow/mpflow.h"
 
 template <
-    class dataType
+    class dataType,
+    bool logarithmic
 >
-mpFlow::models::Constant<dataType>::Constant(std::shared_ptr<numeric::IrregularMesh const> const mesh,
+mpFlow::models::Constant<dataType, logarithmic>::Constant(
+    std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
     std::shared_ptr<numeric::Matrix<dataType>> const jacobian, dataType const referenceValue,
     cudaStream_t const stream)
@@ -67,9 +69,11 @@ thrust::complex<double> parseReferenceValue(json_value const& config) {
 }
 
 template <
-    class dataType
+    class dataType,
+    bool logarithmic
 >
-std::shared_ptr<mpFlow::models::Constant<dataType>> mpFlow::models::Constant<dataType>::fromConfig(
+std::shared_ptr<mpFlow::models::Constant<dataType>>
+    mpFlow::models::Constant<dataType, logarithmic>::fromConfig(
     json_value const& config, cublasHandle_t const, cudaStream_t const stream,
     std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
     // load boundary descriptor from config
@@ -105,10 +109,11 @@ std::shared_ptr<mpFlow::models::Constant<dataType>> mpFlow::models::Constant<dat
 
 // forward solving
 template <
-    class dataType
+    class dataType,
+    bool logarithmic
 >
 std::shared_ptr<mpFlow::numeric::Matrix<dataType> const>
-    mpFlow::models::Constant<dataType>::solve(
+    mpFlow::models::Constant<dataType, logarithmic>::solve(
     std::shared_ptr<numeric::Matrix<dataType> const> const,
     cublasHandle_t const, cudaStream_t const, unsigned* const steps) {
     if (steps != nullptr) {
@@ -119,7 +124,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<dataType> const>
 }
 
 // specialisation
-template class mpFlow::models::Constant<float>;
-template class mpFlow::models::Constant<double>;
-template class mpFlow::models::Constant<thrust::complex<float>>;
-template class mpFlow::models::Constant<thrust::complex<double>>;
+template class mpFlow::models::Constant<float, false>;
+template class mpFlow::models::Constant<float, true>;
+template class mpFlow::models::Constant<double, false>;
+template class mpFlow::models::Constant<double, true>;
+template class mpFlow::models::Constant<thrust::complex<float>, false>;
+template class mpFlow::models::Constant<thrust::complex<float>, true>;
+template class mpFlow::models::Constant<thrust::complex<double>, false>;
+template class mpFlow::models::Constant<thrust::complex<double>, true>;

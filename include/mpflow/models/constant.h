@@ -25,11 +25,13 @@ namespace mpFlow {
 namespace models {
     // model with constant jacobian
     template <
-        class dataType_ = float
+        class dataType_ = float,
+        bool logarithmic_ = false
     >
     class Constant {
     public:
         typedef dataType_ dataType;
+        static bool const logarithmic = logarithmic_;
 
         // initialization
         Constant(std::shared_ptr<numeric::IrregularMesh const> const mesh,
