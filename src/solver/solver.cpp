@@ -68,28 +68,12 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::fromConfig(
     json_value const& config, cublasHandle_t const handle, cudaStream_t const stream,
     std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
-    // check input
-    if (handle == nullptr) {
-        return nullptr;
-    }
-
-    // extract model config
+    // extract model and solver configurations
     auto const modelConfig = config["model"];
-    if (modelConfig.type == json_none) {
-        return nullptr;
-    }
-
-    // extract solver config
     auto const solverConfig = config["solver"];
-    if (solverConfig.type == json_none) {
-        return nullptr;
-    }
 
     // load forward model from config
     auto forwardModel = forwardModelType::fromConfig(modelConfig, handle, stream, path, externalMesh);
-    if (forwardModel == nullptr) {
-        return nullptr;
-    }
 
     // read out reference distribution
     auto const referenceDistribution = [=](json_value const& config) {
@@ -103,7 +87,7 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     }(modelConfig["material"]);
 
     // extract parallel images count
-    int const parallelImages = std::max(1, (int)solverConfig["parallelImages"].u.integer);
+    auto const parallelImages = std::max(1, (int)solverConfig["parallelImages"].u.integer);
        
     // create inverse solver and forward model
     auto solver = std::make_shared<solver::Solver<forwardModelType, numericalInverseSolverType>>(

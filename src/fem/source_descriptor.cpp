@@ -91,23 +91,21 @@ template <
 std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDescriptor<dataType>::fromConfig(
     json_value const& config, std::shared_ptr<BoundaryDescriptor const> const boundaryDescriptor,
     cudaStream_t const stream) {
+    // function to parse pattern config
+    auto const parsePatternConfig = [=](json_value const& config)
+        -> std::shared_ptr<numeric::Matrix<int>> {
+        if (config.type != json_none) {
+            return numeric::Matrix<int>::fromJsonArray(config, stream);
+        }
+        else {
+            return numeric::Matrix<int>::eye(boundaryDescriptor->count, stream);
+        }
+    };
+    
     // load excitation and measurement pattern from config or assume standard pattern, if not given
-    std::shared_ptr<mpFlow::numeric::Matrix<int>> drivePattern = nullptr;
-    if (config["drivePattern"].type != json_none) {
-        drivePattern = numeric::Matrix<int>::fromJsonArray(config["drivePattern"], stream);
-    }
-    else {
-        drivePattern = mpFlow::numeric::Matrix<int>::eye(boundaryDescriptor->count, stream);
-    }
-
-    std::shared_ptr<mpFlow::numeric::Matrix<int>> measurementPattern = nullptr;
-    if (config["measurementPattern"].type != json_none) {
-        measurementPattern = numeric::Matrix<int>::fromJsonArray(config["measurementPattern"], stream);
-    }
-    else {
-        measurementPattern = mpFlow::numeric::Matrix<int>::eye(boundaryDescriptor->count, stream);
-    }
-
+    auto const drivePattern = parsePatternConfig(config["drivePattern"]);
+    auto const measurementPattern = parsePatternConfig(config["measurementPattern"]);
+    
     // read out currents
     std::vector<dataType> excitation(drivePattern->cols);
     if (config["value"].type == json_array) {
@@ -121,7 +119,7 @@ std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDesc
     }
 
     // create source descriptor
-    auto sourceType = std::string(config["type"]) == "voltage" ?
+    auto const sourceType = std::string(config["type"]) == "voltage" ?
         mpFlow::FEM::SourceDescriptor<dataType>::Type::Fixed :
         mpFlow::FEM::SourceDescriptor<dataType>::Type::Open;
     auto source = std::make_shared<mpFlow::FEM::SourceDescriptor<dataType>>(sourceType,

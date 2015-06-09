@@ -80,24 +80,24 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor
 
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::fromConfig(
     json_value const& config, double const modelRadius) {
-    // check for correct config
-    if (config["height"].type == json_none) {
-        return nullptr;
-    }
-
+    // read out height
+    auto const height = config["height"].type != json_none ? config["height"].u.dbl : 1.0;
+    
     // extract descriptor coordinates from config, or create circular descriptor
     // if no coordinates are given
     if (config["coordinates"].type != json_none) {
-        return std::make_shared<mpFlow::FEM::BoundaryDescriptor>(
-            numeric::eigenFromJsonArray<double>(config["coordinates"]), config["height"].u.dbl);
-    }
-    else if ((config["width"].type != json_none) && (config["count"].type != json_none)) {
-        return mpFlow::FEM::BoundaryDescriptor::circularBoundary(
-            config["count"].u.integer, config["width"].u.dbl, config["height"].u.dbl,
-            modelRadius, config["offset"].u.dbl, config["invertDirection"].u.boolean);
+        auto const coordinates = numeric::eigenFromJsonArray<double>(config["coordinates"]);
+        
+        return std::make_shared<mpFlow::FEM::BoundaryDescriptor>(coordinates, height);
     }
     else {
-        return nullptr;
+        auto const width = config["width"].u.dbl;
+        auto const count = config["count"].u.integer;
+        auto const offset = config["offset"].u.dbl;
+        auto const invertDirection = config["invertDirection"].u.boolean;
+        
+        return mpFlow::FEM::BoundaryDescriptor::circularBoundary(count, width,
+            height, modelRadius, offset, invertDirection);
     }
 }
 

@@ -77,28 +77,20 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
     json_value const& config, cublasHandle_t const, cudaStream_t const stream,
     std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
     // load boundary descriptor from config
-    auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(config["boundary"],
-        config["mesh"]["radius"].u.dbl);
-    if (boundaryDescriptor == nullptr) {
-        return nullptr;
-    }
+    auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(
+        config["boundary"], config["mesh"]["radius"].u.dbl);
 
     // load source from config
     auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
         config["source"], boundaryDescriptor, stream);
-    if (source == nullptr) {
-        return nullptr;
-    }
 
     // load mesh from config
     auto const mesh = externalMesh != nullptr ? externalMesh :
         numeric::IrregularMesh::fromConfig(config["mesh"], boundaryDescriptor, stream, path);
-    if (mesh == nullptr) {
-        return nullptr;
-    }
 
     // load jacobian from config
-    auto jacobian = numeric::Matrix<dataType>::loadtxt(str::format("%s/%s")(path, std::string(config["jacobian"])), stream);
+    auto const jacobian = numeric::Matrix<dataType>::loadtxt(
+        str::format("%s/%s")(path, std::string(config["jacobian"])), stream);
         
     // read out reference value
     auto const referenceValue = parseReferenceValue<dataType>(config["material"]);
