@@ -146,10 +146,8 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcJacobianSquare(
     // switch to correct stream
     cublasSetStream(handle, stream);
 
-    // cublas coeficients
-    dataType alpha = 1.0f, beta = 0.0f;
-
     // calc Jt * J
+    dataType const alpha = 1.0, beta = 0.0;
     if (numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, this->jacobianSquare->dataRows,
         this->jacobianSquare->dataCols, this->jacobian->dataRows, &alpha,
         this->jacobian->deviceData, this->jacobian->dataRows, this->jacobian->deviceData,
