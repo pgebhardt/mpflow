@@ -59,7 +59,9 @@ mpFlow::numeric::Matrix<type>::Matrix(unsigned const rows, unsigned const cols,
 
     CudaCheckError();
     if (error != cudaSuccess) {
-        throw std::runtime_error("mpFlow::numeric::Matrix::Matrix: create device data memory");
+        throw std::runtime_error(
+            str::format("mpFlow::numeric::Matrix::Matrix: cannot create device data memory: %f kB")(
+                (double)(sizeof(type) * this->dataRows * this->dataCols) / 1024.0));
     }
 
     if (allocateHostMemory) {
@@ -69,7 +71,9 @@ mpFlow::numeric::Matrix<type>::Matrix(unsigned const rows, unsigned const cols,
 
         CudaCheckError();
         if (error != cudaSuccess) {
-            throw std::runtime_error("mpFlow::numeric::Matrix::Matrix: create host data memory");
+            throw std::runtime_error(
+                str::format("mpFlow::numeric::Matrix::Matrix: cannot create host data memory: %f kB")(
+                    (double)(sizeof(type) * this->dataRows * this->dataCols) / 1024.0));
         }
 
         // init all data with zeros
@@ -225,7 +229,9 @@ void mpFlow::numeric::Matrix<type>::diag(std::shared_ptr<Matrix<type> const> con
         throw std::invalid_argument("mpFlow::numeric::Matrix::diag: matrix == nullptr");
     }
     if ((this->rows != matrix->rows) || (this->cols != matrix->cols)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::diag: shapes do not match");
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::diag: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, matrix->rows, matrix->cols));
     }
     
     // dimension
@@ -243,17 +249,18 @@ void mpFlow::numeric::Matrix<type>::diag(std::shared_ptr<Matrix<type> const> con
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::add(std::shared_ptr<Matrix<type> const> const value,
+void mpFlow::numeric::Matrix<type>::add(std::shared_ptr<Matrix<type> const> const other,
     cudaStream_t const stream) {
     // check input
-    if (value == nullptr) {
+    if (other == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::Matrix::add: value == nullptr");
     }
 
     // check size
-    if ((this->rows != value->rows) ||
-        (this->cols != value->cols)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::add: shape does not match");
+    if ((this->rows != other->rows) || (this->cols != other->cols)) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::add: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, other->rows, other->cols));
     }
 
     // dimension
@@ -263,7 +270,7 @@ void mpFlow::numeric::Matrix<type>::add(std::shared_ptr<Matrix<type> const> cons
         this->dataCols == 1 ? 1 : matrix::blockSize);
 
     // call kernel
-    matrixKernel::add(blocks, threads, stream, value->deviceData,
+    matrixKernel::add(blocks, threads, stream, other->deviceData,
         this->dataRows, this->deviceData);
 }
 
@@ -357,14 +364,19 @@ void mpFlow::numeric::Matrix<type>::elementwiseMultiply(
     }
 
     // check size
-    if ((this->rows != A->rows) ||
-        (this->rows != B->rows)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseMultiply: shape does not match");
+    if (this->rows != A->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::elementwiseMultiply: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, A->rows, A->cols));
+    }
+    if (this->rows != B->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::elementwiseMultiply: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, B->rows, B->cols));
     }
 
     // get minimum colums
-    unsigned columns = std::min(std::min(this->dataCols,
-        A->dataCols), B->dataCols);
+    unsigned columns = std::min(std::min(this->dataCols, A->dataCols), B->dataCols);
 
     // kernel dimension
     dim3 blocks(this->dataRows / matrix::blockSize,
@@ -394,14 +406,19 @@ void mpFlow::numeric::Matrix<type>::elementwiseDivision(
     }
 
     // check size
-    if ((this->rows != A->rows) ||
-        (this->rows != B->rows)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::elementwiseDivision: shape does not match");
+    if (this->rows != A->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::elementwiseDivision: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, A->rows, A->cols));
+    }
+    if (this->rows != B->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::elementwiseDivision: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, B->rows, B->cols));
     }
 
     // get minimum colums
-    unsigned columns = std::min(std::min(this->dataCols,
-        A->dataCols), B->dataCols);
+    unsigned columns = std::min(std::min(this->dataCols, A->dataCols), B->dataCols);
 
     // kernel dimension
     dim3 blocks(this->dataRows / matrix::blockSize,
@@ -431,14 +448,19 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(
     }
 
     // check size
-    if ((this->rows != A->rows) ||
-        (this->rows != B->rows)) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::vectorDotProduct: shape does not match");
+    if (this->rows != A->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::vectorDotProduct: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, A->rows, A->cols));
+    }
+    if (this->rows != B->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::vectorDotProduct: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, B->rows, B->cols));
     }
 
     // get minimum colums
-    unsigned columns = std::min(std::min(this->dataCols,
-        A->dataCols), B->dataCols);
+    unsigned columns = std::min(std::min(this->dataCols, A->dataCols), B->dataCols);
 
     // kernel dimension
     dim3 blocks(this->dataRows / matrix::blockSize,
@@ -460,20 +482,22 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> const value,
+void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> const other,
     cudaStream_t const stream) {
     // check input
-    if (value == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::sum: value == nullptr");
+    if (other == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::sum: other == nullptr");
     }
 
     // check size
-    if (this->rows != value->rows) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::sum: shape does not match");
+    if (this->rows != other->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::sum: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, other->rows, other->cols));
     }
 
     // get minimum columns
-    unsigned columns = std::min(this->dataCols, value->dataCols);
+    unsigned columns = std::min(this->dataCols, other->dataCols);
 
     // kernel settings
     dim3 blocks(this->dataRows / matrix::blockSize,
@@ -483,7 +507,7 @@ void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> cons
     unsigned offset = 1;
 
     // start kernel once
-    matrixKernel::sum<type>(blocks, threads, stream, value->deviceData,
+    matrixKernel::sum<type>(blocks, threads, stream, other->deviceData,
         this->dataRows, offset, this->deviceData);
 
     // start kernel
@@ -504,16 +528,18 @@ void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> cons
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::min(std::shared_ptr<Matrix<type> const> const value,
+void mpFlow::numeric::Matrix<type>::min(std::shared_ptr<Matrix<type> const> const other,
     cudaStream_t const stream) {
     // check input
-    if (value == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::min: value == nullptr");
+    if (other == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::min: other == nullptr");
     }
 
     // check size
-    if (this->rows != value->rows) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::min: shape does not match");
+    if (this->rows != other->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::min: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, other->rows, other->cols));
     }
 
     // kernel settings
@@ -522,7 +548,7 @@ void mpFlow::numeric::Matrix<type>::min(std::shared_ptr<Matrix<type> const> cons
 
     // start kernel once
     matrixKernel::min<type>(blocks, matrix::blockSize, stream,
-        value->deviceData, this->rows, offset, this->deviceData);
+        other->deviceData, this->rows, offset, this->deviceData);
 
     // start kernel
     do {
@@ -559,16 +585,18 @@ namespace numeric {
 template <
     class type
 >
-void mpFlow::numeric::Matrix<type>::max(std::shared_ptr<Matrix<type> const> const value,
+void mpFlow::numeric::Matrix<type>::max(std::shared_ptr<Matrix<type> const> const other,
     cudaStream_t const stream) {
     // check input
-    if (value == nullptr) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::max: value == nullptr");
+    if (other == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::max: other == nullptr");
     }
 
     // check size
-    if (this->rows != value->rows) {
-        throw std::invalid_argument("mpFlow::numeric::Matrix::max: shape does not match");
+    if (this->rows != other->rows) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::max: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, other->rows, other->cols));
     }
 
     // kernel settings
@@ -577,7 +605,7 @@ void mpFlow::numeric::Matrix<type>::max(std::shared_ptr<Matrix<type> const> cons
 
     // start kernel once
     matrixKernel::max<type>(blocks, matrix::blockSize, stream,
-        value->deviceData, this->rows, offset, this->deviceData);
+        other->deviceData, this->rows, offset, this->deviceData);
 
     // start kernel
     do {
@@ -649,7 +677,8 @@ void mpFlow::numeric::Matrix<type>::savetxt(std::string const filename, char con
 
     // check open
     if (file.fail()) {
-        throw std::runtime_error("mpFlow::numeric::Matrix::savetxt: cannot open file!");
+        throw std::runtime_error(
+            str::format("mpFlow::numeric::Matrix::savetxt: cannot open file: %s")(filename));
     }
 
     // save matrix
@@ -747,6 +776,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
         return matrix;        
     }
     catch (std::exception const&) {
+        file.close();
         throw std::runtime_error(
             str::format("mpFlow::numeric::Matrix::loadtxt: cannot parse file: %s")(filename));
     }
