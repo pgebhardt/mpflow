@@ -27,7 +27,7 @@ namespace FEM {
     template <
         class dataType_,
         class basisFunctionType_,
-        bool logarithmic_=true
+        bool logarithmic_ = true
     >
     class Equation {
     public:
