@@ -59,6 +59,69 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned const ele
     return result;
 }
 
+// interpolation
+template <
+    class interpolationFunctionType,
+    class dataType
+>
+std::shared_ptr<mpFlow::numeric::SparseMatrix<dataType>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix(
+    std::shared_ptr<IrregularMesh const> const mesh, cudaStream_t const stream) {
+    // check input
+    if (mesh == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh:createInterpolationMatrix: mesh == nullptr");
+    }
+    
+    // evaluate interpolation function at node locations of the external mesh
+    auto interpolationMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
+        mesh->nodes.rows(), this->nodes.rows(), stream);
+    for (int element = 0; element < this->elements.rows(); ++element) {
+        // get points of element
+        auto const points = this->elementNodes(element);
+        
+        // interpolate from each node point 
+        for (int i = 0; i < points.rows(); ++i)
+        for (int j = 0; j < mesh->nodes.rows(); ++j) {
+            // evaluate interpolation function
+            interpolationFunctionType const func(points, i);
+            dataType const value = func.evaluate(mesh->nodes.row(j).transpose());
+            
+            if (value != dataType(0)) {
+                interpolationMatrix->setValue(j, this->elements(element, i),
+                    interpolationMatrix->getValue(j, this->elements(element, i)) + value);
+            }
+        }
+    }
+    interpolationMatrix->copyToDevice(stream);
+    
+    return interpolationMatrix;
+}
+
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, float> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, double> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, thrust::complex<float>> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, thrust::complex<double>> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, float> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, double> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, thrust::complex<float>> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>
+    mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, thrust::complex<double>> (
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
     json_value const& config,
     std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
