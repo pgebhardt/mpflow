@@ -54,6 +54,9 @@ namespace basis {
         // constructor
         Linear(Eigen::Ref<Eigen::ArrayXXd const> points, unsigned const one);
 
+        // evaluation
+        double evaluate(Eigen::Ref<Eigen::ArrayXd const> point) const;
+        
         // mathematical evaluation of basis
         double integrateWithBasis(std::shared_ptr<Linear const> const other) const;
         double integrateGradientWithBasis(std::shared_ptr<Linear const> const other) const;
@@ -66,6 +69,9 @@ namespace basis {
     public:
         // constructor
         Quadratic(Eigen::Ref<Eigen::ArrayXXd const> points, unsigned const one);
+
+        // evaluation
+        double evaluate(Eigen::Ref<Eigen::ArrayXd const> point) const;
 
         // mathematical evaluation of basis
         double integrateWithBasis(std::shared_ptr<Quadratic const> const other) const;

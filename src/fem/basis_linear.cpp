@@ -55,6 +55,18 @@ mpFlow::FEM::basis::Linear::Linear(
     }
 }
 
+// evaluate basis function at given point
+
+double mpFlow::FEM::basis::Linear::evaluate(
+    Eigen::Ref<Eigen::ArrayXd const> const point
+    ) const {
+    return ({
+((((point(0))*(this->coefficients(1)))+((point(1))*(this->coefficients(2))))+(this->coefficients(0)));
+})
+;
+}
+
+
 // integrate with basis
 
 double mpFlow::FEM::basis::Linear::integrateWithBasis(

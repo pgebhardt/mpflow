@@ -149,6 +149,12 @@ class Basis(object):
                     [0.0] * i + [1.0] + [0.0] * (self.nodes_per_element - i - 1))
                 for i in range(self.nodes_per_element)],
 
+            # evaluation
+            evaluate=self.evaluate(['point(0)', 'point(1)'], this_coefficients,
+                dtype='double',
+                custom_args=['Eigen::Ref<Eigen::ArrayXd const> const point'],
+                name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
+            ),
             # model integrals
             integrateWithBasis=self.integrateWithBasis(
                 points_args, this_coefficients, other_coefficients,

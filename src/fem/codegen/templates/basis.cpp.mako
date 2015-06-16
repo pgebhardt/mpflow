@@ -55,6 +55,9 @@ mpFlow::FEM::basis::${name}::${name}(
     }
 }
 
+// evaluate basis function at given point
+${evaluate}
+
 // integrate with basis
 ${integrateWithBasis}
 
