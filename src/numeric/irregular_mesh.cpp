@@ -22,8 +22,7 @@
 
 // create mesh class
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
-    Eigen::Ref<Eigen::ArrayXXi const> const elements,
-    Eigen::Ref<Eigen::ArrayXXi const> const boundary,
+    Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const boundary,
     double const height)
     : nodes(nodes), elements(elements), boundary(boundary), height(height) {
     // check input
@@ -32,6 +31,64 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> 
     }
     if (height <= 0.0) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: height <= 0.0");
+    }
+}
+
+mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
+    Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height)
+    : IrregularMesh(nodes, elements, distmesh::boundEdges(elements), height) { }
+
+std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
+    json_value const& config,
+    std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+    cudaStream_t const stream, std::string const path) {
+    // check for correct config
+    if (config["height"].type == json_none) {
+        return nullptr;
+    }
+
+    // extract basic mesh parameter
+    double const height = config["height"];
+
+    if (config["path"].type != json_none) {
+        // load mesh from file
+        std::string const meshPath = str::format("%s/%s")(path, std::string(config["path"]));
+
+        auto const nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/nodes.txt")(meshPath), stream);
+        auto const elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elements.txt")(meshPath), stream);
+            
+        return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen(), height);
+    }
+    else if ((config["radius"].type != json_none) &&
+            (config["outerEdgeLength"].type != json_none) &&
+            (config["innerEdgeLength"].type != json_none)) {
+        // fix mesh at boundaryDescriptor boundaries
+        Eigen::ArrayXXd fixedPoints(boundaryDescriptor->count * 2, 2);
+        for (unsigned i = 0; i < boundaryDescriptor->count; ++i) {
+            fixedPoints.block(i * 2, 0, 1, 2) = boundaryDescriptor->coordinates.block(i, 0, 1, 2);
+            fixedPoints.block(i * 2 + 1, 0, 1, 2) = boundaryDescriptor->coordinates.block(i, 2, 1, 2);
+        }
+
+        // create mesh with libdistmesh
+        double const radius = config["radius"];
+        auto const distanceFuntion = distmesh::distanceFunction::circular(radius);
+        auto const distMesh = distmesh::distmesh(distanceFuntion, config["outerEdgeLength"],
+            1.0 + (1.0 - (double)config["innerEdgeLength"] / (double)config["outerEdgeLength"]) *
+            distanceFuntion / radius, 1.1 * radius * distmesh::boundingBox(2), fixedPoints);
+
+        // create mpflow matrix objects from distmesh arrays
+        auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(std::get<0>(distMesh),
+            std::get<1>(distMesh), height);
+
+        // save mesh to files for later usage
+        mkdir(str::format("%s/mesh")(path).c_str(), 0777);
+        mpFlow::numeric::Matrix<double>::fromEigen(mesh->nodes, stream)->savetxt(str::format("%s/mesh/nodes.txt")(path));
+        mpFlow::numeric::Matrix<int>::fromEigen(mesh->elements, stream)->savetxt(str::format("%s/mesh/elements.txt")(path));
+
+        return mesh;
+    }
+    else {
+        return nullptr;
     }
 }
 
@@ -82,11 +139,11 @@ std::shared_ptr<mpFlow::numeric::SparseMatrix<dataType>>
         // interpolate from each node point 
         for (int i = 0; i < points.rows(); ++i)
         for (int j = 0; j < mesh->nodes.rows(); ++j) {
-            // evaluate interpolation function
-            interpolationFunctionType const func(points, i);
-            dataType const value = func.evaluate(mesh->nodes.row(j).transpose());
-            
-            if (value != dataType(0)) {
+            // evaluate interpolation function, only if point lies inside element
+            if ((1.0 - 2.0 * distmesh::utils::pointsInsidePoly(mesh->nodes.row(j), points)(0)) < 0.0) {
+                interpolationFunctionType const func(points, i);
+                dataType const value = func.evaluate(mesh->nodes.row(j).transpose());
+                
                 interpolationMatrix->setValue(j, this->elements(element, i),
                     interpolationMatrix->getValue(j, this->elements(element, i)) + value);
             }
@@ -122,62 +179,6 @@ template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, thrust::complex<double>> (
     std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
     
-std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
-    json_value const& config,
-    std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
-    cudaStream_t const stream, std::string const path) {
-    // check for correct config
-    if (config["height"].type == json_none) {
-        return nullptr;
-    }
-
-    // extract basic mesh parameter
-    double height = config["height"];
-
-    if (config["path"].type != json_none) {
-        // load mesh from file
-        std::string meshPath = str::format("%s/%s")(path, std::string(config["path"]));
-
-        auto nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/nodes.txt")(meshPath), stream);
-        auto elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elements.txt")(meshPath), stream);
-        auto boundary = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/boundary.txt")(meshPath), stream);
-        return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen(),
-            boundary->toEigen(), height);
-    }
-    else if ((config["radius"].type != json_none) &&
-            (config["outerEdgeLength"].type != json_none) &&
-            (config["innerEdgeLength"].type != json_none)) {
-        // fix mesh at boundaryDescriptor boundaries
-        Eigen::ArrayXXd fixedPoints(boundaryDescriptor->count * 2, 2);
-        for (unsigned i = 0; i < boundaryDescriptor->count; ++i) {
-            fixedPoints.block(i * 2, 0, 1, 2) = boundaryDescriptor->coordinates.block(i, 0, 1, 2);
-            fixedPoints.block(i * 2 + 1, 0, 1, 2) = boundaryDescriptor->coordinates.block(i, 2, 1, 2);
-        }
-
-        // create mesh with libdistmesh
-        double const radius = config["radius"];
-        auto distanceFuntion = distmesh::distanceFunction::circular(radius);
-        auto dist_mesh = distmesh::distmesh(distanceFuntion, config["outerEdgeLength"],
-            1.0 + (1.0 - (double)config["innerEdgeLength"] / (double)config["outerEdgeLength"]) *
-            distanceFuntion / radius, 1.1 * radius * distmesh::boundingBox(2), fixedPoints);
-
-        // create mpflow matrix objects from distmesh arrays
-        auto mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(std::get<0>(dist_mesh), std::get<1>(dist_mesh),
-            distmesh::boundEdges(std::get<1>(dist_mesh)), height);
-
-        // save mesh to files for later usage
-        mkdir(str::format("%s/mesh")(path).c_str(), 0777);
-        mpFlow::numeric::Matrix<double>::fromEigen(mesh->nodes, stream)->savetxt(str::format("%s/mesh/nodes.txt")(path));
-        mpFlow::numeric::Matrix<int>::fromEigen(mesh->elements, stream)->savetxt(str::format("%s/mesh/elements.txt")(path));
-        mpFlow::numeric::Matrix<int>::fromEigen(mesh->boundary, stream)->savetxt(str::format("%s/mesh/boundary.txt")(path));
-
-        return mesh;
-    }
-    else {
-        return nullptr;
-    }
-
-}
 
 // create mesh for quadratic basis function
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::quadraticBasis(
@@ -191,7 +192,7 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::
     std::tie(n, e, b) = quadraticMeshFromLinear(nodes, elements, boundary);
 
     // create mesh
-    return std::make_shared<numeric::IrregularMesh>(n, e, b, height);
+    return std::make_shared<numeric::IrregularMesh>(n, e, height);
 }
 
 // function create quadratic mesh from linear

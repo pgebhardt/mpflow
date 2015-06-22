@@ -38,6 +38,9 @@ namespace numeric {
             Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary,
             double const height);
+        IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
+            Eigen::Ref<Eigen::ArrayXXi const> const elements,
+            double const height);
 
         // factories
         static std::shared_ptr<IrregularMesh> fromConfig(json_value const& config,
