@@ -20,6 +20,7 @@
 
 #include "mpflow/mpflow.h"
 #include "mpflow/numeric/sparse_matrix_kernel.h"
+#include <fstream>
 
 // create new sparse matrix
 template <
@@ -270,6 +271,47 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(std::shared_ptr<Matrix<type> 
     sparseMatrixKernel::multiply(blocks, threads, stream, this->deviceValues, this->deviceColumnIds,
         matrix->deviceData, result->dataRows, matrix->dataRows,
         result->dataCols, this->density, result->deviceData);
+}
+
+// save matrix to stream
+template <
+    class type
+>
+void mpFlow::numeric::SparseMatrix<type>::savetxt(std::ostream& ostream, char const delimiter) const {
+    // write data
+    for (unsigned row = 0; row < this->rows; ++row) {
+        for (unsigned col = 0; col < this->cols - 1; ++col) {
+            ostream << this->getValue(row, col) << delimiter;
+        }
+        ostream << this->getValue(row, this->cols - 1);
+
+        // print new line not on last line
+        if (row != this->rows - 1) {
+            ostream << std::endl;
+        }
+    }
+}
+
+// save matrix to file
+template <
+    class type
+>
+void mpFlow::numeric::SparseMatrix<type>::savetxt(std::string const filename, char const delimiter) const {
+    // open file stream
+    std::ofstream file(filename.c_str());
+
+    // check open
+    if (file.fail()) {
+        throw std::runtime_error(
+            str::format("mpFlow::numeric::SparseMatrix::savetxt: cannot open file: %s")(filename));
+    }
+
+    // save matrix
+    file.precision(std::numeric_limits<double>::digits10 + 1);
+    this->savetxt(file, delimiter);
+
+    // close file
+    file.close();
 }
 
 // accessors

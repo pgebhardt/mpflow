@@ -53,6 +53,10 @@ namespace numeric {
         void multiply(std::shared_ptr<Matrix<type> const> const matrix, cudaStream_t const stream,
             std::shared_ptr<Matrix<type>> result) const;
 
+        // save matrix as txt
+        void savetxt(std::ostream& ostream, char const delimiter=' ') const;
+        void savetxt(std::string const filename, char const delimiter=' ') const;
+
         // accessors
         unsigned getColumnId(unsigned const row, unsigned const col) const;
         type getValue(unsigned const row, unsigned const col) const;
