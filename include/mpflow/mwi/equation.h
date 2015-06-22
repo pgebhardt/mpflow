@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -24,28 +24,31 @@
 namespace mpFlow {
 namespace MWI {
     // model class describing an 2D TE Helmholz equation
+    template <
+        class dataType
+    >
     class Equation {
     public:
         // constructor
-        Equation(std::shared_ptr<numeric::IrregularMesh> mesh,
-            cudaStream_t stream);
+        Equation(std::shared_ptr<numeric::IrregularMesh const> const mesh,
+            cudaStream_t const stream);
 
         // init methods
-        void initElementalMatrices(cudaStream_t stream);
-        void initJacobianCalculationMatrix(cudaStream_t stream);
+        void initElementalMatrices(cudaStream_t const stream);
+        void initJacobianCalculationMatrix(cudaStream_t const stream);
 
-        void update(const std::shared_ptr<numeric::Matrix<thrust::complex<float>>> beta,
-            thrust::complex<float> k, cudaStream_t stream);
+        void update(std::shared_ptr<numeric::Matrix<dataType> const> const beta,
+            dataType const k, cudaStream_t const stream);
 
         // member
-        std::shared_ptr<numeric::IrregularMesh> mesh;
-        std::shared_ptr<numeric::SparseMatrix<thrust::complex<float>>> systemMatrix;
+        std::shared_ptr<numeric::IrregularMesh const> const mesh;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix;
         std::shared_ptr<numeric::Matrix<unsigned>> connectivityMatrix;
-        std::shared_ptr<numeric::SparseMatrix<thrust::complex<float>>> sMatrix;
-        std::shared_ptr<numeric::SparseMatrix<thrust::complex<float>>> rMatrix;
-        std::shared_ptr<numeric::Matrix<thrust::complex<float>>> elementalSMatrix;
-        std::shared_ptr<numeric::Matrix<thrust::complex<float>>> elementalRMatrix;
-        std::shared_ptr<numeric::Matrix<float>> elementalJacobianMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> sMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> rMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> elementalSMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> elementalRMatrix;
+        std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
     };
 }
 }
