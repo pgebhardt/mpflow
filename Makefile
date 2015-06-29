@@ -49,11 +49,6 @@ CC ?= gcc
 CXX ?= g++
 NVCC := $(CUDA_TOOLKIT_ROOT)/bin/nvcc
 
-# use of custom compiler
-ifdef CUSTOM_CXX
-	CXX := $(CUSTOM_CXX)
-endif
-
 ifdef CUDA_HOST_CXX
 	NVCC += -ccbin=$(CUDA_HOST_CXX)
 endif
