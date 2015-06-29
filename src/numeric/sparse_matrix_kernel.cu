@@ -124,6 +124,32 @@ void mpFlow::numeric::sparseMatrixKernel::convertToMatrix(dim3 blocks, dim3 thre
     CudaCheckError();
 }
 
+// scalar multiply kernel
+template <
+    class type
+>
+static __global__ void scalarMultiplyKernel(type const scalar,
+    type* const values) {
+    // get ids
+    unsigned const row = blockIdx.x * blockDim.x + threadIdx.x;    
+    unsigned const col = blockIdx.y * blockDim.y + threadIdx.y;
+    
+    // multiply values with scalar
+    values[row * mpFlow::numeric::sparseMatrix::blockSize + col] *= scalar;    
+}
+
+// scalar multiply kernel wrapper
+template <
+    class type
+>
+void mpFlow::numeric::sparseMatrixKernel::scalarMultiply(dim3 const blocks, dim3 const threads,
+    cudaStream_t const stream, type const scalar, type* const values) {
+    // call kernel
+    scalarMultiplyKernel<<<blocks, threads, 0, stream>>>(scalar, values);
+    
+    CudaCheckError();    
+}
+
 // sparse matrix multiply kernel
 template <
     class type
@@ -327,6 +353,20 @@ template void mpFlow::numeric::sparseMatrixKernel::convertToMatrix<int>(dim3, di
     cudaStream_t, const int*, const unsigned*,
     unsigned, unsigned, int* matrix);
 
+// scalar multiply kernel
+template void mpFlow::numeric::sparseMatrixKernel::scalarMultiply<float>(dim3 const, dim3 const,
+    cudaStream_t const, float const, float* const);
+template void mpFlow::numeric::sparseMatrixKernel::scalarMultiply<double>(dim3 const, dim3 const,
+    cudaStream_t const, double const, double* const);
+template void mpFlow::numeric::sparseMatrixKernel::scalarMultiply<thrust::complex<float> >(dim3 const, dim3 const,
+    cudaStream_t const, thrust::complex<float> const, thrust::complex<float>* const);
+template void mpFlow::numeric::sparseMatrixKernel::scalarMultiply<thrust::complex<double> >(dim3 const, dim3 const,
+    cudaStream_t const, thrust::complex<double> const, thrust::complex<double>* const);
+template void mpFlow::numeric::sparseMatrixKernel::scalarMultiply<unsigned>(dim3 const, dim3 const,
+    cudaStream_t const, unsigned const, unsigned* const);
+template void mpFlow::numeric::sparseMatrixKernel::scalarMultiply<int>(dim3 const, dim3 const,
+    cudaStream_t const, int const, int* const);
+    
 // multiply kernel
 template void mpFlow::numeric::sparseMatrixKernel::multiply<float>(dim3, dim3,
     cudaStream_t, const float*, const unsigned*,

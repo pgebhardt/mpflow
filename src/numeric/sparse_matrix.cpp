@@ -241,6 +241,18 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::SparseMatrix<typ
     return matrix;
 }
 
+// scalar multiply
+template <
+    class type
+>
+void mpFlow::numeric::SparseMatrix<type>::scalarMultiply(type const scalar, cudaStream_t const stream) {
+    // kernel dimensions
+    dim3 blocks(this->dataRows / matrix::blockSize, sparseMatrix::blockSize);
+    dim3 threads(matrix::blockSize, 1);
+    
+    sparseMatrixKernel::scalarMultiply(blocks, threads, stream, scalar, this->deviceValues);
+}
+
 // sparse matrix multiply
 template <
     class type

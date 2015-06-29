@@ -43,6 +43,13 @@ namespace numeric {
             const type* values, const unsigned* column_ids,
             unsigned density, unsigned rows, type* matrix);
 
+        // scalar multiply kernel
+        template <
+            class type
+        >
+        void scalarMultiply(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            type const scalar, type* const values);
+            
         // sparse matrix multiply kernel
         template <
             class type

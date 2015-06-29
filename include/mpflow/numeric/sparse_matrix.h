@@ -49,7 +49,8 @@ namespace numeric {
         // convert to matrix
         std::shared_ptr<Matrix<type>> toMatrix(cudaStream_t const stream) const;
 
-        // matrix multiply
+        // arithmetic operations
+        void scalarMultiply(type const scalar, cudaStream_t const stream);
         void multiply(std::shared_ptr<Matrix<type> const> const matrix, cudaStream_t const stream,
             std::shared_ptr<Matrix<type>> result) const;
 
