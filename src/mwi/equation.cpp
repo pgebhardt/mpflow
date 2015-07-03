@@ -197,7 +197,7 @@ void mpFlow::MWI::Equation<dataType>::initJacobianCalculationMatrix(cudaStream_t
 
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i + j * 3) =
-                basisI->integrateGradientWithBasis(basisJ);
+                basisI->integrateWithBasis(basisJ);
         }
     }
 
