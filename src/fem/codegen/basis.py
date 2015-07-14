@@ -204,7 +204,7 @@ class EdgeBasis(object):
         # create coordinats
         x, y = symbols('x, y')
 
-        # create edge based basis functions basis function
+        # create edge based basis functions
         Ni = self.evaluate.symbolic.function(self, [x, y], lengthI, ci1, ci2)
         Nj = self.evaluate.symbolic.function(self, [x, y], lengthJ, cj1, cj2)
 
@@ -217,7 +217,7 @@ class EdgeBasis(object):
         # create coordinats
         x, y = symbols('x, y')
 
-        # create edge based basis functions basis function
+        # create edge based basis functions
         Ni = self.evaluate.symbolic.function(self, [x, y], lengthI, ci1, ci2)
         Nj = self.evaluate.symbolic.function(self, [x, y], lengthJ, cj1, cj2)
 
