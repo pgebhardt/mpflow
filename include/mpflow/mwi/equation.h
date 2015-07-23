@@ -53,7 +53,7 @@ namespace MWI {
         std::shared_ptr<numeric::Matrix<dataType>> elementalSMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalRMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> elementalJacobianMatrix;
-        std::shared_ptr<numeric::Matrix<int>> edges;
+        std::shared_ptr<numeric::Matrix<int>> elementEdges;
     };
 }
 }

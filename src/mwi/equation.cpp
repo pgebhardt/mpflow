@@ -34,18 +34,32 @@ mpFlow::MWI::Equation<dataType>::Equation(std::shared_ptr<numeric::IrregularMesh
     }
 
     // init matrices
-    this->edges = numeric::Matrix<int>::fromEigen(std::get<0>(numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements)), stream);
     this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->edges->rows, this->edges->rows, stream);
+        this->mesh->edges.rows(), this->mesh->edges.rows(), stream);
     this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->edges->rows, this->edges->rows, stream);
+        this->mesh->edges.rows(), this->mesh->edges.rows(), stream);
     this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->edges->rows, this->edges->rows, stream);
+        this->mesh->edges.rows(), this->mesh->edges.rows(), stream);
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->elements.rows(), math::square(3), stream, 0.0, false);
+    this->elementEdges = numeric::Matrix<int>::fromEigen(this->mesh->elementEdges, stream);
     
     this->initElementalMatrices(stream);
     this->initJacobianCalculationMatrix(stream);
+}
+
+Eigen::ArrayXi getLocalEdge(Eigen::Ref<Eigen::ArrayXXi const> const elements,
+    unsigned const element, unsigned const localEdgeIndex) {
+    Eigen::ArrayXi edge(2);
+
+    if (elements(element, localEdgeIndex) < elements(element, (localEdgeIndex + 1) % elements.cols())) {
+        edge << localEdgeIndex, (localEdgeIndex + 1) % elements.cols();
+    }
+    else {
+        edge << (localEdgeIndex + 1) % elements.cols(), localEdgeIndex;
+    }
+    
+    return edge;
 }
 
 // init elemental matrices
@@ -53,19 +67,14 @@ template <
     class dataType
 >
 void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const stream) {
-    // calculate indices of unique mesh edges
-    auto const globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-
     // create intermediate matrices
     auto const elementCount = std::make_shared<numeric::SparseMatrix<unsigned>>(
-        this->edges->rows, this->edges->rows, stream);
+        this->mesh->edges.rows(), this->mesh->edges.rows(), stream);
     std::vector<std::shared_ptr<numeric::SparseMatrix<unsigned>>> connectivityMatrices;
     std::vector<std::shared_ptr<numeric::SparseMatrix<dataType>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
     for (int element = 0; element < this->mesh->elements.rows(); ++element) {
-        auto const localEdges = std::get<1>(globalEdgeIndex)[element];
-
         // extract coordinats of node points of element
         auto const points = this->mesh->elementNodes(element);
 
@@ -74,47 +83,45 @@ void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const s
         for (unsigned j = 0; j < 3; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t const level = elementCount->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+            unsigned const level = elementCount->getValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<unsigned>>(
-                    this->edges->rows, this->edges->rows, stream));
+                    this->mesh->edges.rows(), this->mesh->edges.rows(), stream));
                 elementalSMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    this->edges->rows, this->edges->rows, stream));
+                    this->mesh->edges.rows(), this->mesh->edges.rows(), stream));
                 elementalRMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    this->edges->rows, this->edges->rows, stream));
+                    this->mesh->edges.rows(), this->mesh->edges.rows(), stream));
             }
 
             // set connectivity element
-            connectivityMatrices[level]->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
-                element);
+            connectivityMatrices[level]->setValue(this->mesh->elementEdges(element, i),
+                this->mesh->elementEdges(element, j), element);
 
             // evaluate integral equations
-            Eigen::ArrayXi edgeI(2), edgeJ(2);
-            edgeI << std::get<0>(std::get<1>(localEdges[i])), std::get<1>(std::get<1>(localEdges[i]));
-            edgeJ << std::get<0>(std::get<1>(localEdges[j])), std::get<1>(std::get<1>(localEdges[j]));
-            auto const basisI = std::make_shared<FEM::basis::Edge>(points, edgeI);
-            auto const basisJ = std::make_shared<FEM::basis::Edge>(points, edgeJ);
+            auto const basisI = FEM::basis::Edge(points, getLocalEdge(this->mesh->elements, element, i));
+            auto const basisJ = FEM::basis::Edge(points, getLocalEdge(this->mesh->elements, element, j));
 
             // set elemental system element
+            elementalSMatrices[level]->setValue(this->mesh->elementEdges(element, i),
                 this->mesh->elementEdges(element, j), basisI.integrateGradientWithBasis(basisJ));
 
             // set elemental residual element
+            elementalRMatrices[level]->setValue(this->mesh->elementEdges(element, i),
                 this->mesh->elementEdges(element, j), basisI.integrateWithBasis(basisJ));
 
             // increment element count
+            elementCount->setValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j),
                 elementCount->getValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j)) + 1);
         }
     }
 
     // determine nodes with common element
     auto const commonElementMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
-        this->edges->rows, this->edges->rows, stream);
+        this->mesh->edges.rows(), this->mesh->edges.rows(), stream);
     for (int element = 0; element < this->mesh->elements.rows(); ++element) {
-        auto localEdges = std::get<1>(globalEdgeIndex)[element];
-
         for (unsigned i = 0; i < 3; ++i)
         for (unsigned j = 0; j < 3; ++j) {
-            commonElementMatrix->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]), dataType(1));
+            commonElementMatrix->setValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j), dataType(1));
         }
     }
     commonElementMatrix->copyToDevice(stream);
@@ -126,30 +133,28 @@ void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const s
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<unsigned>>(
-        this->edges->rows, numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
+        this->mesh->edges.rows(), numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
         stream, constants::invalidIndex);
-    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->edges->rows,
+    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->edges.rows(),
         numeric::sparseMatrix::blockSize * elementalSMatrices.size(), stream);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->edges->rows,
+    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->edges.rows(),
         numeric::sparseMatrix::blockSize * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
     for (unsigned level = 0; level < connectivityMatrices.size(); ++level) {
         for (int element = 0; element < this->mesh->elements.rows(); ++element) {
-            auto const localEdges = std::get<1>(globalEdgeIndex)[element];
-
             for (unsigned i = 0; i < 3; ++i)
             for (unsigned j = 0; j < 3; ++j) {
-                unsigned columId = commonElementMatrix->getColumnId(std::get<0>(localEdges[i]),
-                    std::get<0>(localEdges[j]));
+                unsigned columId = commonElementMatrix->getColumnId(this->mesh->elementEdges(element, i),
+                    this->mesh->elementEdges(element, j));
 
-                (*this->connectivityMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::blockSize + columId) =
-                    connectivityMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
-                (*this->elementalSMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::blockSize + columId) =
-                    elementalSMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
-                (*this->elementalRMatrix)(std::get<0>(localEdges[i]), level * numeric::sparseMatrix::blockSize + columId) =
-                    elementalRMatrices[level]->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
+                (*this->connectivityMatrix)(this->mesh->elementEdges(element, i), level * numeric::sparseMatrix::blockSize + columId) =
+                    connectivityMatrices[level]->getValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j));
+                (*this->elementalSMatrix)(this->mesh->elementEdges(element, i), level * numeric::sparseMatrix::blockSize + columId) =
+                    elementalSMatrices[level]->getValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j));
+                (*this->elementalRMatrix)(this->mesh->elementEdges(element, i), level * numeric::sparseMatrix::blockSize + columId) =
+                    elementalRMatrices[level]->getValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j));
             }
         }
     }
@@ -167,16 +172,10 @@ template <
     class dataType
 >
 void mpFlow::MWI::Equation<dataType>::initJacobianCalculationMatrix(cudaStream_t const stream) {
-    // calculate indices of unique mesh edges
-    auto const globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-    auto const edges = std::get<0>(globalEdgeIndex);
-
     // fill connectivity and elementalJacobianMatrix
     auto const elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
     for (int element = 0; element < this->mesh->elements.rows(); ++element) {
-        auto const localEdges = std::get<1>(globalEdgeIndex)[element];
-
         // extract coordinats of node points of element
         auto const points = this->mesh->elementNodes(element);
 
@@ -184,15 +183,12 @@ void mpFlow::MWI::Equation<dataType>::initJacobianCalculationMatrix(cudaStream_t
         for (unsigned i = 0; i < 3; ++i)
         for (unsigned j = 0; j < 3; ++j) {
             // evaluate integral equations
-            Eigen::ArrayXi edgeI(2), edgeJ(2);
-            edgeI << std::get<0>(std::get<1>(localEdges[i])), std::get<1>(std::get<1>(localEdges[i]));
-            edgeJ << std::get<0>(std::get<1>(localEdges[j])), std::get<1>(std::get<1>(localEdges[j]));
-            auto const basisI = std::make_shared<FEM::basis::Edge>(points, edgeI);
-            auto const basisJ = std::make_shared<FEM::basis::Edge>(points, edgeJ);
+            auto const basisI = FEM::basis::Edge(points, getLocalEdge(this->mesh->elements, element, i));
+            auto const basisJ = FEM::basis::Edge(points, getLocalEdge(this->mesh->elements, element, j));
 
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i + j * 3) =
-                basisI->integrateWithBasis(basisJ);
+                basisI.integrateWithBasis(basisJ);
         }
     }
 
@@ -222,7 +218,7 @@ void mpFlow::MWI::Equation<dataType>::calcJacobian(
 
     // calc jacobian
     MWI::equationKernel::calcJacobian<dataType>(blocks, threads, stream,
-        field->deviceData, this->edges->deviceData, this->elementalJacobianMatrix->deviceData,
+        field->deviceData, this->elementEdges->deviceData, this->elementalJacobianMatrix->deviceData,
         jacobian->dataRows, jacobian->dataCols, field->dataRows, this->mesh->elements.rows(),
         field->cols, jacobian->deviceData);
 

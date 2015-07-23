@@ -24,7 +24,8 @@
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const boundary,
     double const height)
-    : nodes(nodes), elements(elements), boundary(boundary), height(height) {
+    : nodes(nodes), edges(std::get<0>(irregularMesh::calculateGlobalEdgeIndices(elements))), elements(elements),
+    elementEdges(std::get<1>(irregularMesh::calculateGlobalEdgeIndices(elements))), boundary(boundary), height(height) {
     // check input
     if (nodes.cols() != 2) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->cols != 2");
@@ -340,12 +341,11 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     return std::make_tuple(nodes_new, elements_new, boundary_new);
 }
 
-std::tuple<Eigen::ArrayXXi,
-    std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>>>
+std::tuple<Eigen::ArrayXXi, Eigen::ArrayXXi>
     mpFlow::numeric::irregularMesh::calculateGlobalEdgeIndices(
         Eigen::Ref<Eigen::ArrayXXi const> const elements) {
     std::vector<std::tuple<unsigned, unsigned>> edges;
-    std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>> localEdgeConnections(elements.rows());
+    Eigen::ArrayXXi localEdgeConnections(elements.rows(), 3);
 
     // find all unique edges
     for (int element = 0; element < elements.rows(); ++element)
@@ -358,15 +358,11 @@ std::tuple<Eigen::ArrayXXi,
         // add edge to edges vector, if it was not already inserted
         auto const edgePosition = std::find(edges.begin(), edges.end(), edge);
         if (edgePosition != edges.end()) {
-            localEdgeConnections[element][i] = std::make_tuple(std::distance(edges.begin(), edgePosition),
-                elements(element, i) < elements(element, (i + 1) % 3) ?
-                std::make_tuple(i, (i + 1) % 3) : std::make_tuple((i + 1) % 3, i));
+            localEdgeConnections(element, i) = std::distance(edges.begin(), edgePosition);
         }
         else {
             edges.push_back(edge);
-            localEdgeConnections[element][i] = std::make_tuple(edges.size() - 1,
-                elements(element, i) < elements(element, (i + 1) % 3) ?
-                std::make_tuple(i, (i + 1) % 3) : std::make_tuple((i + 1) % 3, i));
+            localEdgeConnections(element, i) = edges.size() - 1;
         }
     }
 

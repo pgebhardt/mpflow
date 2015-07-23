@@ -81,14 +81,14 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
     // fill intermediate connectivity and elemental matrices
     for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         // get nodes points of element
-        Eigen::ArrayXXd points = mesh->elementNodes(element);
+        auto const points = mesh->elementNodes(element);
 
         // set connectivity and elemental residual matrix elements
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; i++)
         for (unsigned j = 0; j < basisFunctionType::pointsPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            size_t level = elementCount->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
+            unsigned const level = elementCount->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<unsigned>>(
                     this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
@@ -242,22 +242,12 @@ template <
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
     ::initJacobianCalculationMatrix(cudaStream_t const stream) {
-    // variables
-    std::array<std::shared_ptr<basisFunctionType>,
-        basisFunctionType::pointsPerElement> basisFunction;
-
     // fill connectivity and elementalJacobianMatrix
-    auto elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
+    auto const elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
     for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         // get element points
-        Eigen::ArrayXXd points = this->mesh->elementNodes(element);
-
-        // calc corresponding basis functions
-        for (unsigned node = 0; node < basisFunctionType::pointsPerElement; ++node) {
-            basisFunction[node] = std::make_shared<basisFunctionType>(
-                points, node);
-        }
+        auto const points = this->mesh->elementNodes(element);
 
         // fill matrix
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
@@ -265,6 +255,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
             // create basis functions
             auto const basisI = basisFunctionType(points, i);
             auto const basisJ = basisFunctionType(points, j);
+
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i +
                 j * basisFunctionType::pointsPerElement) =
@@ -320,9 +311,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobi
     }
 
     // dimension
-    dim3 blocks(jacobian->dataRows / numeric::matrix::blockSize,
+    auto const blocks = dim3(jacobian->dataRows / numeric::matrix::blockSize,
         jacobian->dataCols / numeric::matrix::blockSize);
-    dim3 threads(numeric::matrix::blockSize, numeric::matrix::blockSize);
+    auto const threads = dim3(numeric::matrix::blockSize, numeric::matrix::blockSize);
 
     // calc jacobian
     FEM::equationKernel::calcJacobian<dataType, basisFunctionType::pointsPerElement, logarithmic>(

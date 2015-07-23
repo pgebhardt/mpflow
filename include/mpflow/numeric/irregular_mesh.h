@@ -61,7 +61,9 @@ namespace numeric {
 
         // member
         Eigen::ArrayXXd const nodes;
+        Eigen::ArrayXXi const edges;
         Eigen::ArrayXXi const elements;
+        Eigen::ArrayXXi const elementEdges;
         Eigen::ArrayXXi const boundary;
         double const height;
     };
@@ -78,8 +80,7 @@ namespace numeric {
             Eigen::Ref<Eigen::ArrayXXd const> const nodes, Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary);
 
-        std::tuple<Eigen::ArrayXXi,
-            std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>>>
+        std::tuple<Eigen::ArrayXXi, Eigen::ArrayXXi>
             calculateGlobalEdgeIndices(Eigen::Ref<Eigen::ArrayXXi const> const elements);
     }
 }

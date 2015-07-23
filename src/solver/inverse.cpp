@@ -92,27 +92,22 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
         this->regularizationMatrix->diag(this->jacobianSquare, stream);
     }
     else if (this->regularizationType() == RegularizationType::totalVariational) {
-        // get edges of mesh
-        auto const globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-        auto const edges = std::get<0>(globalEdgeIndex);
-
         // calculate connection matrix
-        Eigen::ArrayXf signs = Eigen::ArrayXf::Ones(edges.size());
-        auto L = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
+        Eigen::ArrayXf signs = Eigen::ArrayXf::Ones(this->mesh->edges.size());
+        auto L = std::make_shared<numeric::Matrix<dataType>>(this->mesh->edges.rows(),
             this->mesh->elements.rows(), stream);
         for (int element = 0; element < this->mesh->elements.rows(); ++element) {
-            auto const localEdges = std::get<1>(globalEdgeIndex)[element];
-
-            for (unsigned i = 0; i < localEdges.size(); ++i) {
-                auto const edge = std::get<0>(localEdges[i]);
+            for (unsigned i = 0; i < this->mesh->elementEdges.cols(); ++i) {
+                auto const edge = this->mesh->elementEdges(element, i);
+                
                 auto const length = std::sqrt(
-                    math::square(this->mesh->nodes(edges(edge, 0), 0) -
-                        this->mesh->nodes(edges(edge, 1), 0)) +
-                    math::square(this->mesh->nodes(edges(edge, 0), 1) -
-                        this->mesh->nodes(edges(edge, 1), 1)));
+                    math::square(this->mesh->nodes(this->mesh->edges(edge, 0), 0) -
+                        this->mesh->nodes(this->mesh->edges(edge, 1), 0)) +
+                    math::square(this->mesh->nodes(this->mesh->edges(edge, 0), 1) -
+                        this->mesh->nodes(this->mesh->edges(edge, 1), 1)));
                         
                 (*L)(edge, element) = signs(edge) * length;
-                signs(std::get<0>(localEdges[i])) *= -1;
+                signs(this->mesh->elementEdges(element, i)) *= -1;
             }
         }
         L->copyToDevice(stream);
