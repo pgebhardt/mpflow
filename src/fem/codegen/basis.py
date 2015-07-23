@@ -82,7 +82,7 @@ class Basis(object):
         return self.basis_function(point, coefficient)
 
     @kernel
-    def integrateWithBasis(self, points, ci, cj):
+    def integralB(self, points, ci, cj):
         # create coordinats
         x, y = symbols('x, y')
 
@@ -97,7 +97,7 @@ class Basis(object):
         return integrateOnTriangle(integral, x, y, points)
 
     @kernel
-    def integrateGradientWithBasis(self, points, ci, cj):
+    def integralA(self, points, ci, cj):
         # create coordinats
         x, y = symbols('x, y')
 
@@ -112,7 +112,7 @@ class Basis(object):
         return integrateOnTriangle(integral, x, y, points)
 
     @expressionize
-    def integrateBoundaryEdge(self, nodes, coefficients, start, end):
+    def boundaryIntegral(self, nodes, coefficients, start, end):
         # integrate boundary_function symbolic
         @symbolic
         def integral(coefficients, start, end):
@@ -156,24 +156,24 @@ class Basis(object):
                 name='mpFlow::FEM::basis::{}::evaluate'.format(self.name),
             ),
             # model integrals
-            integrateWithBasis=self.integrateWithBasis(
+            integralB=self.integralB(
                 points_args, this_coefficients, other_coefficients,
                 dtype='double',
                 custom_args=['{} const& other'.format(self.name)],
-                name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
+                name='mpFlow::FEM::basis::{}::integralB'.format(self.name),
                 ),
-            integrateGradientWithBasis=self.integrateGradientWithBasis(
+            integralA=self.integralA(
                 points_args, this_coefficients, other_coefficients,
                 dtype='double',
                 custom_args=['{} const& other'.format(self.name)],
-                name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
+                name='mpFlow::FEM::basis::{}::integralA'.format(self.name),
                 ),
 
             # integrate boundary
             boundaryCoefficiens=coefficients(
                 ['points({})'.format(i) for i in range(self.nodes_per_edge)],
                 self.boundary_function),
-            integrateBoundaryEdge=self.integrateBoundaryEdge(
+            boundaryIntegral=self.boundaryIntegral(
                 ['points({})'.format(i) for i in range(self.nodes_per_edge)],
                 ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
                 'start', 'end').expand(),
@@ -200,7 +200,7 @@ class EdgeBasis(object):
             length * (ui * uj.diff(y) - uj * ui.diff(y))]
 
     @kernel
-    def integrateWithBasis(self, points, lengthI, lengthJ, ci1, ci2, cj1, cj2):
+    def integralB(self, points, lengthI, lengthJ, ci1, ci2, cj1, cj2):
         # create coordinats
         x, y = symbols('x, y')
 
@@ -213,7 +213,7 @@ class EdgeBasis(object):
         return integrateOnTriangle(integrant, x, y, points)
 
     @kernel
-    def integrateGradientWithBasis(self, points, lengthI, lengthJ, ci1, ci2, cj1, cj2):
+    def integralA(self, points, lengthI, lengthJ, ci1, ci2, cj1, cj2):
         # create coordinats
         x, y = symbols('x, y')
 
@@ -244,16 +244,16 @@ class EdgeBasis(object):
             name=self.name,
 
             # model integrals
-            integrateWithBasis=self.integrateWithBasis(
+            integralB=self.integralB(
                 points_args, 'this->length', 'other.length', ci1, ci2, cj1, cj2,
                 dtype='double',
                 custom_args=['{} const& other'.format(self.name)],
-                name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
+                name='mpFlow::FEM::basis::{}::integralB'.format(self.name),
                 ),
-            integrateGradientWithBasis=self.integrateGradientWithBasis(
+            integralA=self.integralA(
                 points_args, 'this->length', 'other.length', ci1, ci2, cj1, cj2,
                 dtype='double',
                 custom_args=['{} const& other'.format(self.name)],
-                name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
+                name='mpFlow::FEM::basis::{}::integralA'.format(self.name),
                 ),
             )

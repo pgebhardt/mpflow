@@ -59,13 +59,13 @@ mpFlow::FEM::basis::${name}::${name}(
 ${evaluate}
 
 // integrate with basis
-${integrateWithBasis}
+${integralB}
 
 // integrate gradient with basis
-${integrateGradientWithBasis}
+${integralA}
 
 // integrate edge
-double mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
+double mpFlow::FEM::basis::${name}::boundaryIntegral(
     Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one,
     double const start, double const end) {
     // calc coefficients for basis function
@@ -83,5 +83,5 @@ double mpFlow::FEM::basis::${name}::integrateBoundaryEdge(
         coefficients[${j}] = ${boundaryCoefficiens[i][j].expand()};
     % endfor
     }
-    return ${integrateBoundaryEdge};
+    return ${boundaryIntegral};
 }

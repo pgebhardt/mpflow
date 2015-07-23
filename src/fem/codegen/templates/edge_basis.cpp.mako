@@ -34,7 +34,7 @@ mpFlow::FEM::basis::${name}::${name} (
 }
 
 // integrate with basis
-${integrateWithBasis}
+${integralB}
 
 // integrate gradient with basis
-${integrateGradientWithBasis}
+${integralA}

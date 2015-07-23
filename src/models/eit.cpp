@@ -47,7 +47,7 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
 
     // create FEM equation
     this->equation = std::make_shared<equationType>(this->mesh,
-        this->source->boundaryDescriptor, this->referenceValue, stream);
+        this->source->boundaryDescriptor, this->referenceValue, true, stream);
         
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(

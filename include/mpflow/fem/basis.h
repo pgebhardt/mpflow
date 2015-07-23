@@ -58,10 +58,18 @@ namespace basis {
         double evaluate(Eigen::Ref<Eigen::ArrayXd const> point) const;
         
         // mathematical evaluation of basis
-        double integrateWithBasis(Linear const& other) const;
-        double integrateGradientWithBasis(Linear const& other) const;
-        static double integrateBoundaryEdge(Eigen::Ref<Eigen::ArrayXd const> const points,
+        double integralA(Linear const& other) const;
+        double integralB(Linear const& other) const;
+        static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
             unsigned const one, double const start, double const end);
+            
+        // mesh related stuff
+        static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
+            { return mesh->nodes.rows(); }
+        static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
+            decltype(mesh->elements) { return mesh->elements; }
+        static inline unsigned toLocalIndex(Eigen::Ref<Eigen::ArrayXXi const> const, unsigned const, unsigned const index)
+            { return index; }
     };
 
     // quadratic basis class definition
@@ -74,10 +82,18 @@ namespace basis {
         double evaluate(Eigen::Ref<Eigen::ArrayXd const> point) const;
 
         // mathematical evaluation of basis
-        double integrateWithBasis(Quadratic const& other) const;
-        double integrateGradientWithBasis(Quadratic const& other) const;
-        static double integrateBoundaryEdge(Eigen::Ref<Eigen::ArrayXd const> const points,
+        double integralA(Quadratic const& other) const;
+        double integralB(Quadratic const& other) const;
+        static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
             unsigned const one, double const start, double const end);
+            
+        // mesh related stuff
+        static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
+            { return mesh->nodes.rows(); }
+        static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
+            decltype(mesh->elements) { return mesh->elements; }
+        static inline unsigned toLocalIndex(Eigen::Ref<Eigen::ArrayXXi const> const, unsigned const, unsigned const index)
+            { return index; }
     };
 
     // edge bases basis function definition
@@ -88,8 +104,28 @@ namespace basis {
             Eigen::Ref<Eigen::ArrayXi const> const edge);
 
         // mathematical evaluation of basis
-        double integrateWithBasis(Edge const& other) const;
-        double integrateGradientWithBasis(Edge const& other) const;
+        double integralA(Edge const& other) const;
+        double integralB(Edge const& other) const;
+        static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const, unsigned const,
+            double const, double const) { return 0.0; }
+                                        
+        // mesh related stuff
+        static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
+            { return mesh->edges.rows(); }
+        static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
+            decltype(mesh->elementEdges) { return mesh->elementEdges; }
+        static Eigen::ArrayXi toLocalIndex(Eigen::Ref<Eigen::ArrayXXi const> const elements, unsigned const element, unsigned const index) {
+            Eigen::ArrayXi edge(2);
+        
+            if (elements(element, index) < elements(element, (index + 1) % elements.cols())) {
+                edge << index, (index + 1) % elements.cols();
+            }
+            else {
+                edge << (index + 1) % elements.cols(), index;
+            }
+            
+            return edge;
+        }
 
         // member
     protected:

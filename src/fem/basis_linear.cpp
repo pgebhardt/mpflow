@@ -69,7 +69,7 @@ double mpFlow::FEM::basis::Linear::evaluate(
 
 // integrate with basis
 
-double mpFlow::FEM::basis::Linear::integrateWithBasis(
+double mpFlow::FEM::basis::Linear::integralB(
     Linear const& other
     ) const {
     return ({
@@ -81,7 +81,7 @@ double mpFlow::FEM::basis::Linear::integrateWithBasis(
 
 // integrate gradient with basis
 
-double mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
+double mpFlow::FEM::basis::Linear::integralA(
     Linear const& other
     ) const {
     return ({
@@ -92,7 +92,7 @@ double mpFlow::FEM::basis::Linear::integrateGradientWithBasis(
 
 
 // integrate edge
-double mpFlow::FEM::basis::Linear::integrateBoundaryEdge(
+double mpFlow::FEM::basis::Linear::boundaryIntegral(
     Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one,
     double const start, double const end) {
     // calc coefficients for basis function

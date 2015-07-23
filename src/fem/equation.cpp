@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ template <
 mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
-    dataType const referenceValue, cudaStream_t const stream)
+    dataType const referenceValue, bool const calculatesPotential, cudaStream_t const stream)
     : mesh(mesh), boundaryDescriptor(boundaryDescriptor), referenceValue(referenceValue) {
     // check input
     if (mesh == nullptr) {
@@ -40,26 +40,29 @@ mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
     }
 
     // init matrices
+    unsigned const pointCount = basisFunctionType::pointCount(mesh);
+    
     this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
+        pointCount, pointCount, stream);
     this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
+        pointCount, pointCount, stream);
     this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
+        pointCount, pointCount, stream);
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->elements.rows(), math::square(basisFunctionType::pointsPerElement),
         stream, 0.0, false);
     this->excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
-        this->mesh->nodes.rows(), this->boundaryDescriptor->count, stream,
+        pointCount, this->boundaryDescriptor->count, stream,
         0.0, false);
-    this->meshElements = numeric::Matrix<unsigned>::fromEigen(this->mesh->elements.template cast<unsigned>(), stream);
+    this->elementConnections = numeric::Matrix<unsigned>::fromEigen(
+        basisFunctionType::elementConnections(mesh).template cast<unsigned>(), stream);
 
     this->initElementalMatrices(stream);
     this->initExcitationMatrix(stream);
-    this->initJacobianCalculationMatrix(stream);
+    this->initJacobianCalculationMatrix(calculatesPotential, stream);
 
     // update equation
-    auto alpha = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements.rows(),
+    auto const alpha = std::make_shared<numeric::Matrix<dataType>>(this->mesh->elements.rows(),
         1, stream, 0.0, false);
     this->update(alpha, 0.0, alpha, stream);
 }
@@ -72,61 +75,64 @@ template <
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElementalMatrices(
     cudaStream_t const stream) {
+    unsigned const pointCount = basisFunctionType::pointCount(mesh);
+
     // create intermediate matrices
-    auto elementCount = std::make_shared<numeric::SparseMatrix<unsigned>>(
-        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
+    auto const elementCount = std::make_shared<numeric::SparseMatrix<unsigned>>(
+        pointCount, pointCount, stream);
     std::vector<std::shared_ptr<numeric::SparseMatrix<unsigned>>> connectivityMatrices;
     std::vector<std::shared_ptr<numeric::SparseMatrix<dataType>>> elementalSMatrices, elementalRMatrices;
 
     // fill intermediate connectivity and elemental matrices
-    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
+    auto const elementConnections = basisFunctionType::elementConnections(this->mesh);
+    for (int element = 0; element < elementConnections.rows(); ++element) {
         // get nodes points of element
-        auto const points = mesh->elementNodes(element);
+        auto const points = this->mesh->elementNodes(element);
 
         // set connectivity and elemental residual matrix elements
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; i++)
         for (unsigned j = 0; j < basisFunctionType::pointsPerElement; j++) {
             // get current element count and add new intermediate matrices if 
             // neccessary
-            unsigned const level = elementCount->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
+            unsigned const level = elementCount->getValue(elementConnections(element, i), elementConnections(element, j));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<unsigned>>(
-                    this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
+                    pointCount, pointCount, stream));
                 elementalSMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
+                    pointCount, pointCount, stream));
                 elementalRMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream));
+                    pointCount, pointCount, stream));
             }
 
             // set connectivity element
-            connectivityMatrices[level]->setValue(this->mesh->elements(element, i),
-                this->mesh->elements(element, j), element);
+            connectivityMatrices[level]->setValue(elementConnections(element, i),
+                elementConnections(element, j), element);
 
             // create basis functions
-            auto const basisI = basisFunctionType(points, i);
-            auto const basisJ = basisFunctionType(points, j);
+            auto const basisI = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, i));
+            auto const basisJ = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, j));
 
             // set elemental system element
-            elementalSMatrices[level]->setValue(this->mesh->elements(element, i),
-                this->mesh->elements(element, j), basisI.integrateGradientWithBasis(basisJ));
+            elementalSMatrices[level]->setValue(elementConnections(element, i),
+                elementConnections(element, j), basisI.integralA(basisJ));
 
             // set elemental residual element
-            elementalRMatrices[level]->setValue(this->mesh->elements(element, i),
-                this->mesh->elements(element, j), basisI.integrateWithBasis(basisJ));
+            elementalRMatrices[level]->setValue(elementConnections(element, i),
+                elementConnections(element, j), basisI.integralB(basisJ));
 
             // increment element count
-            elementCount->setValue(this->mesh->elements(element, i), this->mesh->elements(element, j),
-                elementCount->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j)) + 1);
+            elementCount->setValue(elementConnections(element, i), elementConnections(element, j),
+                elementCount->getValue(elementConnections(element, i), elementConnections(element, j)) + 1);
         }
     }
 
     // determine nodes with common element
-    auto commonElementMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
-        this->mesh->nodes.rows(), this->mesh->nodes.rows(), stream);
-    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
+    auto const commonElementMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
+        pointCount, pointCount, stream);
+    for (int element = 0; element < elementConnections.rows(); ++element) {
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
         for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
-            commonElementMatrix->setValue(this->mesh->elements(element, i), this->mesh->elements(element, j), 1.0f);
+            commonElementMatrix->setValue(elementConnections(element, i), elementConnections(element, j), 1.0);
         }
     }
     commonElementMatrix->copyToDevice(stream);
@@ -138,28 +144,28 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<unsigned>>(
-        this->mesh->nodes.rows(), numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
+        pointCount, numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
         stream, constants::invalidIndex);
-    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
+    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(pointCount,
         numeric::sparseMatrix::blockSize * elementalSMatrices.size(), stream);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
+    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(pointCount,
         numeric::sparseMatrix::blockSize * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
     // matrix like format
     for (unsigned level = 0; level < connectivityMatrices.size(); ++level) {
-        for (int element = 0; element < this->mesh->elements.rows(); ++element) {
+        for (int element = 0; element < elementConnections.rows(); ++element) {
             for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
             for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
-                unsigned columId = commonElementMatrix->getColumnId(this->mesh->elements(element, i),
-                    this->mesh->elements(element, j));
+                unsigned columId = commonElementMatrix->getColumnId(elementConnections(element, i),
+                    elementConnections(element, j));
 
-                (*this->connectivityMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::blockSize + columId) =
-                    connectivityMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
-                (*this->elementalSMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::blockSize + columId) =
-                    elementalSMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
-                (*this->elementalRMatrix)(this->mesh->elements(element, i), level * numeric::sparseMatrix::blockSize + columId) =
-                    elementalRMatrices[level]->getValue(this->mesh->elements(element, i), this->mesh->elements(element, j));
+                (*this->connectivityMatrix)(elementConnections(element, i), level * numeric::sparseMatrix::blockSize + columId) =
+                    connectivityMatrices[level]->getValue(elementConnections(element, i), elementConnections(element, j));
+                (*this->elementalSMatrix)(elementConnections(element, i), level * numeric::sparseMatrix::blockSize + columId) =
+                    elementalSMatrices[level]->getValue(elementConnections(element, i), elementConnections(element, j));
+                (*this->elementalRMatrix)(elementConnections(element, i), level * numeric::sparseMatrix::blockSize + columId) =
+                    elementalRMatrices[level]->getValue(elementConnections(element, i), elementConnections(element, j));
             }
         }
     }
@@ -178,11 +184,11 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
     double integrationStart, integrationEnd;
 
     // calc excitation matrix
-    auto excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
+    auto const excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
     for (int boundaryElement = 0; boundaryElement < this->mesh->boundary.rows(); ++boundaryElement) {
         // get boundary nodes
-        Eigen::ArrayXXd nodes = this->mesh->boundaryNodes(boundaryElement);
+        auto nodes = this->mesh->boundaryNodes(boundaryElement);
 
         // sort nodes by parameter
         std::vector<Eigen::ArrayXd> nodesVector(nodes.rows());
@@ -198,7 +204,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
         }
 
         // calc parameter offset
-        double parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
+        auto const parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
 
         // calc node parameter centered to node 0
         for (unsigned i = 0; i < nodes.rows(); ++i) {
@@ -223,7 +229,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
                 // calc element
                 for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
                     (*excitationMatrix)(this->mesh->boundary(boundaryElement, node), piece) +=
-                        basisFunctionType::integrateBoundaryEdge(
+                        basisFunctionType::boundaryIntegral(
                             nodeParameter, node, integrationStart, integrationEnd) /
                         (integrationEnd - integrationStart);
                 }
@@ -241,11 +247,12 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
-    ::initJacobianCalculationMatrix(cudaStream_t const stream) {
+    ::initJacobianCalculationMatrix(bool const calculatesPotential, cudaStream_t const stream) {
     // fill connectivity and elementalJacobianMatrix
+    auto const elementConnections = basisFunctionType::elementConnections(this->mesh);
     auto const elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->elementalJacobianMatrix->rows, this->elementalJacobianMatrix->cols, stream);
-    for (int element = 0; element < this->mesh->elements.rows(); ++element) {
+    for (int element = 0; element < elementConnections.rows(); ++element) {
         // get element points
         auto const points = this->mesh->elementNodes(element);
 
@@ -253,13 +260,18 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
         for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
             // create basis functions
-            auto const basisI = basisFunctionType(points, i);
-            auto const basisJ = basisFunctionType(points, j);
+            auto const basisI = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, i));
+            auto const basisJ = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, j));
 
             // set elementalJacobianMatrix element
-            (*elementalJacobianMatrix)(element, i +
-                j * basisFunctionType::pointsPerElement) =
-                basisI.integrateGradientWithBasis(basisJ);
+            if (calculatesPotential) {
+                (*elementalJacobianMatrix)(element, i + j * basisFunctionType::pointsPerElement) =
+                    basisI.integralA(basisJ);                
+            }
+            else {
+                (*elementalJacobianMatrix)(element, i + j * basisFunctionType::pointsPerElement) =
+                    basisI.integralB(basisJ);                
+            }
         }
     }
 
@@ -318,9 +330,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::calcJacobi
     // calc jacobian
     FEM::equationKernel::calcJacobian<dataType, basisFunctionType::pointsPerElement, logarithmic>(
         blocks, threads, stream, phi->deviceData, &phi->deviceData[driveCount * phi->dataRows],
-        this->meshElements->deviceData, this->elementalJacobianMatrix->deviceData,
+        this->elementConnections->deviceData, this->elementalJacobianMatrix->deviceData,
         gamma->deviceData, this->referenceValue, jacobian->dataRows, jacobian->dataCols,
-        phi->dataRows, this->meshElements->rows, driveCount, measurmentCount, additiv,
+        phi->dataRows, this->elementConnections->rows, driveCount, measurmentCount, additiv,
         jacobian->deviceData);
 }
 
@@ -409,15 +421,19 @@ template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Quadratic, true>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Edge, false>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Quadratic, true>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Edge, false>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Quadratic, true>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, false>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Quadratic, true>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Quadratic, false>;
+template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, false>;

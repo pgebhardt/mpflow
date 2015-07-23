@@ -35,7 +35,7 @@ mpFlow::FEM::basis::Edge::Edge (
 
 // integrate with basis
 
-double mpFlow::FEM::basis::Edge::integrateWithBasis(
+double mpFlow::FEM::basis::Edge::integralB(
     Edge const& other
     ) const {
     return ({
@@ -47,7 +47,7 @@ double mpFlow::FEM::basis::Edge::integrateWithBasis(
 
 // integrate gradient with basis
 
-double mpFlow::FEM::basis::Edge::integrateGradientWithBasis(
+double mpFlow::FEM::basis::Edge::integralA(
     Edge const& other
     ) const {
     return ({
