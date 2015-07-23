@@ -43,7 +43,6 @@
 #include "fem/boundary_descriptor.h"
 #include "fem/source_descriptor.h"
 #include "fem/equation.h"
-#include "mwi/equation.h"
 
 // Models
 #include "models/eit.h"
