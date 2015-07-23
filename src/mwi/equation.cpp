@@ -96,16 +96,13 @@ void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const s
             auto const basisJ = std::make_shared<FEM::basis::Edge>(points, edgeJ);
 
             // set elemental system element
-            elementalSMatrices[level]->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
-                basisI->integrateGradientWithBasis(basisJ));
+                this->mesh->elementEdges(element, j), basisI.integrateGradientWithBasis(basisJ));
 
             // set elemental residual element
-            elementalRMatrices[level]->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
-                basisI->integrateWithBasis(basisJ));
+                this->mesh->elementEdges(element, j), basisI.integrateWithBasis(basisJ));
 
             // increment element count
-            elementCount->setValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]),
-                elementCount->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j])) + 1);
+                elementCount->getValue(this->mesh->elementEdges(element, i), this->mesh->elementEdges(element, j)) + 1);
         }
     }
 

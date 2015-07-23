@@ -58,8 +58,8 @@ namespace basis {
         double evaluate(Eigen::Ref<Eigen::ArrayXd const> point) const;
         
         // mathematical evaluation of basis
-        double integrateWithBasis(std::shared_ptr<Linear const> const other) const;
-        double integrateGradientWithBasis(std::shared_ptr<Linear const> const other) const;
+        double integrateWithBasis(Linear const& other) const;
+        double integrateGradientWithBasis(Linear const& other) const;
         static double integrateBoundaryEdge(Eigen::Ref<Eigen::ArrayXd const> const points,
             unsigned const one, double const start, double const end);
     };
@@ -74,8 +74,8 @@ namespace basis {
         double evaluate(Eigen::Ref<Eigen::ArrayXd const> point) const;
 
         // mathematical evaluation of basis
-        double integrateWithBasis(std::shared_ptr<Quadratic const> const other) const;
-        double integrateGradientWithBasis(std::shared_ptr<Quadratic const> const other) const;
+        double integrateWithBasis(Quadratic const& other) const;
+        double integrateGradientWithBasis(Quadratic const& other) const;
         static double integrateBoundaryEdge(Eigen::Ref<Eigen::ArrayXd const> const points,
             unsigned const one, double const start, double const end);
     };
@@ -88,8 +88,8 @@ namespace basis {
             Eigen::Ref<Eigen::ArrayXi const> const edge);
 
         // mathematical evaluation of basis
-        double integrateWithBasis(std::shared_ptr<Edge const> const other) const;
-        double integrateGradientWithBasis(std::shared_ptr<Edge const> const other) const;
+        double integrateWithBasis(Edge const& other) const;
+        double integrateGradientWithBasis(Edge const& other) const;
 
         // member
     protected:

@@ -103,16 +103,16 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
                 this->mesh->elements(element, j), element);
 
             // create basis functions
-            auto basisI = std::make_shared<basisFunctionType>(points, i);
-            auto basisJ = std::make_shared<basisFunctionType>(points, j);
+            auto const basisI = basisFunctionType(points, i);
+            auto const basisJ = basisFunctionType(points, j);
 
             // set elemental system element
             elementalSMatrices[level]->setValue(this->mesh->elements(element, i),
-                this->mesh->elements(element, j), basisI->integrateGradientWithBasis(basisJ));
+                this->mesh->elements(element, j), basisI.integrateGradientWithBasis(basisJ));
 
             // set elemental residual element
             elementalRMatrices[level]->setValue(this->mesh->elements(element, i),
-                this->mesh->elements(element, j), basisI->integrateWithBasis(basisJ));
+                this->mesh->elements(element, j), basisI.integrateWithBasis(basisJ));
 
             // increment element count
             elementCount->setValue(this->mesh->elements(element, i), this->mesh->elements(element, j),
@@ -262,10 +262,13 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
         // fill matrix
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
         for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
+            // create basis functions
+            auto const basisI = basisFunctionType(points, i);
+            auto const basisJ = basisFunctionType(points, j);
             // set elementalJacobianMatrix element
             (*elementalJacobianMatrix)(element, i +
                 j * basisFunctionType::pointsPerElement) =
-                basisFunction[i]->integrateGradientWithBasis(basisFunction[j]);
+                basisI.integrateGradientWithBasis(basisJ);
         }
     }
 

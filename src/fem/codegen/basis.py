@@ -135,7 +135,7 @@ class Basis(object):
             for i in range(self.nodes_per_element)]
 
         this_coefficients = ['this->coefficients({})'.format(i) for i in range(self.nodes_per_element)]
-        other_coefficients = ['other->coefficients({})'.format(i) for i in range(self.nodes_per_element)]
+        other_coefficients = ['other.coefficients({})'.format(i) for i in range(self.nodes_per_element)]
 
         # render template
         return template.render(
@@ -159,13 +159,13 @@ class Basis(object):
             integrateWithBasis=self.integrateWithBasis(
                 points_args, this_coefficients, other_coefficients,
                 dtype='double',
-                custom_args=['std::shared_ptr<{} const> const other'.format(self.name)],
+                custom_args=['{} const& other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
                 ),
             integrateGradientWithBasis=self.integrateGradientWithBasis(
                 points_args, this_coefficients, other_coefficients,
                 dtype='double',
-                custom_args=['std::shared_ptr<{} const> const other'.format(self.name)],
+                custom_args=['{} const& other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
                 ),
 
@@ -235,8 +235,8 @@ class EdgeBasis(object):
         # coefficients
         ci1 = ['this->nodeBasis[0].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
         ci2 = ['this->nodeBasis[1].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        cj1 = ['other->nodeBasis[0].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
-        cj2 = ['other->nodeBasis[1].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj1 = ['other.nodeBasis[0].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
+        cj2 = ['other.nodeBasis[1].coefficients({})'.format(i) for i in range(self.nodeBasis.nodes_per_element)]
 
         # render template
         return template.render(
@@ -245,15 +245,15 @@ class EdgeBasis(object):
 
             # model integrals
             integrateWithBasis=self.integrateWithBasis(
-                points_args, 'this->length', 'other->length', ci1, ci2, cj1, cj2,
+                points_args, 'this->length', 'other.length', ci1, ci2, cj1, cj2,
                 dtype='double',
-                custom_args=['std::shared_ptr<{} const> const other'.format(self.name)],
+                custom_args=['{} const& other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateWithBasis'.format(self.name),
                 ),
             integrateGradientWithBasis=self.integrateGradientWithBasis(
-                points_args, 'this->length', 'other->length', ci1, ci2, cj1, cj2,
+                points_args, 'this->length', 'other.length', ci1, ci2, cj1, cj2,
                 dtype='double',
-                custom_args=['std::shared_ptr<{} const> const other'.format(self.name)],
+                custom_args=['{} const& other'.format(self.name)],
                 name='mpFlow::FEM::basis::{}::integrateGradientWithBasis'.format(self.name),
                 ),
             )
