@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
 #include "mpflow/mpflow.h"
 #include "mpflow/fem/equation_kernel.h"
+#include "mpflow/mwi/equation_kernel.h"
 
 template <
     class dataType
@@ -33,18 +34,16 @@ mpFlow::MWI::Equation<dataType>::Equation(std::shared_ptr<numeric::IrregularMesh
     }
 
     // init matrices
-    auto const globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-    auto const edges = std::get<0>(globalEdgeIndex);
-
+    this->edges = numeric::Matrix<int>::fromEigen(std::get<0>(numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements)), stream);
     this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        edges.size(), edges.size(), stream);
+        this->edges->rows, this->edges->rows, stream);
     this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        edges.size(), edges.size(), stream);
+        this->edges->rows, this->edges->rows, stream);
     this->systemMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
-        edges.size(), edges.size(), stream);
+        this->edges->rows, this->edges->rows, stream);
     this->elementalJacobianMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->elements.rows(), math::square(3), stream, 0.0, false);
-
+    
     this->initElementalMatrices(stream);
     this->initJacobianCalculationMatrix(stream);
 }
@@ -56,11 +55,10 @@ template <
 void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const stream) {
     // calculate indices of unique mesh edges
     auto const globalEdgeIndex = numeric::irregularMesh::calculateGlobalEdgeIndices(this->mesh->elements);
-    auto const edges = std::get<0>(globalEdgeIndex);
 
     // create intermediate matrices
     auto const elementCount = std::make_shared<numeric::SparseMatrix<unsigned>>(
-        edges.size(), edges.size(), stream);
+        this->edges->rows, this->edges->rows, stream);
     std::vector<std::shared_ptr<numeric::SparseMatrix<unsigned>>> connectivityMatrices;
     std::vector<std::shared_ptr<numeric::SparseMatrix<dataType>>> elementalSMatrices, elementalRMatrices;
 
@@ -79,11 +77,11 @@ void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const s
             size_t const level = elementCount->getValue(std::get<0>(localEdges[i]), std::get<0>(localEdges[j]));
             if (connectivityMatrices.size() <= level) {
                 connectivityMatrices.push_back(std::make_shared<numeric::SparseMatrix<unsigned>>(
-                    edges.size(), edges.size(), stream));
+                    this->edges->rows, this->edges->rows, stream));
                 elementalSMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    edges.size(), edges.size(), stream));
+                    this->edges->rows, this->edges->rows, stream));
                 elementalRMatrices.push_back(std::make_shared<numeric::SparseMatrix<dataType>>(
-                    edges.size(), edges.size(), stream));
+                    this->edges->rows, this->edges->rows, stream));
             }
 
             // set connectivity element
@@ -113,7 +111,7 @@ void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const s
 
     // determine nodes with common element
     auto const commonElementMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
-        edges.size(), edges.size(), stream);
+        this->edges->rows, this->edges->rows, stream);
     for (int element = 0; element < this->mesh->elements.rows(); ++element) {
         auto localEdges = std::get<1>(globalEdgeIndex)[element];
 
@@ -131,11 +129,11 @@ void mpFlow::MWI::Equation<dataType>::initElementalMatrices(cudaStream_t const s
 
     // create elemental matrices
     this->connectivityMatrix = std::make_shared<numeric::Matrix<unsigned>>(
-        edges.size(), numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
+        this->edges->rows, numeric::sparseMatrix::blockSize * connectivityMatrices.size(),
         stream, constants::invalidIndex);
-    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
+    this->elementalSMatrix = std::make_shared<numeric::Matrix<dataType>>(this->edges->rows,
         numeric::sparseMatrix::blockSize * elementalSMatrices.size(), stream);
-    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(edges.size(),
+    this->elementalRMatrix = std::make_shared<numeric::Matrix<dataType>>(this->edges->rows,
         numeric::sparseMatrix::blockSize * elementalRMatrices.size(), stream);
 
     // store all elemental matrices in one matrix for each type in a sparse
@@ -203,6 +201,34 @@ void mpFlow::MWI::Equation<dataType>::initJacobianCalculationMatrix(cudaStream_t
 
     elementalJacobianMatrix->copyToDevice(stream);
     this->elementalJacobianMatrix->copy(elementalJacobianMatrix, stream);
+}
+
+// calc jacobian
+template <
+    class dataType
+>
+void mpFlow::MWI::Equation<dataType>::calcJacobian(
+    std::shared_ptr<numeric::Matrix<dataType> const> const field,
+    cudaStream_t const stream, std::shared_ptr<numeric::Matrix<dataType>> const jacobian) const {
+    // check input
+    if (field == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: phi == nullptr");
+    }
+    if (jacobian == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::ellipticalEquation::calcJacobian: jacobian == nullptr");
+    }
+
+    // dimension
+    dim3 blocks(jacobian->dataRows / numeric::matrix::blockSize,
+        jacobian->dataCols / numeric::matrix::blockSize);
+    dim3 threads(numeric::matrix::blockSize, numeric::matrix::blockSize);
+
+    // calc jacobian
+    MWI::equationKernel::calcJacobian<dataType>(blocks, threads, stream,
+        field->deviceData, this->edges->deviceData, this->elementalJacobianMatrix->deviceData,
+        jacobian->dataRows, jacobian->dataCols, field->dataRows, this->mesh->elements.rows(),
+        field->cols, jacobian->deviceData);
+
 }
 
 template <

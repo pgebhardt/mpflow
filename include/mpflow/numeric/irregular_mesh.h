@@ -78,8 +78,7 @@ namespace numeric {
             Eigen::Ref<Eigen::ArrayXXd const> const nodes, Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary);
 
-        std::tuple<
-            std::vector<std::tuple<unsigned, unsigned>>,
+        std::tuple<Eigen::ArrayXXi,
             std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>>>
             calculateGlobalEdgeIndices(Eigen::Ref<Eigen::ArrayXXi const> const elements);
     }

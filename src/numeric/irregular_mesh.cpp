@@ -340,8 +340,7 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     return std::make_tuple(nodes_new, elements_new, boundary_new);
 }
 
-std::tuple<
-    std::vector<std::tuple<unsigned, unsigned>>,
+std::tuple<Eigen::ArrayXXi,
     std::vector<std::array<std::tuple<unsigned, std::tuple<unsigned, unsigned>>, 3>>>
     mpFlow::numeric::irregularMesh::calculateGlobalEdgeIndices(
         Eigen::Ref<Eigen::ArrayXXi const> const elements) {
@@ -352,12 +351,12 @@ std::tuple<
     for (int element = 0; element < elements.rows(); ++element)
     for (unsigned i = 0; i < 3; ++i) {
         // sort edge to guarantee constant global edge orientation
-        auto edge = elements(element, i) < elements(element, (i + 1) % 3) ?
+        auto const edge = elements(element, i) < elements(element, (i + 1) % 3) ?
             std::make_tuple(elements(element, i), elements(element, (i + 1) % 3)) :
             std::make_tuple(elements(element, (i + 1) % 3), elements(element, i));
 
         // add edge to edges vector, if it was not already inserted
-        auto edgePosition = std::find(edges.begin(), edges.end(), edge);
+        auto const edgePosition = std::find(edges.begin(), edges.end(), edge);
         if (edgePosition != edges.end()) {
             localEdgeConnections[element][i] = std::make_tuple(std::distance(edges.begin(), edgePosition),
                 elements(element, i) < elements(element, (i + 1) % 3) ?
@@ -371,5 +370,12 @@ std::tuple<
         }
     }
 
-    return std::make_tuple(edges, localEdgeConnections);
+    // convert stl vectors to eigen arrays
+    Eigen::ArrayXXi edgesArray(edges.size(), 2);
+    for (unsigned edge = 0; edge < edges.size(); ++edge) {
+        edgesArray(edge, 0) = std::get<0>(edges[edge]);
+        edgesArray(edge, 1) = std::get<1>(edges[edge]);
+    }
+
+    return std::make_tuple(edgesArray, localEdgeConnections);
 }

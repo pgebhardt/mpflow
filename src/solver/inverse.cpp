@@ -106,10 +106,10 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
             for (unsigned i = 0; i < localEdges.size(); ++i) {
                 auto const edge = std::get<0>(localEdges[i]);
                 auto const length = std::sqrt(
-                    math::square(this->mesh->nodes(std::get<0>(edges[edge]), 0) -
-                        this->mesh->nodes(std::get<1>(edges[edge]), 0)) +
-                    math::square(this->mesh->nodes(std::get<0>(edges[edge]), 1) -
-                        this->mesh->nodes(std::get<1>(edges[edge]), 1)));
+                    math::square(this->mesh->nodes(edges(edge, 0), 0) -
+                        this->mesh->nodes(edges(edge, 1), 0)) +
+                    math::square(this->mesh->nodes(edges(edge, 0), 1) -
+                        this->mesh->nodes(edges(edge, 1), 1)));
                         
                 (*L)(edge, element) = signs(edge) * length;
                 signs(std::get<0>(localEdges[i])) *= -1;
