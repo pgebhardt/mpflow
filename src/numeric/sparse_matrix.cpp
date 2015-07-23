@@ -140,7 +140,9 @@ void mpFlow::numeric::SparseMatrix<type>::copy(std::shared_ptr<SparseMatrix<type
     // check size
     if ((other->rows != this->rows) ||
         (other->cols != this->cols)) {
-        throw std::invalid_argument("mpFlow::numeric::SparseMatrix::copy: shape does not match");
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::SparseMatrix::copy: shape does not match: (%d, %d) != (%d, %d)")
+            (this->rows, this->cols, other->rows, other->cols));
     }
 
     // copy data
