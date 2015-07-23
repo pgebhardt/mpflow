@@ -335,7 +335,9 @@ template <
 unsigned mpFlow::numeric::SparseMatrix<type>::getColumnId(unsigned const row, unsigned const col) const {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
-        throw std::logic_error("mpFlow::numeric::SparseMatrix::getColumnId(): index out of range");
+        throw std::logic_error(
+            str::format("mpFlow::numeric::SparseMatrix::getColumnId(): index out of range: (%d, %d) >= (%d, %d")
+                (row, col, this->rows, this->cols));
     }
 
     // find index in column ids
@@ -371,7 +373,9 @@ template <
 void mpFlow::numeric::SparseMatrix<type>::setValue(unsigned const row, unsigned const col, type const& value) {
     // check index sizes
     if ((row >= this->rows) || (col >= this->cols)) {
-        throw std::logic_error("mpFlow::numeric::SparseMatrix::setValue(): index out of range");
+        throw std::logic_error(
+            str::format("mpFlow::numeric::SparseMatrix::setValue(): index out of range: (%d, %d) >= (%d, %d")
+                (row, col, this->rows, this->cols));
     }
 
     // find index in column ids
