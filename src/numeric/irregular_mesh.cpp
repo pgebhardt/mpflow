@@ -22,10 +22,11 @@
 
 // create mesh class
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
-    Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const boundary,
+    Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const edges,
+    Eigen::Ref<Eigen::ArrayXXi const> const elementEdges, Eigen::Ref<Eigen::ArrayXXi const> const boundary,
     double const height)
-    : nodes(nodes), edges(std::get<0>(irregularMesh::calculateGlobalEdgeIndices(elements))), elements(elements),
-    elementEdges(std::get<1>(irregularMesh::calculateGlobalEdgeIndices(elements))), boundary(boundary), height(height) {
+    : nodes(nodes), elements(elements), edges(edges), elementEdges(elementEdges),
+    boundary(boundary), height(height) {
     // check input
     if (nodes.cols() != 2) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->cols != 2");
@@ -37,7 +38,9 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> 
 
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height)
-    : IrregularMesh(nodes, elements, distmesh::boundEdges(elements), height) { }
+    : IrregularMesh(nodes, elements, distmesh::utils::findUniqueBars(elements),
+        distmesh::utils::getTriangulationBarIndices(elements, distmesh::utils::findUniqueBars(elements)),
+        distmesh::boundEdges(elements), height) { }
 
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
     json_value const& config,
@@ -339,39 +342,4 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
 
     // return quadratic mesh matrices
     return std::make_tuple(nodes_new, elements_new, boundary_new);
-}
-
-std::tuple<Eigen::ArrayXXi, Eigen::ArrayXXi>
-    mpFlow::numeric::irregularMesh::calculateGlobalEdgeIndices(
-        Eigen::Ref<Eigen::ArrayXXi const> const elements) {
-    std::vector<std::tuple<unsigned, unsigned>> edges;
-    Eigen::ArrayXXi localEdgeConnections(elements.rows(), 3);
-
-    // find all unique edges
-    for (int element = 0; element < elements.rows(); ++element)
-    for (unsigned i = 0; i < 3; ++i) {
-        // sort edge to guarantee constant global edge orientation
-        auto const edge = elements(element, i) < elements(element, (i + 1) % 3) ?
-            std::make_tuple(elements(element, i), elements(element, (i + 1) % 3)) :
-            std::make_tuple(elements(element, (i + 1) % 3), elements(element, i));
-
-        // add edge to edges vector, if it was not already inserted
-        auto const edgePosition = std::find(edges.begin(), edges.end(), edge);
-        if (edgePosition != edges.end()) {
-            localEdgeConnections(element, i) = std::distance(edges.begin(), edgePosition);
-        }
-        else {
-            edges.push_back(edge);
-            localEdgeConnections(element, i) = edges.size() - 1;
-        }
-    }
-
-    // convert stl vectors to eigen arrays
-    Eigen::ArrayXXi edgesArray(edges.size(), 2);
-    for (unsigned edge = 0; edge < edges.size(); ++edge) {
-        edgesArray(edge, 0) = std::get<0>(edges[edge]);
-        edgesArray(edge, 1) = std::get<1>(edges[edge]);
-    }
-
-    return std::make_tuple(edgesArray, localEdgeConnections);
 }

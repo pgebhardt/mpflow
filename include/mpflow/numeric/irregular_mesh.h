@@ -36,11 +36,12 @@ namespace numeric {
         // constructor
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
             Eigen::Ref<Eigen::ArrayXXi const> const elements,
+            Eigen::Ref<Eigen::ArrayXXi const> const edges,
+            Eigen::Ref<Eigen::ArrayXXi const> const elementEdges,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary,
             double const height);
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
-            Eigen::Ref<Eigen::ArrayXXi const> const elements,
-            double const height);
+            Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height);
 
         // factories
         static std::shared_ptr<IrregularMesh> fromConfig(json_value const& config,
@@ -61,8 +62,8 @@ namespace numeric {
 
         // member
         Eigen::ArrayXXd const nodes;
-        Eigen::ArrayXXi const edges;
         Eigen::ArrayXXi const elements;
+        Eigen::ArrayXXi const edges;
         Eigen::ArrayXXi const elementEdges;
         Eigen::ArrayXXi const boundary;
         double const height;
@@ -79,9 +80,6 @@ namespace numeric {
         std::tuple<Eigen::ArrayXXd, Eigen::ArrayXXi, Eigen::ArrayXXi> quadraticMeshFromLinear(
             Eigen::Ref<Eigen::ArrayXXd const> const nodes, Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary);
-
-        std::tuple<Eigen::ArrayXXi, Eigen::ArrayXXi>
-            calculateGlobalEdgeIndices(Eigen::Ref<Eigen::ArrayXXi const> const elements);
     }
 }
 }
