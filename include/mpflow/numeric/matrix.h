@@ -109,7 +109,9 @@ namespace numeric {
                 throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
             }
             if ((i >= this->rows) || (j >= this->cols)) {
-                throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
+                throw std::invalid_argument(
+                    str::format("mpFlow::numeric::Matrix::operator(): index out of range: (%d, %d) >= (%d, %d)")
+                        (i, j, this->rows, this->cols));
             }
 
             return this->hostData[i + j * this->dataRows];
@@ -122,7 +124,9 @@ namespace numeric {
                 throw std::logic_error("mpFlow::numeric::Matrix::operator(): host memory was not allocated");
             }
             if ((i >= this->rows) || (j >= this->cols)) {
-                throw std::invalid_argument("mpFlow::numeric::Matrix::operator(): index out of range");
+                throw std::invalid_argument(
+                    str::format("mpFlow::numeric::Matrix::operator(): index out of range: (%d, %d) >= (%d, %d)")
+                        (i, j, this->rows, this->cols));
             }
 
             return this->hostData[i + j * this->dataRows];
