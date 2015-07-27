@@ -189,7 +189,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
     for (int boundaryElement = 0; boundaryElement < this->mesh->boundary.rows(); ++boundaryElement) {
         // get boundary nodes
         auto nodes = this->mesh->boundaryNodes(boundaryElement);
-
+        
         // sort nodes by parameter
         std::vector<Eigen::ArrayXd> nodesVector(nodes.rows());
         for (unsigned i = 0; i < nodes.rows(); ++i) {
@@ -228,7 +228,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
             if (integrationStart < integrationEnd) {
                 // calc element
                 for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
-                    (*excitationMatrix)(this->mesh->boundary(boundaryElement, node), piece) +=
+                    (*excitationMatrix)(this->mesh->edges(this->mesh->boundary(boundaryElement), node), piece) +=
                         basisFunctionType::boundaryIntegral(
                             nodeParameter, node, integrationStart, integrationEnd) /
                         (integrationEnd - integrationStart);

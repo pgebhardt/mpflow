@@ -23,7 +23,7 @@
 // create mesh class
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const edges,
-    Eigen::Ref<Eigen::ArrayXXi const> const elementEdges, Eigen::Ref<Eigen::ArrayXXi const> const boundary,
+    Eigen::Ref<Eigen::ArrayXXi const> const elementEdges, Eigen::Ref<Eigen::ArrayXi const> const boundary,
     double const height)
     : nodes(nodes), elements(elements), edges(edges), elementEdges(elementEdges),
     boundary(boundary), height(height) {
@@ -38,8 +38,8 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> 
 
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height)
-    : IrregularMesh(nodes, elements, distmesh::utils::findUniqueBars(elements),
-        distmesh::utils::getTriangulationBarIndices(elements, distmesh::utils::findUniqueBars(elements)),
+    : IrregularMesh(nodes, elements, distmesh::utils::findUniqueEdges(elements),
+        distmesh::utils::getTriangulationEdgeIndices(elements, distmesh::utils::findUniqueEdges(elements)),
         distmesh::boundEdges(elements), height) { }
 
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
@@ -110,11 +110,11 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const elem
 
 Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned const element) const {
     // result array
-    Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->boundary.cols(), 2);
+    Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->edges.cols(), 2);
 
     // get node index and coordinate
-    for (int node = 0; node < this->boundary.cols(); ++node) {
-        result.row(node) = this->nodes.row(this->boundary(element, node));
+    for (int node = 0; node < this->edges.cols(); ++node) {
+        result.row(node) = this->nodes.row(this->edges(this->boundary(element), node));
     }
 
     return result;

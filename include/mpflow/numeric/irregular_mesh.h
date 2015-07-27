@@ -38,7 +38,7 @@ namespace numeric {
             Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const edges,
             Eigen::Ref<Eigen::ArrayXXi const> const elementEdges,
-            Eigen::Ref<Eigen::ArrayXXi const> const boundary,
+            Eigen::Ref<Eigen::ArrayXi const> const boundary,
             double const height);
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
             Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height);
@@ -65,7 +65,7 @@ namespace numeric {
         Eigen::ArrayXXi const elements;
         Eigen::ArrayXXi const edges;
         Eigen::ArrayXXi const elementEdges;
-        Eigen::ArrayXXi const boundary;
+        Eigen::ArrayXi const boundary;
         double const height;
     };
 
