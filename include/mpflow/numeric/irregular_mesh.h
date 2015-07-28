@@ -50,7 +50,7 @@ namespace numeric {
 
         // helper methods
         Eigen::ArrayXXd elementNodes(unsigned const element) const;
-        Eigen::ArrayXXd boundaryNodes(unsigned const element) const;
+        Eigen::ArrayXXd boundaryNodes(unsigned const edge) const;
 
         // interpolation
         template <
@@ -58,7 +58,7 @@ namespace numeric {
             class dataType
         >
         std::shared_ptr<numeric::SparseMatrix<dataType>> createInterpolationMatrix(
-            std::shared_ptr<IrregularMesh const> const mesh, cudaStream_t const stream);
+            std::shared_ptr<IrregularMesh const> const mesh, cudaStream_t const stream) const;
 
         // member
         Eigen::ArrayXXd const nodes;

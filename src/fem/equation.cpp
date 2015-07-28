@@ -186,22 +186,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
     // calc excitation matrix
     auto const excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
-    for (int boundaryElement = 0; boundaryElement < this->mesh->boundary.rows(); ++boundaryElement) {
+    for (int edge = 0; edge < this->mesh->boundary.rows(); ++edge) {
         // get boundary nodes
-        auto nodes = this->mesh->boundaryNodes(boundaryElement);
-        
-        // sort nodes by parameter
-        std::vector<Eigen::ArrayXd> nodesVector(nodes.rows());
-        for (unsigned i = 0; i < nodes.rows(); ++i) {
-            nodesVector[i] = nodes.row(i);
-        }
-        std::sort(nodesVector.begin(), nodesVector.end(),
-            [](Eigen::Ref<Eigen::ArrayXd const> const a, Eigen::Ref<Eigen::ArrayXd const> const b) -> bool {
-            return math::circleParameter(b, math::circleParameter(a, 0.0)) > 0.0;
-        });
-        for (unsigned i = 0; i < nodes.rows(); ++i) {
-            nodes.row(i) = nodesVector[i];
-        }
+        auto const nodes = this->mesh->boundaryNodes(edge);
 
         // calc parameter offset
         auto const parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
@@ -211,24 +198,24 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
             nodeParameter(i) = math::circleParameter(nodes.row(i).transpose(), parameterOffset);
         }
 
-        for (unsigned piece = 0; piece < this->boundaryDescriptor->count; ++piece) {
+        for (unsigned port = 0; port < this->boundaryDescriptor->count; ++port) {
             // skip boundary part, if radii dont match
-            if (std::abs(math::polar(this->boundaryDescriptor->coordinates.block(piece, 0, 1, 2).transpose())(0) -
+            if (std::abs(math::polar(this->boundaryDescriptor->coordinates.block(port, 0, 1, 2).transpose())(0) -
                 math::polar(nodes.row(0).transpose())(0)) > 1e-4) {
                 continue;
             }
 
             // calc integration interval centered to node 0
-            integrationStart = math::circleParameter(this->boundaryDescriptor->coordinates.block(piece, 0, 1, 2).transpose(),
+            integrationStart = math::circleParameter(this->boundaryDescriptor->coordinates.block(port, 0, 1, 2).transpose(),
                 parameterOffset);
-            integrationEnd = math::circleParameter(this->boundaryDescriptor->coordinates.block(piece, 2, 1, 2).transpose(),
+            integrationEnd = math::circleParameter(this->boundaryDescriptor->coordinates.block(port, 2, 1, 2).transpose(),
                 parameterOffset);
 
             // intgrate if integrationStart is left of integrationEnd
             if (integrationStart < integrationEnd) {
                 // calc element
                 for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
-                    (*excitationMatrix)(this->mesh->edges(this->mesh->boundary(boundaryElement), node), piece) +=
+                    (*excitationMatrix)(this->mesh->edges(abs(this->mesh->boundary(edge)), node), port) +=
                         basisFunctionType::boundaryIntegral(
                             nodeParameter, node, integrationStart, integrationEnd) /
                         (integrationEnd - integrationStart);

@@ -40,7 +40,7 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> 
     Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height)
     : IrregularMesh(nodes, elements, distmesh::utils::findUniqueEdges(elements),
         distmesh::utils::getTriangulationEdgeIndices(elements, distmesh::utils::findUniqueEdges(elements)),
-        distmesh::boundEdges(elements), height) { }
+        distmesh::boundEdges(nodes, elements), height) { }
 
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
     json_value const& config,
@@ -97,10 +97,9 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
 }
 
 Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const element) const {
-    // result array
-    Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->elements.cols(), 2);
-
     // get node index and coordinate
+    Eigen::ArrayXXd result(this->elements.cols(), 2);
+    
     for (int node = 0; node < this->elements.cols(); ++node) {
         result.row(node) = this->nodes.row(this->elements(element, node));
     }
@@ -108,13 +107,14 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const elem
     return result;
 }
 
-Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned const element) const {
-    // result array
-    Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(this->edges.cols(), 2);
-
+Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned const edge) const {
     // get node index and coordinate
+    Eigen::ArrayXXd result(this->edges.cols(), 2);
+    auto const edgeIndex = this->boundary(edge);
+    
     for (int node = 0; node < this->edges.cols(); ++node) {
-        result.row(node) = this->nodes.row(this->edges(this->boundary(element), node));
+        auto const index = (edgeIndex >= 0 ? node : (this->edges.cols() - node - 1));
+        result.row(index) = this->nodes.row(this->edges(abs(edgeIndex), node));
     }
 
     return result;
@@ -127,7 +127,7 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::SparseMatrix<dataType>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix(
-    std::shared_ptr<IrregularMesh const> const mesh, cudaStream_t const stream) {
+    std::shared_ptr<IrregularMesh const> const mesh, cudaStream_t const stream) const {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh:createInterpolationMatrix: mesh == nullptr");
@@ -160,30 +160,29 @@ std::shared_ptr<mpFlow::numeric::SparseMatrix<dataType>>
 
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, float> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, double> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, thrust::complex<float>> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Linear, thrust::complex<double>> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<float>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, float> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<double>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, double> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, thrust::complex<float>> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, thrust::complex<double>> (
-    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const);
+    std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
     
-
 // create mesh for quadratic basis function
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::quadraticBasis(
     Eigen::Ref<Eigen::ArrayXXd const> const nodes,
