@@ -75,6 +75,7 @@ template <
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElementalMatrices(
     cudaStream_t const stream) {
+    // get the number of degrees of freedom for the given mesh and basis function type
     unsigned const pointCount = basisFunctionType::pointCount(mesh);
 
     // create intermediate matrices
@@ -190,10 +191,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
         // get boundary nodes
         auto const nodes = this->mesh->boundaryNodes(edge);
 
-        // calc parameter offset
-        auto const parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
-
         // calc node parameter centered to node 0
+        auto const parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
         for (unsigned i = 0; i < nodes.rows(); ++i) {
             nodeParameter(i) = math::circleParameter(nodes.row(i).transpose(), parameterOffset);
         }
