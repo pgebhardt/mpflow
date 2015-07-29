@@ -22,25 +22,24 @@
 
 // create mesh class
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
-    Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const edges,
-    Eigen::Ref<Eigen::ArrayXXi const> const elementEdges, Eigen::Ref<Eigen::ArrayXi const> const boundary,
-    double const height)
-    : nodes(nodes), elements(elements), edges(edges), elementEdges(elementEdges),
-    boundary(boundary), height(height) {
+    Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const edges)
+    : nodes(nodes), elements(elements), edges(edges), elementEdges(distmesh::utils::getTriangulationEdgeIndices(elements, edges)),
+    boundary(distmesh::boundEdges(nodes, elements, edges)) {
     // check input
     if (nodes.cols() != 2) {
-        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes->cols != 2");
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes.cols() != 2");
     }
-    if (height <= 0.0) {
-        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: height <= 0.0");
+    if (elements.rows() == 0) {
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: elements.rows() == 0");
+    }
+    if (edges.rows() == 0) {
+        throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: edges.rows() == 0");
     }
 }
 
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
-    Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height)
-    : IrregularMesh(nodes, elements, distmesh::utils::findUniqueEdges(elements),
-        distmesh::utils::getTriangulationEdgeIndices(elements, distmesh::utils::findUniqueEdges(elements)),
-        distmesh::boundEdges(nodes, elements), height) { }
+    Eigen::Ref<Eigen::ArrayXXi const> const elements)
+    : IrregularMesh(nodes, elements, distmesh::utils::findUniqueEdges(elements)) { }
 
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
     json_value const& config,
@@ -51,9 +50,6 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
         return nullptr;
     }
 
-    // extract basic mesh parameter
-    double const height = config["height"];
-
     if (config["path"].type != json_none) {
         // load mesh from file
         std::string const meshPath = str::format("%s/%s")(path, std::string(config["path"]));
@@ -61,7 +57,7 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
         auto const nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/nodes.txt")(meshPath), stream);
         auto const elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elements.txt")(meshPath), stream);
             
-        return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen(), height);
+        return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen());
     }
     else if ((config["radius"].type != json_none) &&
             (config["outerEdgeLength"].type != json_none) &&
@@ -82,12 +78,13 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
 
         // create mpflow matrix objects from distmesh arrays
         auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(std::get<0>(distMesh),
-            std::get<1>(distMesh), height);
+            std::get<1>(distMesh));
 
         // save mesh to files for later usage
         mkdir(str::format("%s/mesh")(path).c_str(), 0777);
         mpFlow::numeric::Matrix<double>::fromEigen(mesh->nodes, stream)->savetxt(str::format("%s/mesh/nodes.txt")(path));
         mpFlow::numeric::Matrix<int>::fromEigen(mesh->elements, stream)->savetxt(str::format("%s/mesh/elements.txt")(path));
+        mpFlow::numeric::Matrix<int>::fromEigen(mesh->edges, stream)->savetxt(str::format("%s/mesh/edges.txt")(path));
 
         return mesh;
     }
@@ -182,13 +179,13 @@ template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<float>>>
 template std::shared_ptr<mpFlow::numeric::SparseMatrix<thrust::complex<double>>>
     mpFlow::numeric::IrregularMesh::createInterpolationMatrix<mpFlow::FEM::basis::Quadratic, thrust::complex<double>> (
     std::shared_ptr<mpFlow::numeric::IrregularMesh const> const, cudaStream_t const) const;
-    
+
+/*
 // create mesh for quadratic basis function
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::irregularMesh::quadraticBasis(
     Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements,
-    Eigen::Ref<Eigen::ArrayXXi const> const boundary,
-    double const height) {
+    Eigen::Ref<Eigen::ArrayXXi const> const boundary) {
     // create quadratic grid
     Eigen::ArrayXXd n;
     Eigen::ArrayXXi e, b;
@@ -342,3 +339,4 @@ mpFlow::numeric::irregularMesh::quadraticMeshFromLinear(
     // return quadratic mesh matrices
     return std::make_tuple(nodes_new, elements_new, boundary_new);
 }
+*/

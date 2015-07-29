@@ -37,8 +37,8 @@ namespace models {
         // initialization
         EIT(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
-            dataType const referenceValue, unsigned const components, cublasHandle_t const handle,
-            cudaStream_t const stream);
+            dataType const referenceValue, double const height, unsigned const components,
+            cublasHandle_t const handle, cudaStream_t const stream);
 
         // factories
         static std::shared_ptr<EIT<numericalSolverType, equationType>>
@@ -63,6 +63,7 @@ namespace models {
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
         std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source;
         dataType const referenceValue;
+        double const height;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;

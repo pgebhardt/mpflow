@@ -36,12 +36,9 @@ namespace numeric {
         // constructor
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
             Eigen::Ref<Eigen::ArrayXXi const> const elements,
-            Eigen::Ref<Eigen::ArrayXXi const> const edges,
-            Eigen::Ref<Eigen::ArrayXXi const> const elementEdges,
-            Eigen::Ref<Eigen::ArrayXi const> const boundary,
-            double const height);
+            Eigen::Ref<Eigen::ArrayXXi const> const edges);
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
-            Eigen::Ref<Eigen::ArrayXXi const> const elements, double const height);
+            Eigen::Ref<Eigen::ArrayXXi const> const elements);
 
         // factories
         static std::shared_ptr<IrregularMesh> fromConfig(json_value const& config,
@@ -66,9 +63,8 @@ namespace numeric {
         Eigen::ArrayXXi const edges;
         Eigen::ArrayXXi const elementEdges;
         Eigen::ArrayXi const boundary;
-        double const height;
     };
-
+/*
     // mesh helper
     namespace irregularMesh {
         // create mesh for quadratic basis function
@@ -81,6 +77,7 @@ namespace numeric {
             Eigen::Ref<Eigen::ArrayXXd const> const nodes, Eigen::Ref<Eigen::ArrayXXi const> const elements,
             Eigen::Ref<Eigen::ArrayXXi const> const boundary);
     }
+*/
 }
 }
 

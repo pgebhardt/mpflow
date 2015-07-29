@@ -28,15 +28,18 @@ template <
 mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
-    dataType const referenceValue, unsigned const components, cublasHandle_t const handle,
-    cudaStream_t const stream)
-    : mesh(mesh), source(source), referenceValue(referenceValue) {
+    dataType const referenceValue, double const height, unsigned const components,
+    cublasHandle_t const handle, cudaStream_t const stream)
+    : mesh(mesh), source(source), referenceValue(referenceValue), height(height) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: mesh == nullptr");
     }
     if (source == nullptr) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: source == nullptr");
+    }
+    if (height <= 0.0) {
+        throw std::invalid_argument("mpFlow::models::EIT::EIT: height <= 0.0");
     }
     if (components < 1) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: components < 1");
@@ -73,7 +76,7 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
     // create matrix to calculate system excitation from electrode excitation
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->source->measurementPattern->cols,
-        this->equation->mesh->nodes.rows(), stream, 0.0, false);
+        this->mesh->nodes.rows(), stream, 0.0, false);
           
     if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
         applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
@@ -129,12 +132,15 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     // read out reference value
     auto const referenceValue = parseReferenceValue<dataType>(config["material"]);
 
+    // read out model height
+    auto const height = config["mesh"]["height"].u.dbl;
+    
     // read out 2.5D components count
     auto const componentsCount = std::max(1, (int)config["componentsCount"].u.integer);
         
     // create forward model
     return std::make_shared<EIT<numericalSolverType, equationType>>(mesh, source,
-        referenceValue, componentsCount, handle, stream);
+        referenceValue, height, componentsCount, handle, stream);
 }
 
 // forward solving
@@ -158,9 +164,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     unsigned totalSteps = 0;
     for (unsigned component = 0; component < this->phi.size(); ++component) {
         // 2.5D model constants
-        dataType alpha = math::square(2.0 * component * M_PI / this->equation->mesh->height);
-        dataType beta = component == 0 ? (1.0 / this->equation->mesh->height) :
-            (2.0 * sin(component * M_PI * this->equation->boundaryDescriptor->height / this->equation->mesh->height) /
+        dataType alpha = math::square(2.0 * component * M_PI / this->height);
+        dataType beta = component == 0 ? (1.0 / this->height) :
+            (2.0 * sin(component * M_PI * this->equation->boundaryDescriptor->height / this->height) /
                 (component * M_PI * this->equation->boundaryDescriptor->height));
 
         // update system matrix for different 2.5D components
