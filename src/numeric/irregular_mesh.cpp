@@ -23,8 +23,9 @@
 // create mesh class
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const edges)
-    : nodes(nodes), elements(elements), edges(edges), elementEdges(distmesh::utils::getTriangulationEdgeIndices(elements, edges)),
-    boundary(distmesh::boundEdges(nodes, elements, edges)) {
+    : nodes(nodes), elements(elements), edges(distmesh::utils::fixBoundaryEdgeOrientation(nodes, elements, edges)),
+    elementEdges(distmesh::utils::getTriangulationEdgeIndices(elements, this->edges)),
+    boundary(distmesh::utils::boundEdges(elements, this->edges)) {
     // check input
     if (nodes.cols() != 2) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes.cols() != 2");
@@ -74,7 +75,7 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
         auto const distanceFuntion = distmesh::distanceFunction::circular(radius);
         auto const distMesh = distmesh::distmesh(distanceFuntion, config["outerEdgeLength"],
             1.0 + (1.0 - (double)config["innerEdgeLength"] / (double)config["outerEdgeLength"]) *
-            distanceFuntion / radius, 1.1 * radius * distmesh::boundingBox(2), fixedPoints);
+            distanceFuntion / radius, 1.1 * radius * distmesh::utils::boundingBox(2), fixedPoints);
 
         // create mpflow matrix objects from distmesh arrays
         auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(std::get<0>(distMesh),
@@ -107,11 +108,9 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const elem
 Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned const edge) const {
     // get node index and coordinate
     Eigen::ArrayXXd result(this->edges.cols(), 2);
-    auto const edgeIndex = this->boundary(edge);
     
     for (int node = 0; node < this->edges.cols(); ++node) {
-        auto const index = (edgeIndex >= 0 ? node : (this->edges.cols() - node - 1));
-        result.row(index) = this->nodes.row(this->edges(abs(edgeIndex), node));
+        result.row(node) = this->nodes.row(this->edges(this->boundary(edge), node));
     }
 
     return result;

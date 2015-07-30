@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ namespace basis {
             { return mesh->nodes.rows(); }
         static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
             decltype(mesh->elements) { return mesh->elements; }
-        static inline unsigned toLocalIndex(Eigen::Ref<Eigen::ArrayXXi const> const, unsigned const, unsigned const index)
+        static inline unsigned toLocalIndex(std::shared_ptr<numeric::IrregularMesh const> const, unsigned const, unsigned const index)
             { return index; }
     };
 
@@ -92,7 +92,7 @@ namespace basis {
             { return mesh->nodes.rows(); }
         static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
             decltype(mesh->elements) { return mesh->elements; }
-        static inline unsigned toLocalIndex(Eigen::Ref<Eigen::ArrayXXi const> const, unsigned const, unsigned const index)
+        static inline unsigned toLocalIndex(std::shared_ptr<numeric::IrregularMesh const> const, unsigned const, unsigned const index)
             { return index; }
     };
 
@@ -114,17 +114,18 @@ namespace basis {
             { return mesh->edges.rows(); }
         static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
             decltype(mesh->elementEdges) { return mesh->elementEdges; }
-        static Eigen::ArrayXi toLocalIndex(Eigen::Ref<Eigen::ArrayXXi const> const elements, unsigned const element, unsigned const index) {
-            Eigen::ArrayXi edge(2);
-        
-            if (elements(element, index) < elements(element, (index + 1) % elements.cols())) {
-                edge << index, (index + 1) % elements.cols();
-            }
-            else {
-                edge << (index + 1) % elements.cols(), index;
+        static Eigen::ArrayXi toLocalIndex(std::shared_ptr<numeric::IrregularMesh const> const mesh, unsigned const element, unsigned const index) {
+            Eigen::ArrayXi const edge = mesh->edges.row(mesh->elementEdges(element, index));
+            
+            Eigen::ArrayXi localEdge(edge.rows());
+            for (int node = 0; node < edge.rows(); ++node) {
+                int nodeIndex = 0;
+                (mesh->elements.row(element) - edge(node)).square().minCoeff(&nodeIndex);
+                
+                localEdge(node) = nodeIndex;
             }
             
-            return edge;
+            return localEdge;
         }
 
         // member

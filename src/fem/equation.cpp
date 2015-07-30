@@ -110,8 +110,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initElemen
                 elementConnections(element, j), element);
 
             // create basis functions
-            auto const basisI = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, i));
-            auto const basisJ = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, j));
+            auto const basisI = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh, element, i));
+            auto const basisJ = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh, element, j));
 
             // set elemental system element
             elementalSMatrices[level]->setValue(elementConnections(element, i),
@@ -214,10 +214,9 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
             if (integrationStart < integrationEnd) {
                 // calc element
                 for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
-                    (*excitationMatrix)(this->mesh->edges(abs(this->mesh->boundary(edge)), node), port) +=
-                        basisFunctionType::boundaryIntegral(
-                            nodeParameter, node, integrationStart, integrationEnd) /
-                        (integrationEnd - integrationStart);
+                    (*excitationMatrix)(this->mesh->edges(this->mesh->boundary(edge), node), port) +=
+                        basisFunctionType::boundaryIntegral(nodeParameter, node, integrationStart, integrationEnd) /
+                            (integrationEnd - integrationStart);
                 }
             }
         }
@@ -246,8 +245,8 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
         for (unsigned i = 0; i < basisFunctionType::pointsPerElement; ++i)
         for (unsigned j = 0; j < basisFunctionType::pointsPerElement; ++j) {
             // create basis functions
-            auto const basisI = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, i));
-            auto const basisJ = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh->elements, element, j));
+            auto const basisI = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh, element, i));
+            auto const basisJ = basisFunctionType(points, basisFunctionType::toLocalIndex(this->mesh, element, j));
 
             // set elementalJacobianMatrix element
             if (calculatesPotential) {
