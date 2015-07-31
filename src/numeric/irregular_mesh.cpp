@@ -43,9 +43,7 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> 
     : IrregularMesh(nodes, elements, distmesh::utils::findUniqueEdges(elements)) { }
 
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
-    json_value const& config,
-    std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
-    cudaStream_t const stream, std::string const path) {
+    json_value const& config, json_value const& portConfig, cudaStream_t const stream, std::string const path) {
     // check for correct config
     if (config["height"].type == json_none) {
         return nullptr;
@@ -60,24 +58,30 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
             
         return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen());
     }
-    else if ((config["radius"].type != json_none) &&
-            (config["outerEdgeLength"].type != json_none) &&
-            (config["innerEdgeLength"].type != json_none)) {
-        // fix mesh at boundaryDescriptor boundaries
-        Eigen::ArrayXXd fixedPoints(boundaryDescriptor->count * 2, 2);
-        for (unsigned i = 0; i < boundaryDescriptor->count; ++i) {
-            fixedPoints.block(i * 2, 0, 1, 2) = boundaryDescriptor->coordinates.block(i, 0, 1, 2);
-            fixedPoints.block(i * 2 + 1, 0, 1, 2) = boundaryDescriptor->coordinates.block(i, 2, 1, 2);
-        }
-
-        // create mesh with libdistmesh
+    else if ((config["radius"].type != json_none) && (config["outerEdgeLength"].type != json_none) &&
+            (config["innerEdgeLength"].type != json_none) && (portConfig.type != json_none)) {
         double const radius = config["radius"];
+                
+        // fix mesh at corner points of ports
+        Eigen::ArrayXXd fixedPoints;
+        if ((portConfig["width"].type != json_none) && (portConfig["count"].type != json_none)) {
+            auto const width = portConfig["width"].u.dbl;
+            auto const count = portConfig["count"].u.integer;
+            auto const offset = portConfig["offset"].u.dbl;
+            auto const invertDirection = portConfig["invertDirection"].u.boolean;
+            
+            fixedPoints = Eigen::ArrayXXd(2 * count, 2);
+            fixedPoints << math::circularPoints(radius, 2.0 * M_PI * radius / count, offset, invertDirection),
+                math::circularPoints(radius, 2.0 * M_PI * radius / count, offset + width, invertDirection);
+        }
+        
+        // create mesh with libdistmesh
         auto const distanceFuntion = distmesh::distanceFunction::circular(radius);
         auto const distMesh = distmesh::distmesh(distanceFuntion, config["outerEdgeLength"],
             1.0 + (1.0 - (double)config["innerEdgeLength"] / (double)config["outerEdgeLength"]) *
             distanceFuntion / radius, 1.1 * radius * distmesh::utils::boundingBox(2), fixedPoints);
 
-        // create mpflow matrix objects from distmesh arrays
+        // create mpflow mesh objects from distmesh arrays
         auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(std::get<0>(distMesh),
             std::get<1>(distMesh));
 

@@ -86,7 +86,7 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
 
     // load mesh from config
     auto const mesh = externalMesh != nullptr ? externalMesh :
-        numeric::IrregularMesh::fromConfig(config["mesh"], boundaryDescriptor, stream, path);
+        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
 
     // load jacobian from config
     auto const jacobian = numeric::Matrix<dataType>::loadtxt(

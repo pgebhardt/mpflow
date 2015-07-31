@@ -127,7 +127,7 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
 
     // load mesh from config
     auto const mesh = externalMesh != nullptr ? externalMesh :
-        numeric::IrregularMesh::fromConfig(config["mesh"], boundaryDescriptor, stream, path);
+        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
 
     // read out reference value
     auto const referenceValue = parseReferenceValue<dataType>(config["material"]);

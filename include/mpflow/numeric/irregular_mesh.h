@@ -42,8 +42,7 @@ namespace numeric {
 
         // factories
         static std::shared_ptr<IrregularMesh> fromConfig(json_value const& config,
-            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
-            cudaStream_t const stream, std::string const path="./");
+            json_value const& portConfig, cudaStream_t const stream, std::string const path="./");
 
         // helper methods
         Eigen::ArrayXXd elementNodes(unsigned const element) const;
