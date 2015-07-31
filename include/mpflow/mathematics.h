@@ -43,6 +43,14 @@ namespace math {
         return size == 0 ? 0 : (size / block_size + 1) * block_size;
     }
 
+    // create an array with evenly distributed number between start and end
+    Eigen::ArrayXd arange(double const start, double const end, double const distance);   
+    
+    // create an array with evenly distributed points on a 2-D circle
+    Eigen::ArrayXXd circularPoints(double const radius, double const distance,
+        double const offset=0.0, bool const invertDirection=false,
+        Eigen::Ref<Eigen::ArrayXd const> const midpoint=Eigen::ArrayXd::Zero(2));
+    
     // simple gauss elemination
     template <
         class type,

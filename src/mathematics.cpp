@@ -75,3 +75,26 @@ double mpFlow::math::circleParameter(Eigen::Ref<Eigen::ArrayXd const> const poin
     // calc parameter
     return angle * polarPoint(0);
 }
+
+Eigen::ArrayXd mpFlow::math::arange(double const start, double const end, double const distance) {
+    // calculate size of output array
+    unsigned const count = ceil((end - start) / distance);
+    
+    Eigen::ArrayXd result = Eigen::ArrayXd::Zero(count);
+    for (unsigned i = 0; i < count; ++i) {
+        result(i) = start + (double)i * distance;
+    }
+
+    return result;
+}
+
+Eigen::ArrayXXd mpFlow::math::circularPoints(double const radius, double const distance,
+    double const offset, bool const invertDirection, Eigen::Ref<Eigen::ArrayXd const> const midpoint) {
+    Eigen::ArrayXd const phi = arange(offset / radius, offset / radius + 2.0 * M_PI, distance / radius);
+
+    Eigen::ArrayXXd result = Eigen::ArrayXXd::Zero(phi.rows(), 2);
+    result.col(0) = midpoint(0) + radius * phi.cos();
+    result.col(1) = midpoint(1) + (invertDirection ? -1.0 : 1.0) * radius * phi.sin();
+
+    return result;
+}
