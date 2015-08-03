@@ -112,20 +112,15 @@ class Basis(object):
         return integrateOnTriangle(integral, x, y, points)
 
     @expressionize
-    def boundaryIntegral(self, nodes, coefficients, start, end):
+    def boundaryIntegral(self, nodes, coefficients):
         # integrate boundary_function symbolic
         @symbolic
-        def integral(coefficients, start, end):
+        def integral(nodes, coefficients):
             x = Symbol('x', real=True)
-            return integrate(
-                self.boundary_function(x, coefficients),
-                (x, start, end))
+            return integrate(self.boundary_function(x, coefficients),
+                (x, nodes[0], nodes[-1]))
 
-        # clip integration interval to function definition
-        start = start.clip(nodes[0], nodes[self.nodes_per_edge - 1])
-        end = end.clip(nodes[0], nodes[self.nodes_per_edge - 1])
-
-        return integral(coefficients, start, end)
+        return integral(nodes, coefficients)
 
     def render(self, template):
         # arguments
@@ -175,8 +170,7 @@ class Basis(object):
                 self.boundary_function),
             boundaryIntegral=self.boundaryIntegral(
                 ['points({})'.format(i) for i in range(self.nodes_per_edge)],
-                ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)],
-                'start', 'end').expand(),
+                ['coefficients[{}]'.format(i) for i in range(self.nodes_per_edge)]).expand(),
             )
 
 class EdgeBasis(object):

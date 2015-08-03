@@ -66,8 +66,7 @@ ${integralA}
 
 // integrate edge
 double mpFlow::FEM::basis::${name}::boundaryIntegral(
-    Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one,
-    double const start, double const end) {
+    Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one) {
     // calc coefficients for basis function
     std::array<double, pointsPerEdge> coefficients;
 % for i in range(len(boundaryCoefficiens) - 1):

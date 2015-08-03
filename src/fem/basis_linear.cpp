@@ -93,8 +93,7 @@ double mpFlow::FEM::basis::Linear::integralA(
 
 // integrate edge
 double mpFlow::FEM::basis::Linear::boundaryIntegral(
-    Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one,
-    double const start, double const end) {
+    Eigen::Ref<Eigen::ArrayXd const> const points, unsigned const one) {
     // calc coefficients for basis function
     std::array<double, pointsPerEdge> coefficients;
     if (one == 0) {
@@ -119,7 +118,7 @@ double mpFlow::FEM::basis::Linear::boundaryIntegral(
 ;
     }
     return ({
-(((((-(coefficients[0]))*(min(max((start),(points(0))),(points(1)))))+((coefficients[0])*(min(max((end),(points(0))),(points(1))))))-(((coefficients[1])*((min(max((start),(points(0))),(points(1))))*(min(max((start),(points(0))),(points(1))))))/(2)))+(((coefficients[1])*((min(max((end),(points(0))),(points(1))))*(min(max((end),(points(0))),(points(1))))))/(2)));
+((((((-((points(0))*(points(0))))*(coefficients[1]))/(2))-((points(0))*(coefficients[0])))+((((points(1))*(points(1)))*(coefficients[1]))/(2)))+((points(1))*(coefficients[0])));
 })
 ;
 }

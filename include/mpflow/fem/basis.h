@@ -61,7 +61,7 @@ namespace basis {
         double integralA(Linear const& other) const;
         double integralB(Linear const& other) const;
         static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
-            unsigned const one, double const start, double const end);
+            unsigned const one);
             
         // mesh related stuff
         static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
@@ -85,7 +85,7 @@ namespace basis {
         double integralA(Quadratic const& other) const;
         double integralB(Quadratic const& other) const;
         static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
-            unsigned const one, double const start, double const end);
+            unsigned const one);
             
         // mesh related stuff
         static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
@@ -106,8 +106,8 @@ namespace basis {
         // mathematical evaluation of basis
         double integralA(Edge const& other) const;
         double integralB(Edge const& other) const;
-        static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const, unsigned const,
-            double const, double const) { return 0.0; }
+        static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
+            unsigned const) { return std::abs(points(points.rows() - 1) - points(0)); }
                                         
         // mesh related stuff
         static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
