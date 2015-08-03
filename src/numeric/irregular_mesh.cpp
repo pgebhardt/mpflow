@@ -109,12 +109,12 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const elem
     return result;
 }
 
-Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::boundaryNodes(unsigned const edge) const {
+Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::edgeNodes(unsigned const edge) const {
     // get node index and coordinate
     Eigen::ArrayXXd result(this->edges.cols(), 2);
     
     for (int node = 0; node < this->edges.cols(); ++node) {
-        result.row(node) = this->nodes.row(this->edges(this->boundary(edge), node));
+        result.row(node) = this->nodes.row(this->edges(edge, node));
     }
 
     return result;

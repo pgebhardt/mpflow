@@ -46,7 +46,7 @@ namespace numeric {
 
         // helper methods
         Eigen::ArrayXXd elementNodes(unsigned const element) const;
-        Eigen::ArrayXXd boundaryNodes(unsigned const edge) const;
+        Eigen::ArrayXXd edgeNodes(unsigned const edge) const;
 
         // interpolation
         template <
