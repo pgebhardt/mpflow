@@ -14,61 +14,73 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
 #include "mpflow/mpflow.h"
 
 mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
-    Eigen::Ref<Eigen::ArrayXXd const> const coordinates,
+    Eigen::Ref<Eigen::ArrayXXi const> const edges,
     double const height)
-    : coordinates(coordinates), height(height), count(coordinates.rows()) {
+    : edges(edges), height(height), count(edges.cols()) {
     // check input
-    if (coordinates.rows() == 0) {
-        throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: count == 0");
+    if (edges.rows() == 0) {
+        throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: edges == 0");
     }
 }
 
-std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::circularBoundary(
+ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::circularBoundary(
     unsigned const count, double const width, double const height,
-    double const boundaryRadius, double const offset, bool const clockwise) {
-    // check radius
-    if (boundaryRadius == 0.0) {
-        throw std::invalid_argument(
-            "mpFlow::FEM::boundaryDescriptor::circularBoundary: boundaryRadius == 0.0");
+    std::shared_ptr<numeric::IrregularMesh const> const mesh, double const offset, bool const clockwise) {
+    auto const radius = std::sqrt(mesh->nodes.square().rowwise().sum().maxCoeff());
+    
+    // find edges located inside port interval on a circular boundary
+    auto const portStart = math::circularPoints(radius, 2.0 * M_PI * radius / count,
+        offset + (clockwise ? width : 0.0), clockwise);
+    auto const portEnd = math::circularPoints(radius, 2.0 * M_PI * radius / count,
+        offset + (clockwise ? 0.0 : width), clockwise);
+
+    std::vector<std::vector<int>> portEdgesVector(count);
+    unsigned maxPortEdges = 0;
+    for (unsigned port = 0; port < count; ++port) {
+        for (unsigned edge = 0; edge < mesh->boundary.rows(); ++edge) {
+            // calculate interval parameter
+            auto const nodes = mesh->edgeNodes(mesh->boundary(edge));
+            auto const nodeParameter = sqrt((nodes.rowwise() - nodes.row(0)).square().rowwise().sum()).eval();
+
+            auto const parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
+            auto const intervalStart = math::circleParameter(portStart.row(port).transpose(), parameterOffset);
+            auto const intervalEnd = math::circleParameter(portEnd.row(port).transpose(), parameterOffset);
+            
+            // check if edge lies within port interval
+            if ((intervalStart < intervalEnd) && (nodeParameter(0) - intervalStart >= -1e-9) &&
+                (nodeParameter(nodeParameter.rows() - 1) - intervalEnd <= 1e-9)) {
+                portEdgesVector[port].push_back(mesh->boundary(edge));
+                maxPortEdges = std::max(maxPortEdges, (unsigned)portEdgesVector[port].size());
+            }
+        }
     }
     
-    // get port start and end points
-    auto const startPoints = math::circularPoints(boundaryRadius, 2.0 * M_PI * boundaryRadius / count, offset, clockwise);
-    auto const endPoints = math::circularPoints(boundaryRadius, 2.0 * M_PI * boundaryRadius / count, offset + width, clockwise);
-    auto const coordinates = (Eigen::ArrayXXd(count, 2 * startPoints.cols()) <<
-            (clockwise ? endPoints : startPoints), (clockwise ? startPoints : endPoints)).finished();
-
-    return std::make_shared<BoundaryDescriptor>(coordinates, height);
+    // convert stl vector to eigen array
+    Eigen::ArrayXXi portEdges = Eigen::ArrayXXi::Ones(maxPortEdges, count) * constants::invalidIndex;
+    for (unsigned port = 0; port < count; ++port)
+    for (unsigned edge = 0; edge < portEdgesVector[port].size(); ++edge) {
+        portEdges(edge, port) = portEdgesVector[port][edge];
+    }
+    
+    return std::make_shared<BoundaryDescriptor>(portEdges, height);
 }
 
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::fromConfig(
     json_value const& config, std::shared_ptr<numeric::IrregularMesh const> const mesh) {
-    // read out height
+    // read out basic config
     auto const height = config["height"].type != json_none ? config["height"].u.dbl : 1.0;
-    auto const radius = std::sqrt(mesh->nodes.square().rowwise().sum().maxCoeff());
+    auto const width = config["width"].u.dbl;
+    auto const count = config["count"].u.integer;
+    auto const offset = config["offset"].u.dbl;
+    auto const invertDirection = config["invertDirection"].u.boolean;
     
-    // extract descriptor coordinates from config, or create circular descriptor
-    // if no coordinates are given
-    if (config["coordinates"].type != json_none) {
-        auto const coordinates = numeric::eigenFromJsonArray<double>(config["coordinates"]);
-        
-        return std::make_shared<mpFlow::FEM::BoundaryDescriptor>(coordinates, height);
-    }
-    else {
-        auto const width = config["width"].u.dbl;
-        auto const count = config["count"].u.integer;
-        auto const offset = config["offset"].u.dbl;
-        auto const invertDirection = config["invertDirection"].u.boolean;
-        
-        return mpFlow::FEM::BoundaryDescriptor::circularBoundary(count, width,
-            height, radius, offset, invertDirection);
-    }
+    return circularBoundary(count, width, height, mesh, offset, invertDirection);
 }
 

@@ -181,47 +181,34 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t const stream) {
-    Eigen::ArrayXd nodeParameter(basisFunctionType::pointsPerEdge);
-    double integrationStart, integrationEnd;
-
     // calc excitation matrix
     auto const excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
-    for (int edge = 0; edge < this->mesh->boundary.rows(); ++edge) {
-        // get boundary nodes
-        auto const nodes = this->mesh->boundaryNodes(edge);
+    for (unsigned port = 0; port < this->boundaryDescriptor->count; ++port) {
+        auto const edgeCount = (this->boundaryDescriptor->edges.col(port) != (int)constants::invalidIndex).count();
 
-        // calc node parameter centered to node 0
-        auto const parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
-        for (unsigned i = 0; i < nodes.rows(); ++i) {
-            nodeParameter(i) = math::circleParameter(nodes.row(i).transpose(), parameterOffset);
+        // calculate combined length of all port edges
+        double portLength = 0.0;
+        for (unsigned edge = 0; edge < edgeCount; ++edge) {
+            auto const nodes = this->mesh->edgeNodes(this->boundaryDescriptor->edges(edge, port));
+            portLength += sqrt((nodes.row(nodes.rows() - 1) - nodes.row(0)).square().sum());
         }
-
-        for (unsigned port = 0; port < this->boundaryDescriptor->count; ++port) {
-            // skip boundary part, if radii dont match
-            if (std::abs(math::polar(this->boundaryDescriptor->coordinates.block(port, 0, 1, 2).transpose())(0) -
-                math::polar(nodes.row(0).transpose())(0)) > 1e-4) {
-                continue;
-            }
-
-            // calc integration interval centered to node 0
-            integrationStart = math::circleParameter(this->boundaryDescriptor->coordinates.block(port, 0, 1, 2).transpose(),
-                parameterOffset);
-            integrationEnd = math::circleParameter(this->boundaryDescriptor->coordinates.block(port, 2, 1, 2).transpose(),
-                parameterOffset);
-
-            // intgrate if integrationStart is left of integrationEnd
-            if (integrationStart < integrationEnd) {
-                // calc element
-                for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
-                    (*excitationMatrix)(this->mesh->edges(this->mesh->boundary(edge), node), port) +=
-                        basisFunctionType::boundaryIntegral(nodeParameter, node, integrationStart, integrationEnd) /
-                            (integrationEnd - integrationStart);
-                }
+        str::print("port length of port", port, ":", portLength);
+             
+        for (unsigned edge = 0; edge < edgeCount; ++edge) {
+            auto const edgeIndex = this->boundaryDescriptor->edges(edge, port);
+            
+            // calculate parameter representation of boundary edge
+            auto const nodes = this->mesh->edgeNodes(edgeIndex);
+            auto const parameter = sqrt((nodes.rowwise() - nodes.row(0)).square().rowwise().sum()).eval();
+            
+            for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
+                (*excitationMatrix)(this->mesh->edges(edgeIndex, node), port) +=
+                    basisFunctionType::boundaryIntegral(parameter, node) / portLength;
             }
         }
     }
-
+    
     excitationMatrix->copyToDevice(stream);
     this->excitationMatrix->copy(excitationMatrix, stream);
 }
