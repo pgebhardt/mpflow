@@ -117,17 +117,17 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     mpFlow::models::EIT<numericalSolverType, equationType>::fromConfig(
     json_value const& config, cublasHandle_t const handle, cudaStream_t const stream,
     std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
+    // load mesh from config
+    auto const mesh = externalMesh != nullptr ? externalMesh :
+        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
+
     // load boundary descriptor from config
     auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(
-        config["boundary"], config["mesh"]["radius"].u.dbl);
+        config["boundary"], mesh);
 
     // load source from config
     auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
         config["source"], boundaryDescriptor, stream);
-
-    // load mesh from config
-    auto const mesh = externalMesh != nullptr ? externalMesh :
-        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
 
     // read out reference value
     auto const referenceValue = parseReferenceValue<dataType>(config["material"]);

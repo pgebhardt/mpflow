@@ -76,17 +76,17 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
     mpFlow::models::Constant<dataType, logarithmic>::fromConfig(
     json_value const& config, cublasHandle_t const, cudaStream_t const stream,
     std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
+    // load mesh from config
+    auto const mesh = externalMesh != nullptr ? externalMesh :
+        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
+
     // load boundary descriptor from config
     auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(
-        config["boundary"], config["mesh"]["radius"].u.dbl);
+        config["boundary"], mesh);
 
     // load source from config
     auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
         config["source"], boundaryDescriptor, stream);
-
-    // load mesh from config
-    auto const mesh = externalMesh != nullptr ? externalMesh :
-        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
 
     // load jacobian from config
     auto const jacobian = numeric::Matrix<dataType>::loadtxt(

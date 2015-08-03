@@ -38,50 +38,21 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor
         throw std::invalid_argument(
             "mpFlow::FEM::boundaryDescriptor::circularBoundary: boundaryRadius == 0.0");
     }
+    
+    // get port start and end points
+    auto const startPoints = math::circularPoints(boundaryRadius, 2.0 * M_PI * boundaryRadius / count, offset, clockwise);
+    auto const endPoints = math::circularPoints(boundaryRadius, 2.0 * M_PI * boundaryRadius / count, offset + width, clockwise);
+    auto const coordinates = (Eigen::ArrayXXd(count, 2 * startPoints.cols()) <<
+            (clockwise ? endPoints : startPoints), (clockwise ? startPoints : endPoints)).finished();
 
-    // fill coordinates vectors
-    double angle = 0.0f;
-    double deltaAngle = M_PI / (double)count;
-    Eigen::ArrayXXd coordinates = Eigen::ArrayXXd::Zero(count, 4);
-    for (unsigned electrode = 0; electrode < count; ++electrode) {
-        // calc start angle
-        angle = (double)electrode * 2.0 * deltaAngle + offset / boundaryRadius;
-
-        // calc coordinates
-        Eigen::ArrayXd point(2);
-        point << boundaryRadius, angle;
-        coordinates.block(electrode, 0, 1, 2) = math::kartesian(point).transpose();
-
-        point << boundaryRadius, angle + width / boundaryRadius;
-        coordinates.block(electrode, 2, 1, 2) = math::kartesian(point).transpose();
-    }
-
-    // create boundary descriptor
-    auto const boundaryDescriptor = std::make_shared<BoundaryDescriptor>(coordinates, height);
-
-    // change element direction
-    if (clockwise) {
-        Eigen::ArrayXXd coordinates = boundaryDescriptor->coordinates;
-
-        coordinates.block(0, 0, coordinates.rows(), 2) =
-            boundaryDescriptor->coordinates.block(0, 2, coordinates.rows(), 2);
-        coordinates.block(0, 2, coordinates.rows(), 2) =
-            boundaryDescriptor->coordinates.block(0, 0, coordinates.rows(), 2);
-
-        coordinates.col(1) = -coordinates.col(1);
-        coordinates.col(3) = -coordinates.col(3);
-
-        return std::make_shared<mpFlow::FEM::BoundaryDescriptor>(coordinates, height);
-    }
-    else {
-        return boundaryDescriptor;
-    }
+    return std::make_shared<BoundaryDescriptor>(coordinates, height);
 }
 
 std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::fromConfig(
-    json_value const& config, double const modelRadius) {
+    json_value const& config, std::shared_ptr<numeric::IrregularMesh const> const mesh) {
     // read out height
     auto const height = config["height"].type != json_none ? config["height"].u.dbl : 1.0;
+    auto const radius = std::sqrt(mesh->nodes.square().rowwise().sum().maxCoeff());
     
     // extract descriptor coordinates from config, or create circular descriptor
     // if no coordinates are given
@@ -97,7 +68,7 @@ std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor
         auto const invertDirection = config["invertDirection"].u.boolean;
         
         return mpFlow::FEM::BoundaryDescriptor::circularBoundary(count, width,
-            height, modelRadius, offset, invertDirection);
+            height, radius, offset, invertDirection);
     }
 }
 

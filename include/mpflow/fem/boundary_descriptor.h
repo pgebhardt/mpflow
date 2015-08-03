@@ -34,17 +34,13 @@ namespace FEM {
             double const width, double const height, double const boundaryRadius,
             double const offset=0.0, bool const clockwise=false);
         static std::shared_ptr<BoundaryDescriptor> fromConfig(json_value const& config,
-            double const modelRadius);
+            std::shared_ptr<numeric::IrregularMesh const> const mesh);
 
         // member
         Eigen::ArrayXXd const coordinates;
         double const height;
         unsigned const count;
     };
-
-    namespace boundaryDescriptor {
-        // create BoundaryDescriptor on circular boundary
-    }
 }
 }
 
