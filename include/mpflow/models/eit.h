@@ -36,7 +36,7 @@ namespace models {
         
         // initialization
         EIT(std::shared_ptr<numeric::IrregularMesh const> const mesh,
-            std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
+            std::shared_ptr<FEM::Sources<dataType> const> const sources,
             dataType const referenceValue, double const height, unsigned const components,
             cublasHandle_t const handle, cudaStream_t const stream);
 
@@ -53,7 +53,7 @@ namespace models {
             unsigned* const steps=nullptr);
 
         // helper methods
-        void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dataType> const> const source,
+        void applyMeasurementPattern(std::shared_ptr<numeric::Matrix<dataType> const> const sources,
             std::shared_ptr<numeric::Matrix<dataType>> const result, bool const additiv,
             cublasHandle_t const handle, cudaStream_t const stream) const;
         static void applyMixedBoundaryCondition(std::shared_ptr<numeric::Matrix<dataType>> const excitationMatrix,
@@ -61,7 +61,7 @@ namespace models {
 
         // member
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
-        std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source;
+        std::shared_ptr<FEM::Sources<dataType> const> const sources;
         dataType const referenceValue;
         double const height;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;

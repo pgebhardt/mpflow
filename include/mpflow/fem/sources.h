@@ -14,19 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLDUE_FEM_SOURCE_DESCRIPTOR_H
-#define MPFLOW_INCLDUE_FEM_SOURCE_DESCRIPTOR_H
+#ifndef MPFLOW_INCLDUE_FEM_SOURCES_H
+#define MPFLOW_INCLDUE_FEM_SOURCES_H
 
 namespace mpFlow {
 namespace FEM {
     template <
         class dataType
     >
-    class SourceDescriptor {
+    class Sources {
     public:
         enum Type {
             Open,
@@ -34,20 +34,20 @@ namespace FEM {
         };
 
         // constructor
-        SourceDescriptor(Type const type, std::vector<dataType> const& values,
+        Sources(Type const type, std::vector<dataType> const& values,
             std::shared_ptr<FEM::Ports const> const ports,
             std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
             std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
             cudaStream_t const stream);
-        SourceDescriptor(Type const type, dataType const value,
+        Sources(Type const type, dataType const value,
             std::shared_ptr<FEM::Ports const> const ports,
             std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
             std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
             cudaStream_t const stream);
-        virtual ~SourceDescriptor() { }
+        virtual ~Sources() { }
 
         // factories
-        static std::shared_ptr<SourceDescriptor<dataType>> fromConfig(json_value const& config,
+        static std::shared_ptr<Sources<dataType>> fromConfig(json_value const& config,
             std::shared_ptr<Ports const> const ports,
             cudaStream_t const stream);
 

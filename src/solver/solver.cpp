@@ -43,11 +43,11 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
     // create matrices
     for (unsigned image = 0; image < parallelImages; ++image) {
         this->measurement.push_back(std::make_shared<numeric::Matrix<dataType>>(
-            this->forwardModel->source->measurementPattern->cols,
-            this->forwardModel->source->drivePattern->cols, stream, 0.0, false));
+            this->forwardModel->sources->measurementPattern->cols,
+            this->forwardModel->sources->drivePattern->cols, stream, 0.0, false));
         this->calculation.push_back(std::make_shared<numeric::Matrix<dataType>>(
-            this->forwardModel->source->measurementPattern->cols,
-            this->forwardModel->source->drivePattern->cols, stream, 0.0, false));
+            this->forwardModel->sources->measurementPattern->cols,
+            this->forwardModel->sources->drivePattern->cols, stream, 0.0, false));
     }
 
     dataType const initialValue = forwardModelType::logarithmic ? dataType(0) :

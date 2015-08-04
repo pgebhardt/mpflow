@@ -23,7 +23,7 @@
 template <
     class dataType
 >
-mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type,
+mpFlow::FEM::Sources<dataType>::Sources(Type const type,
     std::vector<dataType> const& values, std::shared_ptr<FEM::Ports const> const ports,
     std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
     std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
@@ -31,18 +31,18 @@ mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type,
     : type(type), values(values), ports(ports) {
     // check input
     if (ports == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: ports == nullptr");
+        throw std::invalid_argument("mpFlow::FEM::Sources::Sources: ports == nullptr");
     }
     if (drivePattern == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: drivePattern == nullptr");
+        throw std::invalid_argument("mpFlow::FEM::Sources::Sources: drivePattern == nullptr");
     }
     if (measurementPattern == nullptr) {
         throw std::invalid_argument(
-            "mpFlow::FEM::SourceDescriptor::SourceDescriptor: measurementPattern == nullptr");
+            "mpFlow::FEM::Sources::Sources: measurementPattern == nullptr");
     }
     if (values.size() != drivePattern->cols) {
         throw std::invalid_argument(
-            "mpFlow::FEM::SourceDescriptor::SourceDescriptor: invalid size of values vector");
+            "mpFlow::FEM::Sources::Sources: invalid size of values vector");
     }
 
     // create matrices
@@ -76,19 +76,19 @@ mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type,
 template <
     class dataType
 >
-mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type, dataType const value,
+mpFlow::FEM::Sources<dataType>::Sources(Type const type, dataType const value,
     std::shared_ptr<FEM::Ports const> const ports,
     std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
     std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
     cudaStream_t const stream)
-    : SourceDescriptor<dataType>(type, std::vector<dataType>(drivePattern->cols, value),
+    : Sources<dataType>(type, std::vector<dataType>(drivePattern->cols, value),
         ports, drivePattern, measurementPattern, stream) {
 }
 
 template <
     class dataType
 >
-std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDescriptor<dataType>::fromConfig(
+std::shared_ptr<mpFlow::FEM::Sources<dataType>> mpFlow::FEM::Sources<dataType>::fromConfig(
     json_value const& config, std::shared_ptr<Ports const> const ports,
     cudaStream_t const stream) {
     // function to parse pattern config
@@ -120,9 +120,9 @@ std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDesc
 
     // create source descriptor
     auto const sourceType = std::string(config["type"]) == "voltage" ?
-        mpFlow::FEM::SourceDescriptor<dataType>::Type::Fixed :
-        mpFlow::FEM::SourceDescriptor<dataType>::Type::Open;
-    auto source = std::make_shared<mpFlow::FEM::SourceDescriptor<dataType>>(sourceType,
+        mpFlow::FEM::Sources<dataType>::Type::Fixed :
+        mpFlow::FEM::Sources<dataType>::Type::Open;
+    auto source = std::make_shared<mpFlow::FEM::Sources<dataType>>(sourceType,
         excitation, ports, drivePattern, measurementPattern, stream);
 
     return source;
@@ -130,7 +130,7 @@ std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDesc
 }
 
 // specialisation
-template class mpFlow::FEM::SourceDescriptor<float>;
-template class mpFlow::FEM::SourceDescriptor<double>;
-template class mpFlow::FEM::SourceDescriptor<thrust::complex<float>>;
-template class mpFlow::FEM::SourceDescriptor<thrust::complex<double>>;
+template class mpFlow::FEM::Sources<float>;
+template class mpFlow::FEM::Sources<double>;
+template class mpFlow::FEM::Sources<thrust::complex<float>>;
+template class mpFlow::FEM::Sources<thrust::complex<double>>;

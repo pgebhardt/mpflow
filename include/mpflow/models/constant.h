@@ -35,7 +35,7 @@ namespace models {
 
         // initialization
         Constant(std::shared_ptr<numeric::IrregularMesh const> const mesh,
-            std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
+            std::shared_ptr<FEM::Sources<dataType> const> const sources,
             std::shared_ptr<numeric::Matrix<dataType>> const jacobian,
             dataType const referenceValue, cudaStream_t const stream);
         
@@ -51,7 +51,7 @@ namespace models {
 
         // member
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
-        std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source;
+        std::shared_ptr<FEM::Sources<dataType> const> const sources;
         std::shared_ptr<numeric::Matrix<dataType>> const jacobian;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         dataType const referenceValue;

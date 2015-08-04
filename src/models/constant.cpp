@@ -26,23 +26,23 @@ template <
 >
 mpFlow::models::Constant<dataType, logarithmic>::Constant(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
-    std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
+    std::shared_ptr<FEM::Sources<dataType> const> const sources,
     std::shared_ptr<numeric::Matrix<dataType>> const jacobian, dataType const referenceValue,
     cudaStream_t const stream)
-    : mesh(mesh), source(source), jacobian(jacobian), referenceValue(referenceValue) {
+    : mesh(mesh), sources(sources), jacobian(jacobian), referenceValue(referenceValue) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::models::Constant::Constant: mesh == nullptr");
     }
-    if (source == nullptr) {
-        throw std::invalid_argument("mpFlow::models::Constant::Constant: source == nullptr");
+    if (sources == nullptr) {
+        throw std::invalid_argument("mpFlow::models::Constant::Constant: sources == nullptr");
     }
     if (jacobian == nullptr) {
         throw std::invalid_argument("mpFlow::models::Constant::Constant: jacobian == nullptr");
     }
     
     this->result = std::make_shared<numeric::Matrix<dataType>>(
-        this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
+        this->sources->measurementPattern->cols, this->sources->drivePattern->cols, stream);
 }
 
 template <class dataType>
@@ -84,8 +84,8 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
     auto const ports = FEM::Ports::fromConfig(
         config["boundary"], mesh);
 
-    // load source from config
-    auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
+    // load sources from config
+    auto const sources = FEM::Sources<dataType>::fromConfig(
         config["source"], ports, stream);
 
     // load jacobian from config
@@ -96,7 +96,7 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
     auto const referenceValue = parseReferenceValue<dataType>(config["material"]);
     
     // create forward model
-    return std::make_shared<Constant<dataType>>(mesh, source, jacobian, referenceValue, stream);
+    return std::make_shared<Constant<dataType>>(mesh, sources, jacobian, referenceValue, stream);
 }
 
 // forward solving

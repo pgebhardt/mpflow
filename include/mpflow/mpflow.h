@@ -41,7 +41,7 @@
 // FEM specific
 #include "fem/basis.h"
 #include "fem/ports.h"
-#include "fem/source_descriptor.h"
+#include "fem/sources.h"
 #include "fem/equation.h"
 
 // Models

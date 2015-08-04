@@ -27,16 +27,16 @@ template <
 >
 mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
-    std::shared_ptr<FEM::SourceDescriptor<dataType> const> const source,
+    std::shared_ptr<FEM::Sources<dataType> const> const sources,
     dataType const referenceValue, double const height, unsigned const components,
     cublasHandle_t const handle, cudaStream_t const stream)
-    : mesh(mesh), source(source), referenceValue(referenceValue), height(height) {
+    : mesh(mesh), sources(sources), referenceValue(referenceValue), height(height) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: mesh == nullptr");
     }
-    if (source == nullptr) {
-        throw std::invalid_argument("mpFlow::models::EIT::EIT: source == nullptr");
+    if (sources == nullptr) {
+        throw std::invalid_argument("mpFlow::models::EIT::EIT: sources == nullptr");
     }
     if (height <= 0.0) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: height <= 0.0");
@@ -50,39 +50,39 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
 
     // create FEM equation
     this->equation = std::make_shared<equationType>(this->mesh,
-        this->source->ports, this->referenceValue, true, stream);
+        this->sources->ports, this->referenceValue, true, stream);
         
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(
         this->mesh->nodes.rows(),
-        this->source->drivePattern->cols + this->source->measurementPattern->cols, stream);
+        this->sources->drivePattern->cols + this->sources->measurementPattern->cols, stream);
 
     // create matrices
     this->result = std::make_shared<numeric::Matrix<dataType>>(
-        this->source->measurementPattern->cols, this->source->drivePattern->cols, stream);
+        this->sources->measurementPattern->cols, this->sources->drivePattern->cols, stream);
     for (unsigned component = 0; component < components; ++component) {
         this->phi.push_back(std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
-            this->source->pattern->cols, stream,
-            source->type == FEM::SourceDescriptor<dataType>::Type::Fixed ? dataType(1) : dataType(0)));
+            this->sources->pattern->cols, stream,
+            sources->type == FEM::Sources<dataType>::Type::Fixed ? dataType(1) : dataType(0)));
     }
     this->excitation = std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
-        this->source->pattern->cols, stream);
+        this->sources->pattern->cols, stream);
     this->jacobian = std::make_shared<numeric::Matrix<dataType>>(
-        this->source->measurementPattern->dataCols * this->source->drivePattern->dataCols,
+        this->sources->measurementPattern->dataCols * this->sources->drivePattern->dataCols,
         this->mesh->elements.rows(), stream, 0.0, false);
     this->preconditioner = std::make_shared<numeric::SparseMatrix<dataType>>(
         this->equation->systemMatrix->rows, this->equation->systemMatrix->cols, stream);
 
     // create matrix to calculate system excitation from electrode excitation
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
-        this->source->measurementPattern->cols,
+        this->sources->measurementPattern->cols,
         this->mesh->nodes.rows(), stream, 0.0, false);
           
-    if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
+    if (this->sources->type == FEM::Sources<dataType>::Type::Fixed) {
         applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
     }
     
-    this->electrodesAttachmentMatrix->multiply(this->source->measurementPattern,
+    this->electrodesAttachmentMatrix->multiply(this->sources->measurementPattern,
         this->equation->excitationMatrix, handle, stream, CUBLAS_OP_T, CUBLAS_OP_T);
 }
 
@@ -124,8 +124,8 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     // load ports descriptor from config
     auto const ports = FEM::Ports::fromConfig(config["boundary"], mesh);
 
-    // load source from config
-    auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
+    // load sources from config
+    auto const sources = FEM::Sources<dataType>::fromConfig(
         config["source"], ports, stream);
 
     // read out reference value
@@ -138,7 +138,7 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     auto const componentsCount = std::max(1, (int)config["componentsCount"].u.integer);
         
     // create forward model
-    return std::make_shared<EIT<numericalSolverType, equationType>>(mesh, source,
+    return std::make_shared<EIT<numericalSolverType, equationType>>(mesh, sources,
         referenceValue, height, componentsCount, handle, stream);
 }
 
@@ -171,14 +171,14 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         // update system matrix for different 2.5D components
         this->equation->update(materialDistribution, alpha, materialDistribution, stream);
 
-        if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
+        if (this->sources->type == FEM::Sources<dataType>::Type::Fixed) {
             applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
         }
 
         this->excitation->multiply(this->equation->excitationMatrix,
-            this->source->pattern, handle, stream);
+            this->sources->pattern, handle, stream);
 
-        if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) {
+        if (this->sources->type == FEM::Sources<dataType>::Type::Open) {
             this->excitation->scalarMultiply(beta, stream);
         }
 
@@ -188,12 +188,12 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
             this->excitation, nullptr, stream, this->phi[component], this->preconditioner);
 
         // calc jacobian
-        this->equation->calcJacobian(this->phi[component], materialDistribution, this->source->drivePattern->cols,
-            this->source->measurementPattern->cols, component == 0 ? false : true,
+        this->equation->calcJacobian(this->phi[component], materialDistribution, this->sources->drivePattern->cols,
+            this->sources->measurementPattern->cols, component == 0 ? false : true,
             stream, this->jacobian);
 
-        // calculate electrode voltage or current, depends on the type of source
-        if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Fixed) {
+        // calculate electrode voltage or current, depends on the type of sources
+        if (this->sources->type == FEM::Sources<dataType>::Type::Fixed) {
             this->equation->update(materialDistribution, alpha, materialDistribution, stream);
 
             this->excitation->multiply(this->equation->systemMatrix,
@@ -210,8 +210,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         }
     }
 
-    // current source specific correction for jacobian matrix
-    if (this->source->type == FEM::SourceDescriptor<dataType>::Type::Open) {
+    // current sources specific correction for jacobian matrix
+    if (this->sources->type == FEM::Sources<dataType>::Type::Open) {
         this->jacobian->scalarMultiply(dataType(-1), stream);
     }
 
@@ -229,12 +229,12 @@ template <
     class equationType
 >
 void mpFlow::models::EIT<numericalSolverType, equationType>::applyMeasurementPattern(
-    std::shared_ptr<numeric::Matrix<dataType> const> const source,
+    std::shared_ptr<numeric::Matrix<dataType> const> const sources,
     std::shared_ptr<numeric::Matrix<dataType>> const result, bool const additiv,
     cublasHandle_t const handle, cudaStream_t const stream) const {
     // check input
-    if (source == nullptr) {
-        throw std::invalid_argument("mpFlow::models::EIT::applyMeasurementPattern: source == nullptr");
+    if (sources == nullptr) {
+        throw std::invalid_argument("mpFlow::models::EIT::applyMeasurementPattern: sources == nullptr");
     }
     if (result == nullptr) {
         throw std::invalid_argument("mpFlow::models::EIT::applyMeasurementPattern: result == nullptr");
@@ -249,9 +249,9 @@ void mpFlow::models::EIT<numericalSolverType, equationType>::applyMeasurementPat
     // add result
     dataType alpha = dataType(1), beta = additiv ? dataType(1) : dataType(0);
     numeric::cublasWrapper<dataType>::gemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, this->electrodesAttachmentMatrix->dataRows,
-        this->source->drivePattern->cols, this->electrodesAttachmentMatrix->dataCols, &alpha,
+        this->sources->drivePattern->cols, this->electrodesAttachmentMatrix->dataCols, &alpha,
         this->electrodesAttachmentMatrix->deviceData, this->electrodesAttachmentMatrix->dataRows,
-        source->deviceData, source->dataRows, &beta,
+        sources->deviceData, sources->dataRows, &beta,
         result->deviceData, result->dataRows);
 }
 
