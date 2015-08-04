@@ -80,13 +80,13 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
     auto const mesh = externalMesh != nullptr ? externalMesh :
         numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
 
-    // load boundary descriptor from config
-    auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(
+    // load ports descriptor from config
+    auto const ports = FEM::Ports::fromConfig(
         config["boundary"], mesh);
 
     // load source from config
     auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
-        config["source"], boundaryDescriptor, stream);
+        config["source"], ports, stream);
 
     // load jacobian from config
     auto const jacobian = numeric::Matrix<dataType>::loadtxt(

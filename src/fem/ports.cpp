@@ -20,17 +20,17 @@
 
 #include "mpflow/mpflow.h"
 
-mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
+mpFlow::FEM::Ports::Ports(
     Eigen::Ref<Eigen::ArrayXXi const> const edges,
     double const height)
     : edges(edges), height(height), count(edges.cols()) {
     // check input
     if (edges.rows() == 0) {
-        throw std::invalid_argument("mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor: edges == 0");
+        throw std::invalid_argument("mpFlow::FEM::Ports::Ports: edges == 0");
     }
 }
 
- std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::circularBoundary(
+ std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::circularBoundary(
     unsigned const count, double const width, double const height,
     std::shared_ptr<numeric::IrregularMesh const> const mesh, double const offset, bool const clockwise) {
     auto const radius = std::sqrt(mesh->nodes.square().rowwise().sum().maxCoeff());
@@ -69,10 +69,10 @@ mpFlow::FEM::BoundaryDescriptor::BoundaryDescriptor(
         portEdges(edge, port) = portEdgesVector[port][edge];
     }
     
-    return std::make_shared<BoundaryDescriptor>(portEdges, height);
+    return std::make_shared<Ports>(portEdges, height);
 }
 
-std::shared_ptr<mpFlow::FEM::BoundaryDescriptor> mpFlow::FEM::BoundaryDescriptor::fromConfig(
+std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
     json_value const& config, std::shared_ptr<numeric::IrregularMesh const> const mesh) {
     // read out basic config
     auto const height = config["height"].type != json_none ? config["height"].u.dbl : 1.0;

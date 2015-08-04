@@ -37,7 +37,7 @@ namespace FEM {
 
         // constructor
         Equation(std::shared_ptr<numeric::IrregularMesh const> const mesh,
-            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+            std::shared_ptr<FEM::Ports const> const ports,
             dataType const referenceValue, bool const calculatesPotential, cudaStream_t const stream);
 
         // init methods
@@ -56,7 +56,7 @@ namespace FEM {
 
         // member
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
-        std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor;
+        std::shared_ptr<FEM::Ports const> const ports;
         std::shared_ptr<numeric::SparseMatrix<dataType>> systemMatrix;
         std::shared_ptr<numeric::Matrix<dataType>> excitationMatrix;
         dataType const referenceValue;

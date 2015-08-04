@@ -35,12 +35,12 @@ namespace FEM {
 
         // constructor
         SourceDescriptor(Type const type, std::vector<dataType> const& values,
-            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+            std::shared_ptr<FEM::Ports const> const ports,
             std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
             std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
             cudaStream_t const stream);
         SourceDescriptor(Type const type, dataType const value,
-            std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+            std::shared_ptr<FEM::Ports const> const ports,
             std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
             std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
             cudaStream_t const stream);
@@ -48,13 +48,13 @@ namespace FEM {
 
         // factories
         static std::shared_ptr<SourceDescriptor<dataType>> fromConfig(json_value const& config,
-            std::shared_ptr<BoundaryDescriptor const> const boundaryDescriptor,
+            std::shared_ptr<Ports const> const ports,
             cudaStream_t const stream);
 
         // member
         Type const type;
         std::vector<dataType> const values;
-        std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor;
+        std::shared_ptr<FEM::Ports const> const ports;
         std::shared_ptr<numeric::Matrix<dataType>> drivePattern;
         std::shared_ptr<numeric::Matrix<dataType>> measurementPattern;
         std::shared_ptr<numeric::Matrix<dataType>> pattern;

@@ -18,22 +18,22 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLUDE_FEM_BOUNDARY_DESCRIPTOR_H
-#define MPFLOW_INCLUDE_FEM_BOUNDARY_DESCRIPTOR_H
+#ifndef MPFLOW_INCLUDE_FEM_PORTS_H
+#define MPFLOW_INCLUDE_FEM_PORTS_H
 
 namespace mpFlow {
 namespace FEM {
-    class BoundaryDescriptor {
+    class Ports {
     public:
-        BoundaryDescriptor(Eigen::Ref<Eigen::ArrayXXi const> const edges,
+        Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges,
             double const height);
-        virtual ~BoundaryDescriptor() { }
+        virtual ~Ports() { }
 
         // factories
-        static std::shared_ptr<BoundaryDescriptor> circularBoundary(unsigned const count,
+        static std::shared_ptr<Ports> circularBoundary(unsigned const count,
             double const width, double const height, std::shared_ptr<numeric::IrregularMesh const> const mesh,
             double const offset=0.0, bool const clockwise=false);
-        static std::shared_ptr<BoundaryDescriptor> fromConfig(json_value const& config,
+        static std::shared_ptr<Ports> fromConfig(json_value const& config,
             std::shared_ptr<numeric::IrregularMesh const> const mesh);
 
         // member

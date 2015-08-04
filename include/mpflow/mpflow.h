@@ -40,7 +40,7 @@
 
 // FEM specific
 #include "fem/basis.h"
-#include "fem/boundary_descriptor.h"
+#include "fem/ports.h"
 #include "fem/source_descriptor.h"
 #include "fem/equation.h"
 

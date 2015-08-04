@@ -50,7 +50,7 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
 
     // create FEM equation
     this->equation = std::make_shared<equationType>(this->mesh,
-        this->source->boundaryDescriptor, this->referenceValue, true, stream);
+        this->source->ports, this->referenceValue, true, stream);
         
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(
@@ -121,13 +121,12 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     auto const mesh = externalMesh != nullptr ? externalMesh :
         numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
 
-    // load boundary descriptor from config
-    auto const boundaryDescriptor = FEM::BoundaryDescriptor::fromConfig(
-        config["boundary"], mesh);
+    // load ports descriptor from config
+    auto const ports = FEM::Ports::fromConfig(config["boundary"], mesh);
 
     // load source from config
     auto const source = FEM::SourceDescriptor<dataType>::fromConfig(
-        config["source"], boundaryDescriptor, stream);
+        config["source"], ports, stream);
 
     // read out reference value
     auto const referenceValue = parseReferenceValue<dataType>(config["material"]);
@@ -164,10 +163,10 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     unsigned totalSteps = 0;
     for (unsigned component = 0; component < this->phi.size(); ++component) {
         // 2.5D model constants
-        dataType alpha = math::square(2.0 * component * M_PI / this->height);
-        dataType beta = component == 0 ? (1.0 / this->height) :
-            (2.0 * sin(component * M_PI * this->equation->boundaryDescriptor->height / this->height) /
-                (component * M_PI * this->equation->boundaryDescriptor->height));
+        dataType const alpha = math::square(2.0 * component * M_PI / this->height);
+        dataType const beta = component == 0 ? (1.0 / this->height) :
+            (2.0 * sin(component * M_PI * this->equation->ports->height / this->height) /
+                (component * M_PI * this->equation->ports->height));
 
         // update system matrix for different 2.5D components
         this->equation->update(materialDistribution, alpha, materialDistribution, stream);
@@ -199,7 +198,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
             this->excitation->multiply(this->equation->systemMatrix,
                 this->phi[component], handle, stream);
-            this->excitation->scalarMultiply(this->equation->boundaryDescriptor->height,
+            this->excitation->scalarMultiply(this->equation->ports->height,
                 stream);
 
             this->applyMeasurementPattern(this->excitation, this->result,

@@ -21,13 +21,6 @@
 #ifndef MPFLOW_INCLUDE_NUMERIC_IRREGULAR_MESH_H
 #define MPFLOW_INCLUDE_NUMERIC_IRREGULAR_MESH_H
 
-// forward declarations
-namespace mpFlow {
-namespace FEM {
-    class BoundaryDescriptor;
-}
-}
-
 namespace mpFlow {
 namespace numeric {
     // class for holdingding irregular meshs

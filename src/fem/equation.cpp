@@ -28,15 +28,15 @@ template <
 >
 mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
-    std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+    std::shared_ptr<FEM::Ports const> const ports,
     dataType const referenceValue, bool const calculatesPotential, cudaStream_t const stream)
-    : mesh(mesh), boundaryDescriptor(boundaryDescriptor), referenceValue(referenceValue) {
+    : mesh(mesh), ports(ports), referenceValue(referenceValue) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::Equation::Equation: mesh == nullptr");
     }
-    if (boundaryDescriptor == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::Equation::Equation: boundaryDescriptor == nullptr");
+    if (ports == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::Equation::Equation: ports == nullptr");
     }
 
     // init matrices
@@ -52,7 +52,7 @@ mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
         this->mesh->elements.rows(), math::square(basisFunctionType::pointsPerElement),
         stream, 0.0, false);
     this->excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
-        pointCount, this->boundaryDescriptor->count, stream,
+        pointCount, this->ports->count, stream,
         0.0, false);
     this->elementConnections = numeric::Matrix<unsigned>::fromEigen(
         basisFunctionType::elementConnections(mesh).template cast<unsigned>(), stream);
@@ -184,19 +184,18 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
     // calc excitation matrix
     auto const excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
-    for (unsigned port = 0; port < this->boundaryDescriptor->count; ++port) {
-        auto const edgeCount = (this->boundaryDescriptor->edges.col(port) != (int)constants::invalidIndex).count();
+    for (unsigned port = 0; port < this->ports->count; ++port) {
+        auto const edgeCount = (this->ports->edges.col(port) != (int)constants::invalidIndex).count();
 
         // calculate combined length of all port edges
         double portLength = 0.0;
         for (unsigned edge = 0; edge < edgeCount; ++edge) {
-            auto const nodes = this->mesh->edgeNodes(this->boundaryDescriptor->edges(edge, port));
+            auto const nodes = this->mesh->edgeNodes(this->ports->edges(edge, port));
             portLength += sqrt((nodes.row(nodes.rows() - 1) - nodes.row(0)).square().sum());
         }
-        str::print("port length of port", port, ":", portLength);
              
         for (unsigned edge = 0; edge < edgeCount; ++edge) {
-            auto const edgeIndex = this->boundaryDescriptor->edges(edge, port);
+            auto const edgeIndex = this->ports->edges(edge, port);
             
             // calculate parameter representation of boundary edge
             auto const nodes = this->mesh->edgeNodes(edgeIndex);

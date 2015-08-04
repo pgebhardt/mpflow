@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with mpFlow. If not, see <http://www.gnu.org/licenses/>.
 //
-// Copyright (C) 2014 Patrik Gebhardt
+// Copyright (C) 2015 Patrik Gebhardt
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
@@ -24,14 +24,14 @@ template <
     class dataType
 >
 mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type,
-    std::vector<dataType> const& values, std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+    std::vector<dataType> const& values, std::shared_ptr<FEM::Ports const> const ports,
     std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
     std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
     cudaStream_t const stream)
-    : type(type), values(values), boundaryDescriptor(boundaryDescriptor) {
+    : type(type), values(values), ports(ports) {
     // check input
-    if (boundaryDescriptor == nullptr) {
-        throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: boundaryDescriptor == nullptr");
+    if (ports == nullptr) {
+        throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: ports == nullptr");
     }
     if (drivePattern == nullptr) {
         throw std::invalid_argument("mpFlow::FEM::SourceDescriptor::SourceDescriptor: drivePattern == nullptr");
@@ -50,11 +50,11 @@ mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type,
         drivePattern->cols, stream);
     this->measurementPattern = std::make_shared<numeric::Matrix<dataType>>(measurementPattern->rows,
         measurementPattern->cols, stream);
-    this->pattern = std::make_shared<numeric::Matrix<dataType>>(this->boundaryDescriptor->count,
+    this->pattern = std::make_shared<numeric::Matrix<dataType>>(this->ports->count,
         this->drivePattern->cols + this->measurementPattern->cols, stream);
 
     // fill pattern matrix with drive pattern
-    for (unsigned row = 0; row < this->boundaryDescriptor->count; ++row)
+    for (unsigned row = 0; row < this->ports->count; ++row)
     for (unsigned col = 0; col < this->drivePattern->cols; ++col) {
         (*this->drivePattern)(row, col) = (*drivePattern)(row, col);
         (*this->pattern)(row, col) = this->values[col] * (*this->drivePattern)(row, col);
@@ -62,7 +62,7 @@ mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type,
 
     // fill pattern matrix with measurment pattern and turn sign of measurment
     // for correct current pattern
-    for (unsigned row = 0; row < this->boundaryDescriptor->count; ++row)
+    for (unsigned row = 0; row < this->ports->count; ++row)
     for (unsigned col = 0; col < this->measurementPattern->cols; ++col) {
         (*this->measurementPattern)(row, col) = (*measurementPattern)(row, col);
         (*this->pattern)(row, col + this->drivePattern->cols) =
@@ -77,19 +77,19 @@ template <
     class dataType
 >
 mpFlow::FEM::SourceDescriptor<dataType>::SourceDescriptor(Type const type, dataType const value,
-    std::shared_ptr<FEM::BoundaryDescriptor const> const boundaryDescriptor,
+    std::shared_ptr<FEM::Ports const> const ports,
     std::shared_ptr<numeric::Matrix<int> const> const drivePattern,
     std::shared_ptr<numeric::Matrix<int> const> const measurementPattern,
     cudaStream_t const stream)
     : SourceDescriptor<dataType>(type, std::vector<dataType>(drivePattern->cols, value),
-        boundaryDescriptor, drivePattern, measurementPattern, stream) {
+        ports, drivePattern, measurementPattern, stream) {
 }
 
 template <
     class dataType
 >
 std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDescriptor<dataType>::fromConfig(
-    json_value const& config, std::shared_ptr<BoundaryDescriptor const> const boundaryDescriptor,
+    json_value const& config, std::shared_ptr<Ports const> const ports,
     cudaStream_t const stream) {
     // function to parse pattern config
     auto const parsePatternConfig = [=](json_value const& config)
@@ -98,7 +98,7 @@ std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDesc
             return numeric::Matrix<int>::fromJsonArray(config, stream);
         }
         else {
-            return numeric::Matrix<int>::eye(boundaryDescriptor->count, stream);
+            return numeric::Matrix<int>::eye(ports->count, stream);
         }
     };
     
@@ -123,7 +123,7 @@ std::shared_ptr<mpFlow::FEM::SourceDescriptor<dataType>> mpFlow::FEM::SourceDesc
         mpFlow::FEM::SourceDescriptor<dataType>::Type::Fixed :
         mpFlow::FEM::SourceDescriptor<dataType>::Type::Open;
     auto source = std::make_shared<mpFlow::FEM::SourceDescriptor<dataType>>(sourceType,
-        excitation, boundaryDescriptor, drivePattern, measurementPattern, stream);
+        excitation, ports, drivePattern, measurementPattern, stream);
 
     return source;
 
