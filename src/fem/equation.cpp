@@ -181,6 +181,8 @@ template <
     bool logarithmic
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t const stream) {
+    auto const edgeConnections = basisFunctionType::edgeConnections(this->mesh);
+    
     // calc excitation matrix
     auto const excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
@@ -202,7 +204,7 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcita
             auto const parameter = sqrt((nodes.rowwise() - nodes.row(0)).square().rowwise().sum()).eval();
             
             for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
-                (*excitationMatrix)(this->mesh->edges(edgeIndex, node), port) +=
+                (*excitationMatrix)(edgeConnections(edgeIndex, node), port) +=
                     basisFunctionType::boundaryIntegral(parameter, node) / portLength;
             }
         }

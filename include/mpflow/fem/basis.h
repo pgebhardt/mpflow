@@ -21,7 +21,8 @@
 #ifndef MPFLOW_INCLUDE_FEM_BASIS_H
 #define MPFLOW_INCLUDE_FEM_BASIS_H
 
-// namespace mpFlow::FEM::basis
+#include <functional>
+
 namespace mpFlow {
 namespace FEM {
 namespace basis {
@@ -68,6 +69,8 @@ namespace basis {
             { return mesh->nodes.rows(); }
         static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
             decltype(mesh->elements) { return mesh->elements; }
+        static inline auto edgeConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
+            decltype(mesh->edges) { return mesh->edges; }
         static inline unsigned toLocalIndex(std::shared_ptr<numeric::IrregularMesh const> const, unsigned const, unsigned const index)
             { return index; }
     };
@@ -92,6 +95,8 @@ namespace basis {
             { return mesh->nodes.rows(); }
         static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
             decltype(mesh->elements) { return mesh->elements; }
+        static inline auto edgeConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
+            decltype(mesh->edges) { return mesh->edges; }
         static inline unsigned toLocalIndex(std::shared_ptr<numeric::IrregularMesh const> const, unsigned const, unsigned const index)
             { return index; }
     };
@@ -114,6 +119,9 @@ namespace basis {
             { return mesh->edges.rows(); }
         static inline auto elementConnections(std::shared_ptr<numeric::IrregularMesh const> const mesh) ->
             decltype(mesh->elementEdges) { return mesh->elementEdges; }
+        static inline std::function<unsigned(unsigned, unsigned)> edgeConnections(std::shared_ptr<numeric::IrregularMesh const> const)
+            { return [](unsigned edge, unsigned) { return edge; }; }
+            
         static Eigen::ArrayXi toLocalIndex(std::shared_ptr<numeric::IrregularMesh const> const mesh, unsigned const element, unsigned const index) {
             Eigen::ArrayXi const edge = mesh->edges.row(mesh->elementEdges(element, index));
             
