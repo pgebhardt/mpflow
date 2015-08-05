@@ -46,6 +46,7 @@
 
 // Models
 #include "models/eit.h"
+#include "models/mwi.h"
 #include "models/constant.h"
 
 // generic solver
