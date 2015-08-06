@@ -73,14 +73,26 @@ mpFlow::FEM::Ports::Ports(
 }
 
 std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
-    json_value const& config, std::shared_ptr<numeric::IrregularMesh const> const mesh) {
-    // read out basic config
+    json_value const& config, std::shared_ptr<numeric::IrregularMesh const> const mesh,
+    cudaStream_t const stream, std::string const path) {
     auto const height = config["height"].type != json_none ? config["height"].u.dbl : 1.0;
-    auto const width = config["width"].u.dbl;
-    auto const count = config["count"].u.integer;
-    auto const offset = config["offset"].u.dbl;
-    auto const invertDirection = config["invertDirection"].u.boolean;
-    
-    return circularBoundary(count, width, height, mesh, offset, invertDirection);
+
+    // check whether a path to a file is given, or a complete config
+    if (config["path"].type != json_none) {
+        // read out port edges from file
+        auto const ports = numeric::Matrix<int>::loadtxt(str::format("%s/%s")
+            (path, std::string(config["path"])), stream)->toEigen();
+            
+        return std::make_shared<Ports>(ports, height);      
+    }
+    else {
+        // read out basic config
+        auto const width = config["width"].u.dbl;
+        auto const count = config["count"].u.integer;
+        auto const offset = config["offset"].u.dbl;
+        auto const invertDirection = config["invertDirection"].u.boolean;
+        
+        return circularBoundary(count, width, height, mesh, offset, invertDirection);
+    }
 }
 

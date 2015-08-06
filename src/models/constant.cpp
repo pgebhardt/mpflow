@@ -82,7 +82,7 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
 
     // load ports descriptor from config
     auto const ports = FEM::Ports::fromConfig(
-        config["boundary"], mesh);
+        config["boundary"], mesh, stream, path);
 
     // load sources from config
     auto const sources = FEM::Sources<dataType>::fromConfig(

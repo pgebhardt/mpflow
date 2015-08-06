@@ -122,7 +122,7 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
         numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
 
     // load ports descriptor from config
-    auto const ports = FEM::Ports::fromConfig(config["boundary"], mesh);
+    auto const ports = FEM::Ports::fromConfig(config["boundary"], mesh, stream, path);
 
     // load sources from config
     auto const sources = FEM::Sources<dataType>::fromConfig(
@@ -170,14 +170,13 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
         // update system matrix for different 2.5D components
         this->equation->update(materialDistribution, alpha, materialDistribution, stream);
-
         if (this->sources->type == FEM::Sources<dataType>::Type::Fixed) {
             applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
         }
 
+        // create system excitation
         this->excitation->multiply(this->equation->excitationMatrix,
             this->sources->pattern, handle, stream);
-
         if (this->sources->type == FEM::Sources<dataType>::Type::Open) {
             this->excitation->scalarMultiply(beta, stream);
         }
