@@ -55,8 +55,15 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
 
         auto const nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/nodes.txt")(meshPath), stream);
         auto const elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elements.txt")(meshPath), stream);
-            
-        return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen());
+        
+        // try to load edges from file, but fallback to default edge implementation on error
+        try {
+            auto const edges = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/edges.txt")(meshPath), stream);
+            return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen(), edges->toEigen());            
+        }
+        catch(std::exception const&) {
+            return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen());            
+        }
     }
     else if ((config["radius"].type != json_none) && (config["outerEdgeLength"].type != json_none) &&
             (config["innerEdgeLength"].type != json_none) && (portConfig.type != json_none)) {
