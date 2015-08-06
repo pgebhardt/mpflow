@@ -23,9 +23,9 @@
 // create mesh class
 mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
     Eigen::Ref<Eigen::ArrayXXi const> const elements, Eigen::Ref<Eigen::ArrayXXi const> const edges)
-    : nodes(nodes), elements(elements), edges(distmesh::utils::fixBoundaryEdgeOrientation(nodes, elements, edges)),
-    elementEdges(distmesh::utils::getTriangulationEdgeIndices(elements, this->edges)),
-    boundary(distmesh::utils::boundEdges(elements, this->edges)) {
+    : nodes(nodes), elements(elements), elementEdges(distmesh::utils::getTriangulationEdgeIndices(elements, edges)),
+    edges(distmesh::utils::fixBoundaryEdgeOrientation(nodes, elements, edges, this->elementEdges)),
+    boundary(distmesh::utils::boundEdges(elements, this->edges, this->elementEdges)) {
     // check input
     if (nodes.cols() != 2) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh::IrregularMesh: nodes.cols() != 2");

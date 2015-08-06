@@ -52,8 +52,8 @@ namespace numeric {
         // member
         Eigen::ArrayXXd const nodes;
         Eigen::ArrayXXi const elements;
-        Eigen::ArrayXXi const edges;
         Eigen::ArrayXXi const elementEdges;
+        Eigen::ArrayXXi const edges;
         Eigen::ArrayXi const boundary;
     };
 /*
