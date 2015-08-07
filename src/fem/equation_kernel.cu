@@ -30,6 +30,14 @@
 #include "mpflow/numeric/constants.h"
 #include "mpflow/fem/equation_kernel.h"
 
+template <typename type>
+inline __device__ type expS(type const v) { return exp(v); }
+
+template <typename type>
+inline __device__ thrust::complex<type> expS(thrust::complex<type> const v) {
+    return thrust::complex<type>(expS(v.real()), expS(v.imag()));
+}
+
 // update matrix kernel
 template <
     class dataType,
@@ -53,7 +61,7 @@ static __global__ void updateMatrixKernel(const unsigned* connectivityMatrix,
         if (logarithmic == true) {
             value += elementId != mpFlow::constants::invalidIndex ?
                 elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::blockSize) * rows] *
-                referenceValue * exp(log(dataType(10)) * gamma[elementId] / dataType(10)) :
+                referenceValue * expS(log(dataType(10)) * gamma[elementId] / dataType(10)) :
                 dataType(0);
         }
         else {
@@ -226,7 +234,7 @@ static __global__ void calcJacobianKernel(const dataType* drivePhi,
 
     if (logarithmic == true) {
         // diff sigma to gamma
-        element *= referenceValue * exp(log(dataType(10)) * gamma[column] / dataType(10)) /
+        element *= referenceValue * expS(log(dataType(10)) * gamma[column] / dataType(10)) /
             dataType(10);
     }
 
