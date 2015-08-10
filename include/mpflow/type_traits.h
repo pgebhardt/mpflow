@@ -29,20 +29,20 @@ namespace typeTraits {
     struct extractNumericalType { typedef type_ type; };
 
     template <typename type_>
-    struct extractNumericalType<thrust::complex<type_>> { typedef type_ type; };
+    struct extractNumericalType<thrust::complex<type_> > { typedef type_ type; };
 
     template <typename type_>
-    struct extractNumericalType<std::complex<type_>> { typedef type_ type; };
+    struct extractNumericalType<std::complex<type_> > { typedef type_ type; };
 
     // convert thrust::complex to std::complex and vice versa
     template <typename type_>
     struct convertComplexType { typedef type_ type; };
 
     template <typename type_>
-    struct convertComplexType<thrust::complex<type_>> { typedef std::complex<type_> type; };
+    struct convertComplexType<thrust::complex<type_> > { typedef std::complex<type_> type; };
 
     template <typename type_>
-    struct convertComplexType<std::complex<type_>> { typedef thrust::complex<type_> type; };
+    struct convertComplexType<std::complex<type_> > { typedef thrust::complex<type_> type; };
 }
 }
 
