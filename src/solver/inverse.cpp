@@ -29,7 +29,7 @@ mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
     unsigned const parallelImages, cublasHandle_t const handle, cudaStream_t const stream)
-    : regularizationFactor_(dataType(0)), regularizationType_(Inverse<dataType, numericalSolverType>::identity),
+    : regularizationFactor_(0), regularizationType_(Inverse<dataType, numericalSolverType>::identity),
     jacobian(jacobian), mesh(mesh) {
     // check input
     if (handle == nullptr) {
@@ -69,7 +69,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::updateJacobian(
     // update system matrix
     this->calcJacobianSquare(handle, stream);
     this->systemMatrix->copy(this->regularizationMatrix, stream);
-    this->systemMatrix->scalarMultiply(this->regularizationFactor(), stream);
+    this->systemMatrix->scalarMultiply(math::square(this->regularizationFactor()), stream);
     this->systemMatrix->add(this->jacobianSquare, stream);
 }
 
@@ -123,7 +123,7 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
     
     // update system matrix
     this->systemMatrix->copy(this->regularizationMatrix, stream);
-    this->systemMatrix->scalarMultiply(this->regularizationFactor(), stream);
+    this->systemMatrix->scalarMultiply(math::square(this->regularizationFactor()), stream);
     this->systemMatrix->add(this->jacobianSquare, stream);
 }
 
@@ -227,11 +227,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<dataType> const>
     // solve system
     unsigned const steps = this->numericalSolver->template solve<numeric::Matrix, numeric::Matrix>(
         this->systemMatrix, this->excitation, handle, stream, this->result, nullptr, maxIterations);
-        
+
     if (iterations != nullptr) {
         *iterations = steps; 
     }
-    
+
     return this->result;
 }
 
