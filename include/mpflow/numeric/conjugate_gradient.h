@@ -41,7 +41,8 @@ namespace numeric {
         unsigned solve(std::shared_ptr<matrixType<dataType>> const A,
             std::shared_ptr<Matrix<dataType> const> const b, cublasHandle_t const handle,
             cudaStream_t const stream, std::shared_ptr<Matrix<dataType>> const x,
-            std::shared_ptr<preconditionerType<dataType>> const KInv=nullptr, unsigned const maxIterations=0);
+            std::shared_ptr<preconditionerType<dataType>> const KInv=nullptr, unsigned const maxIterations=0,
+            bool const dcFree=false);
 
         // helper
         static void addScalar(std::shared_ptr<Matrix<dataType> const> const scalar,
