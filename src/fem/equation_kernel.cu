@@ -35,10 +35,10 @@
 template <typename type, bool logarithmic>
 inline __device__ type matParam(type const ref, type const v) {
     if (logarithmic == true) {
-        return ref * exp(log(type(10)) * v / type(10));        
+        return ref * exp(log(type(10)) * v / type(10));
     }
     else {
-        return ref * v;        
+        return ref * v;
     }
 }
 
@@ -49,17 +49,17 @@ inline __device__ thrust::complex<type> matParam(thrust::complex<type> const ref
             ref.imag() * exp(log(type(10)) * v.imag() / type(10)));
     }
     else {
-        return ref * v;        
+        return ref * v;
     }
 }
 
 template <typename type, bool logarithmic>
 inline __device__ type matParamDeriv(type const ref, type const v) {
     if (logarithmic == true) {
-        return (log(type(10)) / type(10)) * ref * exp(log(type(10)) * v / type(10));        
+        return (log(type(10)) / type(10)) * ref * exp(log(type(10)) * v / type(10));
     }
     else {
-        return ref;        
+        return ref;
     }
 }
 
@@ -70,7 +70,7 @@ inline __device__ thrust::complex<type> matParamDeriv(thrust::complex<type> cons
             ref.imag() * exp(log(type(10)) * v.imag() / type(10)));
     }
     else {
-        return ref;        
+        return ref;
     }
 }
 
