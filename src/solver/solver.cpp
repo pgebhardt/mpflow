@@ -51,7 +51,7 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
     }
 
     dataType const initialValue = forwardModelType::logarithmic ? dataType(0) :
-        this->forwardModel->referenceValue;
+        dataType(1);
     this->referenceDistribution = std::make_shared<numeric::Matrix<dataType>>(
         this->forwardModel->mesh->elements.rows(), parallelImages, stream,
         initialValue);
@@ -175,7 +175,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> con
     // solve
     auto const result = this->inverseSolver->solve(this->calculation, this->measurement,
         handle, stream, maxIterations, iterations);
-    this->materialDistribution->copy(result, stream);
+
+    this->materialDistribution->copy(this->referenceDistribution, stream);
+    this->materialDistribution->add(result, stream);
 
     return this->materialDistribution;
 }
