@@ -108,7 +108,7 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     }
 
     // extract regularization parameter
-    double const regularizationFactor = solverConfig["regularizationFactor"].u.dbl;
+    auto const regularizationFactor = jsonHelper::parseNumericValue<dataType>(solverConfig["regularizationFactor"]);
     auto const regularizationType = [](json_value const& config) {
         typedef solver::Inverse<dataType, numericalInverseSolverType> inverseSolverType;
         

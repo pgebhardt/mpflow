@@ -18,40 +18,16 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
-#ifndef MPFLOW_INCLUDE_MPFLOW_H
-#define MPFLOW_INCLUDE_MPFLOW_H
+#ifndef MPFLOW_INCLUDE_JSON_HELPER_H
+#define MPFLOW_INCLUDE_JSON_HELPER_H
 
-#include "common.h"
-#include "version.h"
-#include "cuda_error.h"
-#include "constants.h"
-#include "mathematics.h"
-#include "type_traits.h"
-#include "json_helper.h"
-
-// numeric solver
-#include "numeric/cublas_wrapper.h"
-#include "numeric/constants.h"
-#include "numeric/matrix.h"
-#include "numeric/sparse_matrix.h"
-#include "numeric/irregular_mesh.h"
-#include "numeric/conjugate_gradient.h"
-#include "numeric/bicgstab.h"
-#include "numeric/preconditioner.h"
-
-// FEM specific
-#include "fem/basis.h"
-#include "fem/ports.h"
-#include "fem/sources.h"
-#include "fem/equation.h"
-
-// Models
-#include "models/eit.h"
-#include "models/mwi.h"
-#include "models/constant.h"
-
-// generic solver
-#include "solver/inverse.h"
-#include "solver/solver.h"
+namespace mpFlow {
+namespace jsonHelper {
+	// parse a json encoded numeric value with specializations for
+	// complex types encoded as an array of two elements
+	template <class dataType>
+	dataType parseNumericValue(json_value const& value, dataType const def=dataType(0));
+}
+}
 
 #endif

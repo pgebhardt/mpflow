@@ -86,29 +86,6 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
         this->equation->excitationMatrix, handle, stream, CUBLAS_OP_T, CUBLAS_OP_T);
 }
 
-template <class dataType>
-static dataType parseReferenceValue(json_value const& config) {
-    if (config.type == json_double) {
-        return config.u.dbl;
-    }
-    else {
-        return 1.0;
-    }
-}
-
-template <>
-thrust::complex<double> parseReferenceValue(json_value const& config) {
-    if (config.type == json_array) {
-        return thrust::complex<double>(config[0], config[1]);
-    }
-    else if (config.type == json_double) {
-        return thrust::complex<double>(config.u.dbl);
-    }
-    else {
-        return thrust::complex<double>(1.0);
-    }
-}
-
 template <
     template <class> class numericalSolverType,
     class equationType
@@ -129,8 +106,8 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
         config["source"], ports, stream);
 
     // read out reference value
-    auto const referenceValue = parseReferenceValue<dataType>(config["material"]);
-
+    auto const referenceValue = jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
+    
     // read out model height
     auto const height = config["mesh"]["height"].u.dbl;
     
