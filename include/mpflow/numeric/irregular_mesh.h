@@ -34,8 +34,10 @@ namespace numeric {
             Eigen::Ref<Eigen::ArrayXXi const> const elements);
 
         // factories
+#ifdef _JSON_H
         static std::shared_ptr<IrregularMesh> fromConfig(json_value const& config,
             json_value const& portConfig, cudaStream_t const stream, std::string const path="./");
+#endif
 
         // helper methods
         Eigen::ArrayXXd elementNodes(unsigned const element) const;

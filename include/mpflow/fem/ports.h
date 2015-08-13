@@ -33,9 +33,12 @@ namespace FEM {
         static std::shared_ptr<Ports> circularBoundary(unsigned const count,
             double const width, double const height, std::shared_ptr<numeric::IrregularMesh const> const mesh,
             double const offset=0.0, bool const clockwise=false);
+            
+#ifdef _JSON_H
         static std::shared_ptr<Ports> fromConfig(json_value const& config,
             std::shared_ptr<numeric::IrregularMesh const> const mesh,
             cudaStream_t const stream, std::string const path="./");
+#endif
 
         // member
         Eigen::ArrayXXi const edges;

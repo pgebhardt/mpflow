@@ -41,10 +41,12 @@ namespace models {
             cublasHandle_t const handle, cudaStream_t const stream);
 
         // factories
+#ifdef _JSON_H
         static std::shared_ptr<EIT<numericalSolverType, equationType>>
             fromConfig(json_value const& config, cublasHandle_t const handle,
             cudaStream_t const stream, std::string const path="./",
             std::shared_ptr<numeric::IrregularMesh const> const externalMesh=nullptr);
+#endif
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dataType> const> solve(

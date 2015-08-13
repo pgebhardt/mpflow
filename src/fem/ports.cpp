@@ -18,6 +18,7 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
+#include "json.h"
 #include "mpflow/mpflow.h"
 
 mpFlow::FEM::Ports::Ports(

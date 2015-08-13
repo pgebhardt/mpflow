@@ -93,8 +93,10 @@ namespace numeric {
             cudaStream_t const stream=nullptr);
 
         // create from json array
+#ifdef _JSON_H
         static std::shared_ptr<Matrix<type>> fromJsonArray(json_value const& array,
             cudaStream_t const stream=nullptr);
+#endif
 
         // I/O operators
         friend std::ostream& operator << (std::ostream& out, Matrix<type> const& matrix) {
@@ -140,6 +142,7 @@ namespace numeric {
         unsigned dataCols;
     };
 
+#ifdef _JSON_H
     // creates eigen array from an json array
     template <class type>
     Eigen::Array<type, Eigen::Dynamic, Eigen::Dynamic> eigenFromJsonArray(
@@ -171,6 +174,7 @@ namespace numeric {
 
         return eigenArray;
     }
+#endif
 }
 }
 

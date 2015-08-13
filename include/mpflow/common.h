@@ -47,7 +47,4 @@
 // library from mesh generation
 #include <distmesh/distmesh.h>
 
-// library to parse json
-#include "json.h"
-
 #endif

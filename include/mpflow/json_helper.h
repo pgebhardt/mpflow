@@ -21,6 +21,8 @@
 #ifndef MPFLOW_INCLUDE_JSON_HELPER_H
 #define MPFLOW_INCLUDE_JSON_HELPER_H
 
+#ifdef _JSON_H
+
 namespace mpFlow {
 namespace jsonHelper {
 	// parse a json encoded numeric value with specializations for
@@ -29,5 +31,7 @@ namespace jsonHelper {
 	dataType parseNumericValue(json_value const& value, dataType const def=dataType(0));
 }
 }
+
+#endif
 
 #endif

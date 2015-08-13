@@ -39,10 +39,12 @@ namespace models {
             std::shared_ptr<numeric::Matrix<dataType>> const jacobian,
             dataType const referenceValue, cudaStream_t const stream);
         
+#ifdef _JSON_H
         static std::shared_ptr<Constant<dataType>>
             fromConfig(json_value const& config, cublasHandle_t const handle,
             cudaStream_t const stream, std::string const path="./",
             std::shared_ptr<numeric::IrregularMesh const> const externalMesh=nullptr);
+#endif
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dataType> const> solve(

@@ -18,6 +18,7 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
+#include "json.h"
 #include "mpflow/mpflow.h"
 
 // parse a json encoded numeric value with specializations for

@@ -47,9 +47,11 @@ namespace FEM {
         virtual ~Sources() { }
 
         // factories
+#ifdef _JSON_H        
         static std::shared_ptr<Sources<dataType>> fromConfig(json_value const& config,
             std::shared_ptr<Ports const> const ports,
             cudaStream_t const stream);
+#endif
 
         // member
         Type const type;

@@ -24,6 +24,7 @@
 #include <iomanip>
 #include <fstream>
 
+#include "json.h"
 #include "mpflow/mpflow.h"
 #include "mpflow/numeric/matrix_kernel.h"
 

@@ -18,6 +18,7 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
+#include "json.h"
 #include "mpflow/mpflow.h"
 #include "mpflow/models/eit_kernel.h"
 
