@@ -164,20 +164,19 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
             this->excitation, nullptr, stream, this->phi[component], this->preconditioner, 0,
             (component == 0 && this->sources->type == FEM::Sources<dataType>::Type::Open) ? true : false);
-
+        
         // calc jacobian
         this->equation->calcJacobian(this->phi[component], materialDistribution, this->sources->drivePattern->cols,
             this->sources->measurementPattern->cols, component == 0 ? false : true,
             stream, this->jacobian);
-
+        
         // calculate electrode voltage or current, depends on the type of sources
         if (this->sources->type == FEM::Sources<dataType>::Type::Fixed) {
             this->equation->update(materialDistribution, alpha, materialDistribution, stream);
 
             this->excitation->multiply(this->equation->systemMatrix,
                 this->phi[component], handle, stream);
-            this->excitation->scalarMultiply(this->equation->ports->height,
-                stream);
+            this->excitation->scalarMultiply(this->height, stream);
 
             this->applyMeasurementPattern(this->excitation, this->result,
                 component == 0 ? false : true, handle, stream);
@@ -189,6 +188,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     }
 
     // current sources specific correction for jacobian matrix
+    this->jacobian->scalarMultiply(this->height, stream);        
     if (this->sources->type == FEM::Sources<dataType>::Type::Open) {
         this->jacobian->scalarMultiply(dataType(-1), stream);
     }
