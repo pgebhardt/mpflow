@@ -45,14 +45,9 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> 
 
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
     json_value const& config, json_value const& portConfig, cudaStream_t const stream, std::string const path) {
-    // check for correct config
-    if (config["height"].type == json_none) {
-        return nullptr;
-    }
-
-    if (config["path"].type != json_none) {
+    if (config.type == json_string) {
         // load mesh from file
-        std::string const meshPath = str::format("%s/%s")(path, std::string(config["path"]));
+        std::string const meshPath = str::format("%s/%s")(path, std::string(config));
 
         auto const nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/nodes.txt")(meshPath), stream);
         auto const elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elements.txt")(meshPath), stream);
