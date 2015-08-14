@@ -79,7 +79,7 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
     std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
     // load mesh from config
     auto const mesh = externalMesh != nullptr ? externalMesh :
-        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
+        numeric::IrregularMesh::fromConfig(config["mesh"], config["ports"], stream, path);
 
     // load ports descriptor from config
     auto const ports = FEM::Ports::fromConfig(

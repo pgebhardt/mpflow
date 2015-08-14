@@ -37,8 +37,8 @@ namespace models {
         // initialization
         EIT(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::Sources<dataType> const> const sources,
-            dataType const referenceValue, double const height, unsigned const components,
-            cublasHandle_t const handle, cudaStream_t const stream);
+            dataType const referenceValue, cublasHandle_t const handle, cudaStream_t const stream,
+            unsigned const components=1, double const height=1.0, double const portHeight=1.0);
 
         // factories
 #ifdef _JSON_H
@@ -66,6 +66,7 @@ namespace models {
         std::shared_ptr<FEM::Sources<dataType> const> const sources;
         dataType const referenceValue;
         double const height;
+        double const portHeight;
         std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;

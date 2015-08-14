@@ -29,9 +29,9 @@ template <
 mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<FEM::Sources<dataType> const> const sources,
-    dataType const referenceValue, double const height, unsigned const components,
-    cublasHandle_t const handle, cudaStream_t const stream)
-    : mesh(mesh), sources(sources), referenceValue(referenceValue), height(height) {
+    dataType const referenceValue, cublasHandle_t const handle, cudaStream_t const stream,
+    unsigned const components, double const height, double const portHeight) :
+    mesh(mesh), sources(sources), referenceValue(referenceValue), height(height), portHeight(portHeight) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: mesh == nullptr");
@@ -39,14 +39,17 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
     if (sources == nullptr) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: sources == nullptr");
     }
-    if (height <= 0.0) {
-        throw std::invalid_argument("mpFlow::models::EIT::EIT: height <= 0.0");
+    if (handle == nullptr) {
+        throw std::invalid_argument("mpFlow::models::EIT::EIT: handle == nullptr");
     }
     if (components < 1) {
         throw std::invalid_argument("mpFlow::models::EIT::EIT: components < 1");
     }
-    if (handle == nullptr) {
-        throw std::invalid_argument("mpFlow::models::EIT::EIT: handle == nullptr");
+    if (height <= 0.0) {
+        throw std::invalid_argument("mpFlow::models::EIT::EIT: height <= 0.0");
+    }
+    if (portHeight <= 0.0) {
+        throw std::invalid_argument("mpFlow::models::EIT::EIT: portHeight <= 0.0");
     }
 
     // create FEM equation
@@ -97,10 +100,10 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
     // load mesh from config
     auto const mesh = externalMesh != nullptr ? externalMesh :
-        numeric::IrregularMesh::fromConfig(config["mesh"], config["boundary"], stream, path);
+        numeric::IrregularMesh::fromConfig(config["mesh"], config["ports"], stream, path);
 
     // load ports descriptor from config
-    auto const ports = FEM::Ports::fromConfig(config["boundary"], mesh, stream, path);
+    auto const ports = FEM::Ports::fromConfig(config["ports"], mesh, stream, path);
 
     // load sources from config
     auto const sources = FEM::Sources<dataType>::fromConfig(
@@ -109,15 +112,14 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     // read out reference value
     auto const referenceValue = jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
     
-    // read out model height
-    auto const height = config["mesh"]["height"].u.dbl;
-    
-    // read out 2.5D components count
-    auto const componentsCount = std::max(1, (int)config["componentsCount"].u.integer);
+    // read 2.5D stuff  
+    auto const componentsCount = std::max(1, (int)config["2.5D"]["components"].u.integer);
+    auto const height = config["2.5D"]["height"].type != json_none ? config["2.5D"]["height"].u.dbl : 1.0;
+    auto const portHeight = config["2.5D"]["portHeight"].type != json_none ? config["2.5D"]["portHeight"].u.dbl : 1.0;
         
     // create forward model
     return std::make_shared<EIT<numericalSolverType, equationType>>(mesh, sources,
-        referenceValue, height, componentsCount, handle, stream);
+        referenceValue, handle, stream, componentsCount, height, portHeight);
 }
 
 // forward solving
@@ -143,8 +145,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         // 2.5D model constants
         dataType const alpha = math::square(2.0 * component * M_PI / this->height);
         dataType const beta = component == 0 ? (1.0 / this->height) :
-            (2.0 * sin(component * M_PI * this->equation->ports->height / this->height) /
-                (component * M_PI * this->equation->ports->height));
+            (2.0 * sin(component * M_PI * this->portHeight / this->height) /
+                (component * M_PI * this->portHeight));
 
         // update system matrix for different 2.5D components
         this->equation->update(materialDistribution, alpha, materialDistribution, stream);
