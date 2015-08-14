@@ -21,10 +21,8 @@
 #include "json.h"
 #include "mpflow/mpflow.h"
 
-mpFlow::FEM::Ports::Ports(
-    Eigen::Ref<Eigen::ArrayXXi const> const edges,
-    double const height)
-    : edges(edges), height(height), count(edges.cols()) {
+mpFlow::FEM::Ports::Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges)
+    : edges(edges), count(edges.cols()) {
     // check input
     if (edges.rows() == 0) {
         throw std::invalid_argument("mpFlow::FEM::Ports::Ports: edges == 0");
@@ -32,8 +30,8 @@ mpFlow::FEM::Ports::Ports(
 }
 
  std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::circularBoundary(
-    unsigned const count, double const width, double const height,
-    std::shared_ptr<numeric::IrregularMesh const> const mesh, double const offset, bool const clockwise) {
+    unsigned const count, double const width, std::shared_ptr<numeric::IrregularMesh const> const mesh,
+    double const offset, bool const clockwise) {
     auto const radius = std::sqrt(mesh->nodes.square().rowwise().sum().maxCoeff());
     
     // find edges located inside port interval on a circular boundary
@@ -70,21 +68,19 @@ mpFlow::FEM::Ports::Ports(
         portEdges(edge, port) = portEdgesVector[port][edge];
     }
     
-    return std::make_shared<Ports>(portEdges, height);
+    return std::make_shared<Ports>(portEdges);
 }
 
 std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
     json_value const& config, std::shared_ptr<numeric::IrregularMesh const> const mesh,
     cudaStream_t const stream, std::string const path) {
-    auto const height = config["height"].type != json_none ? config["height"].u.dbl : 1.0;
-
     // check whether a path to a file is given, or a complete config
-    if (config["path"].type != json_none) {
+    if (config.type == json_string) {
         // read out port edges from file
         auto const ports = numeric::Matrix<int>::loadtxt(str::format("%s/%s")
-            (path, std::string(config["path"])), stream)->toEigen();
+            (path, std::string(config)), stream)->toEigen();
             
-        return std::make_shared<Ports>(ports, height);      
+        return std::make_shared<Ports>(ports);      
     }
     else {
         // read out basic config
@@ -93,7 +89,7 @@ std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
         auto const offset = config["offset"].u.dbl;
         auto const invertDirection = config["invertDirection"].u.boolean;
         
-        return circularBoundary(count, width, height, mesh, offset, invertDirection);
+        return circularBoundary(count, width, mesh, offset, invertDirection);
     }
 }
 

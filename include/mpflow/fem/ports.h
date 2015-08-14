@@ -25,13 +25,12 @@ namespace mpFlow {
 namespace FEM {
     class Ports {
     public:
-        Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges,
-            double const height);
+        Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges);
         virtual ~Ports() { }
 
         // factories
         static std::shared_ptr<Ports> circularBoundary(unsigned const count,
-            double const width, double const height, std::shared_ptr<numeric::IrregularMesh const> const mesh,
+            double const width, std::shared_ptr<numeric::IrregularMesh const> const mesh,
             double const offset=0.0, bool const clockwise=false);
             
 #ifdef _JSON_H
@@ -42,7 +41,6 @@ namespace FEM {
 
         // member
         Eigen::ArrayXXi const edges;
-        double const height;
         unsigned const count;
     };
 }
