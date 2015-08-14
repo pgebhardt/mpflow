@@ -43,31 +43,9 @@ inline __device__ type matParam(type const ref, type const v) {
 }
 
 template <typename type, bool logarithmic>
-inline __device__ thrust::complex<type> matParam(thrust::complex<type> const ref, thrust::complex<type> const v) {
-    if (logarithmic == true) {
-        return thrust::complex<type>(ref.real() * exp(log(type(10)) * v.real() / type(10)),
-            ref.imag() * exp(log(type(10)) * v.imag() / type(10)));
-    }
-    else {
-        return ref * v;
-    }
-}
-
-template <typename type, bool logarithmic>
 inline __device__ type matParamDeriv(type const ref, type const v) {
     if (logarithmic == true) {
         return (log(type(10)) / type(10)) * ref * exp(log(type(10)) * v / type(10));
-    }
-    else {
-        return ref;
-    }
-}
-
-template <typename type, bool logarithmic>
-inline __device__ thrust::complex<type> matParamDeriv(thrust::complex<type> const ref, thrust::complex<type> const v) {
-    if (logarithmic == true) {
-        return (log(type(10)) / type(10)) * thrust::complex<type>(ref.real() * exp(log(type(10)) * v.real() / type(10)),
-            ref.imag() * exp(log(type(10)) * v.imag() / type(10)));
     }
     else {
         return ref;
@@ -96,8 +74,7 @@ static __global__ void updateMatrixKernel(const unsigned* connectivityMatrix,
 
         value += elementId != mpFlow::constants::invalidIndex ?
             elementalMatrix[row + (column + k * mpFlow::numeric::sparseMatrix::blockSize) * rows] *
-            matParam<typename mpFlow::typeTraits::extractNumericalType<dataType>::type, logarithmic>(
-                referenceValue, gamma[elementId]) : dataType(0);
+            matParam<dataType, logarithmic>(referenceValue, gamma[elementId]) : dataType(0);
     }
 
     // set residual matrix element
@@ -241,13 +218,10 @@ static __global__ void calcJacobianKernel(const dataType* drivePhi,
     unsigned const measurmentId = row % roundMeasurmentCount;
     unsigned const driveId = row / roundMeasurmentCount;
 
-    // variables
-    dataType dPhi[nodes_per_element], mPhi[nodes_per_element];
-    unsigned index;
-
     // get data
+    dataType dPhi[nodes_per_element], mPhi[nodes_per_element];
     for (unsigned i = 0; i < nodes_per_element; i++) {
-        index = connectivityMatrix[column + i * columns];
+        unsigned const index = connectivityMatrix[column + i * columns];
         dPhi[i] = driveId < driveCount ? drivePhi[index + driveId * phiRows] : dataType(0);
         mPhi[i] = measurmentId < measurmentCount ? measurmentPhi[index +
             measurmentId * phiRows] : dataType(0);
@@ -260,8 +234,7 @@ static __global__ void calcJacobianKernel(const dataType* drivePhi,
         element += dPhi[i] * mPhi[j] * elementalJacobianMatrix[column +
             (i + j * nodes_per_element) * columns];
     }
-    element *= matParamDeriv<typename mpFlow::typeTraits::extractNumericalType<dataType>::type, logarithmic>(
-        referenceValue, gamma[column]);
+    element *= matParamDeriv<dataType, logarithmic>(referenceValue, gamma[column]);
 
     if (additiv) {
         jacobian[row + column * rows] += element;
