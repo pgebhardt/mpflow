@@ -113,11 +113,11 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     auto const regularizationType = [](json_value const& config) {
         typedef solver::Inverse<dataType, numericalInverseSolverType> inverseSolverType;
         
-        if (std::string(config) == "diagonal") {
-            return inverseSolverType::RegularizationType::diagonal;
+        if (std::string(config) == "noser") {
+            return inverseSolverType::RegularizationType::noser;
         }
-        else if (std::string(config) == "totalVariational") {
-            return inverseSolverType::RegularizationType::totalVariational;
+        else if (std::string(config) == "laplacian") {
+            return inverseSolverType::RegularizationType::laplacian;
         }
         else {
             return inverseSolverType::RegularizationType::identity;

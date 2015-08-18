@@ -32,8 +32,8 @@ namespace solver {
     public:
         enum RegularizationType {
             identity,
-            diagonal,
-            totalVariational
+            noser,
+            laplacian
         };
 
         // constructor

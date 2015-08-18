@@ -88,10 +88,10 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
     if (this->regularizationType() == RegularizationType::identity) {
         this->regularizationMatrix->setEye(stream);
     }
-    else if (this->regularizationType() == RegularizationType::diagonal) {
+    else if (this->regularizationType() == RegularizationType::noser) {
         this->regularizationMatrix->diag(this->jacobianSquare, stream);
     }
-    else if (this->regularizationType() == RegularizationType::totalVariational) {
+    else if (this->regularizationType() == RegularizationType::laplacian) {
         // calculate connection matrix
         Eigen::ArrayXf signs = Eigen::ArrayXf::Ones(this->mesh->edges.size());
         auto L = std::make_shared<numeric::Matrix<dataType>>(this->mesh->edges.rows(),
