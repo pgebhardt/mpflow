@@ -67,7 +67,8 @@ namespace models {
         dataType const referenceValue;
         double const height;
         double const portHeight;
-        std::vector<std::shared_ptr<numeric::Matrix<dataType>>> phi;
+        std::vector<std::shared_ptr<numeric::Matrix<dataType>>> fields;
+        std::shared_ptr<numeric::Matrix<dataType>> field;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;
 
