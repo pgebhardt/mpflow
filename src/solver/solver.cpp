@@ -82,6 +82,9 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
             return numeric::Matrix<dataType>::loadtxt(
                 str::format("%s/%s")(path, std::string(config)), stream);
         }
+        else if ((config.type == json_object) && (config["distribution"].type == json_string)) {
+            return numeric::Matrix<dataType>::loadtxt(str::format("%s/%s")(path, std::string(config["distribution"])), stream);            
+        }
         else {
             return std::shared_ptr<numeric::Matrix<dataType>>(nullptr);
         }
@@ -101,9 +104,9 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     solver->preSolve(handle, stream);
 
     // clear jacobian matrix for not needed elements
-    if (modelConfig["mesh"]["noSensitivity"].type != json_none) {
+    if (modelConfig["noSensitivity"].type == json_string) {
         forwardModel->jacobian->elementwiseMultiply(forwardModel->jacobian,
-            numeric::Matrix<dataType>::loadtxt(str::format("%s/%s")(path, std::string(modelConfig["mesh"]["noSensitivity"])), stream),
+            numeric::Matrix<dataType>::loadtxt(str::format("%s/%s")(path, std::string(modelConfig["noSensitivity"])), stream),
             stream);
         solver->inverseSolver->updateJacobian(forwardModel->jacobian, handle, stream);
     }
@@ -297,3 +300,8 @@ template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<f
 template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<float>>, mpFlow::numeric::BiCGSTAB>;
 template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<double>>, mpFlow::numeric::ConjugateGradient>;
 template class mpFlow::solver::Solver<mpFlow::models::Constant<thrust::complex<double>>, mpFlow::numeric::BiCGSTAB>;
+
+template class mpFlow::solver::Solver<mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, false>>, mpFlow::numeric::BiCGSTAB>;
+template class mpFlow::solver::Solver<mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, false>>, mpFlow::numeric::BiCGSTAB>;    
