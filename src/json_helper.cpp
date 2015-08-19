@@ -37,30 +37,34 @@ dataType mpFlow::jsonHelper::parseNumericValue(json_value const& value,
 template float mpFlow::jsonHelper::parseNumericValue<float>(json_value const&, float const);
 template double mpFlow::jsonHelper::parseNumericValue<double>(json_value const&, double const);
 
-template <>
-thrust::complex<float> mpFlow::jsonHelper::parseNumericValue(json_value const& value,
-	thrust::complex<float> const def) {
-	if ((value.type == json_array) && (value.u.array.length >= 2)) {
-		return thrust::complex<float>(value[0].u.dbl, value[1].u.dbl);
+namespace mpFlow {
+namespace jsonHelper {
+	template <>
+	thrust::complex<float> parseNumericValue(json_value const& value,
+		thrust::complex<float> const def) {
+		if ((value.type == json_array) && (value.u.array.length >= 2)) {
+			return thrust::complex<float>(value[0].u.dbl, value[1].u.dbl);
+		}
+		else if (value.type == json_double) {
+			return thrust::complex<float>(value.u.dbl);
+		}
+		else {
+			return def;
+		}
 	}
-	else if (value.type == json_double) {
-		return thrust::complex<float>(value.u.dbl);
-	}
-	else {
-		return def;
-	}
+	
+	template <>
+	thrust::complex<double> parseNumericValue(json_value const& value,
+		thrust::complex<double> const def) {
+		if ((value.type == json_array) && (value.u.array.length >= 2)) {
+			return thrust::complex<double>(value[0].u.dbl, value[1].u.dbl);
+		}
+		else if (value.type == json_double) {
+			return thrust::complex<double>(value.u.dbl);
+		}
+		else {
+			return def;
+		}
+	}	
 }
-
-template <>
-thrust::complex<double> mpFlow::jsonHelper::parseNumericValue(json_value const& value,
-	thrust::complex<double> const def) {
-	if ((value.type == json_array) && (value.u.array.length >= 2)) {
-		return thrust::complex<double>(value[0].u.dbl, value[1].u.dbl);
-	}
-	else if (value.type == json_double) {
-		return thrust::complex<double>(value.u.dbl);
-	}
-	else {
-		return def;
-	}
 }
