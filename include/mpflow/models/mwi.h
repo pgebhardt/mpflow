@@ -37,8 +37,16 @@ namespace models {
         // initialization
         MWI(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::Sources<dataType> const> const sources,
-            dataType const referenceWaveNumber, cublasHandle_t const handle,
+            dataType const referenceValue, cublasHandle_t const handle,
             cudaStream_t const stream);
+
+        // factories
+#ifdef _JSON_H
+        static std::shared_ptr<MWI<numericalSolverType, equationType>>
+            fromConfig(json_value const& config, cublasHandle_t const handle,
+            cudaStream_t const stream, std::string const path="./",
+            std::shared_ptr<numeric::IrregularMesh const> const externalMesh=nullptr);
+#endif
 
         // forward solving
         std::shared_ptr<numeric::Matrix<dataType> const> solve(
@@ -49,15 +57,18 @@ namespace models {
         // member
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
         std::shared_ptr<FEM::Sources<dataType> const> const sources;
-        std::shared_ptr<numeric::Matrix<dataType>> fields;
-        dataType const referenceWaveNumber;
-        
+        dataType const referenceValue;
+        std::shared_ptr<numeric::Matrix<dataType>> field;
+        std::shared_ptr<numeric::Matrix<dataType>> result;
+        std::shared_ptr<numeric::Matrix<dataType>> jacobian;
+
     private:
         std::shared_ptr<equationType> equation;
         std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
-        Eigen::Matrix<typename typeTraits::convertComplexType<dataType>::type,
-            Eigen::Dynamic, Eigen::Dynamic> excitation;
+        std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> alpha;
+        std::shared_ptr<numeric::Matrix<dataType>> portsAttachmentMatrix;
+        std::shared_ptr<numeric::SparseMatrix<dataType>> preconditioner;
     };
 }
 }

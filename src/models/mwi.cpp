@@ -18,6 +18,7 @@
 // Contact: patrik.gebhardt@rub.de
 // --------------------------------------------------------------------
 
+#include "json.h"
 #include "mpflow/mpflow.h"
 #include "mpflow/models/eit_kernel.h"
 
@@ -28,9 +29,9 @@ template <
 mpFlow::models::MWI<numericalSolverType, equationType>::MWI(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<FEM::Sources<dataType> const> const sources,
-    dataType const referenceWaveNumber, cublasHandle_t const handle,
+    dataType const referenceValue, cublasHandle_t const handle,
     cudaStream_t const stream)
-    : mesh(mesh), sources(sources), referenceWaveNumber(referenceWaveNumber) {
+    : mesh(mesh), sources(sources), referenceValue(referenceValue) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::models::MWI::MWI: mesh == nullptr");
@@ -52,19 +53,55 @@ mpFlow::models::MWI<numericalSolverType, equationType>::MWI(
         this->sources->drivePattern->cols + this->sources->measurementPattern->cols, stream);
 
     // create matrices
-    this->fields = std::make_shared<numeric::Matrix<dataType>>(
+    this->result = std::make_shared<numeric::Matrix<dataType>>(
+        this->sources->measurementPattern->cols, this->sources->drivePattern->cols, stream);
+    this->field = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->edges.rows(), this->sources->pattern->cols, stream);
+    this->excitation = std::make_shared<numeric::Matrix<dataType>>(
+        this->mesh->edges.rows(), this->sources->pattern->cols, stream);
+    this->jacobian = std::make_shared<numeric::Matrix<dataType>>(
+        this->sources->measurementPattern->dataCols * this->sources->drivePattern->dataCols,
+        this->mesh->elements.rows(), stream, 0.0, false);
+    this->preconditioner = std::make_shared<numeric::SparseMatrix<dataType>>(
+        this->equation->systemMatrix->rows, this->equation->systemMatrix->cols, stream);
     this->alpha = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->elements.rows(), 1, stream, 1.0);
-        
-    // create mass matrix
-    auto const excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
-        equation->excitationMatrix->rows, equation->excitationMatrix->cols, stream);
-    excitationMatrix->copy(equation->excitationMatrix, stream);
-    excitationMatrix->copyToHost(stream);
-    cudaStreamSynchronize(stream);
+
+    // create matrix to calculate system excitation from ports excitation
+    this->portsAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
+        this->sources->measurementPattern->cols,
+        this->mesh->edges.rows(), stream, 0.0, false);
+    this->portsAttachmentMatrix->multiply(this->sources->measurementPattern,
+        this->equation->excitationMatrix, handle, stream, CUBLAS_OP_T, CUBLAS_OP_T);
+}
+
+template <
+    template <class> class numericalSolverType,
+    class equationType
+>
+std::shared_ptr<mpFlow::models::MWI<numericalSolverType, equationType>>
+    mpFlow::models::MWI<numericalSolverType, equationType>::fromConfig(
+    json_value const& config, cublasHandle_t const handle, cudaStream_t const stream,
+    std::string const path, std::shared_ptr<numeric::IrregularMesh const> const externalMesh) {
+    // load mesh from config
+    auto const mesh = externalMesh != nullptr ? externalMesh :
+        numeric::IrregularMesh::fromConfig(config["mesh"], config["ports"], stream, path);
+
+    // load ports descriptor from config
+    auto const ports = FEM::Ports::fromConfig(config["ports"], mesh, stream, path);
+
+    // load sources from config
+    auto const sources = FEM::Sources<dataType>::fromConfig(
+        config["source"], ports, stream);
+
+    // read out reference value
+    auto const referenceValue = config["material"].type == json_object ?
+        jsonHelper::parseNumericValue<dataType>(config["material"]["referenceValue"], 1.0) :
+        jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
     
-    this->excitation = excitationMatrix->toEigen().matrix();
+    // create forward model
+    return std::make_shared<MWI<numericalSolverType, equationType>>(mesh, sources,
+        referenceValue, handle, stream);
 }
 
 template <class dataType>
@@ -84,7 +121,7 @@ template <
 std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     mpFlow::models::MWI<numericalSolverType, equationType>::solve(
     std::shared_ptr<numeric::Matrix<dataType> const> const materialDistribution,
-    cublasHandle_t const handle, cudaStream_t const stream, unsigned* const) {
+    cublasHandle_t const handle, cudaStream_t const stream, unsigned* const steps) {
     // check input
     if (materialDistribution == nullptr) {
         throw std::invalid_argument("mpFlow::models::MWI::solve: materialDistribution == nullptr");
@@ -94,7 +131,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     }
 
     // update equation for new material distribution
-    this->equation->update(this->alpha, dataType(1), materialDistribution, stream);
+    this->equation->update(this->alpha, -this->referenceValue, materialDistribution, stream);
     
     // make system matrix available on host for post processing
     this->equation->systemMatrix->copyToHost(stream);
@@ -113,7 +150,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
             
         this->equation->systemMatrix->setValue(edgeIndex, edgeIndex,
             this->equation->systemMatrix->getValue(edgeIndex, edgeIndex) +
-            dataType(0.0, 1.0) * length * this->referenceWaveNumber);
+            dataType(0.0, 1.0) * length * this->referenceValue);
                 
         // fix tangential field to zero on all boundary edges excepts the ports
         if (abs(this->sources->ports->edges - edgeIndex).minCoeff() != 0) {
@@ -123,26 +160,36 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     }
     equation->systemMatrix->copyToDevice(stream);
     
-    // convert system Matrix to eigen matrix
-    auto const AMatrix = equation->systemMatrix->toMatrix(stream);
-    AMatrix->copyToHost(stream);
-    cudaStreamSynchronize(stream);       
-    auto const A = AMatrix->toEigen().matrix().eval();
-    
-    // solve system using eigen
-    auto const b = (this->excitation * this->sources->pattern->toEigen().matrix() *
-        dataType(0.0, -1.0) * 2.0 * M_PI * constants::mu0).eval();
-    auto const x = A.partialPivLu().solve(b).eval();
+    // create system excitation
+    this->excitation->multiply(this->equation->excitationMatrix,
+        this->sources->pattern, handle, stream);
+    this->excitation->scalarMultiply(dataType(0.0, -2.0 * M_PI * constants::mu0), stream);
 
-    // copy result back to Device
-    this->fields = numeric::Matrix<dataType>::fromEigen(x.array(), stream);
-    this->fields->copyToDevice(stream);
+    // solve linear system
+    numeric::preconditioner::diagonal<dataType>(this->equation->systemMatrix, stream, this->preconditioner);
+    unsigned const _steps = this->numericalSolver->solve(this->equation->systemMatrix, this->excitation, nullptr,
+        stream, this->field, this->preconditioner);    
+
+    // calc jacobian
+    this->equation->calcJacobian(this->field, materialDistribution, this->sources->drivePattern->cols,
+        this->sources->measurementPattern->cols, false, stream, this->jacobian);
     
-    return nullptr;
+    // calculate port parameter
+    this->result->multiply(this->portsAttachmentMatrix, this->field, handle, stream);
+
+    if (steps != nullptr) {
+        *steps = _steps;
+    }
+    
+    return this->result;
 }
 
 // specialisation
 template class mpFlow::models::MWI<mpFlow::numeric::BiCGSTAB,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, false>>;
 template class mpFlow::models::MWI<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, false>>;
+template class mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, false>>;
+template class mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, false>>;
