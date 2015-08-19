@@ -46,29 +46,6 @@ mpFlow::models::Constant<dataType, logarithmic>::Constant(
         this->sources->measurementPattern->cols, this->sources->drivePattern->cols, stream);
 }
 
-template <class dataType>
-static dataType parseReferenceValue(json_value const& config) {
-    if (config.type == json_double) {
-        return config.u.dbl;
-    }
-    else {
-        return 1.0;
-    }
-}
-
-template <>
-thrust::complex<double> parseReferenceValue(json_value const& config) {
-    if (config.type == json_array) {
-        return thrust::complex<double>(config[0], config[1]);
-    }
-    else if (config.type == json_double) {
-        return thrust::complex<double>(config.u.dbl);
-    }
-    else {
-        return thrust::complex<double>(1.0);
-    }
-}
-
 template <
     class dataType,
     bool logarithmic
@@ -94,7 +71,7 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
         str::format("%s/%s")(path, std::string(config["jacobian"])), stream);
         
     // read out reference value
-    auto const referenceValue = parseReferenceValue<dataType>(config["material"]);
+    auto const referenceValue = jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
     
     // create forward model
     return std::make_shared<Constant<dataType>>(mesh, sources, jacobian, referenceValue, stream);
