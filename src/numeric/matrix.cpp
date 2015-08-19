@@ -788,7 +788,7 @@ template <
     class type
 >
 Eigen::Array<typename mpFlow::typeTraits::convertComplexType<type>::type,
-    Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::Matrix<type>::toEigen() const {
+    Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::Matrix<type>::toEigen(cudaStream_t const) const {
     // create eigen array with mpflow_type
     Eigen::Array<typename typeTraits::convertComplexType<type>::type,
         Eigen::Dynamic, Eigen::Dynamic> array(this->dataRows, this->dataCols);

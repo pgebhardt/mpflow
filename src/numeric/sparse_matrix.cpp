@@ -287,6 +287,23 @@ void mpFlow::numeric::SparseMatrix<type>::multiply(std::shared_ptr<Matrix<type> 
         result->dataCols, this->density, result->deviceData);
 }
 
+// converts matrix to eigen array
+template <
+    class type
+>
+Eigen::Array<typename mpFlow::typeTraits::convertComplexType<type>::type,
+    Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::SparseMatrix<type>::toEigen(cudaStream_t const stream) const {
+    // convert sparse matrix to full matrix
+    auto const fullMatrix = this->toMatrix(stream);
+    fullMatrix->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+    
+    // convert full matrix to eigen array
+    auto const array = fullMatrix->toEigen();
+    
+    return array;
+}
+
 // save matrix to stream
 template <
     class type

@@ -54,6 +54,10 @@ namespace numeric {
         void multiply(std::shared_ptr<Matrix<type> const> const matrix, cudaStream_t const stream,
             std::shared_ptr<Matrix<type>> result) const;
 
+        // cast to eigen array
+        Eigen::Array<typename typeTraits::convertComplexType<type>::type,
+            Eigen::Dynamic, Eigen::Dynamic> toEigen(cudaStream_t const stream) const;
+        
         // save matrix as txt
         void savetxt(std::ostream& ostream, char const delimiter=' ') const;
         void savetxt(std::string const filename, char const delimiter=' ') const;

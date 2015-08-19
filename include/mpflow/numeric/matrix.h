@@ -86,7 +86,7 @@ namespace numeric {
 
         // cast from and to eigen arrays
         Eigen::Array<typename typeTraits::convertComplexType<type>::type,
-            Eigen::Dynamic, Eigen::Dynamic> toEigen() const;
+            Eigen::Dynamic, Eigen::Dynamic> toEigen(cudaStream_t const stream=nullptr) const;
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> fromEigen(
             Eigen::Ref<Eigen::Array<typename typeTraits::convertComplexType<type>::type,
                 Eigen::Dynamic, Eigen::Dynamic> const> const array,
