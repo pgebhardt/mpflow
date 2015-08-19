@@ -60,7 +60,7 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
 
     // load ports descriptor from config
     auto const ports = FEM::Ports::fromConfig(
-        config["boundary"], mesh, stream, path);
+        config["ports"], mesh, stream, path);
 
     // load sources from config
     auto const sources = FEM::Sources<dataType>::fromConfig(
@@ -71,7 +71,9 @@ std::shared_ptr<mpFlow::models::Constant<dataType>>
         str::format("%s/%s")(path, std::string(config["jacobian"])), stream);
         
     // read out reference value
-    auto const referenceValue = jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
+    auto const referenceValue = config["material"].type == json_object ?
+        jsonHelper::parseNumericValue<dataType>(config["material"]["referenceValue"], 1.0) :
+        jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
     
     // create forward model
     return std::make_shared<Constant<dataType>>(mesh, sources, jacobian, referenceValue, stream);
