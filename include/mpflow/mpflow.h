@@ -37,6 +37,7 @@
 #include "numeric/irregular_mesh.h"
 #include "numeric/conjugate_gradient.h"
 #include "numeric/bicgstab.h"
+#include "numeric/cpu_solver.h"
 #include "numeric/preconditioner.h"
 
 // FEM specific
