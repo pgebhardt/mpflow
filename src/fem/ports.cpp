@@ -32,7 +32,12 @@ mpFlow::FEM::Ports::Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges)
  std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::circularBoundary(
     unsigned const count, double const width, std::shared_ptr<numeric::IrregularMesh const> const mesh,
     double const offset, bool const clockwise) {
-    auto const radius = std::sqrt(mesh->nodes.square().rowwise().sum().maxCoeff());
+    double radius = 0.0;
+    for (int element = 0; element < mesh->elements.rows(); ++element) {
+        radius = std::max(radius, std::sqrt(mesh->nodes.row(mesh->elements(element, 0)).square().sum()));
+        radius = std::max(radius, std::sqrt(mesh->nodes.row(mesh->elements(element, 1)).square().sum()));
+        radius = std::max(radius, std::sqrt(mesh->nodes.row(mesh->elements(element, 2)).square().sum()));
+    }
     
     // find edges located inside port interval on a circular boundary
     auto const portStart = math::circularPoints(radius, 2.0 * M_PI * radius / count,
