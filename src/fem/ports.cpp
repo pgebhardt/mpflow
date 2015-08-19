@@ -87,9 +87,9 @@ std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
         auto const width = config["width"].u.dbl;
         auto const count = config["count"].u.integer;
         auto const offset = config["offset"].u.dbl;
-        auto const invertDirection = config["invertDirection"].u.boolean;
+        auto const clockwise = config["clockwise"].u.boolean;
         
-        return circularBoundary(count, width, mesh, offset, invertDirection);
+        return circularBoundary(count, width, mesh, offset, clockwise);
     }
 }
 
