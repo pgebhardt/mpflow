@@ -37,8 +37,9 @@ namespace models {
         // initialization
         MWI(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::Sources<dataType> const> const sources,
-            dataType const referenceValue, cublasHandle_t const handle,
-            cudaStream_t const stream);
+            double const frequency, double const height, double const portHeight,
+            dataType const portMaterial, std::shared_ptr<numeric::Matrix<unsigned> const> const portElements,
+            cublasHandle_t const handle, cudaStream_t const stream);
 
         // factories
 #ifdef _JSON_H
@@ -57,16 +58,21 @@ namespace models {
         // member
         std::shared_ptr<numeric::IrregularMesh const> const mesh;
         std::shared_ptr<FEM::Sources<dataType> const> const sources;
-        dataType const referenceValue;
         std::shared_ptr<numeric::Matrix<dataType>> field;
         std::shared_ptr<numeric::Matrix<dataType>> result;
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;
+        double const frequency;
+        double const height;
+        double const portHeight;
+        dataType const portMaterial;
+        std::shared_ptr<numeric::Matrix<unsigned> const> portElements;
 
     private:
         std::shared_ptr<equationType> equation;
         std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
         std::shared_ptr<numeric::Matrix<dataType>> excitation;
         std::shared_ptr<numeric::Matrix<dataType>> alpha;
+        std::shared_ptr<numeric::Matrix<dataType>> beta;
         std::shared_ptr<numeric::Matrix<dataType>> portsAttachmentMatrix;
         std::shared_ptr<numeric::SparseMatrix<dataType>> preconditioner;
     };

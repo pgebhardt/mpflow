@@ -29,9 +29,11 @@ template <
 mpFlow::models::MWI<numericalSolverType, equationType>::MWI(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<FEM::Sources<dataType> const> const sources,
-    dataType const referenceValue, cublasHandle_t const handle,
-    cudaStream_t const stream)
-    : mesh(mesh), sources(sources), referenceValue(referenceValue) {
+    double const frequency, double const height, double const portHeight,
+    dataType const portMaterial, std::shared_ptr<numeric::Matrix<unsigned> const> const portElements,
+    cublasHandle_t const handle, cudaStream_t const stream)
+    : mesh(mesh), sources(sources), frequency(frequency), height(height),
+    portHeight(portHeight), portMaterial(portMaterial), portElements(portElements) {
     // check input
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::models::MWI::MWI: mesh == nullptr");
@@ -46,7 +48,7 @@ mpFlow::models::MWI<numericalSolverType, equationType>::MWI(
     // create FEM equation
     this->equation = std::make_shared<equationType>(this->mesh,
         this->sources->ports, dataType(1), false, stream);
-        
+
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(
         this->mesh->edges.rows(),
@@ -66,6 +68,8 @@ mpFlow::models::MWI<numericalSolverType, equationType>::MWI(
         this->equation->systemMatrix->rows, this->equation->systemMatrix->cols, stream);
     this->alpha = std::make_shared<numeric::Matrix<dataType>>(
         this->mesh->elements.rows(), 1, stream, 1.0);
+    this->beta = std::make_shared<numeric::Matrix<dataType>>(
+        this->mesh->elements.rows(), 1, stream);
 
     // create matrix to calculate system excitation from ports excitation
     this->portsAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
@@ -94,14 +98,25 @@ std::shared_ptr<mpFlow::models::MWI<numericalSolverType, equationType>>
     auto const sources = FEM::Sources<dataType>::fromConfig(
         config["source"], ports, stream);
 
-    // read out reference value
-    auto const referenceValue = config["material"].type == json_object ?
-        jsonHelper::parseNumericValue<dataType>(config["material"]["referenceValue"], 1.0) :
-        jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
+    // read out mwi specific config
+    auto const frequency = config["mwi"]["frequency"].u.dbl;
+    auto const height = config["mwi"]["height"].type == json_double ? config["mwi"]["height"].u.dbl : 1.0;
+    auto const portHeight = config["ports"]["height"].type == json_double ? config["ports"]["height"].u.dbl : 1.0;
+    auto const portMaterial = jsonHelper::parseNumericValue<dataType>(config["ports"]["material"], 1.0);
+    
+    auto const portElements = [=](json_value const& config) {
+        if (config.type == json_string) {
+            return numeric::Matrix<unsigned>::loadtxt(
+                str::format("%s/%s")(path, std::string(config)), stream);
+        }
+        else {
+            return std::shared_ptr<numeric::Matrix<unsigned>>(nullptr);
+        }
+    }(config["ports"]["elements"]);
     
     // create forward model
     return std::make_shared<MWI<numericalSolverType, equationType>>(mesh, sources,
-        referenceValue, handle, stream);
+        frequency, height, portHeight, portMaterial, portElements, handle, stream);
 }
 
 template <class dataType>
@@ -130,57 +145,73 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         throw std::invalid_argument("mpFlow::models::MWI::solve: handle == nullptr");
     }
 
+    // calculate material parameter
+    dataType const k0 = 2.0 * M_PI * this->frequency / constants::c0;
+    dataType const kBc = M_PI / this->height;
+    dataType const kPc = M_PI / this->portHeight;
+    dataType const kP = sqrt(math::square(k0) * this->portMaterial - math::square(kPc)); 
+    
+    this->beta->copy(materialDistribution, stream);
+    this->beta->scalarMultiply(math::square(k0), stream);
+    this->beta->add(-math::square(kBc), stream);
+    
+    if (this->portElements) {
+        this->beta->setIndexedElements(this->portElements,
+            math::square(kP), stream);
+    }
+    
     // update equation for new material distribution
-    this->equation->update(this->alpha, -this->referenceValue, materialDistribution, stream);
+    this->equation->update(this->alpha, -dataType(1), this->beta, stream);
     
     // make system matrix available on host for post processing
     this->equation->systemMatrix->copyToHost(stream);
     cudaStreamSynchronize(stream);
-    
+
     // apply first order ABC
     for (unsigned i = 0; i < this->mesh->boundary.rows(); ++i) {
         // get boundary edge
         auto const edgeIndex = this->mesh->boundary(i);
         auto const edge = this->mesh->edges.row(edgeIndex).eval();
-         
+
         // calculate length of edge
         dataType const length = std::sqrt(
             (this->mesh->nodes.row(edge(1)) - this->mesh->nodes.row(edge(0)))
             .square().sum());
-            
+
         this->equation->systemMatrix->setValue(edgeIndex, edgeIndex,
             this->equation->systemMatrix->getValue(edgeIndex, edgeIndex) +
-            dataType(0.0, 1.0) * length * this->referenceValue);
-                
+            dataType(0.0, 1.0) * length * kP);
+
         // fix tangential field to zero on all boundary edges excepts the ports
         if (abs(this->sources->ports->edges - edgeIndex).minCoeff() != 0) {
-            clearRow(equation->systemMatrix, edgeIndex);  
-            equation->systemMatrix->setValue(edgeIndex, edgeIndex, dataType(1));  
+            clearRow(equation->systemMatrix, edgeIndex);
+            equation->systemMatrix->setValue(edgeIndex, edgeIndex, dataType(1));
         }
     }
     equation->systemMatrix->copyToDevice(stream);
-    
+
     // create system excitation
     this->excitation->multiply(this->equation->excitationMatrix,
         this->sources->pattern, handle, stream);
-    this->excitation->scalarMultiply(dataType(0.0, -2.0 * M_PI * constants::mu0), stream);
+    this->excitation->scalarMultiply(dataType(0.0, -2.0 * M_PI * this->frequency * constants::mu0), stream);
 
     // solve linear system
     numeric::preconditioner::diagonal<dataType>(this->equation->systemMatrix, stream, this->preconditioner);
     unsigned const _steps = this->numericalSolver->solve(this->equation->systemMatrix, this->excitation, nullptr,
-        stream, this->field, this->preconditioner);    
+        stream, this->field, this->preconditioner);
 
     // calc jacobian
     this->equation->calcJacobian(this->field, materialDistribution, this->sources->drivePattern->cols,
         this->sources->measurementPattern->cols, false, stream, this->jacobian);
-    
+    this->jacobian->scalarMultiply(dataType(0.0, 2.0 * M_PI * this->frequency * constants::epsilon0), stream);
+
     // calculate port parameter
     this->result->multiply(this->portsAttachmentMatrix, this->field, handle, stream);
 
     if (steps != nullptr) {
         *steps = _steps;
     }
-    
+
     return this->result;
 }
 
