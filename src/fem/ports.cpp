@@ -87,6 +87,13 @@ std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
             
         return std::make_shared<Ports>(ports);      
     }
+    else if (config["edges"].type == json_string) {
+        // read out port edges from file
+        auto const ports = numeric::Matrix<int>::loadtxt(str::format("%s/%s")
+            (path, std::string(config["edges"])), stream)->toEigen();
+
+        return std::make_shared<Ports>(ports);        
+    }
     else {
         // read out basic config
         auto const width = config["width"].u.dbl;
