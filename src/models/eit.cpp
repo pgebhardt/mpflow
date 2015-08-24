@@ -121,7 +121,7 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     // read 2.5D stuff  
     auto const componentsCount = std::max(1, (int)config["2.5D"]["components"].u.integer);
     auto const height = config["2.5D"]["height"].type != json_none ? config["2.5D"]["height"].u.dbl : 1.0;
-    auto const portHeight = config["2.5D"]["portHeight"].type != json_none ? config["2.5D"]["portHeight"].u.dbl : 1.0;
+    auto const portHeight = config["ports"]["height"].type != json_none ? config["ports"]["height"].u.dbl : 1.0;
         
     // create forward model
     return std::make_shared<EIT<numericalSolverType, equationType>>(mesh, sources,
