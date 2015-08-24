@@ -42,10 +42,13 @@ namespace numeric {
         void diag(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
             type const* const matrix, unsigned const dataRows, type* const result);
         
+        // add scalar kernel
+        template <class type>
+        void add(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            type const value, unsigned const rows, type* const result);
+
         // add kernel
-        template <
-            class type
-        >
+        template <class type>
         void add(dim3 blocks, dim3 threads, cudaStream_t stream,
             const type* matrix, unsigned rows, type* result);
 

@@ -246,6 +246,22 @@ void mpFlow::numeric::Matrix<type>::diag(std::shared_ptr<Matrix<type> const> con
         this->dataRows, this->deviceData);
 }
 
+// add scalar to matrix
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::add(type const value, cudaStream_t const stream) {
+    // dimension
+    dim3 blocks(this->dataRows == 1 ? 1 : this->dataRows / matrix::blockSize,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::blockSize);
+    dim3 threads(this->dataRows == 1 ? 1 : matrix::blockSize,
+        this->dataCols == 1 ? 1 : matrix::blockSize);
+ 
+    // call kernel
+    matrixKernel::add(blocks, threads, stream, value,
+        this->dataRows, this->deviceData);
+}
+
 // add matrix
 template <
     class type

@@ -165,6 +165,39 @@ template void mpFlow::numeric::matrixKernel::diag<int>(
     dim3 const, dim3 const, cudaStream_t const, int const* const,
     unsigned const, int* const);
     
+// add scalar kernel
+template <class type>
+__global__ void addKernel(type const value, unsigned const rows, type* const result) {
+    // get ids
+    unsigned const row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned const col = blockIdx.y * blockDim.y + threadIdx.y;
+
+    result[row + col * rows] += value;
+}
+
+// add scalar kernel wrapper
+template <class type>
+void mpFlow::numeric::matrixKernel::add(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    type const value, unsigned const rows, type* const result) {
+    // call cuda kernel
+    addKernel<type><<<blocks, threads, 0, stream>>>(value, rows, result);
+
+    CudaCheckError();
+}
+
+template void mpFlow::numeric::matrixKernel::add<float>(dim3 const, dim3 const, cudaStream_t const,
+    float const, unsigned const, float* const);
+template void mpFlow::numeric::matrixKernel::add<double>(dim3 const, dim3 const, cudaStream_t const,
+    double const, unsigned const, double* const);
+template void mpFlow::numeric::matrixKernel::add<thrust::complex<float> >(dim3 const, dim3 const, cudaStream_t const,
+    thrust::complex<float> const, unsigned const, thrust::complex<float>* const);
+template void mpFlow::numeric::matrixKernel::add<thrust::complex<double> >(dim3 const, dim3 const, cudaStream_t const,
+    thrust::complex<double> const, unsigned const, thrust::complex<double>* const);
+template void mpFlow::numeric::matrixKernel::add<unsigned>(dim3 const, dim3 const, cudaStream_t const,
+    unsigned const, unsigned const, unsigned* const);
+template void mpFlow::numeric::matrixKernel::add<int>(dim3 const, dim3 const, cudaStream_t const,
+    int const, unsigned const, int* const);
+    
 // add kernel
 template <
     class type
