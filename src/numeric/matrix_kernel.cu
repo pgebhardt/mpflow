@@ -164,7 +164,7 @@ template void mpFlow::numeric::matrixKernel::diag<unsigned>(
 template void mpFlow::numeric::matrixKernel::diag<int>(
     dim3 const, dim3 const, cudaStream_t const, int const* const,
     unsigned const, int* const);
-    
+
 // add scalar kernel
 template <class type>
 __global__ void addKernel(type const value, unsigned const rows, type* const result) {
@@ -445,6 +445,44 @@ template void mpFlow::numeric::matrixKernel::vectorDotProduct<int>(
     dim3, dim3, cudaStream_t, const int*,
     const int*, unsigned, int*);
 
+template <class type>
+__global__ void setIndexedElementsKernel(unsigned const* const indices, unsigned const indicesRows,
+    type const value, unsigned const rows, type* const result) {
+    // get ids
+    unsigned const row = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned const col = blockIdx.y * blockDim.y + threadIdx.y;
+    
+    unsigned const index = indices[row + col * indicesRows];
+    if (index != mpFlow::constants::invalidIndex) {
+        result[index + col * rows] = value;
+    }
+}
+
+// set indexed elements kernel wrapper
+template <class type>
+void mpFlow::numeric::matrixKernel::setIndexedElements(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+    unsigned const* const indices, unsigned const indicesRows, type const value,
+    unsigned const rows, type* const result) {
+    // call cuda kernel
+    setIndexedElementsKernel<type><<<blocks, threads, 0, stream>>>(indices, indicesRows, value,
+        rows, result);
+    
+    CudaCheckError();   
+}
+
+template void mpFlow::numeric::matrixKernel::setIndexedElements<float>(dim3 const, dim3 const, cudaStream_t const,
+    unsigned const* const, unsigned const, float const, unsigned const, float* const);
+template void mpFlow::numeric::matrixKernel::setIndexedElements<double>(dim3 const, dim3 const, cudaStream_t const,
+    unsigned const* const, unsigned const, double const, unsigned const, double* const);
+template void mpFlow::numeric::matrixKernel::setIndexedElements<thrust::complex<float> >(dim3 const, dim3 const, cudaStream_t const,
+    unsigned const* const, unsigned const, thrust::complex<float> const, unsigned const, thrust::complex<float>* const);
+template void mpFlow::numeric::matrixKernel::setIndexedElements<thrust::complex<double> >(dim3 const, dim3 const, cudaStream_t const,
+    unsigned const* const, unsigned const, thrust::complex<double> const, unsigned const, thrust::complex<double>* const);
+template void mpFlow::numeric::matrixKernel::setIndexedElements<unsigned>(dim3 const, dim3 const, cudaStream_t const,
+    unsigned const* const, unsigned const, unsigned const, unsigned const, unsigned* const);
+template void mpFlow::numeric::matrixKernel::setIndexedElements<int>(dim3 const, dim3 const, cudaStream_t const,
+    unsigned const* const, unsigned const, int const, unsigned const, int* const);
+    
 // sum kernel
 template <
     class type

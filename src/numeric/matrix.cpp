@@ -291,7 +291,6 @@ void mpFlow::numeric::Matrix<type>::add(std::shared_ptr<Matrix<type> const> cons
         this->dataRows, this->deviceData);
 }
 
-
 // matrix multiply
 template <
     class type
@@ -477,12 +476,12 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(
     }
 
     // get minimum colums
-    unsigned columns = std::min(std::min(this->dataCols, A->dataCols), B->dataCols);
+    unsigned const columns = std::min(std::min(this->dataCols, A->dataCols), B->dataCols);
 
     // kernel dimension
-    dim3 blocks(this->dataRows / matrix::blockSize,
+    dim3 const blocks(this->dataRows / matrix::blockSize,
         columns == 1 ? 1 : columns / matrix::blockSize);
-    dim3 threads(matrix::blockSize,
+    dim3 const threads(matrix::blockSize,
         columns == 1 ? 1 : matrix::blockSize);
 
     // call kernel
@@ -493,6 +492,35 @@ void mpFlow::numeric::Matrix<type>::vectorDotProduct(
     // sum
     struct noop_deleter { void operator()(void*) {} };
     this->sum(std::shared_ptr<mpFlow::numeric::Matrix<type>>(this, noop_deleter()), stream);
+}
+
+// set indexed elements of a matrix to a new value
+template <
+    class type
+>
+void mpFlow::numeric::Matrix<type>::setIndexedElements(std::shared_ptr<Matrix<unsigned> const> const indices,
+    type const value, cudaStream_t const stream) {
+    // check input
+    if (indices == nullptr) {
+        throw std::invalid_argument("mpFlow::numeric::Matrix::setIndexedElements: indices == nullptr");
+    }
+    
+    // check shape
+    if (indices->cols != this->cols) {
+        throw std::invalid_argument(
+            str::format("mpFlow::numeric::Matrix::setIndexedElements: cols not equal: %d != %d")
+            (this->cols, indices->cols));
+    }
+    
+    // kernel dimensions
+    dim3 const blocks(indices->dataRows / matrix::blockSize,
+        this->dataCols == 1 ? 1 : this->dataCols / matrix::blockSize);
+    dim3 const threads(matrix::blockSize,
+        this->dataCols == 1 ? 1 : matrix::blockSize);
+
+    // call kernel
+    matrixKernel::setIndexedElements<type>(blocks, threads, stream, indices->deviceData,
+        indices->dataRows, value, this->dataRows, this->deviceData);
 }
 
 // sum

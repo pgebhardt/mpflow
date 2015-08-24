@@ -80,6 +80,11 @@ namespace numeric {
         void vectorDotProduct(dim3 blocks, dim3 threads, cudaStream_t stream,
             const type* a, const type* b, unsigned rows, type* result);
 
+        template <class type>
+        void setIndexedElements(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            unsigned const* const indices, unsigned const indicesRows, type const value,
+            unsigned const rows, type* const result);
+            
         // sum kernel
         template <
             class type

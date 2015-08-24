@@ -69,7 +69,9 @@ namespace numeric {
             std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream=nullptr);
         void vectorDotProduct(std::shared_ptr<Matrix<type> const> const A,
             std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream=nullptr);
-
+        void setIndexedElements(std::shared_ptr<Matrix<unsigned> const> const indices,
+            type const value, cudaStream_t const stream=nullptr);
+            
         // reduce methods
         void sum(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
         void min(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
