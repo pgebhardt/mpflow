@@ -29,10 +29,10 @@ template <
 mpFlow::models::MWI<numericalSolverType, equationType>::MWI(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<FEM::Sources<dataType> const> const sources,
-    double const frequency, double const height, double const portHeight,
+    double const frequency, double const height, dataType const referenceValue, double const portHeight,
     dataType const portMaterial, std::shared_ptr<numeric::Matrix<unsigned> const> const portElements,
     cublasHandle_t const handle, cudaStream_t const stream)
-    : mesh(mesh), sources(sources), frequency(frequency), height(height),
+    : mesh(mesh), sources(sources), frequency(frequency), height(height), referenceValue(referenceValue),
     portHeight(portHeight), portMaterial(portMaterial), portElements(portElements) {
     // check input
     if (mesh == nullptr) {
@@ -114,9 +114,14 @@ std::shared_ptr<mpFlow::models::MWI<numericalSolverType, equationType>>
         }
     }(config["ports"]["elements"]);
     
+    // read out reference value
+    auto const referenceValue = config["material"].type == json_object ?
+        jsonHelper::parseNumericValue<dataType>(config["material"]["referenceValue"], 1.0) :
+        jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
+    
     // create forward model
     return std::make_shared<MWI<numericalSolverType, equationType>>(mesh, sources,
-        frequency, height, portHeight, portMaterial, portElements, handle, stream);
+        frequency, height, referenceValue, portHeight, portMaterial, portElements, handle, stream);
 }
 
 template <class dataType>
@@ -152,14 +157,14 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     dataType const kP = sqrt(math::square(k0) * this->portMaterial - math::square(kPc)); 
     
     this->beta->copy(materialDistribution, stream);
-    this->beta->scalarMultiply(math::square(k0), stream);
+    this->beta->scalarMultiply(math::square(k0) * this->referenceValue, stream);
     this->beta->add(-math::square(kBc), stream);
     
     if (this->portElements) {
         this->beta->setIndexedElements(this->portElements,
             math::square(kP), stream);
     }
-    
+
     // update equation for new material distribution
     this->equation->update(this->alpha, -dataType(1), this->beta, stream);
     
