@@ -37,8 +37,9 @@ namespace models {
         // initialization
         MWI(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::Sources<dataType> const> const sources,
-            double const frequency, double const height, double const portHeight,
-            dataType const portMaterial, std::shared_ptr<numeric::Matrix<unsigned> const> const portElements,
+            double const frequency, double const height, dataType const referenceValue,
+            double const portHeight, dataType const portMaterial,
+            std::shared_ptr<numeric::Matrix<unsigned> const> const portElements,
             cublasHandle_t const handle, cudaStream_t const stream);
 
         // factories
@@ -63,6 +64,7 @@ namespace models {
         std::shared_ptr<numeric::Matrix<dataType>> jacobian;
         double const frequency;
         double const height;
+        dataType const referenceValue;
         double const portHeight;
         dataType const portMaterial;
         std::shared_ptr<numeric::Matrix<unsigned> const> portElements;
