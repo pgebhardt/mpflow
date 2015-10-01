@@ -29,7 +29,8 @@ namespace numeric {
         // constructor
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
             Eigen::Ref<Eigen::ArrayXXi const> const elements,
-            Eigen::Ref<Eigen::ArrayXXi const> const edges);
+            Eigen::Ref<Eigen::ArrayXXi const> const edges,
+            Eigen::Ref<Eigen::ArrayXXi const> const elementEdges);
         IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> const nodes,
             Eigen::Ref<Eigen::ArrayXXi const> const elements);
 

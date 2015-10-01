@@ -168,6 +168,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         }
 
         // solve linear system
+        this->fields[component]->fill(sources->type == FEM::Sources<dataType>::Type::Fixed ? dataType(1) : dataType(0), stream);
         numeric::preconditioner::diagonal<dataType>(this->equation->systemMatrix, stream, this->preconditioner);
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
             this->excitation, nullptr, stream, this->fields[component], this->preconditioner, 0,
