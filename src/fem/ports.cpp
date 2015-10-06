@@ -22,7 +22,7 @@
 #include "mpflow/mpflow.h"
 
 mpFlow::FEM::Ports::Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges)
-    : edges(edges), count(edges.cols()) {
+    : edges(edges), count(edges.rows()) {
     // check input
     if (edges.rows() == 0) {
         throw std::invalid_argument("mpFlow::FEM::Ports::Ports: edges == 0");
@@ -38,7 +38,7 @@ mpFlow::FEM::Ports::Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges)
         radius = std::max(radius, std::sqrt(mesh->nodes.row(mesh->elements(element, 1)).square().sum()));
         radius = std::max(radius, std::sqrt(mesh->nodes.row(mesh->elements(element, 2)).square().sum()));
     }
-    
+
     // find edges located inside port interval on a circular boundary
     auto const portStart = math::circularPoints(radius, 2.0 * M_PI * radius / count,
         offset + (clockwise ? width : 0.0), clockwise);
@@ -56,7 +56,7 @@ mpFlow::FEM::Ports::Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges)
             auto const parameterOffset = math::circleParameter(nodes.row(0).transpose(), 0.0);
             auto const intervalStart = math::circleParameter(portStart.row(port).transpose(), parameterOffset);
             auto const intervalEnd = math::circleParameter(portEnd.row(port).transpose(), parameterOffset);
-            
+
             // check if edge lies within port interval
             if ((intervalStart < intervalEnd) && (nodeParameter(0) - intervalStart >= -1e-9) &&
                 (nodeParameter(nodeParameter.rows() - 1) - intervalEnd <= 1e-9)) {
@@ -65,14 +65,14 @@ mpFlow::FEM::Ports::Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges)
             }
         }
     }
-    
+
     // convert stl vector to eigen array
-    Eigen::ArrayXXi portEdges = Eigen::ArrayXXi::Ones(maxPortEdges, count) * constants::invalidIndex;
+    Eigen::ArrayXXi portEdges = Eigen::ArrayXXi::Ones(count, maxPortEdges) * constants::invalidIndex;
     for (unsigned port = 0; port < count; ++port)
     for (unsigned edge = 0; edge < portEdgesVector[port].size(); ++edge) {
-        portEdges(edge, port) = portEdgesVector[port][edge];
+        portEdges(port, edge) = portEdgesVector[port][edge];
     }
-    
+
     return std::make_shared<Ports>(portEdges);
 }
 
@@ -84,15 +84,15 @@ std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
         // read out port edges from file
         auto const ports = numeric::Matrix<int>::loadtxt(str::format("%s/%s")
             (path, std::string(config)), stream)->toEigen();
-            
-        return std::make_shared<Ports>(ports);      
+
+        return std::make_shared<Ports>(ports);
     }
     else if (config["edges"].type == json_string) {
         // read out port edges from file
         auto const ports = numeric::Matrix<int>::loadtxt(str::format("%s/%s")
             (path, std::string(config["edges"])), stream)->toEigen();
 
-        return std::make_shared<Ports>(ports);        
+        return std::make_shared<Ports>(ports);
     }
     else {
         // read out basic config
@@ -100,8 +100,7 @@ std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
         auto const count = config["count"].u.integer;
         auto const offset = config["offset"].u.dbl;
         auto const clockwise = config["clockwise"].u.boolean;
-        
+
         return circularBoundary(count, width, mesh, offset, clockwise);
     }
 }
-

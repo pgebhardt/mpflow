@@ -41,7 +41,7 @@ mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::Equation(
 
     // init matrices
     unsigned const pointCount = basisFunctionType::pointCount(mesh);
-    
+
     this->sMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
         pointCount, pointCount, stream);
     this->rMatrix = std::make_shared<mpFlow::numeric::SparseMatrix<dataType>>(
@@ -182,34 +182,34 @@ template <
 >
 void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>::initExcitationMatrix(cudaStream_t const stream) {
     auto const edgeConnections = basisFunctionType::edgeConnections(this->mesh);
-    
+
     // calc excitation matrix
     auto const excitationMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->excitationMatrix->rows, this->excitationMatrix->cols, stream);
     for (unsigned port = 0; port < this->ports->count; ++port) {
-        auto const edgeCount = (this->ports->edges.col(port) != (int)constants::invalidIndex).count();
+        auto const edgeCount = (this->ports->edges.row(port) != (int)constants::invalidIndex).count();
 
         // calculate combined length of all port edges
         double portLength = 0.0;
         for (unsigned edge = 0; edge < edgeCount; ++edge) {
-            auto const nodes = this->mesh->edgeNodes(this->ports->edges(edge, port));
+            auto const nodes = this->mesh->edgeNodes(this->ports->edges(port, edge));
             portLength += sqrt((nodes.row(nodes.rows() - 1) - nodes.row(0)).square().sum());
         }
-             
+
         for (unsigned edge = 0; edge < edgeCount; ++edge) {
-            auto const edgeIndex = this->ports->edges(edge, port);
-            
+            auto const edgeIndex = this->ports->edges(port, edge);
+
             // calculate parameter representation of boundary edge
             auto const nodes = this->mesh->edgeNodes(edgeIndex);
             auto const parameter = sqrt((nodes.rowwise() - nodes.row(0)).square().rowwise().sum()).eval();
-            
+
             for (unsigned node = 0; node < basisFunctionType::pointsPerEdge; ++node) {
                 (*excitationMatrix)(edgeConnections(edgeIndex, node), port) +=
                     basisFunctionType::boundaryIntegral(parameter, node) / portLength;
             }
         }
     }
-    
+
     excitationMatrix->copyToDevice(stream);
     this->excitationMatrix->copy(excitationMatrix, stream);
 }
