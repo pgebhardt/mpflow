@@ -53,41 +53,41 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
 
         auto const nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/nodes.txt")(meshPath), stream);
         auto const elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elements.txt")(meshPath), stream);
-        
+
         // try to load edges from file, but fallback to default edge implementation on error
         try {
             auto const edges = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/edges.txt")(meshPath), stream);
-            
+
             try {
                 auto const elementEdges = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elementEdges.txt")(meshPath), stream);
-                
+
                 return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen(), edges->toEigen(),
-                    elementEdges->toEigen());            
+                    elementEdges->toEigen());
             }
             catch (std::exception const&) {
                 auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen(), edges->toEigen(),
                     distmesh::utils::getTriangulationEdgeIndices(elements->toEigen(), edges->toEigen()));
-                    
+
                 // save newly created lists
                 numeric::Matrix<int>::fromEigen(mesh->elementEdges, stream)->savetxt(str::format("%s/elementEdges.txt")(meshPath));
-                
-                return mesh;            
+
+                return mesh;
             }
         }
         catch(std::exception const&) {
-            auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen());            
-                
+            auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen());
+
             // save newly created lists
-            numeric::Matrix<int>::fromEigen(mesh->edges, stream)->savetxt(str::format("%s/edges.txt")(meshPath));            
+            numeric::Matrix<int>::fromEigen(mesh->edges, stream)->savetxt(str::format("%s/edges.txt")(meshPath));
             numeric::Matrix<int>::fromEigen(mesh->elementEdges, stream)->savetxt(str::format("%s/elementEdges.txt")(meshPath));
-            
-            return mesh;            
+
+            return mesh;
         }
     }
     else if ((config["radius"].type != json_none) && (config["outerEdgeLength"].type != json_none) &&
             (config["innerEdgeLength"].type != json_none) && (portConfig.type != json_none)) {
         double const radius = config["radius"];
-                
+
         // fix mesh at corner points of ports
         Eigen::ArrayXXd fixedPoints;
         if ((portConfig["width"].type != json_none) && (portConfig["count"].type != json_none)) {
@@ -95,12 +95,12 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
             auto const count = portConfig["count"].u.integer;
             auto const offset = portConfig["offset"].u.dbl;
             auto const invertDirection = portConfig["invertDirection"].u.boolean;
-            
+
             fixedPoints = Eigen::ArrayXXd(2 * count, 2);
             fixedPoints << math::circularPoints(radius, 2.0 * M_PI * radius / count, offset, invertDirection),
                 math::circularPoints(radius, 2.0 * M_PI * radius / count, offset + width, invertDirection);
         }
-        
+
         // create mesh with libdistmesh
         auto const distanceFuntion = distmesh::distanceFunction::circular(radius);
         auto const distMesh = distmesh::distmesh(distanceFuntion, config["outerEdgeLength"],
@@ -128,7 +128,7 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
 Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const element) const {
     // get node index and coordinate
     Eigen::ArrayXXd result(this->elements.cols(), 2);
-    
+
     for (int node = 0; node < this->elements.cols(); ++node) {
         result.row(node) = this->nodes.row(this->elements(element, node));
     }
@@ -139,7 +139,7 @@ Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::elementNodes(unsigned const elem
 Eigen::ArrayXXd mpFlow::numeric::IrregularMesh::edgeNodes(unsigned const edge) const {
     // get node index and coordinate
     Eigen::ArrayXXd result(this->edges.cols(), 2);
-    
+
     for (int node = 0; node < this->edges.cols(); ++node) {
         result.row(node) = this->nodes.row(this->edges(edge, node));
     }
@@ -159,14 +159,14 @@ std::shared_ptr<mpFlow::numeric::SparseMatrix<dataType>>
     if (mesh == nullptr) {
         throw std::invalid_argument("mpFlow::numeric::IrregularMesh:createInterpolationMatrix: mesh == nullptr");
     }
-    
+
     // evaluate interpolation function at node locations of the external mesh
     auto interpolationMatrix = std::make_shared<numeric::SparseMatrix<dataType>>(
         mesh->nodes.rows(), this->nodes.rows(), stream);
     for (int element = 0; element < this->elements.rows(); ++element) {
         // get points of element
         auto const points = this->elementNodes(element);
-        
+
         // interpolate from each node point 
         for (int i = 0; i < points.rows(); ++i)
         for (int j = 0; j < mesh->nodes.rows(); ++j) {
@@ -174,14 +174,14 @@ std::shared_ptr<mpFlow::numeric::SparseMatrix<dataType>>
             if ((1.0 - 2.0 * distmesh::utils::pointsInsidePoly(mesh->nodes.row(j), points)(0)) < 0.0) {
                 interpolationFunctionType const func(points, i);
                 dataType const value = func.evaluate(mesh->nodes.row(j).transpose());
-                
+
                 interpolationMatrix->setValue(j, this->elements(element, i),
                     interpolationMatrix->getValue(j, this->elements(element, i)) + value);
             }
         }
     }
     interpolationMatrix->copyToDevice(stream);
-    
+
     return interpolationMatrix;
 }
 
