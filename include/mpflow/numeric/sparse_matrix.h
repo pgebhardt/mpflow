@@ -56,8 +56,8 @@ namespace numeric {
 
         // cast to eigen array
         Eigen::Array<typename typeTraits::convertComplexType<type>::type,
-            Eigen::Dynamic, Eigen::Dynamic> toEigen(cudaStream_t const stream) const;
-        
+            Eigen::Dynamic, Eigen::Dynamic> toEigen() const;
+
         // save matrix as txt
         void savetxt(std::ostream& ostream, char const delimiter=' ') const;
         void savetxt(std::string const filename, char const delimiter=' ') const;

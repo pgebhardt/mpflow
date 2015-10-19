@@ -50,15 +50,15 @@ unsigned mpFlow::numeric::CPUSolver<dataType>::solve(std::shared_ptr<matrixType<
     A->copyToHost(stream);
     b->copyToHost(stream);
     cudaStreamSynchronize(stream);
-    
-    auto const S = A->toEigen(stream).matrix().eval();
-    auto const f = b->toEigen(stream).matrix().eval();
-    
+
+    auto const S = A->toEigen().matrix().eval();
+    auto const f = b->toEigen().matrix().eval();
+
     // solve system
     auto const res = S.partialPivLu().solve(f).eval();
-    
+
     x->copy(numeric::Matrix<dataType>::fromEigen(res.array(), stream), stream);
-        
+
     return 0;
 }
 

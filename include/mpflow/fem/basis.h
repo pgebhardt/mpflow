@@ -57,13 +57,13 @@ namespace basis {
 
         // evaluation
         double evaluate(Eigen::Ref<Eigen::ArrayXd const> point) const;
-        
+
         // mathematical evaluation of basis
         double integralA(Linear const& other) const;
         double integralB(Linear const& other) const;
         static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
             unsigned const one);
-            
+
         // mesh related stuff
         static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
             { return mesh->nodes.rows(); }
@@ -89,7 +89,7 @@ namespace basis {
         double integralB(Quadratic const& other) const;
         static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
             unsigned const one);
-            
+
         // mesh related stuff
         static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
             { return mesh->nodes.rows(); }
@@ -113,7 +113,7 @@ namespace basis {
         double integralB(Edge const& other) const;
         static double boundaryIntegral(Eigen::Ref<Eigen::ArrayXd const> const points,
             unsigned const) { return std::abs(points(points.rows() - 1) - points(0)); }
-                                        
+
         // mesh related stuff
         static inline unsigned pointCount(std::shared_ptr<numeric::IrregularMesh const> const mesh)
             { return mesh->edges.rows(); }
@@ -121,18 +121,18 @@ namespace basis {
             decltype(mesh->elementEdges) { return mesh->elementEdges; }
         static inline std::function<unsigned(unsigned, unsigned)> edgeConnections(std::shared_ptr<numeric::IrregularMesh const> const)
             { return [](unsigned edge, unsigned) { return edge; }; }
-            
+
         static Eigen::ArrayXi toLocalIndex(std::shared_ptr<numeric::IrregularMesh const> const mesh, unsigned const element, unsigned const index) {
             Eigen::ArrayXi const edge = mesh->edges.row(mesh->elementEdges(element, index));
-            
+
             Eigen::ArrayXi localEdge(edge.rows());
             for (int node = 0; node < edge.rows(); ++node) {
                 int nodeIndex = 0;
                 (mesh->elements.row(element) - edge(node)).square().minCoeff(&nodeIndex);
-                
+
                 localEdge(node) = nodeIndex;
             }
-            
+
             return localEdge;
         }
 

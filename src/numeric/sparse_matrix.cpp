@@ -292,15 +292,21 @@ template <
     class type
 >
 Eigen::Array<typename mpFlow::typeTraits::convertComplexType<type>::type,
-    Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::SparseMatrix<type>::toEigen(cudaStream_t const stream) const {
-    // convert sparse matrix to full matrix
-    auto const fullMatrix = this->toMatrix(stream);
-    fullMatrix->copyToHost(stream);
-    cudaStreamSynchronize(stream);
-    
-    // convert full matrix to eigen array
-    auto const array = fullMatrix->toEigen();
-    
+    Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::SparseMatrix<type>::toEigen() const {
+    // create eigen array to hold all values
+    auto array = Eigen::Array<typename typeTraits::convertComplexType<type>::type, Eigen::Dynamic, Eigen::Dynamic>
+        ::Zero(this->rows, this->cols).eval();
+
+    // set values
+    for (unsigned row = 0; row < this->rows; ++row)
+    for (unsigned col = 0; col < sparseMatrix::blockSize; ++col) {
+        auto const columnId = this->hostColumnIds[row * sparseMatrix::blockSize + col];
+
+        if (columnId != constants::invalidIndex) {
+            array(row, columnId) = this->hostValues[row * sparseMatrix::blockSize + col];
+        }
+    }
+
     return array;
 }
 
@@ -374,7 +380,7 @@ template <
 >
 type mpFlow::numeric::SparseMatrix<type>::getValue(unsigned const row, unsigned const col) const {
     // get column id
-    unsigned columnId = this->getColumnId(row, col);
+    unsigned const columnId = this->getColumnId(row, col);
 
     if (columnId == constants::invalidIndex) {
         return type(0);

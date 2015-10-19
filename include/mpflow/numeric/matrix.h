@@ -71,7 +71,7 @@ namespace numeric {
             std::shared_ptr<Matrix<type> const> const B, cudaStream_t const stream=nullptr);
         void setIndexedElements(std::shared_ptr<Matrix<unsigned> const> const indices,
             type const value, cudaStream_t const stream=nullptr);
-            
+
         // reduce methods
         void sum(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
         void min(std::shared_ptr<Matrix<type> const> const value, cudaStream_t const stream=nullptr);
@@ -89,7 +89,7 @@ namespace numeric {
 
         // cast from and to eigen arrays
         Eigen::Array<typename typeTraits::convertComplexType<type>::type,
-            Eigen::Dynamic, Eigen::Dynamic> toEigen(cudaStream_t const stream=nullptr) const;
+            Eigen::Dynamic, Eigen::Dynamic> toEigen() const;
         static std::shared_ptr<mpFlow::numeric::Matrix<type>> fromEigen(
             Eigen::Ref<Eigen::Array<typename typeTraits::convertComplexType<type>::type,
                 Eigen::Dynamic, Eigen::Dynamic> const> const array,
