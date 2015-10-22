@@ -103,7 +103,7 @@ std::shared_ptr<mpFlow::models::MWI<numericalSolverType, equationType>>
     auto const height = config["mwi"]["height"].type == json_double ? config["mwi"]["height"].u.dbl : 1.0;
     auto const portHeight = config["ports"]["height"].type == json_double ? config["ports"]["height"].u.dbl : 1.0;
     auto const portMaterial = jsonHelper::parseNumericValue<dataType>(config["ports"]["material"], 1.0);
-    
+
     auto const portElements = [=](json_value const& config) {
         if (config.type == json_string) {
             return numeric::Matrix<unsigned>::loadtxt(
@@ -113,12 +113,12 @@ std::shared_ptr<mpFlow::models::MWI<numericalSolverType, equationType>>
             return std::shared_ptr<numeric::Matrix<unsigned>>(nullptr);
         }
     }(config["ports"]["elements"]);
-    
+
     // read out reference value
     auto const referenceValue = config["material"].type == json_object ?
         jsonHelper::parseNumericValue<dataType>(config["material"]["referenceValue"], 1.0) :
         jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
-    
+
     // create forward model
     return std::make_shared<MWI<numericalSolverType, equationType>>(mesh, sources,
         frequency, height, referenceValue, portHeight, portMaterial, portElements, handle, stream);
@@ -155,11 +155,11 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     dataType const kBc = M_PI / this->height;
     dataType const kPc = M_PI / this->portHeight;
     dataType const kP = sqrt(math::square(k0) * this->portMaterial - math::square(kPc)); 
-    
+
     this->beta->copy(materialDistribution, stream);
     this->beta->scalarMultiply(math::square(k0) * this->referenceValue, stream);
     this->beta->add(-math::square(kBc), stream);
-    
+
     if (this->portElements) {
         this->beta->setIndexedElements(this->portElements,
             math::square(kP), stream);
@@ -167,7 +167,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
 
     // update equation for new material distribution
     this->equation->update(this->alpha, -dataType(1), this->beta, stream);
-    
+
     // make system matrix available on host for post processing
     this->equation->systemMatrix->copyToHost(stream);
     cudaStreamSynchronize(stream);
@@ -208,7 +208,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     // calc jacobian
     this->equation->calcJacobian(this->field, materialDistribution, this->sources->drivePattern->cols,
         this->sources->measurementPattern->cols, false, stream, this->jacobian);
-    this->jacobian->scalarMultiply(dataType(0.0, 2.0 * M_PI * this->frequency * constants::epsilon0), stream);
+    this->jacobian->scalarMultiply(
+        dataType(0.0, 2.0 * M_PI * this->frequency * constants::epsilon0) * this->referenceValue, stream);
 
     // calculate port parameter
     this->result->multiply(this->portsAttachmentMatrix, this->field, handle, stream);
