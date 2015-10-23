@@ -28,8 +28,10 @@ template <
 mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(
     std::shared_ptr<numeric::IrregularMesh const> const mesh,
     std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
-    unsigned const parallelImages, cublasHandle_t const handle, cudaStream_t const stream)
-    : regularizationFactor_(0), regularizationType_(Inverse<dataType, numericalSolverType>::identity),
+    dataType const referenceValue, unsigned const parallelImages,
+    cublasHandle_t const handle, cudaStream_t const stream)
+    : referenceValue(referenceValue), regularizationFactor_(0),
+    regularizationType_(Inverse<dataType, numericalSolverType>::identity),
     jacobian(jacobian), mesh(mesh) {
     // check input
     if (handle == nullptr) {
@@ -43,10 +45,10 @@ mpFlow::solver::Inverse<dataType, numericalSolverType>::Inverse(
     this->regularizationMatrix = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
     this->systemMatrix = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), mesh->elements.rows(), stream, 0.0, false);
     this->result = std::make_shared<numeric::Matrix<dataType>>(mesh->elements.rows(), parallelImages, stream, 0.0, false);
-        
+
     // create numerical EIT
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(mesh->elements.rows(), parallelImages, stream);
-        
+
     // initialize matrices
     this->updateJacobian(jacobian, handle, stream);
 }
@@ -65,11 +67,11 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::updateJacobian(
 
     // save jacobian for future use
     this->jacobian = jacobian;
-    
+
     // update system matrix
     this->calcJacobianSquare(handle, stream);
     this->systemMatrix->copy(this->regularizationMatrix, stream);
-    this->systemMatrix->scalarMultiply(math::square(this->regularizationFactor()), stream);
+    this->systemMatrix->scalarMultiply(math::square(this->referenceValue * this->regularizationFactor()), stream);
     this->systemMatrix->add(this->jacobianSquare, stream);
 }
 
@@ -99,20 +101,20 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
         for (int element = 0; element < this->mesh->elements.rows(); ++element) {
             for (unsigned i = 0; i < this->mesh->elementEdges.cols(); ++i) {
                 auto const edge = this->mesh->elementEdges(element, i);
-                
+
                 auto const length = std::sqrt(
                     math::square(this->mesh->nodes(this->mesh->edges(edge, 0), 0) -
                         this->mesh->nodes(this->mesh->edges(edge, 1), 0)) +
                     math::square(this->mesh->nodes(this->mesh->edges(edge, 0), 1) -
                         this->mesh->nodes(this->mesh->edges(edge, 1), 1)));
-                        
+
                 (*L)(edge, element) = signs(edge) * length;
                 signs(this->mesh->elementEdges(element, i)) *= -1;
             }
         }
         L->copyToDevice(stream);
         cudaStreamSynchronize(stream);
-        
+
         // calculate regularization matrix
         this->regularizationMatrix->multiply(L, L, handle, stream, CUBLAS_OP_T);
     }
@@ -120,10 +122,10 @@ void mpFlow::solver::Inverse<dataType, numericalSolverType>::calcRegularizationM
         throw std::runtime_error(
             "mpFlow::solver::Inverse::calcRegularizationMatrix: regularization type not implemented yet");
     }
-    
+
     // update system matrix
     this->systemMatrix->copy(this->regularizationMatrix, stream);
-    this->systemMatrix->scalarMultiply(math::square(this->regularizationFactor()), stream);
+    this->systemMatrix->scalarMultiply(math::square(this->referenceValue * this->regularizationFactor()), stream);
     this->systemMatrix->add(this->jacobianSquare, stream);
 }
 

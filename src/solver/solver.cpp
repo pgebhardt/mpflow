@@ -39,7 +39,8 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
 
     // create inverse solver
     this->inverseSolver = std::make_shared<solver::Inverse<dataType, numericalInverseSolverType>>(
-        this->forwardModel->mesh, this->forwardModel->jacobian, parallelImages, handle, stream);
+        this->forwardModel->mesh, this->forwardModel->jacobian, forwardModel->referenceValue,
+        parallelImages, handle, stream);
 
     // create matrices
     for (unsigned image = 0; image < parallelImages; ++image) {
@@ -74,7 +75,7 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     auto const solverConfig = config["solver"];
 
     // load forward model from config
-    auto forwardModel = forwardModelType::fromConfig(modelConfig, handle, stream, path, externalMesh);
+    auto const forwardModel = forwardModelType::fromConfig(modelConfig, handle, stream, path, externalMesh);
 
     // read out reference distribution
     auto const referenceDistribution = [=](json_value const& config) {
@@ -83,7 +84,7 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
                 str::format("%s/%s")(path, std::string(config)), stream);
         }
         else if ((config.type == json_object) && (config["distribution"].type == json_string)) {
-            return numeric::Matrix<dataType>::loadtxt(str::format("%s/%s")(path, std::string(config["distribution"])), stream);            
+            return numeric::Matrix<dataType>::loadtxt(str::format("%s/%s")(path, std::string(config["distribution"])), stream);
         }
         else {
             return std::shared_ptr<numeric::Matrix<dataType>>(nullptr);
@@ -92,9 +93,9 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
 
     // extract parallel images count
     auto const parallelImages = std::max(1, (int)solverConfig["parallelImages"].u.integer);
-       
+
     // create inverse solver and forward model
-    auto solver = std::make_shared<solver::Solver<forwardModelType, numericalInverseSolverType>>(
+    auto const solver = std::make_shared<solver::Solver<forwardModelType, numericalInverseSolverType>>(
         forwardModel, parallelImages, handle, stream);
 
     // override reference Distribution, if applicable
@@ -115,7 +116,7 @@ std::shared_ptr<mpFlow::solver::Solver<forwardModelType, numericalInverseSolverT
     auto const regularizationFactor = jsonHelper::parseNumericValue<dataType>(solverConfig["regularizationFactor"]);
     auto const regularizationType = [](json_value const& config) {
         typedef solver::Inverse<dataType, numericalInverseSolverType> inverseSolverType;
-        
+
         if (std::string(config) == "noser") {
             return inverseSolverType::RegularizationType::noser;
         }
@@ -144,7 +145,7 @@ void mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::preSo
     if (handle == nullptr) {
         throw std::invalid_argument("mpFlow::solver::Solver::preSolve: handle == nullptr");
     }
-    
+
     // forward solving a few steps
     auto const initialValue = this->forwardModel->solve(this->referenceDistribution,
         handle, stream);
@@ -211,15 +212,15 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> con
         // solve for new jacobian and reference data
         this->forwardModel->solve(this->materialDistribution, handle, stream);
         this->inverseSolver->updateJacobian(this->forwardModel->jacobian, handle, stream);
-    
+
         // solve inverse
         auto const result = this->inverseSolver->solve({ this->forwardModel->result },
             this->measurement, handle, stream);
-    
+
         // add to result
         this->materialDistribution->add(result, stream);
     }
-    
+
     return this->materialDistribution;
 }
 

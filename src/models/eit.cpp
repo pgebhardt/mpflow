@@ -55,7 +55,7 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
     // create FEM equation
     this->equation = std::make_shared<equationType>(this->mesh,
         this->sources->ports, this->referenceValue, true, stream);
-        
+
     // create numericalSolver solver
     this->numericalSolver = std::make_shared<numericalSolverType<dataType>>(
         this->mesh->nodes.rows(),
@@ -68,7 +68,7 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
         this->fields.push_back(std::make_shared<numeric::Matrix<dataType>>(this->mesh->nodes.rows(),
             this->sources->pattern->cols, stream,
             sources->type == FEM::Sources<dataType>::Type::Fixed ? dataType(1) : dataType(0)));
-            
+
         if (component == 0) {
             this->field = this->fields[0];
         }
@@ -85,11 +85,11 @@ mpFlow::models::EIT<numericalSolverType, equationType>::EIT(
     this->electrodesAttachmentMatrix = std::make_shared<numeric::Matrix<dataType>>(
         this->sources->measurementPattern->cols,
         this->mesh->nodes.rows(), stream, 0.0, false);
-          
+
     if (this->sources->type == FEM::Sources<dataType>::Type::Fixed) {
         applyMixedBoundaryCondition(this->equation->excitationMatrix, this->equation->systemMatrix, stream);
     }
-    
+
     this->electrodesAttachmentMatrix->multiply(this->sources->measurementPattern,
         this->equation->excitationMatrix, handle, stream, CUBLAS_OP_T, CUBLAS_OP_T);
 }
@@ -117,12 +117,12 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
     auto const referenceValue = config["material"].type == json_object ?
         jsonHelper::parseNumericValue<dataType>(config["material"]["referenceValue"], 1.0) :
         jsonHelper::parseNumericValue<dataType>(config["material"], 1.0);
-    
-    // read 2.5D stuff  
+
+    // read 2.5D stuff
     auto const componentsCount = std::max(1, (int)config["2.5D"]["components"].u.integer);
     auto const height = config["2.5D"]["height"].type != json_none ? config["2.5D"]["height"].u.dbl : 1.0;
     auto const portHeight = config["ports"]["height"].type != json_none ? config["ports"]["height"].u.dbl : 1.0;
-        
+
     // create forward model
     return std::make_shared<EIT<numericalSolverType, equationType>>(mesh, sources,
         referenceValue, handle, stream, componentsCount, height, portHeight);
@@ -173,12 +173,12 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
         totalSteps += this->numericalSolver->solve(this->equation->systemMatrix,
             this->excitation, nullptr, stream, this->fields[component], this->preconditioner, 0,
             (component == 0 && this->sources->type == FEM::Sources<dataType>::Type::Open) ? true : false);
-        
+
         // calc jacobian
         this->equation->calcJacobian(this->fields[component], materialDistribution, this->sources->drivePattern->cols,
             this->sources->measurementPattern->cols, component == 0 ? false : true,
             stream, this->jacobian);
-        
+
         // calculate electrode voltage or current, depends on the type of sources
         if (this->sources->type == FEM::Sources<dataType>::Type::Fixed) {
             this->equation->update(materialDistribution, alpha, materialDistribution, stream);
@@ -197,7 +197,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     }
 
     // current sources specific correction for jacobian matrix
-    this->jacobian->scalarMultiply(this->height, stream);        
+    this->jacobian->scalarMultiply(this->height, stream);
     if (this->sources->type == FEM::Sources<dataType>::Type::Open) {
         this->jacobian->scalarMultiply(dataType(-1), stream);
     }

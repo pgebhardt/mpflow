@@ -39,21 +39,21 @@ namespace solver {
         // constructor
         Inverse(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
-            unsigned const parallelImages, cublasHandle_t const handle,
-            cudaStream_t const stream);
+            dataType const referenceValue, unsigned const parallelImages,
+            cublasHandle_t const handle, cudaStream_t const stream);
 
     public:
         // update jacobian matrix and recalculated all intermediate matrices
         void updateJacobian(std::shared_ptr<numeric::Matrix<dataType> const> const jacobian,
             cublasHandle_t const handle, cudaStream_t const stream);
-            
+
         // inverse solving
         std::shared_ptr<numeric::Matrix<dataType> const> solve(
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& calculation,
             std::vector<std::shared_ptr<numeric::Matrix<dataType>>> const& measurement,
             cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations=0,
             unsigned* const iterations=nullptr);
-            
+
     private:
         // update intermediate matrices
         void calcRegularizationMatrix(cublasHandle_t const handle, cudaStream_t const stream);
@@ -80,12 +80,13 @@ namespace solver {
             this->regularizationType_ = type;
             this->calcRegularizationMatrix(handle, stream);
         }
-        
+
         dataType regularizationFactor() const { return this->regularizationFactor_; }
         RegularizationType regularizationType() const { return this->regularizationType_; }
-        
+
     private:
         // member
+        dataType const referenceValue;
         dataType regularizationFactor_;
         RegularizationType regularizationType_;
         std::shared_ptr<numericalSolverType<dataType>> numericalSolver;
