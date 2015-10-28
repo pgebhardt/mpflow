@@ -97,7 +97,7 @@ WARNINGS := -Wall -Wextra -Werror
 COMMON_FLAGS := $(addprefix -I, $(INCLUDE_DIRS)) -DGIT_VERSION=\"$(GIT_VERSION)\"
 CXXFLAGS := -std=c++11 -fPIC $(WARNINGS)
 CFLAGS := -fPIC
-NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH) $(addprefix -Xcompiler , $(WARNINGS))
+NVCCFLAGS := -Xcompiler -fpic -use_fast_math $(CUDA_ARCH)
 
 LINKFLAGS := -fPIC -static-libstdc++
 LDFLAGS := $(addprefix -l, $(LIBRARIES)) $(addprefix -L, $(LIBRARY_DIRS)) $(addprefix -Xlinker -rpath , $(LIBRARY_DIRS))
