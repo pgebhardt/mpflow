@@ -47,19 +47,19 @@ mpFlow::numeric::IrregularMesh::IrregularMesh(Eigen::Ref<Eigen::ArrayXXd const> 
 
 std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::fromConfig(
     json_value const& config, json_value const& portConfig, cudaStream_t const stream, std::string const path) {
-    if (config.type == json_string) {
+    if (config.type == json_string || config["path"].type == json_string) {
         // load mesh from file
-        std::string const meshPath = str::format("%s/%s")(path, std::string(config));
+        auto const meshPath = config.type == json_string ? std::string(config) : std::string(config["path"]);
 
-        auto const nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/nodes.txt")(meshPath), stream);
-        auto const elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elements.txt")(meshPath), stream);
+        auto const nodes = mpFlow::numeric::Matrix<double>::loadtxt(str::format("%s/%s/nodes.txt")(path, meshPath), stream);
+        auto const elements = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/%s/elements.txt")(path, meshPath), stream);
 
         // try to load edges from file, but fallback to default edge implementation on error
         try {
-            auto const edges = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/edges.txt")(meshPath), stream);
+            auto const edges = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/%s/edges.txt")(path, meshPath), stream);
 
             try {
-                auto const elementEdges = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/elementEdges.txt")(meshPath), stream);
+                auto const elementEdges = mpFlow::numeric::Matrix<int>::loadtxt(str::format("%s/%s/elementEdges.txt")(path, meshPath), stream);
 
                 return std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen(), edges->toEigen(),
                     elementEdges->toEigen());
@@ -69,7 +69,7 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
                     distmesh::utils::getTriangulationEdgeIndices(elements->toEigen(), edges->toEigen()));
 
                 // save newly created lists
-                numeric::Matrix<int>::fromEigen(mesh->elementEdges, stream)->savetxt(str::format("%s/elementEdges.txt")(meshPath));
+                numeric::Matrix<int>::fromEigen(mesh->elementEdges, stream)->savetxt(str::format("%s/%s/elementEdges.txt")(path, meshPath));
 
                 return mesh;
             }
@@ -78,8 +78,8 @@ std::shared_ptr<mpFlow::numeric::IrregularMesh> mpFlow::numeric::IrregularMesh::
             auto const mesh = std::make_shared<mpFlow::numeric::IrregularMesh>(nodes->toEigen(), elements->toEigen());
 
             // save newly created lists
-            numeric::Matrix<int>::fromEigen(mesh->edges, stream)->savetxt(str::format("%s/edges.txt")(meshPath));
-            numeric::Matrix<int>::fromEigen(mesh->elementEdges, stream)->savetxt(str::format("%s/elementEdges.txt")(meshPath));
+            numeric::Matrix<int>::fromEigen(mesh->edges, stream)->savetxt(str::format("%s/%s/edges.txt")(path, meshPath));
+            numeric::Matrix<int>::fromEigen(mesh->elementEdges, stream)->savetxt(str::format("%s/%s/elementEdges.txt")(path, meshPath));
 
             return mesh;
         }
