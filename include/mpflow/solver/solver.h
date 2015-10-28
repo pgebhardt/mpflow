@@ -52,8 +52,8 @@ namespace solver {
             cublasHandle_t const handle, cudaStream_t const stream,
             unsigned const maxIterations=0, unsigned* const iterations=nullptr);
         std::shared_ptr<numeric::Matrix<dataType> const> solveAbsolute(
-            unsigned const iterations, cublasHandle_t const handle,
-            cudaStream_t const stream);
+            cublasHandle_t const handle, cudaStream_t const stream,
+            unsigned const maxIterations=0, unsigned* const iterations=nullptr);
 
         // member
         std::shared_ptr<forwardModelType> const forwardModel;

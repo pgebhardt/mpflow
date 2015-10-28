@@ -46,10 +46,10 @@ mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::Solver(
     for (unsigned image = 0; image < parallelImages; ++image) {
         this->measurement.push_back(std::make_shared<numeric::Matrix<dataType>>(
             this->forwardModel->sources->measurementPattern->cols,
-            this->forwardModel->sources->drivePattern->cols, stream, 0.0, false));
+            this->forwardModel->sources->drivePattern->cols, stream));
         this->calculation.push_back(std::make_shared<numeric::Matrix<dataType>>(
             this->forwardModel->sources->measurementPattern->cols,
-            this->forwardModel->sources->drivePattern->cols, stream, 0.0, false));
+            this->forwardModel->sources->drivePattern->cols, stream));
     }
 
     dataType const initialValue = forwardModelType::logarithmic ? dataType(0) :
@@ -194,7 +194,8 @@ template <
 >
 std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> const>
     mpFlow::solver::Solver<forwardModelType, numericalInverseSolverType>::solveAbsolute(
-    unsigned const iterations, cublasHandle_t const handle, cudaStream_t const stream) {
+    cublasHandle_t const handle, cudaStream_t const stream, unsigned const maxIterations,
+    unsigned* const iterations) {
     // only execute method, when parallelImages == 1
     if (this->measurement.size() != 1) {
         throw std::runtime_error(
@@ -207,19 +208,18 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename forwardModelType::dataType> con
             "mpFlow::solver::Solver::solveAbsolute: handle == nullptr");
     }
 
-    // do newton iterations
-    for (unsigned step = 0; step < iterations; ++step) {
-        // solve for new jacobian and reference data
-        this->forwardModel->solve(this->materialDistribution, handle, stream);
-        this->inverseSolver->updateJacobian(this->forwardModel->jacobian, handle, stream);
+    // do one newton iterations
+    // solve for new jacobian and reference data
+    this->forwardModel->solve(this->materialDistribution, handle, stream);
+    this->inverseSolver->updateJacobian(this->forwardModel->jacobian, handle, stream);
+    this->calculation[0]->copy(this->forwardModel->result, stream);
 
-        // solve inverse
-        auto const result = this->inverseSolver->solve({ this->forwardModel->result },
-            this->measurement, handle, stream);
+    // solve inverse
+    auto const result = this->inverseSolver->solve(this->calculation,
+        this->measurement, handle, stream, maxIterations, iterations);
 
-        // add to result
-        this->materialDistribution->add(result, stream);
-    }
+    // add to result
+    this->materialDistribution->add(result, stream);
 
     return this->materialDistribution;
 }
