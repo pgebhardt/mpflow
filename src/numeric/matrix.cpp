@@ -119,7 +119,7 @@ template <
 std::shared_ptr<mpFlow::numeric::Matrix<type>>
     mpFlow::numeric::Matrix<type>::eye(unsigned const size, cudaStream_t const stream) {
     auto matrix = std::make_shared<Matrix<type>>(size, size, stream);
-    
+
     matrix->setEye(stream);
     matrix->copyToHost(stream);
     cudaStreamSynchronize(stream);
@@ -786,7 +786,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
     if ((values.size() == 0) || (values[0].size() == 0)) {
         throw std::runtime_error("mpFlow::numeric::Matrix::loadtxt: cannot parse file!");
     }
-    
+
     // covert STL vector to Matrix
     auto matrix = std::make_shared<Matrix<type>>(values.size(), values[0].size(), stream);
     for (unsigned row = 0; row < matrix->rows; ++row)
@@ -816,9 +816,9 @@ std::shared_ptr<mpFlow::numeric::Matrix<type>> mpFlow::numeric::Matrix<type>::lo
     // load matrix from file
     try {
         auto const matrix = Matrix<type>::loadtxt(file, stream, delimiter);
-            
+
         file.close();
-        return matrix;        
+        return matrix;
     }
     catch (std::exception const&) {
         file.close();
@@ -833,6 +833,10 @@ template <
 >
 Eigen::Array<typename mpFlow::typeTraits::convertComplexType<type>::type,
     Eigen::Dynamic, Eigen::Dynamic> mpFlow::numeric::Matrix<type>::toEigen() const {
+    if (this->hostData == nullptr) {
+        throw std::runtime_error("mpFlow::numeric::Matrix::toEigen: host memory was not allocated");
+    }
+
     // create eigen array with mpflow_type
     Eigen::Array<typename typeTraits::convertComplexType<type>::type,
         Eigen::Dynamic, Eigen::Dynamic> array(this->dataRows, this->dataCols);
