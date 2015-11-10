@@ -11,15 +11,14 @@ mpFlow is an extensible GPU-based multi-phase flow analysis library containing a
 
 ## System Requirements
 
-* NVIDIA CUDA ToolKit 5.0
+* NVIDIA CUDA ToolKit 7.0
 * clang 3.1
 * scons 2.2.0
 
 It has been tested on the following platforms:
 
-* OS X 10.7
-* Ubuntu Linux 12.04 x64
-* Fedora Linux 18 x64
+* OS X 10.9
+* Ubuntu Linux 14.04 x64
 
 ## Install
 
