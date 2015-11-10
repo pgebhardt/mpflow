@@ -63,7 +63,7 @@ mpFlow::models::MWI<numericalSolverType, equationType>::MWI(
         this->mesh->edges.rows(), this->sources->pattern->cols, stream);
     this->jacobian = std::make_shared<numeric::Matrix<dataType>>(
         this->sources->measurementPattern->dataCols * this->sources->drivePattern->dataCols,
-        this->mesh->elements.rows(), stream, 0.0, false);
+        this->mesh->elements.rows(), stream);
     this->preconditioner = std::make_shared<numeric::SparseMatrix<dataType>>(
         this->equation->systemMatrix->rows, this->equation->systemMatrix->cols, stream);
     this->alpha = std::make_shared<numeric::Matrix<dataType>>(
@@ -211,6 +211,17 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     this->jacobian->scalarMultiply(
         dataType(0.0, 2.0 * M_PI * this->frequency * constants::epsilon0) * this->referenceValue, stream);
 
+/*    // don't use reflection data
+    this->jacobian->copyToHost(stream);
+    cudaStreamSynchronize(stream);
+
+    unsigned const dim = std::sqrt(this->jacobian->rows);
+    for (unsigned i = 0; i < dim; ++i)
+    for (unsigned e = 0; e < this->jacobian->cols; ++e) {
+        (*this->jacobian)(i * dim + i, e) = dataType(0);
+    }
+    this->jacobian->copyToDevice(stream);*/
+
     // calculate port parameter
     this->result->multiply(this->portsAttachmentMatrix, this->field, handle, stream);
 
@@ -230,3 +241,11 @@ template class mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
     mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, false>>;
 template class mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
     mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, false>>;
+template class mpFlow::models::MWI<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, true>>;
+template class mpFlow::models::MWI<mpFlow::numeric::BiCGSTAB,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, true>>;
+template class mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
+    mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, true>>;
+template class mpFlow::models::MWI<mpFlow::numeric::CPUSolver,
+    mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, true>>;

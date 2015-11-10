@@ -239,11 +239,11 @@ void mpFlow::FEM::Equation<dataType, basisFunctionType, logarithmic>
             // set elementalJacobianMatrix element
             if (calculatesPotential) {
                 (*elementalJacobianMatrix)(element, i + j * basisFunctionType::pointsPerElement) =
-                    basisI.integralA(basisJ);                
+                    basisI.integralA(basisJ);
             }
             else {
                 (*elementalJacobianMatrix)(element, i + j * basisFunctionType::pointsPerElement) =
-                    basisI.integralB(basisJ);                
+                    basisI.integralB(basisJ);
             }
         }
     }
@@ -392,21 +392,25 @@ template void mpFlow::FEM::equation::updateMatrix<thrust::complex<double>, false
 
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Edge, true>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Quadratic, false>;
 template class mpFlow::FEM::Equation<float, mpFlow::FEM::basis::Edge, false>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Edge, true>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Quadratic, false>;
 template class mpFlow::FEM::Equation<double, mpFlow::FEM::basis::Edge, false>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, true>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Quadratic, false>;
 template class mpFlow::FEM::Equation<thrust::complex<float>, mpFlow::FEM::basis::Edge, false>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, true>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Quadratic, true>;
+template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, true>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Linear, false>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Quadratic, false>;
 template class mpFlow::FEM::Equation<thrust::complex<double>, mpFlow::FEM::basis::Edge, false>;
