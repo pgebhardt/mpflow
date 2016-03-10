@@ -154,7 +154,7 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     dataType const k0 = 2.0 * M_PI * this->frequency / constants::c0;
     dataType const kBc = M_PI / this->height;
     dataType const kPc = M_PI / this->portHeight;
-    dataType const kP = sqrt(math::square(k0) * this->portMaterial - math::square(kPc)); 
+    dataType const kP = sqrt(math::square(k0) * this->portMaterial - math::square(kPc));
 
     this->beta->copy(materialDistribution, stream);
     this->beta->scalarMultiply(math::square(k0) * this->referenceValue, stream);
@@ -211,8 +211,8 @@ std::shared_ptr<mpFlow::numeric::Matrix<typename equationType::dataType> const>
     this->jacobian->scalarMultiply(
         dataType(0.0, 2.0 * M_PI * this->frequency * constants::epsilon0) * this->referenceValue, stream);
 
-/*    // don't use reflection data
-    this->jacobian->copyToHost(stream);
+    // don't use reflection data
+/*    this->jacobian->copyToHost(stream);
     cudaStreamSynchronize(stream);
 
     unsigned const dim = std::sqrt(this->jacobian->rows);

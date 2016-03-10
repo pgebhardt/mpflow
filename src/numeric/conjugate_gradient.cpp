@@ -87,7 +87,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(std::shared_ptr<mat
         this->temp1->sum(x, stream);
         addScalar(this->temp1, this->rows, this->cols, stream, this->r);
     }
-    
+
     // z = KInv * r
     if (KInv != nullptr) {
         this->z->multiply(KInv, this->r, handle, stream);
@@ -117,7 +117,7 @@ unsigned mpFlow::numeric::ConjugateGradient<dataType>::solve(std::shared_ptr<mat
             this->temp2->sum(this->p, stream);
             addScalar(this->temp2, this->rows, this->cols, stream, this->temp1);
         }
-        
+
         // calc p * A * p
         this->temp2->vectorDotProduct(this->p, this->temp1, stream);
 

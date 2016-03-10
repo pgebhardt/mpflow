@@ -26,14 +26,14 @@ namespace models {
     // 2.5D EIT forward model
     template <
         template <class> class numericalSolverType = numeric::ConjugateGradient,
-        class equationType_ = FEM::Equation<float, FEM::basis::Linear, true>
+        class equationType_ = FEM::Equation<float, FEM::basis::Linear, false>
     >
     class EIT {
     public:
         typedef equationType_ equationType;
         typedef typename equationType::dataType dataType;
         static bool const logarithmic = equationType::logarithmic;
-        
+
         // initialization
         EIT(std::shared_ptr<numeric::IrregularMesh const> const mesh,
             std::shared_ptr<FEM::Sources<dataType> const> const sources,

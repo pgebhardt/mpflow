@@ -107,7 +107,9 @@ std::shared_ptr<mpFlow::models::EIT<numericalSolverType, equationType>>
         numeric::IrregularMesh::fromConfig(config["mesh"], config["ports"], stream, path);
 
     // load ports descriptor from config
-    auto const ports = FEM::Ports::fromConfig(config["ports"], mesh, stream, path);
+    auto const meshPath = config["mesh"].type == json_string ? std::string(config["mesh"]) :
+        (config["mesh"]["path"].type == json_string ? std::string(config["mesh"]["path"]) : std::string("mesh"));
+    auto const ports = FEM::Ports::fromConfig(config["ports"], mesh, stream, path, meshPath);
 
     // load sources from config
     auto const sources = FEM::Sources<dataType>::fromConfig(

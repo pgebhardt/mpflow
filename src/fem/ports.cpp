@@ -78,7 +78,7 @@ mpFlow::FEM::Ports::Ports(Eigen::Ref<Eigen::ArrayXXi const> const edges)
 
 std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
     json_value const& config, std::shared_ptr<numeric::IrregularMesh const> const mesh,
-    cudaStream_t const stream, std::string const path) {
+    cudaStream_t const stream, std::string const path, std::string const meshPath) {
     // check whether a path to a file is given, or a complete config
     if (config.type == json_string) {
         // read out port edges from file
@@ -101,6 +101,14 @@ std::shared_ptr<mpFlow::FEM::Ports> mpFlow::FEM::Ports::fromConfig(
         auto const offset = config["offset"].u.dbl;
         auto const clockwise = config["clockwise"].u.boolean;
 
-        return circularBoundary(count, width, mesh, offset, clockwise);
+        // create port definition on a circular domain
+        auto const ports = circularBoundary(count, width, mesh, offset, clockwise);
+
+        // save ports matrix to file
+        mkdir(str::format("%s/%s")(path, meshPath).c_str(), 0777);
+        numeric::Matrix<int>::fromEigen(ports->edges, stream)->savetxt(
+            str::format("%s/%s/ports.txt")(path, meshPath));
+
+        return ports;
     }
 }
