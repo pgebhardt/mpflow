@@ -167,14 +167,12 @@ static __global__ void multiplyKernel(const type* values,
     unsigned id = mpFlow::constants::invalidIndex;
 
     // read column ids to local memory
-    __shared__ unsigned columnId[
-        mpFlow::numeric::sparseMatrix::blockSize * mpFlow::numeric::sparseMatrix::blockSize];
-    __shared__ type value[
-        mpFlow::numeric::sparseMatrix::blockSize * mpFlow::numeric::sparseMatrix::blockSize];
+    __shared__ unsigned columnId[mpFlow::numeric::sparseMatrix::blockSize][mpFlow::numeric::sparseMatrix::blockSize];
+    __shared__ type value[mpFlow::numeric::sparseMatrix::blockSize][mpFlow::numeric::sparseMatrix::blockSize];
 
-    columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::blockSize + threadIdx.y] = row < result_rows ?
+    columnId[threadIdx.y][threadIdx.x] = row < result_rows ?
         columnIds[row * mpFlow::numeric::sparseMatrix::blockSize + threadIdx.y] : mpFlow::constants::invalidIndex;
-    value[threadIdx.x * mpFlow::numeric::sparseMatrix::blockSize + threadIdx.y] = row < result_rows ?
+    value[threadIdx.y][threadIdx.x] = row < result_rows ?
         values[row * mpFlow::numeric::sparseMatrix::blockSize + threadIdx.y] : 0.0f;
 
     __syncthreads();
@@ -187,10 +185,10 @@ static __global__ void multiplyKernel(const type* values,
     // read matrix to local memory
     for (unsigned j = 0; j < density; j++) {
         // get column id
-        id = columnId[threadIdx.x * mpFlow::numeric::sparseMatrix::blockSize + j];
+        id = columnId[j][threadIdx.x];
 
          res += id != mpFlow::constants::invalidIndex ? matrix[id + column * matrix_rows] *
-            value[threadIdx.x * mpFlow::numeric::sparseMatrix::blockSize + j] : 0.0f;
+            value[j][threadIdx.x] : 0.0f;
     }
 
     // set result
