@@ -544,29 +544,23 @@ void mpFlow::numeric::Matrix<type>::sum(std::shared_ptr<Matrix<type> const> cons
     // get minimum columns
     unsigned columns = std::min(this->dataCols, other->dataCols);
 
-    // kernel settings
-    dim3 blocks(this->dataRows / matrix::blockSize,
+    // perform prefix sum algorithm
+    int size = this->dataRows;
+    dim3 blocks((this->dataRows + 32 - 1) / 32,
         columns == 1 ? 1 : columns / matrix::blockSize);
-    dim3 threads(matrix::blockSize,
-        columns == 1 ? 1 : matrix::blockSize);
-    unsigned offset = 1;
+    dim3 threads(32, columns == 1 ? 1 : matrix::blockSize);
 
-    // start kernel once
     matrixKernel::sum<type>(blocks, threads, stream, other->deviceData,
-        this->dataRows, offset, this->deviceData);
+        this->dataRows, size, this->deviceData);
 
-    // start kernel
     do {
-        // update settings
-        offset *= matrix::blockSize;
-        blocks.x = (blocks.x + matrix::blockSize - 1) /
-            matrix::blockSize;
+        blocks.x = (blocks.x + 32 - 1) / 32;
+        size = (size + 32 - 1) / 32;
 
         matrixKernel::sum(blocks, threads, stream, this->deviceData,
-            this->dataRows, offset, this->deviceData);
-
+            this->dataRows, size, this->deviceData);
     }
-    while (offset * matrix::blockSize < this->dataRows);
+    while (size >= 32);
 }
 
 // min

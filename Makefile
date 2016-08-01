@@ -74,7 +74,7 @@ STATIC_NAME := $(BUILD_DIR)/lib/lib$(PROJECT)_static.a
 ##############################
 LIBRARIES := distmesh_static qhull cudart_static cublas_static culibos pthread dl
 LIBRARY_DIRS +=
-INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./utils/stringtools/include ./utils/json-parser
+INCLUDE_DIRS += $(CUDA_DIR)/include ./include ./utils/stringtools/include ./utils/json-parser ./utils/generics
 
 # link aganinst librt, only if it exists
 ifeq ($(shell echo "int main() {}" | $(CXX) -o /dev/null -x c - -lrt 2>&1),)

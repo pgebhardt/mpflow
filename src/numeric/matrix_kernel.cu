@@ -21,6 +21,7 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <thrust/complex.h>
+#include <generics/shfl.h>
 #include "mpflow/cuda_error.h"
 
 #include "mpflow/constants.h"
@@ -487,138 +488,28 @@ template void mpFlow::numeric::matrixKernel::setIndexedElements<int>(dim3 const,
 template <
     class type
 >
-__global__ void sumKernel(const type* vector, unsigned rows, unsigned offset,
-    type* result) {
-    // get column
-    int const column = blockIdx.y * blockDim.y + threadIdx.y;
-
-    // get id
-    int const gid = blockIdx.x * blockDim.x + threadIdx.x;
-    int const lid = threadIdx.x;
-
-    // copy data to shared memory
-    volatile __shared__ type res[mpFlow::numeric::matrix::blockSize][mpFlow::numeric::matrix::blockSize];
-    res[threadIdx.y][lid] = gid * offset < rows ? vector[gid * offset + column * rows] : 0.0f;
+__global__ void sumKernel(type const* const vector, unsigned const rows,
+    unsigned const length, type* const result) {
+    int const row = threadIdx.x + blockDim.x * blockIdx.x;
+    int const col = threadIdx.y + blockDim.y * blockIdx.y;
 
     // reduce
-    res[threadIdx.y][lid] += (lid % 2 == 0) ? res[threadIdx.y][lid + 1] : 0.0f;
-    res[threadIdx.y][lid] += (lid % 4 == 0) ? res[threadIdx.y][lid + 2] : 0.0f;
-    res[threadIdx.y][lid] += (lid % 8 == 0) ? res[threadIdx.y][lid + 4] : 0.0f;
-    res[threadIdx.y][lid] += (lid % 16 == 0) ? res[threadIdx.y][lid + 8] : 0.0f;
-    __syncthreads();
+    type res = row < length ? vector[row + col * rows] : type(0.0f);
+    for (int offset = 32 / 2; offset > 0; offset /= 2)
+        res += __shfl_down(res, offset);
 
-    // stop rest of worker
-    if (lid != 0) {
-        return;
+    if ((threadIdx.x % 32) == 0) {
+        result[row / 32 + col * rows] = res;
     }
-
-    // write to global memory
-    result[gid * offset + column * rows] = res[threadIdx.y][lid];
-}
-
-// complex specialisation
-template <>
-__global__ void sumKernel(const thrust::complex<float>* vector, unsigned rows,
-    unsigned offset, thrust::complex<float>* result) {
-    // get column
-    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
-
-    // get id
-    unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned lid = threadIdx.x;
-
-    // copy data to shared memory
-    volatile __shared__ cuFloatComplex res[mpFlow::numeric::matrix::blockSize * mpFlow::numeric::matrix::blockSize];
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x =
-        gid * offset < rows ? vector[gid * offset + column * rows].real() : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y =
-        gid * offset < rows ? vector[gid * offset + column * rows].imag() : 0.0f;
-
-    // reduce
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    // stop rest of worker
-    if (lid != 0) {
-        return;
-    }
-
-    // write to global memory
-    result[gid * offset + column * rows].real(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x);
-    result[gid * offset + column * rows].imag(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y);
-}
-
-template <>
-__global__ void sumKernel(const thrust::complex<double>* vector, unsigned rows,
-    unsigned offset, thrust::complex<double>* result) {
-    // get column
-    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
-
-    // get id
-    unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned lid = threadIdx.x;
-
-    // copy data to shared memory
-    volatile __shared__ cuDoubleComplex res[mpFlow::numeric::matrix::blockSize * mpFlow::numeric::matrix::blockSize];
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x =
-        gid * offset < rows ? vector[gid * offset + column * rows].real() : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y =
-        gid * offset < rows ? vector[gid * offset + column * rows].imag() : 0.0f;
-
-    // reduce
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].x : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize].y : 0.0f;
-
-    // stop rest of worker
-    if (lid != 0) {
-        return;
-    }
-
-    // write to global memory
-    result[gid * offset + column * rows].real(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].x);
-    result[gid * offset + column * rows].imag(res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize].y);
 }
 
 // sum kernel wrapper
 template <
     class type
 >
-void mpFlow::numeric::matrixKernel::sum(dim3 blocks, dim3 threads, cudaStream_t stream,
-    const type* vector, unsigned rows, unsigned offset, type* result) {
+void mpFlow::numeric::matrixKernel::sum(dim3 const blocks, dim3 const threads,
+    cudaStream_t const stream, type const* const vector, unsigned const rows,
+    unsigned const offset, type* const result) {
     // call cuda kernel
     sumKernel<type><<<blocks, threads, 0, stream>>>(vector, rows, offset, result);
 
@@ -626,24 +517,24 @@ void mpFlow::numeric::matrixKernel::sum(dim3 blocks, dim3 threads, cudaStream_t 
 }
 
 // sum specialisation
-template void mpFlow::numeric::matrixKernel::sum<float>(dim3, dim3,
-    cudaStream_t, const float*, unsigned,
-    unsigned, float*);
-template void mpFlow::numeric::matrixKernel::sum<double>(dim3, dim3,
-    cudaStream_t, const double*, unsigned,
-    unsigned, double*);
-template void mpFlow::numeric::matrixKernel::sum<thrust::complex<float> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<float>*, unsigned,
-    unsigned, thrust::complex<float>*);
-template void mpFlow::numeric::matrixKernel::sum<thrust::complex<double> >(dim3, dim3,
-    cudaStream_t, const thrust::complex<double>*, unsigned,
-    unsigned, thrust::complex<double>*);
-template void mpFlow::numeric::matrixKernel::sum<unsigned>(dim3, dim3,
-    cudaStream_t, const unsigned*, unsigned,
-    unsigned, unsigned*);
-template void mpFlow::numeric::matrixKernel::sum<int>(dim3, dim3,
-    cudaStream_t, const int*, unsigned,
-    unsigned, int*);
+template void mpFlow::numeric::matrixKernel::sum<float>(dim3 const, dim3 const,
+    cudaStream_t const, float const* const, unsigned const, unsigned const,
+    float* const);
+template void mpFlow::numeric::matrixKernel::sum<double>(dim3 const, dim3 const,
+    cudaStream_t const, double const* const, unsigned const, unsigned const,
+    double* const);
+template void mpFlow::numeric::matrixKernel::sum<thrust::complex<float> >(dim3 const, dim3 const,
+    cudaStream_t const, thrust::complex<float> const* const, unsigned const, unsigned const,
+    thrust::complex<float>* const);
+template void mpFlow::numeric::matrixKernel::sum<thrust::complex<double> >(dim3 const, dim3 const,
+    cudaStream_t const, thrust::complex<double> const* const, unsigned const, unsigned const,
+    thrust::complex<double>* const);
+template void mpFlow::numeric::matrixKernel::sum<unsigned>(dim3 const, dim3 const,
+    cudaStream_t const, unsigned const* const, unsigned const, unsigned const,
+    unsigned* const);
+template void mpFlow::numeric::matrixKernel::sum<int>(dim3 const, dim3 const,
+    cudaStream_t const, int const* const, unsigned const, unsigned const,
+    int* const);
 
 // min kernel
 template <

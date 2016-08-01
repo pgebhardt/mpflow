@@ -89,8 +89,8 @@ namespace numeric {
         template <
             class type
         >
-        void sum(dim3 blocks, dim3 threads, cudaStream_t stream,
-            const type* vector, unsigned rows, unsigned offset, type* result);
+        void sum(dim3 const blocks, dim3 const threads, cudaStream_t const stream,
+            type const* const vector, unsigned const rows, unsigned const length, type* const result);
 
         // min kernel
         template <
