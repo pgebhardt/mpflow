@@ -490,26 +490,21 @@ template <
 __global__ void sumKernel(const type* vector, unsigned rows, unsigned offset,
     type* result) {
     // get column
-    unsigned column = blockIdx.y * blockDim.y + threadIdx.y;
+    int const column = blockIdx.y * blockDim.y + threadIdx.y;
 
     // get id
-    unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned lid = threadIdx.x;
+    int const gid = blockIdx.x * blockDim.x + threadIdx.x;
+    int const lid = threadIdx.x;
 
     // copy data to shared memory
-    volatile __shared__ type res[mpFlow::numeric::matrix::blockSize * mpFlow::numeric::matrix::blockSize];
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] =
-        gid * offset < rows ? vector[gid * offset + column * rows] : 0.0f;
+    volatile __shared__ type res[mpFlow::numeric::matrix::blockSize][mpFlow::numeric::matrix::blockSize];
+    res[threadIdx.y][lid] = gid * offset < rows ? vector[gid * offset + column * rows] : 0.0f;
 
     // reduce
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
-        (lid % 2 == 0) ? res[lid + 1 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
-        (lid % 4 == 0) ? res[lid + 2 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
-        (lid % 8 == 0) ? res[lid + 4 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
-    res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize] +=
-        (lid % 16 == 0) ? res[lid + 8 + threadIdx.y * mpFlow::numeric::matrix::blockSize] : 0.0f;
+    res[threadIdx.y][lid] += (lid % 2 == 0) ? res[threadIdx.y][lid + 1] : 0.0f;
+    res[threadIdx.y][lid] += (lid % 4 == 0) ? res[threadIdx.y][lid + 2] : 0.0f;
+    res[threadIdx.y][lid] += (lid % 8 == 0) ? res[threadIdx.y][lid + 4] : 0.0f;
+    res[threadIdx.y][lid] += (lid % 16 == 0) ? res[threadIdx.y][lid + 8] : 0.0f;
     __syncthreads();
 
     // stop rest of worker
@@ -518,7 +513,7 @@ __global__ void sumKernel(const type* vector, unsigned rows, unsigned offset,
     }
 
     // write to global memory
-    result[gid * offset + column * rows] = res[lid + threadIdx.y * mpFlow::numeric::matrix::blockSize];
+    result[gid * offset + column * rows] = res[threadIdx.y][lid];
 }
 
 // complex specialisation
